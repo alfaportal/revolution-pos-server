@@ -18,6 +18,25 @@
   <div class="container">
     <div class="stats" id="stats"></div>
 
+    <div class="card links-card" id="owner-links-card">
+      <div class="card-title">Linqet e lokalit tuaj</div>
+      <p class="links-hint">Çdo restorant/kafene ka linkun e vet — kamarierët e këtij lokali përdorin të njëjtin link (shkruajnë emrin kur hyjnë).</p>
+      <div class="link-row">
+        <label>Kamarierët (telefon)</label>
+        <div class="link-actions">
+          <input type="text" id="owner-waiter-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-waiter">Kopjo</button>
+        </div>
+      </div>
+      <div class="link-row">
+        <label>Kuzhina (KDS)</label>
+        <div class="link-actions">
+          <input type="text" id="owner-kitchen-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kitchen">Kopjo</button>
+        </div>
+      </div>
+    </div>
+
     <div class="tabs">
       <button class="tab active" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="raportet">Raportet</button>

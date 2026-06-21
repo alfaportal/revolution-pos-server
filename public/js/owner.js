@@ -59,14 +59,40 @@ function renderOrderCard(o) {
 }
 
 async function loadClient() {
-  const { client } = await api("/api/owner/client");
+  const data = await api("/api/owner/client");
+  const { client, waiter_url, kitchen_url } = data;
   if (client) {
     document.getElementById("biz-name").textContent = client.emri;
     document.getElementById("biz-sub").textContent =
       (client.tipi === "kafene" ? "Kafene" : "Restorant") +
       (client.adresa ? ` · ${client.adresa}` : "");
   }
+  if (waiter_url) {
+    document.getElementById("owner-waiter-url").value = waiter_url;
+    document.getElementById("owner-kitchen-url").value = kitchen_url || "";
+  }
 }
+
+async function kopjoLinkun(inputId, btn) {
+  const val = document.getElementById(inputId).value;
+  if (!val) return;
+  try {
+    await navigator.clipboard.writeText(val);
+    const orig = btn.textContent;
+    btn.textContent = "U kopjua!";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch {
+    document.getElementById(inputId).select();
+    document.execCommand("copy");
+  }
+}
+
+document.getElementById("btn-owner-copy-waiter").addEventListener("click", function () {
+  kopjoLinkun("owner-waiter-url", this);
+});
+document.getElementById("btn-owner-copy-kitchen").addEventListener("click", function () {
+  kopjoLinkun("owner-kitchen-url", this);
+});
 
 async function loadStats() {
   const s = await api("/api/owner/stats");

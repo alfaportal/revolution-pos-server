@@ -15,7 +15,14 @@ router.use(authOwner, ownerOnly);
 router.get("/client", async (req, res) => {
   try {
     const client = await getClientById(req.user.client_id);
-    res.json({ ok: true, client });
+    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const id = req.user.client_id;
+    res.json({
+      ok: true,
+      client,
+      waiter_url: `${base}/waiter/${id}`,
+      kitchen_url: `${base}/kitchen/${id}`,
+    });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
   }

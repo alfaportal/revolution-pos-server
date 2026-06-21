@@ -111,6 +111,32 @@
 .filter-row input { margin-bottom: 0; flex: 1; min-width: 130px; }
 .filter-row button { margin-bottom: 0; }
 
+.links-card { margin-bottom: 1rem; }
+.links-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  line-height: 1.4;
+}
+.link-row { margin-bottom: 0.75rem; }
+.link-row label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+.link-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.link-actions input {
+  flex: 1;
+  min-width: 200px;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
 @media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .header h1 { font-size: 1rem; }
