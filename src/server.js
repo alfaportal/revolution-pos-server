@@ -23,6 +23,8 @@ const waiterRoutes = require("./routes/waiter");
 const posRoutes = require("./routes/pos");
 const { ensureSuperAdmin } = require("./services/licenseService");
 
+const pkg = require("../package.json");
+
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 
