@@ -1,0 +1,248 @@
+const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require("uuid");
+const { getSupabase } = require("../db");
+
+function normalizeKey(key) {
+  return String(key || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+function generateLicenseKey() {
+  const part = () => Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "X");
+  return `${part()}-${part()}-${part()}-${part()}`;
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isExpired(dateStr) {
+  if (!dateStr) return true;
+  return dateStr < todayISO();
+}
+
+async function findLicenseByKey(celesi) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .select("*, clients(id, emri, adresa, telefoni, email, tipi)")
+    .eq("celesi", normalizeKey(celesi))
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function validateLicense({ celesi, device_id, app_type }) {
+  const license = await findLicenseByKey(celesi);
+  if (!license) {
+    return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet." };
+  }
+
+  if (license.statusi === "revokuar") {
+    return { valid: false, code: "REVOKED", message: "Liçenca është revokuar." };
+  }
+  if (license.statusi === "pezulluar") {
+    return { valid: false, code: "SUSPENDED", message: "Liçenca është pezulluar." };
+  }
+  if (license.statusi === "skaduar" || isExpired(license.data_skadimit)) {
+    return { valid: false, code: "EXPIRED", message: "Liçenca ka skaduar." };
+  }
+
+  if (app_type && license.clients?.tipi && license.clients.tipi !== "tjeter") {
+    if (app_type !== license.clients.tipi) {
+      return {
+        valid: false,
+        code: "WRONG_APP",
+        message: `Liçenca është për ${license.clients.tipi}, jo për ${app_type}.`,
+      };
+    }
+  }
+
+  const deviceId = String(device_id || "").trim().toUpperCase();
+  if (deviceId) {
+    if (!license.device_id) {
+      const db = getSupabase();
+      await db
+        .from("licenses")
+        .update({ device_id: deviceId })
+        .eq("id", license.id);
+      license.device_id = deviceId;
+    } else if (license.device_id !== deviceId) {
+      return {
+        valid: false,
+        code: "DEVICE_MISMATCH",
+        message: "Liçenca është aktivizuar në një pajisje tjetër.",
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    license_id: license.id,
+    client_id: license.client_id,
+    client_name: license.clients?.emri || "",
+    client_type: license.clients?.tipi || "",
+    device_id: license.device_id,
+    status: license.statusi,
+    valid_from: license.data_fillimit,
+    valid_until: license.data_skadimit,
+    message: "Liçenca është aktive.",
+  };
+}
+
+async function listClients() {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("clients")
+    .select("*, licenses(count)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function listLicenses() {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .select("*, clients(id, emri, tipi, email)")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function createClient(body) {
+  const db = getSupabase();
+  const row = {
+    emri: String(body.emri || "").trim(),
+    adresa: String(body.adresa || "").trim(),
+    telefoni: String(body.telefoni || "").trim(),
+    email: String(body.email || "").trim(),
+    tipi: body.tipi || "restorant",
+  };
+  if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
+  const { data, error } = await db.from("clients").insert(row).select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function createLicense(body) {
+  const db = getSupabase();
+  const months = Number(body.muaj) || 12;
+  const start = body.data_fillimit || todayISO();
+  const endDate = new Date(start);
+  endDate.setMonth(endDate.getMonth() + months);
+
+  const row = {
+    client_id: body.client_id,
+    celesi: normalizeKey(body.celesi) || generateLicenseKey(),
+    device_id: String(body.device_id || "").trim().toUpperCase(),
+    statusi: body.statusi || "aktive",
+    data_fillimit: start,
+    data_skadimit: body.data_skadimit || endDate.toISOString().slice(0, 10),
+  };
+
+  if (!row.client_id) throw new Error("client_id mungon.");
+
+  const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
+  if (error) throw error;
+  return data;
+}
+
+async function updateLicenseStatus(id, statusi) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .update({ statusi })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function resetLicenseDevice(id) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .update({ device_id: "" })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function findUserByEmail(email) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("users")
+    .select("*")
+    .eq("email", String(email).trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function verifyUserPassword(user, password) {
+  return bcrypt.compare(password, user.passwordi);
+}
+
+async function ensureSuperAdmin() {
+  const email = (process.env.SUPER_ADMIN_EMAIL || "admin@revolutioninvest.com").toLowerCase();
+  const existing = await findUserByEmail(email);
+  if (existing) return existing;
+
+  const password = process.env.SUPER_ADMIN_PASSWORD || "Revolution2026!";
+  const hash = await bcrypt.hash(password, 12);
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("users")
+    .insert({
+      client_id: null,
+      emri: process.env.SUPER_ADMIN_NAME || "Super Admin",
+      email,
+      passwordi: hash,
+      roli: "super_admin",
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  console.log(`  👤 Super Admin u krijua: ${email}`);
+  return data;
+}
+
+async function getDashboardStats() {
+  const db = getSupabase();
+  const [clients, licenses] = await Promise.all([
+    db.from("clients").select("id", { count: "exact", head: true }),
+    db.from("licenses").select("id, statusi"),
+  ]);
+  const lic = licenses.data || [];
+  return {
+    clients_total: clients.count || 0,
+    licenses_total: lic.length,
+    licenses_active: lic.filter(l => l.statusi === "aktive").length,
+    licenses_expired: lic.filter(l => l.statusi === "skaduar").length,
+    licenses_revoked: lic.filter(l => l.statusi === "revokuar").length,
+  };
+}
+
+module.exports = {
+  normalizeKey,
+  generateLicenseKey,
+  validateLicense,
+  listClients,
+  listLicenses,
+  createClient,
+  createLicense,
+  updateLicenseStatus,
+  resetLicenseDevice,
+  findUserByEmail,
+  verifyUserPassword,
+  ensureSuperAdmin,
+  getDashboardStats,
+};

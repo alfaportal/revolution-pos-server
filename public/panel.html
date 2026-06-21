@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revolution Invest POS — Super Admin</title>
+  <link rel="stylesheet" href="/css/panel.css">
+</head>
+<body>
+  <div id="view-login" class="login-wrap">
+    <div class="login-card">
+      <h1>Revolution Invest POS</h1>
+      <p>Panel Super Admin — menaxhimi i klientëve dhe liçensave</p>
+      <div id="login-error" class="alert alert-error hidden"></div>
+      <form id="form-login">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" placeholder="admin@revolutioninvest.com">
+        <label for="password">Fjalëkalimi</label>
+        <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="view-app" class="hidden">
+    <header class="header">
+      <div>
+        <h1>Revolution Invest POS</h1>
+        <div class="sub">Super Admin Panel</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <span id="user-label" style="color:var(--muted);font-size:0.9rem"></span>
+        <button class="btn btn-ghost btn-sm" id="btn-logout">Dil</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="stats" id="stats"></div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="klientet">Klientët</button>
+        <button class="tab" data-tab="licensat">Liçensat</button>
+        <button class="tab" data-tab="shto">+ Shto</button>
+      </div>
+
+      <div id="panel-klientet" class="panel-section">
+        <div class="card">
+          <div class="card-title">Të gjithë klientët</div>
+          <div class="overflow-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>Emri</th><th>Tipi</th><th>Telefoni</th><th>Email</th><th>Adresa</th><th>Liçensa</th><th>Regjistruar</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-clients"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-licensat" class="panel-section hidden">
+        <div class="card">
+          <div class="card-title">Të gjitha liçensat</div>
+          <div class="overflow-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>Klienti</th><th>Çelësi</th><th>Pajisja</th><th>Statusi</th><th>Nga</th><th>Deri</th><th>Veprime</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-licenses"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-shto" class="panel-section hidden">
+        <div class="card">
+          <div class="card-title">Shto klient të ri</div>
+          <div id="msg-client" class="alert hidden"></div>
+          <form id="form-client">
+            <div class="form-row">
+              <div>
+                <label>Emri *</label>
+                <input type="text" id="c-emri" required placeholder="p.sh. Restorant Drita">
+              </div>
+              <div>
+                <label>Tipi</label>
+                <select id="c-tipi">
+                  <option value="restorant">Restorant</option>
+                  <option value="kafene">Kafene</option>
+                  <option value="tjeter">Tjetër</option>
+                </select>
+              </div>
+              <div>
+                <label>Telefoni</label>
+                <input type="text" id="c-telefoni" placeholder="+383 ...">
+              </div>
+              <div>
+                <label>Email</label>
+                <input type="email" id="c-email" placeholder="info@...">
+              </div>
+            </div>
+            <label>Adresa</label>
+            <input type="text" id="c-adresa" placeholder="Rruga, qyteti">
+            <button type="submit" class="btn btn-primary">Ruaj klientin</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Krijo liçencë të re</div>
+          <div id="msg-license" class="alert hidden"></div>
+          <form id="form-license">
+            <div class="form-row">
+              <div>
+                <label>Klienti *</label>
+                <select id="l-client" required></select>
+              </div>
+              <div>
+                <label>Çelësi</label>
+                <div style="display:flex;gap:0.5rem">
+                  <input type="text" id="l-celesi" class="mono" placeholder="Auto-gjenerohet">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btn-gen-key" style="margin-bottom:0.75rem;white-space:nowrap">Gjenero</button>
+                </div>
+              </div>
+              <div>
+                <label>Muaj vlefshmërie</label>
+                <input type="number" id="l-muaj" value="12" min="1" max="120">
+              </div>
+              <div>
+                <label>ID pajisje (opsionale)</label>
+                <input type="text" id="l-device" placeholder="Lidhet automatikisht nga POS">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Krijo liçencën</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/panel.js"></script>
+</body>
+</html>
