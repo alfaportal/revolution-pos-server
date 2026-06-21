@@ -225,6 +225,11 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .modal-actions .btn { margin-bottom: 0; }
 
 td.actions { white-space: nowrap; }
+td.kds-link-cell {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+td.kds-link-cell .btn { margin-top: 0.25rem; }
 
 .overflow-x { overflow-x: auto; }
 

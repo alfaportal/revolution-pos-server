@@ -90,10 +90,10 @@ Content-Type: application/json
 
 ### Kuzhina (KDS)
 
-- Faqe: `/kitchen/:kitchen_slug?k=KITCHEN_KEY` (pa login)
-- API: `GET /api/kds/:slug/orders?k=...` — porositë me status `ordered`
-- API: `POST /api/kds/:slug/orders/:id/ready?k=...` — shëno «Gati»
-- Linku gjenerohet nga Super Admin → Ndrysho klientin
+- Faqe: `/kitchen/[client_id]` (pa login — ID nga Super Admin)
+- API: `GET /api/kds/:client_id/orders` — porositë me status `ordered`
+- API: `POST /api/kds/:client_id/orders/:id/ready` — shëno «Gati»
+- Porosia hiqet nga KDS kur statusi bëhet `ready` ose `closed` (nga POS)
 
 ### Auth
 

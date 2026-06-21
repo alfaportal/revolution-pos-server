@@ -7,13 +7,9 @@ const {
 
 const router = express.Router();
 
-function kitchenKey(req) {
-  return req.query.k || req.query.key || "";
-}
-
-router.get("/:slug/orders", async (req, res) => {
+router.get("/:clientId/orders", async (req, res) => {
   try {
-    const client = await getClientForKitchen(req.params.slug, kitchenKey(req));
+    const client = await getClientForKitchen(req.params.clientId);
     const orders = await listKitchenOrders(client.id);
     res.json({
       ok: true,
@@ -21,13 +17,13 @@ router.get("/:slug/orders", async (req, res) => {
       orders,
     });
   } catch (e) {
-    res.status(403).json({ ok: false, gabim: e.message });
+    res.status(404).json({ ok: false, gabim: e.message });
   }
 });
 
-router.post("/:slug/orders/:orderId/ready", async (req, res) => {
+router.post("/:clientId/orders/:orderId/ready", async (req, res) => {
   try {
-    const client = await getClientForKitchen(req.params.slug, kitchenKey(req));
+    const client = await getClientForKitchen(req.params.clientId);
     const order = await markKitchenOrderReady(client.id, req.params.orderId);
     res.json({ ok: true, order });
   } catch (e) {

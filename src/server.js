@@ -68,7 +68,7 @@ app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
 });
 
-app.get("/kitchen/:slug", (_req, res) => {
+app.get("/kitchen/:clientId", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
@@ -108,7 +108,7 @@ async function start() {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: /panel`);
     console.log(`  🏪 Pronarët:    /owner/login`);
-    console.log(`  🍳 Kuzhina KDS: /kitchen/:slug?k=...`);
+    console.log(`  🍳 Kuzhina KDS: /kitchen/:client_id`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);

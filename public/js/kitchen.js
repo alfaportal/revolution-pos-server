@@ -1,8 +1,6 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "kitchen" ? parts[1] : "";
-  const key = new URLSearchParams(window.location.search).get("k") ||
-    new URLSearchParams(window.location.search).get("key") || "";
+  const clientId = parts[0] === "kitchen" ? parts[1] : "";
 
   const titleEl = document.getElementById("kitchen-title");
   const subEl = document.getElementById("kitchen-sub");
@@ -13,7 +11,6 @@
   const syncEl = document.getElementById("last-sync");
 
   let knownIds = new Set();
-  let clientName = "";
 
   function showError(msg) {
     errorEl.textContent = msg;
@@ -68,7 +65,7 @@
           </div>
           <div class="ticket-waiter">👤 ${escapeHtml(o.waiter_name || "—")}</div>
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
-          <button type="button" class="btn-ready" data-ready="${o.id}">✓ Gati</button>
+          <button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>
         </article>`;
     }).join("");
 
@@ -89,22 +86,21 @@
   }
 
   async function fetchOrders() {
-    if (!slug || !key) {
-      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/slug?k=çelësi");
+    if (!clientId) {
+      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[client_id]");
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders?k=${encodeURIComponent(key)}`);
+      const res = await fetch(`/api/kds/${encodeURIComponent(clientId)}/orders`);
       const data = await res.json();
       if (!res.ok || !data.ok) {
         showError(data.gabim || "Nuk u ngarkuan porositë.");
         return;
       }
       if (data.client_name) {
-        clientName = data.client_name;
-        titleEl.textContent = clientName;
+        titleEl.textContent = data.client_name;
         subEl.textContent = "Porositë e reja nga POS";
-        document.title = `Kuzhina — ${clientName}`;
+        document.title = `Kuzhina — ${data.client_name}`;
       }
       renderOrders(data.orders || []);
     } catch (e) {
@@ -117,14 +113,14 @@
     btn.textContent = "Duke u përpunuar...";
     try {
       const res = await fetch(
-        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/ready?k=${encodeURIComponent(key)}`,
+        `/api/kds/${encodeURIComponent(clientId)}/orders/${encodeURIComponent(orderId)}/ready`,
         { method: "POST" },
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
         alert(data.gabim || "Nuk u shënua si gati.");
         btn.disabled = false;
-        btn.textContent = "✓ Gati";
+        btn.textContent = "Gati ✅";
         return;
       }
       const card = gridEl.querySelector(`[data-id="${orderId}"]`);
@@ -136,7 +132,7 @@
     } catch (e) {
       alert(e.message || "Gabim.");
       btn.disabled = false;
-      btn.textContent = "✓ Gati";
+      btn.textContent = "Gati ✅";
     }
   }
 

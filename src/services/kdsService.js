@@ -1,48 +1,14 @@
+const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
-const { normalizeItems } = require("./salesService");
-const { slugify, randomKitchenKey } = require("../lib/kitchen");
 
-async function ensureClientKitchenFields(client) {
-  if (!client) return null;
-  if (client.kitchen_slug && client.kitchen_key) return client;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  const db = getSupabase();
-  let slug = slugify(client.emri);
-  const { data: taken } = await db.from("clients").select("id").eq("kitchen_slug", slug);
-  if (taken?.length && taken[0].id !== client.id) {
-    slug = `${slug}-${String(client.id).slice(0, 6)}`;
-  }
-
-  const patch = {
-    kitchen_slug: client.kitchen_slug || slug,
-    kitchen_key: client.kitchen_key || randomKitchenKey(),
-  };
-
-  const { data, error } = await db
-    .from("clients")
-    .update(patch)
-    .eq("id", client.id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-async function getClientForKitchen(slug, key) {
-  const s = String(slug || "").trim().toLowerCase();
-  const k = String(key || "").trim();
-  if (!s || !k) throw new Error("Mungon slug ose çelësi i kuzhinës.");
-
-  const db = getSupabase();
-  let { data, error } = await db.from("clients").select("*").eq("kitchen_slug", s).maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error("Kuzhina nuk u gjet.");
-  if (!data.kitchen_key || !data.kitchen_slug) {
-    data = await ensureClientKitchenFields(data);
-  }
-  if (data.kitchen_key !== k) throw new Error("Çelësi i kuzhinës është i gabuar.");
-
-  return data;
+async function getClientForKitchen(clientId) {
+  const id = String(clientId || "").trim();
+  if (!UUID_RE.test(id)) throw new Error("ID klienti nuk është i vlefshëm.");
+  const client = await getClientById(id);
+  if (!client) throw new Error("Klienti nuk u gjet.");
+  return client;
 }
 
 async function listKitchenOrders(clientId) {
@@ -82,7 +48,6 @@ async function markKitchenOrderReady(clientId, orderId) {
 }
 
 module.exports = {
-  ensureClientKitchenFields,
   getClientForKitchen,
   listKitchenOrders,
   markKitchenOrderReady,
