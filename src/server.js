@@ -19,6 +19,8 @@ const salesRoutes = require("./routes/sales");
 const adminRoutes = require("./routes/admin");
 const ownerRoutes = require("./routes/owner");
 const kdsRoutes = require("./routes/kds");
+const waiterRoutes = require("./routes/waiter");
+const posRoutes = require("./routes/pos");
 const { ensureSuperAdmin } = require("./services/licenseService");
 
 const app = express();
@@ -50,9 +52,11 @@ app.get("/health/db", async (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/v1/license", licenseRoutes);
 app.use("/api/v1/sales", salesRoutes);
+app.use("/api/v1/pos", posRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
+app.use("/api/waiter", waiterRoutes);
 
 app.use(express.static(path.join(__dirname, "../public")));
 
@@ -70,6 +74,10 @@ app.get("/owner/panel", (_req, res) => {
 
 app.get("/kitchen/:clientId", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
+});
+
+app.get("/waiter/:clientId", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/waiter.html"));
 });
 
 app.get("/", (_req, res) => {
@@ -108,7 +116,9 @@ async function start() {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: /panel`);
     console.log(`  🏪 Pronarët:    /owner/login`);
-    console.log(`  🍳 Kuzhina KDS: /kitchen/:client_id`);
+    console.log(`  🍳 Kuzhina KDS:  /kitchen/:client_id`);
+    console.log(`  🧑‍🍳 Kamarieri:   /waiter/:client_id`);
+    console.log(`  📋 POS catalog:  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);

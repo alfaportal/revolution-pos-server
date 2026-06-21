@@ -85,6 +85,41 @@ CREATE INDEX IF NOT EXISTS idx_sales_client_closed ON sales_orders (client_id, c
 CREATE INDEX IF NOT EXISTS idx_sales_kitchen_queue
   ON sales_orders (client_id, status, ordered_at DESC NULLS LAST);
 
+-- Katalog POS (menu, tavolina, stafi) — sync nga Electron
+CREATE TABLE IF NOT EXISTS pos_settings (
+  client_id         UUID PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+  restaurant_name   TEXT DEFAULT '',
+  table_count       INTEGER NOT NULL DEFAULT 10,
+  synced_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS pos_categories (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id   UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (client_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS pos_menu_items (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id   UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  local_id    INTEGER NOT NULL DEFAULT 0,
+  name        TEXT NOT NULL,
+  category    TEXT NOT NULL DEFAULT '',
+  price       NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  active      BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE (client_id, local_id)
+);
+
+CREATE TABLE IF NOT EXISTS pos_staff (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id   UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  active      BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE (client_id, name)
+);
+
 -- Përditëso updated_at te licenses
 CREATE OR REPLACE FUNCTION set_licenses_updated_at()
 RETURNS TRIGGER AS $$

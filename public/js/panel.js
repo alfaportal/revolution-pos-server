@@ -152,8 +152,11 @@ function kitchenLink(clientId) {
   return `${window.location.origin}/kitchen/${clientId}`;
 }
 
-async function copyKitchenLink(clientId, btn) {
-  const url = kitchenLink(clientId);
+function waiterLink(clientId) {
+  return `${window.location.origin}/waiter/${clientId}`;
+}
+
+async function copyLink(url, btn) {
   try {
     await navigator.clipboard.writeText(url);
     const prev = btn.textContent;
@@ -162,6 +165,14 @@ async function copyKitchenLink(clientId, btn) {
   } catch {
     prompt("Kopjoni linkun:", url);
   }
+}
+
+async function copyKitchenLink(clientId, btn) {
+  await copyLink(kitchenLink(clientId), btn);
+}
+
+async function copyWaiterLink(clientId, btn) {
+  await copyLink(waiterLink(clientId), btn);
 }
 
 function openEditLicense(id) {
@@ -275,18 +286,29 @@ async function loadClients() {
         <td>${c.licenses?.[0]?.count ?? 0}</td>
         <td>${fmtDate(c.created_at)}</td>
         <td class="kds-link-cell">
-          <a href="/kitchen/${esc(c.id)}" target="_blank" rel="noopener" class="mono" style="font-size:0.72rem">/kitchen/${esc(c.id.slice(0, 8))}…</a>
-          <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kopjo linkun</button>
+          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start">
+            <a href="/waiter/${esc(c.id)}" target="_blank" rel="noopener" class="mono" style="font-size:0.7rem">Kamarieri</a>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kopjo</button>
+          </div>
+        </td>
+        <td class="kds-link-cell">
+          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start">
+            <a href="/kitchen/${esc(c.id)}" target="_blank" rel="noopener" class="mono" style="font-size:0.7rem">Kuzhina</a>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kopjo</button>
+          </div>
         </td>
         <td class="actions">
           <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
       </tr>`).join("")
-    : '<tr><td colspan="9" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+    : '<tr><td colspan="10" style="color:var(--muted)">Nuk ka klientë</td></tr>';
   bindTableActions(tbl);
   tbl.querySelectorAll("[data-copy-kitchen]").forEach(btn => {
     btn.addEventListener("click", () => copyKitchenLink(btn.dataset.copyKitchen, btn));
+  });
+  tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
+    btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));
   });
   return clients;
 }

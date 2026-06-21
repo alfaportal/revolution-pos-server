@@ -90,10 +90,30 @@ Content-Type: application/json
 
 ### Kuzhina (KDS)
 
-- Faqe: `/kitchen/[client_id]` (pa login — ID nga Super Admin)
+- Faqe: `/kitchen/[client_id]` (pa login)
 - API: `GET /api/kds/:client_id/orders` — porositë me status `ordered`
-- API: `POST /api/kds/:client_id/orders/:id/ready` — shëno «Gati»
-- Porosia hiqet nga KDS kur statusi bëhet `ready` ose `closed` (nga POS)
+- API: `POST /api/kds/:client_id/orders/:id/ready` — shëno «Gati ✅»
+
+### Kamarieri (web)
+
+- Faqe: `/waiter/[client_id]` — login me emër (pa fjalëkalim)
+- API: `GET /api/waiter/:client_id/bootstrap` — menu, tavolina, stafi
+- API: `POST /api/waiter/:client_id/orders` — dërgon te kuzhina (`status: ordered`)
+
+### Sync katalog nga POS
+
+```http
+POST /api/v1/pos/catalog/sync
+{
+  "celesi": "...",
+  "device_id": "...",
+  "restaurant_name": "Babylon",
+  "table_count": 10,
+  "categories": [{"name": "Pije", "sort_order": 0}],
+  "menu_items": [{"local_id": 1, "name": "Kafe", "category": "Pije", "price": 1.0, "active": true}],
+  "staff": [{"name": "Arben", "active": true}]
+}
+```
 
 ### Auth
 

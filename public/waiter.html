@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Kamarieri</title>
+  <link rel="stylesheet" href="/css/waiter.css">
+</head>
+<body>
+  <div id="screen-login" class="screen active">
+    <div class="waiter-header">
+      <h1 id="login-title">Kamarieri</h1>
+      <div class="sub" id="login-sub">Hyni me emrin tuaj</div>
+    </div>
+    <div class="waiter-main">
+      <div class="login-box">
+        <div id="login-err" class="err hidden"></div>
+        <label for="waiter-name">Emri i kamarierit</label>
+        <input id="waiter-name" type="text" placeholder="p.sh. Arben" autocomplete="name" list="staff-list">
+        <datalist id="staff-list"></datalist>
+        <button type="button" class="btn btn-primary" id="btn-login">Vazhdo</button>
+        <p class="hint" id="sync-hint"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-tables" class="screen">
+    <div class="waiter-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem">
+        <div>
+          <h1 id="tables-title">Tavolinat</h1>
+          <div class="sub" id="tables-waiter"></div>
+        </div>
+        <button type="button" class="btn btn-ghost" id="btn-logout">Dil</button>
+      </div>
+    </div>
+    <div class="waiter-main">
+      <div id="tables-err" class="err hidden"></div>
+      <div id="tables-grid" class="tables-grid"></div>
+    </div>
+  </div>
+
+  <div id="screen-order" class="screen">
+    <div class="waiter-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
+        <button type="button" class="btn btn-ghost" id="btn-back">← Tavolinat</button>
+        <h1 id="order-title" style="margin:0;font-size:1.1rem">T1</h1>
+        <span style="width:4rem"></span>
+      </div>
+    </div>
+    <div class="waiter-main" style="padding-bottom:0">
+      <div id="order-err" class="err hidden"></div>
+      <div class="order-layout">
+        <div id="cat-tabs" class="cat-tabs"></div>
+        <div id="menu-grid" class="menu-grid"></div>
+      </div>
+    </div>
+    <div class="cart-bar">
+      <div id="cart-lines" class="cart-lines"></div>
+      <div class="cart-total">
+        <span>Totali</span>
+        <span id="cart-total">0.00 €</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-send">Dërgo porosinë</button>
+    </div>
+  </div>
+
+  <script src="/js/waiter.js"></script>
+</body>
+</html>
