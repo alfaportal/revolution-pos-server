@@ -6,13 +6,23 @@ const {
   listClients,
   listLicenses,
   createClient,
+  updateClient,
+  deleteClient,
   createLicense,
+  updateLicense,
+  deleteLicense,
   updateLicenseStatus,
   resetLicenseDevice,
   getDashboardStats,
   generateLicenseKey,
 } = require("../services/licenseService");
-const { listOwners, createOwner, setOwnerActive } = require("../services/userService");
+const {
+  listOwners,
+  createOwner,
+  updateOwner,
+  deleteOwner,
+  setOwnerActive,
+} = require("../services/userService");
 
 const router = express.Router();
 
@@ -38,6 +48,26 @@ router.post("/clients", asyncHandler(async (req, res) => {
   }
 }));
 
+router.patch("/clients/:id", asyncHandler(async (req, res) => {
+  try {
+    const client = await updateClient(req.params.id, req.body);
+    res.json({ ok: true, client });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /clients", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.delete("/clients/:id", asyncHandler(async (req, res) => {
+  try {
+    await deleteClient(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    const msg = logRouteError("admin:DELETE /clients", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
 router.get("/licenses", asyncHandler(async (_req, res) => {
   res.json({ ok: true, licenses: await listLicenses() });
 }));
@@ -55,6 +85,26 @@ router.post("/licenses", asyncHandler(async (req, res) => {
 router.get("/licenses/generate-key", (_req, res) => {
   res.json({ ok: true, celesi: generateLicenseKey() });
 });
+
+router.patch("/licenses/:id", asyncHandler(async (req, res) => {
+  try {
+    const license = await updateLicense(req.params.id, req.body);
+    res.json({ ok: true, license });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /licenses", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.delete("/licenses/:id", asyncHandler(async (req, res) => {
+  try {
+    await deleteLicense(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    const msg = logRouteError("admin:DELETE /licenses", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
 
 router.patch("/licenses/:id/status", asyncHandler(async (req, res) => {
   const { statusi } = req.body;
@@ -87,7 +137,26 @@ router.post("/owners", asyncHandler(async (req, res) => {
   }
 }));
 
-/** Alias: /api/admin/users → i njëjti si /owners */
+router.patch("/owners/:id", asyncHandler(async (req, res) => {
+  try {
+    const owner = await updateOwner(req.params.id, req.body);
+    res.json({ ok: true, owner });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /owners", e, { body: { ...req.body, password: "[redacted]" } });
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.delete("/owners/:id", asyncHandler(async (req, res) => {
+  try {
+    await deleteOwner(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    const msg = logRouteError("admin:DELETE /owners", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
 router.post("/users", asyncHandler(async (req, res) => {
   console.log("[admin] POST /users (alias → owners)");
   try {

@@ -182,6 +182,50 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 
 .hidden { display: none !important; }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.modal-actions .btn { margin-bottom: 0; }
+
+td.actions { white-space: nowrap; }
+
 .overflow-x { overflow-x: auto; }
 
 @media (max-width: 640px) {

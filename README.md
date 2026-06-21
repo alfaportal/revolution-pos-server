@@ -97,11 +97,14 @@ Content-Type: application/json
 
 - `GET /api/admin/stats`
 - `GET|POST /api/admin/clients`
+- `PATCH|DELETE /api/admin/clients/:id`
 - `GET|POST /api/admin/licenses`
+- `PATCH|DELETE /api/admin/licenses/:id`
 - `PATCH /api/admin/licenses/:id/status`
 - `POST /api/admin/licenses/:id/reset-device`
 - `GET /api/admin/owners` — lista e pronarëve
 - `POST /api/admin/owners` — krijo pronar `{ client_id, emri, email, password }`
+- `PATCH|DELETE /api/admin/owners/:id` — ndrysho/fshi pronar
 - `POST /api/admin/users` — alias i `POST /owners`
 - `PATCH /api/admin/owners/:id/status` — `{ aktiv: true|false }`
 

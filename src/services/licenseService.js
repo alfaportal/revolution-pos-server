@@ -138,6 +138,36 @@ async function createClient(body) {
   return data;
 }
 
+async function updateClient(id, body) {
+  const db = getSupabase();
+  const patch = {};
+  if (body.emri != null) {
+    patch.emri = String(body.emri).trim();
+    if (!patch.emri) throw new Error("Emri i klientit është i detyrueshëm.");
+  }
+  if (body.tipi != null) {
+    const allowed = ["restorant", "kafene", "tjeter"];
+    if (!allowed.includes(body.tipi)) throw new Error(`Tipi i pavlefshëm: ${body.tipi}`);
+    patch.tipi = body.tipi;
+  }
+  if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
+  if (body.email != null) patch.email = String(body.email).trim();
+  if (body.adresa != null) patch.adresa = String(body.adresa).trim();
+
+  const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  if (!data) throw new Error("Klienti nuk u gjet.");
+  return data;
+}
+
+async function deleteClient(id) {
+  const db = getSupabase();
+  await db.from("users").delete().eq("client_id", id).eq("roli", "client_admin");
+  const { error } = await db.from("clients").delete().eq("id", id);
+  if (error) throw error;
+  return { ok: true };
+}
+
 async function createLicense(body) {
   const db = getSupabase();
   const months = Number(body.muaj) || 12;
@@ -159,6 +189,30 @@ async function createLicense(body) {
   const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
   if (error) throw error;
   return data;
+}
+
+async function updateLicense(id, body) {
+  const db = getSupabase();
+  const patch = {};
+  if (body.data_skadimit != null) patch.data_skadimit = String(body.data_skadimit).slice(0, 10);
+  if (body.statusi != null) {
+    const allowed = ["aktive", "skaduar", "revokuar", "pezulluar"];
+    if (!allowed.includes(body.statusi)) throw new Error("Status i pavlefshëm.");
+    patch.statusi = body.statusi;
+  }
+  if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
+
+  const { data, error } = await db.from("licenses").update(patch).eq("id", id).select("*, clients(emri, tipi)").single();
+  if (error) throw error;
+  if (!data) throw new Error("Liçenca nuk u gjet.");
+  return data;
+}
+
+async function deleteLicense(id) {
+  const db = getSupabase();
+  const { error } = await db.from("licenses").delete().eq("id", id);
+  if (error) throw error;
+  return { ok: true };
 }
 
 async function updateLicenseStatus(id, statusi) {
@@ -249,7 +303,11 @@ module.exports = {
   listClients,
   listLicenses,
   createClient,
+  updateClient,
+  deleteClient,
   createLicense,
+  updateLicense,
+  deleteLicense,
   updateLicenseStatus,
   resetLicenseDevice,
   findUserByEmail,

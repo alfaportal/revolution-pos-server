@@ -53,6 +53,183 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("sq-AL");
 }
 
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
+}
+
+let clientsCache = [];
+let licensesCache = [];
+let ownersCache = [];
+let modalState = null;
+
+function openModal(title, fieldsHtml, onSave) {
+  modalState = { onSave };
+  document.getElementById("modal-title").textContent = title;
+  document.getElementById("modal-form").innerHTML = fieldsHtml;
+  document.getElementById("modal-error").classList.add("hidden");
+  document.getElementById("modal-edit").classList.remove("hidden");
+}
+
+function closeModal() {
+  modalState = null;
+  document.getElementById("modal-edit").classList.add("hidden");
+  document.getElementById("modal-form").innerHTML = "";
+}
+
+document.getElementById("modal-cancel").addEventListener("click", closeModal);
+document.getElementById("modal-backdrop").addEventListener("click", closeModal);
+
+document.getElementById("modal-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!modalState) return;
+  const errEl = document.getElementById("modal-error");
+  const btn = document.getElementById("modal-save");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  try {
+    await modalState.onSave(new FormData(e.target));
+    closeModal();
+    await safeRefresh();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function confirmDelete(message, fn) {
+  if (!confirm(message)) return;
+  try {
+    await fn();
+    await safeRefresh();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function actionBtns(editId, deleteId, editLabel = "Ndrysho") {
+  return `<button class="btn btn-ghost btn-sm" data-edit="${editId}">${editLabel}</button>
+    <button class="btn btn-danger btn-sm" data-del="${deleteId}">Fshi</button>`;
+}
+
+function openEditClient(id) {
+  const c = clientsCache.find(x => x.id === id);
+  if (!c) return;
+  openModal("Ndrysho klientin", `
+    <label>Emri *</label>
+    <input name="emri" required value="${esc(c.emri)}">
+    <label>Tipi</label>
+    <select name="tipi">
+      <option value="restorant" ${c.tipi === "restorant" ? "selected" : ""}>Restorant</option>
+      <option value="kafene" ${c.tipi === "kafene" ? "selected" : ""}>Kafene</option>
+      <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
+    </select>
+    <label>Telefoni</label>
+    <input name="telefoni" value="${esc(c.telefoni)}">
+    <label>Email</label>
+    <input type="email" name="email" value="${esc(c.email)}">
+    <label>Adresa</label>
+    <input name="adresa" value="${esc(c.adresa)}">
+  `, async fd => {
+    await api(`/api/admin/clients/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        emri: fd.get("emri"),
+        tipi: fd.get("tipi"),
+        telefoni: fd.get("telefoni"),
+        email: fd.get("email"),
+        adresa: fd.get("adresa"),
+      }),
+    });
+  });
+}
+
+function openEditLicense(id) {
+  const l = licensesCache.find(x => x.id === id);
+  if (!l) return;
+  openModal("Ndrysho liçencën", `
+    <p class="mono" style="margin-bottom:0.75rem;color:var(--muted)">${esc(l.celesi)}</p>
+    <label>Data e skadimit</label>
+    <input type="date" name="data_skadimit" required value="${esc(l.data_skadimit)}">
+    <label>Statusi</label>
+    <select name="statusi">
+      <option value="aktive" ${l.statusi === "aktive" ? "selected" : ""}>aktive</option>
+      <option value="skaduar" ${l.statusi === "skaduar" ? "selected" : ""}>skaduar</option>
+      <option value="revokuar" ${l.statusi === "revokuar" ? "selected" : ""}>revokuar</option>
+      <option value="pezulluar" ${l.statusi === "pezulluar" ? "selected" : ""}>pezulluar</option>
+    </select>
+  `, async fd => {
+    await api(`/api/admin/licenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        data_skadimit: fd.get("data_skadimit"),
+        statusi: fd.get("statusi"),
+      }),
+    });
+  });
+}
+
+function openEditOwner(id) {
+  const o = ownersCache.find(x => x.id === id);
+  if (!o) return;
+  openModal("Ndrysho pronarin", `
+    <label>Emri *</label>
+    <input name="emri" required value="${esc(o.emri)}">
+    <label>Email *</label>
+    <input type="email" name="email" required value="${esc(o.email)}">
+    <label>Fjalëkalimi i ri (lëreni bosh për të mos ndryshuar)</label>
+    <input type="password" name="password" minlength="6" placeholder="••••••••" autocomplete="new-password">
+    <label>Statusi</label>
+    <select name="aktiv">
+      <option value="true" ${o.aktiv !== false ? "selected" : ""}>aktiv</option>
+      <option value="false" ${o.aktiv === false ? "selected" : ""}>çaktiv</option>
+    </select>
+  `, async fd => {
+    const body = {
+      emri: fd.get("emri"),
+      email: fd.get("email"),
+      aktiv: fd.get("aktiv") === "true",
+    };
+    const pw = fd.get("password");
+    if (pw) body.password = pw;
+    await api(`/api/admin/owners/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  });
+}
+
+function bindTableActions(scope) {
+  scope.querySelectorAll("[data-edit-client]").forEach(btn => {
+    btn.onclick = () => openEditClient(btn.dataset.editClient);
+  });
+  scope.querySelectorAll("[data-edit-license]").forEach(btn => {
+    btn.onclick = () => openEditLicense(btn.dataset.editLicense);
+  });
+  scope.querySelectorAll("[data-edit-owner]").forEach(btn => {
+    btn.onclick = () => openEditOwner(btn.dataset.editOwner);
+  });
+  scope.querySelectorAll("[data-del-client]").forEach(btn => {
+    btn.onclick = () => confirmDelete(
+      "Fshi këtë klient? Liçensat dhe pronarët e lidhur do të fshihen gjithashtu.",
+      () => api(`/api/admin/clients/${btn.dataset.delClient}`, { method: "DELETE" }),
+    );
+  });
+  scope.querySelectorAll("[data-del-license]").forEach(btn => {
+    btn.onclick = () => confirmDelete(
+      "Fshi këtë liçencë? Ky veprim nuk kthehet mbrapsht.",
+      () => api(`/api/admin/licenses/${btn.dataset.delLicense}`, { method: "DELETE" }),
+    );
+  });
+  scope.querySelectorAll("[data-del-owner]").forEach(btn => {
+    btn.onclick = () => confirmDelete(
+      "Fshi llogarinë e këtij pronari?",
+      () => api(`/api/admin/owners/${btn.dataset.delOwner}`, { method: "DELETE" }),
+    );
+  });
+}
+
 async function loadStats() {
   const s = await api("/api/admin/stats");
   document.getElementById("stats").innerHTML = `
@@ -65,44 +242,55 @@ async function loadStats() {
 
 async function loadClients() {
   const { clients } = await api("/api/admin/clients");
+  clientsCache = clients;
   const sel = document.getElementById("l-client");
   const oSel = document.getElementById("o-client");
   const opts = clients.map(c => `<option value="${c.id}">${c.emri} (${c.tipi})</option>`).join("");
   sel.innerHTML = opts;
   if (oSel) oSel.innerHTML = opts;
-  document.getElementById("tbl-clients").innerHTML = clients.length
+  const tbl = document.getElementById("tbl-clients");
+  tbl.innerHTML = clients.length
     ? clients.map(c => `<tr>
-        <td><strong>${c.emri}</strong></td>
-        <td>${c.tipi}</td>
-        <td>${c.telefoni || "—"}</td>
-        <td>${c.email || "—"}</td>
-        <td>${c.adresa || "—"}</td>
+        <td><strong>${esc(c.emri)}</strong></td>
+        <td>${esc(c.tipi)}</td>
+        <td>${esc(c.telefoni) || "—"}</td>
+        <td>${esc(c.email) || "—"}</td>
+        <td>${esc(c.adresa) || "—"}</td>
         <td>${c.licenses?.[0]?.count ?? 0}</td>
         <td>${fmtDate(c.created_at)}</td>
+        <td class="actions">
+          <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
+          <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
+        </td>
       </tr>`).join("")
-    : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+    : '<tr><td colspan="8" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+  bindTableActions(tbl);
   return clients;
 }
 
 async function loadLicenses() {
   const { licenses } = await api("/api/admin/licenses");
-  document.getElementById("tbl-licenses").innerHTML = licenses.length
+  licensesCache = licenses;
+  const tbl = document.getElementById("tbl-licenses");
+  tbl.innerHTML = licenses.length
     ? licenses.map(l => `<tr>
-        <td>${l.clients?.emri || "—"} <small style="color:var(--muted)">(${l.clients?.tipi || ""})</small></td>
-        <td class="mono">${l.celesi}</td>
-        <td class="mono">${l.device_id || "—"}</td>
+        <td>${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
+        <td class="mono">${esc(l.celesi)}</td>
+        <td class="mono">${esc(l.device_id) || "—"}</td>
         <td>${badge(l.statusi)}</td>
         <td>${l.data_fillimit}</td>
         <td>${l.data_skadimit}</td>
-        <td style="white-space:nowrap">
+        <td class="actions" style="white-space:nowrap">
+          <button class="btn btn-ghost btn-sm" data-edit-license="${l.id}">Ndrysho</button>
+          <button class="btn btn-danger btn-sm" data-del-license="${l.id}">Fshi</button>
           ${l.statusi !== "aktive" ? `<button class="btn btn-ghost btn-sm" data-act="aktive" data-id="${l.id}">Aktivizo</button>` : ""}
-          ${l.statusi !== "revokuar" ? `<button class="btn btn-danger btn-sm" data-act="revokuar" data-id="${l.id}">Revoko</button>` : ""}
+          ${l.statusi !== "revokuar" ? `<button class="btn btn-ghost btn-sm" data-act="revokuar" data-id="${l.id}">Revoko</button>` : ""}
           <button class="btn btn-ghost btn-sm" data-reset="${l.id}">Reset pajisje</button>
         </td>
       </tr>`).join("")
     : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
 
-  document.querySelectorAll("[data-act]").forEach(btn => {
+  tbl.querySelectorAll("[data-act]").forEach(btn => {
     btn.onclick = async () => {
       await api(`/api/admin/licenses/${btn.dataset.id}/status`, {
         method: "PATCH",
@@ -111,50 +299,34 @@ async function loadLicenses() {
       await refreshAll();
     };
   });
-  document.querySelectorAll("[data-reset]").forEach(btn => {
+  tbl.querySelectorAll("[data-reset]").forEach(btn => {
     btn.onclick = async () => {
       if (!confirm("Hiq lidhjen me pajisjen aktuale?")) return;
       await api(`/api/admin/licenses/${btn.dataset.id}/reset-device`, { method: "POST" });
       await refreshAll();
     };
   });
+  bindTableActions(tbl);
 }
 
 async function loadOwners() {
   const { owners } = await api("/api/admin/owners");
-  document.getElementById("tbl-owners").innerHTML = owners.length
+  ownersCache = owners;
+  const tbl = document.getElementById("tbl-owners");
+  tbl.innerHTML = owners.length
     ? owners.map(o => `<tr>
-        <td><strong>${o.emri}</strong></td>
-        <td>${o.email}</td>
-        <td>${o.clients?.emri || "—"} <small style="color:var(--muted)">(${o.clients?.tipi || ""})</small></td>
+        <td><strong>${esc(o.emri)}</strong></td>
+        <td>${esc(o.email)}</td>
+        <td>${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
         <td>${o.aktiv !== false ? '<span class="badge badge-aktive">aktiv</span>' : '<span class="badge badge-revokuar">çaktiv</span>'}</td>
         <td>${fmtDate(o.created_at)}</td>
-        <td>
-          ${o.aktiv !== false
-            ? `<button class="btn btn-danger btn-sm" data-owner-off="${o.id}">Çaktivizo</button>`
-            : `<button class="btn btn-ghost btn-sm" data-owner-on="${o.id}">Aktivizo</button>`}
+        <td class="actions">
+          <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
+          <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
       </tr>`).join("")
     : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka pronarë</td></tr>';
-
-  document.querySelectorAll("[data-owner-off]").forEach(btn => {
-    btn.onclick = async () => {
-      await api(`/api/admin/owners/${btn.dataset.ownerOff}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ aktiv: false }),
-      });
-      await refreshAll();
-    };
-  });
-  document.querySelectorAll("[data-owner-on]").forEach(btn => {
-    btn.onclick = async () => {
-      await api(`/api/admin/owners/${btn.dataset.ownerOn}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ aktiv: true }),
-      });
-      await refreshAll();
-    };
-  });
+  bindTableActions(tbl);
 }
 
 async function refreshAll() {

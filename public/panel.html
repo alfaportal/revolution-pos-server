@@ -51,7 +51,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>Emri</th><th>Tipi</th><th>Telefoni</th><th>Email</th><th>Adresa</th><th>Liçensa</th><th>Regjistruar</th>
+                  <th>Emri</th><th>Tipi</th><th>Telefoni</th><th>Email</th><th>Adresa</th><th>Liçensa</th><th>Regjistruar</th><th>Veprime</th>
                 </tr>
               </thead>
               <tbody id="tbl-clients"></tbody>
@@ -185,6 +185,19 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=3"></script>
+  <div id="modal-edit" class="modal hidden">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-card">
+      <h2 id="modal-title" class="modal-title">Ndrysho</h2>
+      <div id="modal-error" class="alert alert-error hidden"></div>
+      <form id="modal-form"></form>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="modal-cancel">Anulo</button>
+        <button type="submit" form="modal-form" class="btn btn-primary" id="modal-save">Ruaj</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/panel.js?v=4"></script>
 </body>
 </html>
