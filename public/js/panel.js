@@ -287,7 +287,7 @@ async function loadClients() {
         <td>${fmtDate(c.created_at)}</td>
         <td class="kds-link-cell">
           <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start">
-            <a href="/waiter/${esc(c.id)}" target="_blank" rel="noopener" class="mono" style="font-size:0.7rem">Kamarieri</a>
+            <span class="mono" style="font-size:0.7rem">/waiter/${esc(c.id)}</span>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kopjo</button>
           </div>
         </td>

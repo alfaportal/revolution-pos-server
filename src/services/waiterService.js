@@ -17,7 +17,7 @@ async function getActiveTableOrders(clientId) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
-    .select("table_number, waiter_name, status, total, ordered_at")
+    .select("id, table_number, waiter_name, status, total, ordered_at, items_json, local_order_id, device_id")
     .eq("client_id", clientId)
     .in("status", ["ordered", "ready"])
     .order("ordered_at", { ascending: false });
@@ -29,6 +29,27 @@ async function getActiveTableOrders(clientId) {
     byTable.set(n, row);
   }
   return byTable;
+}
+
+async function getLicenseForClient(clientId) {
+  const db = getSupabase();
+  const { data: license } = await db
+    .from("licenses")
+    .select("id, celesi, device_id")
+    .eq("client_id", clientId)
+    .eq("statusi", "aktive")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!license?.celesi) throw new Error("Nuk ka licencë aktive për këtë klient.");
+  return license;
+}
+
+function assertWaiterOnTable(existing, waiterName, tableNumber) {
+  if (existing && existing.waiter_name &&
+      existing.waiter_name.toLowerCase() !== waiterName.toLowerCase()) {
+    throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
+  }
 }
 
 async function getWaiterBootstrap(clientId) {
@@ -54,6 +75,7 @@ async function getWaiterBootstrap(clientId) {
       status: active ? "occupied" : "free",
       waiter_name: active?.waiter_name || null,
       order_total: active ? Number(active.total) : 0,
+      active_items: active ? normalizeItems(active.items_json) : [],
     });
   }
 
@@ -85,60 +107,95 @@ async function submitWaiterOrder(clientId, body) {
   const items = normalizeItems(body.items);
   if (!items.length) throw new Error("Shtoni të paktën një artikull.");
 
-  const db = getSupabase();
-  const { data: staffRow } = await db
-    .from("pos_staff")
-    .select("name")
-    .eq("client_id", clientId)
-    .eq("active", true);
-
-  if (staffRow?.length) {
-    const names = staffRow.map(s => s.name.toLowerCase());
-    if (!names.includes(waiterName.toLowerCase())) {
-      throw new Error("Ky emër nuk është në listën e stafit. Kontrolloni emrin.");
-    }
-  }
-
   const active = await getActiveTableOrders(clientId);
   const existing = active.get(tableNumber);
-  if (existing && existing.waiter_name &&
-      existing.waiter_name.toLowerCase() !== waiterName.toLowerCase()) {
-    throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
-  }
+  assertWaiterOnTable(existing, waiterName, tableNumber);
 
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
-  const localOrderId = `web-${uuidv4()}`;
-
-  const { data: license } = await db
-    .from("licenses")
-    .select("id, celesi, device_id")
-    .eq("client_id", clientId)
-    .eq("statusi", "aktive")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!license?.celesi) {
-    throw new Error("Nuk ka licencë aktive për këtë klient.");
-  }
+  const license = await getLicenseForClient(clientId);
+  const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
 
   const sale = await syncSaleFromPos({
     celesi: license.celesi,
-    device_id: WEB_DEVICE,
+    device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
     waiter_name: waiterName,
     items,
     total,
     status: "ordered",
-    ordered_at: now,
+    ordered_at: existing?.ordered_at || now,
   });
 
   return { ok: true, order: sale };
 }
 
+async function closeWaiterTable(clientId, body) {
+  await assertClient(clientId);
+  const waiterName = String(body.waiter_name || "").trim();
+  if (!waiterName) throw new Error("Shkruani emrin e kamarierit.");
+
+  const tableNumber = Number(body.table_number);
+  if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
+
+  const active = await getActiveTableOrders(clientId);
+  const existing = active.get(tableNumber);
+  assertWaiterOnTable(existing, waiterName, tableNumber);
+
+  const cartItems = normalizeItems(body.items);
+  const items = cartItems.length
+    ? cartItems
+    : normalizeItems(existing?.items_json);
+  if (!items.length) {
+    throw new Error("Nuk ka artikuj për të mbyllur tavolinën.");
+  }
+
+  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const now = new Date().toISOString();
+  const license = await getLicenseForClient(clientId);
+  const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
+  const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
+
+  const sale = await syncSaleFromPos({
+    celesi: license.celesi,
+    device_id: existing?.device_id || WEB_DEVICE,
+    local_order_id: localOrderId,
+    table_number: tableNumber,
+    waiter_name: waiterName,
+    items,
+    total,
+    receipt_number: receiptNumber,
+    status: "closed",
+    ordered_at: existing?.ordered_at || now,
+    closed_at: now,
+  });
+
+  const client = await getClientById(clientId);
+  const db = getSupabase();
+  const { data: settings } = await db
+    .from("pos_settings")
+    .select("restaurant_name")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  return {
+    ok: true,
+    order: sale,
+    receipt: {
+      receipt_number: receiptNumber,
+      restaurant_name: settings?.restaurant_name || client?.emri || "",
+      table_number: tableNumber,
+      waiter_name: waiterName,
+      items,
+      total,
+      closed_at: now,
+    },
+  };
+}
+
 module.exports = {
   getWaiterBootstrap,
   submitWaiterOrder,
+  closeWaiterTable,
 };

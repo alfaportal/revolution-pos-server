@@ -1,5 +1,5 @@
 const express = require("express");
-const { getWaiterBootstrap, submitWaiterOrder } = require("../services/waiterService");
+const { getWaiterBootstrap, submitWaiterOrder, closeWaiterTable } = require("../services/waiterService");
 
 const router = express.Router();
 
@@ -16,6 +16,15 @@ router.post("/:clientId/orders", async (req, res) => {
   try {
     const result = await submitWaiterOrder(req.params.clientId, req.body);
     res.status(201).json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/:clientId/orders/close", async (req, res) => {
+  try {
+    const result = await closeWaiterTable(req.params.clientId, req.body);
+    res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

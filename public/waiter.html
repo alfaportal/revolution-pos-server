@@ -18,7 +18,7 @@
       <div class="login-box">
         <div id="login-err" class="err hidden"></div>
         <label for="waiter-name">Emri i kamarierit</label>
-        <input id="waiter-name" type="text" placeholder="p.sh. Arben" autocomplete="name" list="staff-list">
+        <input id="waiter-name" type="text" placeholder="p.sh. Agron" autocomplete="name" list="staff-list">
         <datalist id="staff-list"></datalist>
         <button type="button" class="btn btn-primary" id="btn-login">Vazhdo</button>
         <p class="hint" id="sync-hint"></p>
@@ -63,7 +63,26 @@
         <span>Totali</span>
         <span id="cart-total">0.00 €</span>
       </div>
-      <button type="button" class="btn btn-primary" id="btn-send">Dërgo porosinë</button>
+      <div class="cart-actions">
+        <button type="button" class="btn btn-primary" id="btn-send">Dërgo porosinë</button>
+        <button type="button" class="btn btn-close" id="btn-close">Mbyll tavolinën + Printo faturën</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="receipt-modal" class="receipt-modal hidden">
+    <div class="receipt-sheet" id="receipt-print">
+      <h2 id="receipt-restaurant"></h2>
+      <p class="receipt-meta" id="receipt-meta"></p>
+      <table class="receipt-table">
+        <tbody id="receipt-items"></tbody>
+      </table>
+      <p class="receipt-total" id="receipt-total"></p>
+      <p class="receipt-thanks">Faleminderit!</p>
+    </div>
+    <div class="receipt-actions no-print">
+      <button type="button" class="btn btn-primary" id="btn-print">Printo</button>
+      <button type="button" class="btn btn-ghost" id="btn-receipt-done">Mbyll</button>
     </div>
   </div>
 

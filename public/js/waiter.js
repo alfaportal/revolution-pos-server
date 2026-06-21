@@ -87,7 +87,17 @@
 
   function openOrder(num) {
     tableNumber = num;
-    cart = [];
+    const table = bootstrap.tables?.find(t => t.number === num);
+    if (table?.active_items?.length &&
+        table.waiter_name?.toLowerCase() === waiterName.toLowerCase()) {
+      cart = table.active_items.map(i => ({
+        name: i.name,
+        price: Number(i.price),
+        quantity: Number(i.quantity),
+      }));
+    } else {
+      cart = [];
+    }
     activeCategory = bootstrap.categories?.[0] || "";
     $("order-title").textContent = `T${num}`;
     renderCategories();
@@ -217,6 +227,73 @@
     showScreen("screen-tables");
   });
 
+  function showReceipt(receipt) {
+    $("receipt-restaurant").textContent = receipt.restaurant_name || "Faturë";
+    $("receipt-meta").innerHTML = [
+      `Fatura: <strong>${escapeHtml(receipt.receipt_number)}</strong>`,
+      `Tavolina: T${receipt.table_number}`,
+      `Kamarieri: ${escapeHtml(receipt.waiter_name)}`,
+      new Date(receipt.closed_at).toLocaleString("sq-AL"),
+    ].join("<br>");
+    $("receipt-items").innerHTML = receipt.items.map(i => `
+      <tr>
+        <td>${i.quantity}× ${escapeHtml(i.name)}</td>
+        <td style="text-align:right">${formatEuro(i.price * i.quantity)}</td>
+      </tr>`).join("");
+    $("receipt-total").textContent = `Totali: ${formatEuro(receipt.total)}`;
+    $("receipt-modal").classList.remove("hidden");
+  }
+
+  function hideReceipt() {
+    $("receipt-modal").classList.add("hidden");
+  }
+
+  $("btn-print").addEventListener("click", () => window.print());
+
+  $("btn-receipt-done").addEventListener("click", async () => {
+    hideReceipt();
+    cart = [];
+    renderCart();
+    await refreshTables();
+    showScreen("screen-tables");
+  });
+
+  $("btn-close").addEventListener("click", async () => {
+    const err = $("order-err");
+    showErr(err, "");
+    const table = bootstrap.tables?.find(t => t.number === tableNumber);
+    const hasOrder = cart.length || table?.active_items?.length;
+    if (!hasOrder) {
+      showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
+      return;
+    }
+    if (!confirm(`Mbyll tavolinën T${tableNumber} dhe printo faturën?`)) return;
+    const btn = $("btn-close");
+    btn.disabled = true;
+    btn.textContent = "Duke mbyllur...";
+    try {
+      const data = await api(`/api/waiter/${encodeURIComponent(clientId)}/orders/close`, {
+        method: "POST",
+        body: JSON.stringify({
+          waiter_name: waiterName,
+          table_number: tableNumber,
+          items: cart.map(c => ({
+            name: c.name,
+            quantity: c.quantity,
+            price: c.price,
+          })),
+        }),
+      });
+      showReceipt(data.receipt);
+      setTimeout(() => window.print(), 400);
+    } catch (e) {
+      showErr(err, e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Mbyll tavolinën + Printo faturën";
+    }
+  });
+
   $("btn-send").addEventListener("click", async () => {
     const err = $("order-err");
     showErr(err, "");
@@ -259,6 +336,10 @@
       const saved = localStorage.getItem(LS_WAITER);
       if (saved) {
         $("waiter-name").value = saved;
+        waiterName = saved;
+        $("tables-waiter").textContent = `Kamarieri: ${saved}`;
+        renderTables();
+        showScreen("screen-tables");
       }
     } catch (e) {
       showErr($("login-err"), e.message);
