@@ -12,11 +12,15 @@ CREATE TABLE IF NOT EXISTS clients (
   email       TEXT DEFAULT '',
   tipi        TEXT NOT NULL DEFAULT 'restorant'
               CHECK (tipi IN ('restorant', 'kafene', 'tjeter')),
+  kitchen_slug TEXT,
+  kitchen_key  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_clients_emri ON clients (emri);
 CREATE INDEX IF NOT EXISTS idx_clients_tipi ON clients (tipi);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_kitchen_slug
+  ON clients (kitchen_slug) WHERE kitchen_slug IS NOT NULL AND kitchen_slug <> '';
 
 -- Liçensat
 CREATE TABLE IF NOT EXISTS licenses (
@@ -66,6 +70,10 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   items_json      JSONB NOT NULL DEFAULT '[]'::jsonb,
   total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
   receipt_number  TEXT DEFAULT '',
+  status          TEXT NOT NULL DEFAULT 'closed'
+                  CHECK (status IN ('ordered', 'ready', 'closed', 'cancelled')),
+  ordered_at      TIMESTAMPTZ,
+  ready_at        TIMESTAMPTZ,
   closed_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (client_id, local_order_id, device_id)
@@ -74,6 +82,8 @@ CREATE TABLE IF NOT EXISTS sales_orders (
 CREATE INDEX IF NOT EXISTS idx_sales_client ON sales_orders (client_id);
 CREATE INDEX IF NOT EXISTS idx_sales_closed ON sales_orders (closed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sales_client_closed ON sales_orders (client_id, closed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_kitchen_queue
+  ON sales_orders (client_id, status, ordered_at DESC NULLS LAST);
 
 -- Përditëso updated_at te licenses
 CREATE OR REPLACE FUNCTION set_licenses_updated_at()

@@ -39,22 +39,56 @@ async function syncSaleFromPos(body) {
   const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
   const items = normalizeItems(rawItems);
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const closedAt = body.closed_at || new Date().toISOString();
+  const now = new Date().toISOString();
+  const incomingStatus = String(body.status || "closed").toLowerCase();
+  const allowed = ["ordered", "ready", "closed", "cancelled"];
+  const status = allowed.includes(incomingStatus) ? incomingStatus : "closed";
+
+  const localOrderId = String(body.local_order_id || body.order_id || Date.now());
+  const db = getSupabase();
+
+  const { data: existing } = await db
+    .from("sales_orders")
+    .select("status, closed_at")
+    .eq("client_id", license.client_id)
+    .eq("local_order_id", localOrderId)
+    .eq("device_id", deviceId)
+    .maybeSingle();
+
+  let finalStatus = status;
+  if (existing?.status === "closed" && status === "ordered") {
+    finalStatus = "closed";
+  } else if (existing?.status === "ready" && status === "ordered") {
+    finalStatus = "ordered";
+  }
 
   const row = {
     client_id: license.client_id,
     license_id: license.id,
-    local_order_id: String(body.local_order_id || body.order_id || Date.now()),
+    local_order_id: localOrderId,
     device_id: deviceId,
     table_number: Number(body.table_number) || 0,
     waiter_name: String(body.waiter_name || "").trim(),
     items_json: items,
     total,
     receipt_number: String(body.receipt_number || "").trim(),
-    closed_at: closedAt,
+    status: finalStatus,
   };
 
-  const db = getSupabase();
+  if (finalStatus === "ordered") {
+    row.ordered_at = body.ordered_at || now;
+    row.closed_at = row.ordered_at;
+    row.ready_at = null;
+  } else if (finalStatus === "ready") {
+    row.ready_at = body.ready_at || now;
+    row.closed_at = body.closed_at || existing?.closed_at || now;
+  } else {
+    row.closed_at = body.closed_at || now;
+    if (finalStatus === "closed" && !existing) {
+      row.ordered_at = body.ordered_at || row.closed_at;
+    }
+  }
+
   const { data, error } = await db
     .from("sales_orders")
     .upsert(row, { onConflict: "client_id,local_order_id,device_id" })
@@ -70,7 +104,8 @@ async function sumSales(clientId, fromDate, toDate) {
   let q = db
     .from("sales_orders")
     .select("total, closed_at")
-    .eq("client_id", clientId);
+    .eq("client_id", clientId)
+    .eq("status", "closed");
 
   if (fromDate) q = q.gte("closed_at", `${fromDate}T00:00:00.000Z`);
   if (toDate) q = q.lte("closed_at", `${toDate}T23:59:59.999Z`);
@@ -103,8 +138,9 @@ async function listOwnerOrders(clientId, opts = {}) {
   const db = getSupabase();
   let q = db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at")
+    .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at, status")
     .eq("client_id", clientId)
+    .eq("status", "closed")
     .order("closed_at", { ascending: false })
     .limit(limit);
 
@@ -127,6 +163,7 @@ async function getOwnerOrderFilters(clientId) {
     .from("sales_orders")
     .select("waiter_name, table_number")
     .eq("client_id", clientId)
+    .eq("status", "closed")
     .order("closed_at", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -149,6 +186,7 @@ async function getOwnerReport(clientId, from, to) {
     .from("sales_orders")
     .select("*")
     .eq("client_id", clientId)
+    .eq("status", "closed")
     .gte("closed_at", `${fromD}T00:00:00.000Z`)
     .lte("closed_at", `${toD}T23:59:59.999Z`)
     .order("closed_at", { ascending: false });

@@ -18,6 +18,7 @@ const licenseRoutes = require("./routes/license");
 const salesRoutes = require("./routes/sales");
 const adminRoutes = require("./routes/admin");
 const ownerRoutes = require("./routes/owner");
+const kdsRoutes = require("./routes/kds");
 const { ensureSuperAdmin } = require("./services/licenseService");
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/v1/license", licenseRoutes);
 app.use("/api/v1/sales", salesRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerRoutes);
+app.use("/api/kds", kdsRoutes);
 
 app.use(express.static(path.join(__dirname, "../public")));
 
@@ -64,6 +66,10 @@ app.get("/owner/login", (_req, res) => {
 
 app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
+});
+
+app.get("/kitchen/:slug", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
 app.get("/", (_req, res) => {
@@ -102,6 +108,7 @@ async function start() {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: /panel`);
     console.log(`  🏪 Pronarët:    /owner/login`);
+    console.log(`  🍳 Kuzhina KDS: /kitchen/:slug?k=...`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);

@@ -119,7 +119,9 @@ function actionBtns(editId, deleteId, editLabel = "Ndrysho") {
 function openEditClient(id) {
   const c = clientsCache.find(x => x.id === id);
   if (!c) return;
-  openModal("Ndrysho klientin", `
+  (async () => {
+    let kitchenBlock = '<p style="font-size:0.85rem;color:var(--muted)">Duke ngarkuar linkun KDS...</p>';
+    openModal("Ndrysho klientin", `
     <label>Emri *</label>
     <input name="emri" required value="${esc(c.emri)}">
     <label>Tipi</label>
@@ -134,6 +136,9 @@ function openEditClient(id) {
     <input type="email" name="email" value="${esc(c.email)}">
     <label>Adresa</label>
     <input name="adresa" value="${esc(c.adresa)}">
+    <label>Slug kuzhine (opsional)</label>
+    <input name="kitchen_slug" value="${esc(c.kitchen_slug || "")}" placeholder="p.sh. babylon">
+    <div id="kitchen-link-hint">${kitchenBlock}</div>
   `, async fd => {
     await api(`/api/admin/clients/${id}`, {
       method: "PATCH",
@@ -143,9 +148,21 @@ function openEditClient(id) {
         telefoni: fd.get("telefoni"),
         email: fd.get("email"),
         adresa: fd.get("adresa"),
+        kitchen_slug: fd.get("kitchen_slug"),
       }),
     });
   });
+    try {
+      const k = await api(`/api/admin/clients/${id}/kitchen`);
+      const hint = document.getElementById("kitchen-link-hint");
+      if (hint && k.kitchen_url) {
+        hint.innerHTML = `KDS: <a href="${esc(k.kitchen_url)}" target="_blank" rel="noopener">${esc(k.kitchen_url)}</a>`;
+      }
+    } catch {
+      const hint = document.getElementById("kitchen-link-hint");
+      if (hint) hint.textContent = "Linku KDS nuk u gjenerua.";
+    }
+  })();
 }
 
 function openEditLicense(id) {

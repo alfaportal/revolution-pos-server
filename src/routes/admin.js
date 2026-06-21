@@ -23,6 +23,8 @@ const {
   deleteOwner,
   setOwnerActive,
 } = require("../services/userService");
+const { getClientById } = require("../services/salesService");
+const { ensureClientKitchenFields } = require("../services/kdsService");
 
 const router = express.Router();
 
@@ -64,6 +66,26 @@ router.delete("/clients/:id", asyncHandler(async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     const msg = logRouteError("admin:DELETE /clients", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/kitchen", asyncHandler(async (req, res) => {
+  try {
+    let client = await getClientById(req.params.id);
+    if (!client) return res.status(404).json({ gabim: "Klienti nuk u gjet." });
+    client = await ensureClientKitchenFields(client);
+    const proto = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers["x-forwarded-host"] || req.get("host");
+    const base = `${proto}://${host}`;
+    res.json({
+      ok: true,
+      kitchen_url: `${base}/kitchen/${client.kitchen_slug}?k=${client.kitchen_key}`,
+      kitchen_slug: client.kitchen_slug,
+      kitchen_key: client.kitchen_key,
+    });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/kitchen", e);
     res.status(400).json({ gabim: msg });
   }
 }));

@@ -81,9 +81,19 @@ Content-Type: application/json
   "items": [{"name": "Pizza", "qty": 2, "price": 8}],
   "total": 16.00,
   "receipt_number": "R-001",
+  "status": "closed",
   "closed_at": "2026-06-20T18:30:00.000Z"
 }
 ```
+
+`status`: `ordered` (porosi e re te kuzhina), `ready` (gati), `closed` (shitje e përfunduar).
+
+### Kuzhina (KDS)
+
+- Faqe: `/kitchen/:kitchen_slug?k=KITCHEN_KEY` (pa login)
+- API: `GET /api/kds/:slug/orders?k=...` — porositë me status `ordered`
+- API: `POST /api/kds/:slug/orders/:id/ready?k=...` — shëno «Gati»
+- Linku gjenerohet nga Super Admin → Ndrysho klientin
 
 ### Auth
 

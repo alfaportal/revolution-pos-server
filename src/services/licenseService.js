@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
+const { slugify, randomKitchenKey } = require("../lib/kitchen");
 
 function normalizeKey(key) {
   return String(key || "")
@@ -122,6 +123,8 @@ async function createClient(body) {
     telefoni: String(body.telefoni || "").trim(),
     email: String(body.email || "").trim(),
     tipi: body.tipi || "restorant",
+    kitchen_slug: slugify(body.kitchen_slug || body.emri || "klient"),
+    kitchen_key: String(body.kitchen_key || "").trim() || randomKitchenKey(),
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
 
@@ -153,6 +156,7 @@ async function updateClient(id, body) {
   if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
   if (body.email != null) patch.email = String(body.email).trim();
   if (body.adresa != null) patch.adresa = String(body.adresa).trim();
+  if (body.kitchen_slug != null) patch.kitchen_slug = slugify(body.kitchen_slug);
 
   const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
   if (error) throw error;
