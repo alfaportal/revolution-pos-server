@@ -76,13 +76,31 @@ router.get("/owners", asyncHandler(async (_req, res) => {
 }));
 
 router.post("/owners", asyncHandler(async (req, res) => {
+  console.log("[admin] POST /owners", { emri: req.body?.emri, email: req.body?.email });
+  try {
+    const owner = await createOwner(req.body);
+    console.log("[admin] Pronari u krijua:", owner.id);
+    res.status(201).json({ ok: true, owner });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /owners", e, { body: { ...req.body, password: "[redacted]" } });
+    res.status(400).json({ gabim: msg, code: e?.code || null });
+  }
+}));
+
+/** Alias: /api/admin/users → i njëjti si /owners */
+router.post("/users", asyncHandler(async (req, res) => {
+  console.log("[admin] POST /users (alias → owners)");
   try {
     const owner = await createOwner(req.body);
     res.status(201).json({ ok: true, owner });
   } catch (e) {
-    const msg = logRouteError("admin:POST /owners", e);
+    const msg = logRouteError("admin:POST /users", e);
     res.status(400).json({ gabim: msg, code: e?.code || null });
   }
+}));
+
+router.get("/users", asyncHandler(async (_req, res) => {
+  res.json({ ok: true, owners: await listOwners() });
 }));
 
 router.patch("/owners/:id/status", asyncHandler(async (req, res) => {

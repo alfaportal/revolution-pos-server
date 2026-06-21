@@ -2,11 +2,16 @@ require("./lib/env");
 
 const path = require("path");
 const express = require("express");
-const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
 const { logEnvStatus } = require("./lib/env");
 const { formatError } = require("./lib/errors");
+const {
+  corsMiddleware,
+  requestLogger,
+  jsonErrorHandler,
+  noCachePanel,
+} = require("./lib/http");
 const { testSupabaseConnection } = require("./db");
 const authRoutes = require("./routes/auth");
 const licenseRoutes = require("./routes/license");
@@ -20,13 +25,12 @@ const PORT = Number(process.env.PORT) || 8080;
 
 app.set("trust proxy", 1);
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || true,
-  credentials: true,
-}));
+app.use(corsMiddleware);
 app.use(express.json({ limit: "1mb" }));
+app.use(jsonErrorHandler);
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(requestLogger);
+app.use(noCachePanel);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -48,6 +52,8 @@ app.use("/api/v1/sales", salesRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerRoutes);
 
+app.use(express.static(path.join(__dirname, "../public")));
+
 app.get("/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/panel.html"));
 });
@@ -65,7 +71,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use((err, req, res, _next) => {
-  console.error(`[error] ${req.method} ${req.path}:`, formatError(err));
+  console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
   if (!res.headersSent) {
     res.status(500).json({ gabim: formatError(err) || "Gabim i brendshëm serveri." });
   }

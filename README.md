@@ -102,6 +102,7 @@ Content-Type: application/json
 - `POST /api/admin/licenses/:id/reset-device`
 - `GET /api/admin/owners` — lista e pronarëve
 - `POST /api/admin/owners` — krijo pronar `{ client_id, emri, email, password }`
+- `POST /api/admin/users` — alias i `POST /owners`
 - `PATCH /api/admin/owners/:id/status` — `{ aktiv: true|false }`
 
 ### Owner (Pronar, JWT)

@@ -3,11 +3,21 @@ const { getSupabase } = require("../db");
 
 async function listOwners() {
   const db = getSupabase();
-  const { data, error } = await db
+  let { data, error } = await db
     .from("users")
     .select("id, emri, email, roli, aktiv, client_id, created_at, clients(id, emri, tipi)")
     .eq("roli", "client_admin")
     .order("created_at", { ascending: false });
+
+  if (error?.code === "PGRST204" || (error?.message && /aktiv/i.test(error.message))) {
+    ({ data, error } = await db
+      .from("users")
+      .select("id, emri, email, roli, client_id, created_at, clients(id, emri, tipi)")
+      .eq("roli", "client_admin")
+      .order("created_at", { ascending: false }));
+    data = (data || []).map(u => ({ ...u, aktiv: true }));
+  }
+
   if (error) throw error;
   return data;
 }
@@ -20,18 +30,29 @@ async function createOwner({ client_id, emri, email, password }) {
 
   const db = getSupabase();
   const hash = await bcrypt.hash(password, 12);
-  const { data, error } = await db
+  const row = {
+    client_id,
+    emri: emri.trim(),
+    email: email.trim().toLowerCase(),
+    passwordi: hash,
+    roli: "client_admin",
+    aktiv: true,
+  };
+
+  let { data, error } = await db
     .from("users")
-    .insert({
-      client_id,
-      emri: emri.trim(),
-      email: email.trim().toLowerCase(),
-      passwordi: hash,
-      roli: "client_admin",
-      aktiv: true,
-    })
+    .insert(row)
     .select("id, emri, email, roli, aktiv, client_id, created_at, clients(id, emri, tipi)")
     .single();
+
+  if (error?.code === "PGRST204" || (error?.message && /aktiv/i.test(error.message))) {
+    const { aktiv, ...rowWithoutAktiv } = row;
+    ({ data, error } = await db
+      .from("users")
+      .insert(rowWithoutAktiv)
+      .select("id, emri, email, roli, client_id, created_at, clients(id, emri, tipi)")
+      .single());
+  }
 
   if (error) {
     if (error.code === "23505") throw new Error("Ky email ekziston tashmë.");

@@ -1,14 +1,19 @@
 let token = localStorage.getItem("rip_token") || "";
 
+function apiUrl(path) {
+  if (path.startsWith("http")) return path;
+  return `${window.location.origin}${path}`;
+}
+
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   let res;
   try {
-    res = await fetch(path, { ...opts, headers, credentials: "include" });
+    res = await fetch(apiUrl(path), { ...opts, headers, credentials: "include" });
   } catch (netErr) {
     throw new Error(
-      `Nuk u lidh me serverin (${netErr.message}). Kontrollo që serveri është online dhe /health/db kthen OK.`,
+      `Nuk u lidh me serverin (${netErr.message}). Kontrollo /health/db dhe rifresko faqen (Ctrl+F5).`,
     );
   }
   const data = await res.json().catch(() => ({}));
@@ -17,6 +22,14 @@ async function api(path, opts = {}) {
     throw new Error(data.code ? `${detail} [${data.code}]` : detail);
   }
   return data;
+}
+
+async function safeRefresh() {
+  try {
+    await refreshAll();
+  } catch (e) {
+    console.warn("refreshAll:", e.message);
+  }
 }
 
 function show(el, visible) {
@@ -202,6 +215,8 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 document.getElementById("form-client").addEventListener("submit", async e => {
   e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
   try {
     await api("/api/admin/clients", {
       method: "POST",
@@ -215,9 +230,11 @@ document.getElementById("form-client").addEventListener("submit", async e => {
     });
     showMsg("msg-client", "Klienti u shtua!", true);
     e.target.reset();
-    await refreshAll();
+    await safeRefresh();
   } catch (err) {
     showMsg("msg-client", err.message, false);
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -249,6 +266,8 @@ document.getElementById("form-license").addEventListener("submit", async e => {
 
 document.getElementById("form-owner").addEventListener("submit", async e => {
   e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
   try {
     await api("/api/admin/owners", {
       method: "POST",
@@ -261,9 +280,11 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
     });
     showMsg("msg-owner", "Llogaria e pronarit u krijua!", true);
     e.target.reset();
-    await refreshAll();
+    await safeRefresh();
   } catch (err) {
     showMsg("msg-owner", err.message, false);
+  } finally {
+    btn.disabled = false;
   }
 });
 
