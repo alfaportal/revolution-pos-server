@@ -41,7 +41,7 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "revolution-pos-server",
-    version: "1.0.0",
+    version: pkg.version || "1.0.0",
     time: new Date().toISOString(),
   });
 });
