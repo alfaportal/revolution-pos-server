@@ -1,10 +1,13 @@
-require("dotenv").config();
+require("./lib/env");
 
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
+const { logEnvStatus } = require("./lib/env");
+const { formatError } = require("./lib/errors");
+const { testSupabaseConnection } = require("./db");
 const authRoutes = require("./routes/auth");
 const licenseRoutes = require("./routes/license");
 const salesRoutes = require("./routes/sales");
@@ -34,6 +37,11 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/health/db", async (_req, res) => {
+  const result = await testSupabaseConnection();
+  res.status(result.ok ? 200 : 503).json(result);
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/v1/license", licenseRoutes);
 app.use("/api/v1/sales", salesRoutes);
@@ -56,16 +64,32 @@ app.get("/", (_req, res) => {
   res.redirect("/panel");
 });
 
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ gabim: "Gabim i brendshëm serveri." });
+app.use((err, req, res, _next) => {
+  console.error(`[error] ${req.method} ${req.path}:`, formatError(err));
+  if (!res.headersSent) {
+    res.status(500).json({ gabim: formatError(err) || "Gabim i brendshëm serveri." });
+  }
 });
 
 async function start() {
+  const envOk = logEnvStatus();
+  if (!envOk) {
+    console.warn("  ⚠️  Serveri niset por API-t që kërkojnë Supabase/JWT do të dështojnë.\n");
+  }
+
+  const dbCheck = await testSupabaseConnection();
+  if (dbCheck.ok) {
+    console.log("  ✅ Lidhja me Supabase: OK");
+  } else {
+    console.error("  ❌ Lidhja me Supabase dështoi:", dbCheck.error);
+    if (dbCheck.hint) console.error("     Hint:", dbCheck.hint);
+    if (dbCheck.details) console.error("     Details:", dbCheck.details);
+  }
+
   try {
     await ensureSuperAdmin();
   } catch (e) {
-    console.warn("  ⚠️  Super Admin seed:", e.message);
+    console.warn("  ⚠️  Super Admin seed:", formatError(e));
   }
 
   app.listen(PORT, "0.0.0.0", () => {
@@ -73,7 +97,8 @@ async function start() {
     console.log(`  📋 Super Admin: /panel`);
     console.log(`  🏪 Pronarët:    /owner/login`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
-    console.log(`  📊 Sales sync:  POST /api/v1/sales/sync\n`);
+    console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
+    console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }
 

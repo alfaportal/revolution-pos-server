@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
+const { trimEnv } = require("../lib/env");
 
 function jwtSecret() {
-  const secret = process.env.JWT_SECRET;
+  const secret = trimEnv("JWT_SECRET");
   if (!secret || secret.length < 16) {
     throw new Error("JWT_SECRET duhet të jetë të paktën 16 karaktere");
   }

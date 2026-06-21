@@ -43,7 +43,7 @@ Nëse ke ekzekutuar `schema.sql` më parë, ekzekuto vetëm `supabase/migrations
 | Variabël | Përshkrimi |
 |----------|------------|
 | `SUPABASE_URL` | `https://tdkpcgxcudxbvrtmpobi.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (Settings → API) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (Settings → API) — **jo** anon key |
 | `JWT_SECRET` | String i gjatë random (min 16 karaktere) |
 | `SUPER_ADMIN_EMAIL` | Email i panelit |
 | `SUPER_ADMIN_PASSWORD` | Fjalëkalimi fillestar |
@@ -113,7 +113,8 @@ Content-Type: application/json
 
 ### Health
 
-- `GET /health`
+- `GET /health` — serveri online
+- `GET /health/db` — test lidhje Supabase (kthen gabimin e saktë nëse dështon)
 
 ## Panelet web
 

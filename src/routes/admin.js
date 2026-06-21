@@ -1,5 +1,7 @@
 const express = require("express");
 const { authRequired, superAdminOnly } = require("../middleware/auth");
+const { asyncHandler } = require("../lib/asyncHandler");
+const { logRouteError } = require("../lib/errors");
 const {
   listClients,
   listLicenses,
@@ -16,103 +18,80 @@ const router = express.Router();
 
 router.use(authRequired, superAdminOnly);
 
-router.get("/stats", async (_req, res) => {
-  try {
-    res.json({ ok: true, ...(await getDashboardStats()) });
-  } catch (e) {
-    res.status(500).json({ gabim: e.message });
-  }
-});
+router.get("/stats", asyncHandler(async (_req, res) => {
+  res.json({ ok: true, ...(await getDashboardStats()) });
+}));
 
-router.get("/clients", async (_req, res) => {
-  try {
-    res.json({ ok: true, clients: await listClients() });
-  } catch (e) {
-    res.status(500).json({ gabim: e.message });
-  }
-});
+router.get("/clients", asyncHandler(async (_req, res) => {
+  res.json({ ok: true, clients: await listClients() });
+}));
 
-router.post("/clients", async (req, res) => {
+router.post("/clients", asyncHandler(async (req, res) => {
+  console.log("[admin] POST /clients", { emri: req.body?.emri, tipi: req.body?.tipi });
   try {
     const client = await createClient(req.body);
+    console.log("[admin] Klienti u krijua:", client.id);
     res.status(201).json({ ok: true, client });
   } catch (e) {
-    res.status(400).json({ gabim: e.message });
+    const msg = logRouteError("admin:POST /clients", e, { body: req.body });
+    res.status(400).json({ gabim: msg, code: e?.code || null });
   }
-});
+}));
 
-router.get("/licenses", async (_req, res) => {
-  try {
-    res.json({ ok: true, licenses: await listLicenses() });
-  } catch (e) {
-    res.status(500).json({ gabim: e.message });
-  }
-});
+router.get("/licenses", asyncHandler(async (_req, res) => {
+  res.json({ ok: true, licenses: await listLicenses() });
+}));
 
-router.post("/licenses", async (req, res) => {
+router.post("/licenses", asyncHandler(async (req, res) => {
   try {
     const license = await createLicense(req.body);
     res.status(201).json({ ok: true, license });
   } catch (e) {
-    res.status(400).json({ gabim: e.message });
+    const msg = logRouteError("admin:POST /licenses", e);
+    res.status(400).json({ gabim: msg, code: e?.code || null });
   }
-});
+}));
 
 router.get("/licenses/generate-key", (_req, res) => {
   res.json({ ok: true, celesi: generateLicenseKey() });
 });
 
-router.patch("/licenses/:id/status", async (req, res) => {
-  try {
-    const { statusi } = req.body;
-    const allowed = ["aktive", "skaduar", "revokuar", "pezulluar"];
-    if (!allowed.includes(statusi)) {
-      return res.status(400).json({ gabim: "Status i pavlefshëm." });
-    }
-    const license = await updateLicenseStatus(req.params.id, statusi);
-    res.json({ ok: true, license });
-  } catch (e) {
-    res.status(400).json({ gabim: e.message });
+router.patch("/licenses/:id/status", asyncHandler(async (req, res) => {
+  const { statusi } = req.body;
+  const allowed = ["aktive", "skaduar", "revokuar", "pezulluar"];
+  if (!allowed.includes(statusi)) {
+    return res.status(400).json({ gabim: "Status i pavlefshëm." });
   }
-});
+  const license = await updateLicenseStatus(req.params.id, statusi);
+  res.json({ ok: true, license });
+}));
 
-router.post("/licenses/:id/reset-device", async (req, res) => {
-  try {
-    const license = await resetLicenseDevice(req.params.id);
-    res.json({ ok: true, license });
-  } catch (e) {
-    res.status(400).json({ gabim: e.message });
-  }
-});
+router.post("/licenses/:id/reset-device", asyncHandler(async (req, res) => {
+  const license = await resetLicenseDevice(req.params.id);
+  res.json({ ok: true, license });
+}));
 
-router.get("/owners", async (_req, res) => {
-  try {
-    res.json({ ok: true, owners: await listOwners() });
-  } catch (e) {
-    res.status(500).json({ gabim: e.message });
-  }
-});
+router.get("/owners", asyncHandler(async (_req, res) => {
+  res.json({ ok: true, owners: await listOwners() });
+}));
 
-router.post("/owners", async (req, res) => {
+router.post("/owners", asyncHandler(async (req, res) => {
   try {
     const owner = await createOwner(req.body);
     res.status(201).json({ ok: true, owner });
   } catch (e) {
-    res.status(400).json({ gabim: e.message });
+    const msg = logRouteError("admin:POST /owners", e);
+    res.status(400).json({ gabim: msg, code: e?.code || null });
   }
-});
+}));
 
-router.patch("/owners/:id/status", async (req, res) => {
-  try {
-    const { aktiv } = req.body;
-    if (typeof aktiv !== "boolean") {
-      return res.status(400).json({ gabim: "aktiv duhet true ose false." });
-    }
-    const owner = await setOwnerActive(req.params.id, aktiv);
-    res.json({ ok: true, owner });
-  } catch (e) {
-    res.status(400).json({ gabim: e.message });
+router.patch("/owners/:id/status", asyncHandler(async (req, res) => {
+  const { aktiv } = req.body;
+  if (typeof aktiv !== "boolean") {
+    return res.status(400).json({ gabim: "aktiv duhet true ose false." });
   }
-});
+  const owner = await setOwnerActive(req.params.id, aktiv);
+  res.json({ ok: true, owner });
+}));
 
 module.exports = router;

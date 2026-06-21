@@ -3,9 +3,19 @@ let token = localStorage.getItem("rip_token") || "";
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(path, { ...opts, headers, credentials: "include" });
+  let res;
+  try {
+    res = await fetch(path, { ...opts, headers, credentials: "include" });
+  } catch (netErr) {
+    throw new Error(
+      `Nuk u lidh me serverin (${netErr.message}). Kontrollo që serveri është online dhe /health/db kthen OK.`,
+    );
+  }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.gabim || data.message || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const detail = data.gabim || data.error || data.message || `HTTP ${res.status}`;
+    throw new Error(data.code ? `${detail} [${data.code}]` : detail);
+  }
   return data;
 }
 

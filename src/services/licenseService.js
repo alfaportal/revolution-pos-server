@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
+const { formatError, logRouteError } = require("../lib/errors");
 
 function normalizeKey(key) {
   return String(key || "")
@@ -123,8 +124,17 @@ async function createClient(body) {
     tipi: body.tipi || "restorant",
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
+
+  const allowed = ["restorant", "kafene", "tjeter"];
+  if (!allowed.includes(row.tipi)) {
+    throw new Error(`Tipi i pavlefshëm: ${row.tipi}`);
+  }
+
   const { data, error } = await db.from("clients").insert(row).select().single();
-  if (error) throw error;
+  if (error) {
+    logRouteError("createClient", error, { row });
+    throw error;
+  }
   return data;
 }
 
