@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Hyrje — Revolution POS Pronar</title>
+  <link rel="stylesheet" href="/css/owner.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>Paneli i pronarit</h1>
+      <p>Shikoni shitjet dhe raportet e restorantit/kafenes tuaj nga telefoni.</p>
+      <div id="login-error" class="alert alert-error hidden"></div>
+      <form id="form-login">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" placeholder="pronari@restorant.com">
+        <label for="password">Fjalëkalimi</label>
+        <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr</button>
+      </form>
+      <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted);text-align:center">
+        Super Admin? <a href="/panel">Hyr këtu</a>
+      </p>
+    </div>
+  </div>
+  <script>
+    const token = localStorage.getItem("owner_token");
+    if (token) location.href = "/owner/panel";
+
+    document.getElementById("form-login").addEventListener("submit", async e => {
+      e.preventDefault();
+      const errEl = document.getElementById("login-error");
+      errEl.classList.add("hidden");
+      try {
+        const res = await fetch("/api/auth/owner/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.gabim || "Gabim");
+        localStorage.setItem("owner_token", data.token);
+        location.href = "/owner/panel";
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>

@@ -52,10 +52,42 @@ function licenseApiKeyOptional(req, res, next) {
   next();
 }
 
+function ownerOnly(req, res, next) {
+  if (req.user?.roli !== "client_admin") {
+    return res.status(403).json({ gabim: "Vetëm pronarët kanë akses." });
+  }
+  if (!req.user?.client_id) {
+    return res.status(403).json({ gabim: "Llogaria nuk është e lidhur me restorant." });
+  }
+  next();
+}
+
+function authOwner(req, res, next) {
+  const header = req.headers.authorization || "";
+  const cookie = req.cookies?.owner_token;
+  const token = header.startsWith("Bearer ") ? header.slice(7) : cookie;
+
+  if (!token) {
+    return res.status(401).json({ gabim: "Kërkohet autentifikim." });
+  }
+
+  try {
+    req.user = verifyToken(token);
+    if (req.user.roli !== "client_admin") {
+      return res.status(403).json({ gabim: "Akses i ndaluar." });
+    }
+    next();
+  } catch {
+    return res.status(401).json({ gabim: "Sesioni skadoi. Hyni përsëri." });
+  }
+}
+
 module.exports = {
   signToken,
   verifyToken,
   authRequired,
+  authOwner,
   superAdminOnly,
+  ownerOnly,
   licenseApiKeyOptional,
 };

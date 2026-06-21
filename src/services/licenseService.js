@@ -206,6 +206,7 @@ async function ensureSuperAdmin() {
       email,
       passwordi: hash,
       roli: "super_admin",
+      aktiv: true,
     })
     .select()
     .single();

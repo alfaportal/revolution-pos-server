@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Paneli i pronarit — Revolution POS</title>
+  <link rel="stylesheet" href="/css/owner.css">
+</head>
+<body>
+  <header class="header owner-header">
+    <div>
+      <h1 id="biz-name">Restoranti im</h1>
+      <div class="sub" id="biz-sub">Revolution Invest POS</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="btn-logout">Dil</button>
+  </header>
+
+  <div class="container">
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="porosite">Porositë</button>
+      <button class="tab" data-tab="raportet">Raportet</button>
+    </div>
+
+    <div id="panel-porosite" class="panel-section">
+      <div class="card">
+        <div class="card-title">Porositë e fundit</div>
+        <div id="orders-list"></div>
+      </div>
+    </div>
+
+    <div id="panel-raportet" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Të ardhurat</div>
+        <div class="filter-row">
+          <div>
+            <label>Nga</label>
+            <input type="date" id="raport-nga">
+          </div>
+          <div>
+            <label>Deri</label>
+            <input type="date" id="raport-deri">
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-raport">Shfaq</button>
+        </div>
+        <div id="report-summary" style="margin-bottom:1rem;font-size:1.1rem;font-weight:700"></div>
+        <div id="report-bars"></div>
+        <div class="overflow-x" style="margin-top:1rem">
+          <table>
+            <thead>
+              <tr><th>Ora</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th></tr>
+            </thead>
+            <tbody id="report-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/owner.js"></script>
+</body>
+</html>

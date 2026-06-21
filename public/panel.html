@@ -40,6 +40,7 @@
       <div class="tabs">
         <button class="tab active" data-tab="klientet">Klientët</button>
         <button class="tab" data-tab="licensat">Liçensat</button>
+        <button class="tab" data-tab="pronaret">Pronarët</button>
         <button class="tab" data-tab="shto">+ Shto</button>
       </div>
 
@@ -72,6 +73,50 @@
               <tbody id="tbl-licenses"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <div id="panel-pronaret" class="panel-section hidden">
+        <div class="card">
+          <div class="card-title">Pronarët e restoranteve / kafeneve</div>
+          <div class="overflow-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>Emri</th><th>Email</th><th>Restoranti</th><th>Statusi</th><th>Regjistruar</th><th>Veprime</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-owners"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Krijo llogari pronari</div>
+          <div id="msg-owner" class="alert hidden"></div>
+          <form id="form-owner">
+            <div class="form-row">
+              <div>
+                <label>Klienti *</label>
+                <select id="o-client" required></select>
+              </div>
+              <div>
+                <label>Emri i pronarit *</label>
+                <input type="text" id="o-emri" required placeholder="p.sh. Agron">
+              </div>
+              <div>
+                <label>Email *</label>
+                <input type="email" id="o-email" required placeholder="agron@restorant.com">
+              </div>
+              <div>
+                <label>Fjalëkalimi *</label>
+                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Krijo llogarinë</button>
+          </form>
+          <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
+            Pronari hyn në <a href="/owner/login" target="_blank">/owner/login</a>
+          </p>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ const {
   getDashboardStats,
   generateLicenseKey,
 } = require("../services/licenseService");
+const { listOwners, createOwner, setOwnerActive } = require("../services/userService");
 
 const router = express.Router();
 
@@ -79,6 +80,36 @@ router.post("/licenses/:id/reset-device", async (req, res) => {
   try {
     const license = await resetLicenseDevice(req.params.id);
     res.json({ ok: true, license });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/owners", async (_req, res) => {
+  try {
+    res.json({ ok: true, owners: await listOwners() });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/owners", async (req, res) => {
+  try {
+    const owner = await createOwner(req.body);
+    res.status(201).json({ ok: true, owner });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/owners/:id/status", async (req, res) => {
+  try {
+    const { aktiv } = req.body;
+    if (typeof aktiv !== "boolean") {
+      return res.status(400).json({ gabim: "aktiv duhet true ose false." });
+    }
+    const owner = await setOwnerActive(req.params.id, aktiv);
+    res.json({ ok: true, owner });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }

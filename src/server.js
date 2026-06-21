@@ -7,7 +7,9 @@ const cookieParser = require("cookie-parser");
 
 const authRoutes = require("./routes/auth");
 const licenseRoutes = require("./routes/license");
+const salesRoutes = require("./routes/sales");
 const adminRoutes = require("./routes/admin");
+const ownerRoutes = require("./routes/owner");
 const { ensureSuperAdmin } = require("./services/licenseService");
 
 const app = express();
@@ -34,10 +36,20 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/v1/license", licenseRoutes);
+app.use("/api/v1/sales", salesRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/owner", ownerRoutes);
 
 app.get("/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/panel.html"));
+});
+
+app.get("/owner/login", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/owner/login.html"));
+});
+
+app.get("/owner/panel", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
 });
 
 app.get("/", (_req, res) => {
@@ -58,8 +70,10 @@ async function start() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
-    console.log(`  📋 Panel: /panel`);
-    console.log(`  🔑 License API: POST /api/v1/license/validate\n`);
+    console.log(`  📋 Super Admin: /panel`);
+    console.log(`  🏪 Pronarët:    /owner/login`);
+    console.log(`  🔑 License API: POST /api/v1/license/validate`);
+    console.log(`  📊 Sales sync:  POST /api/v1/sales/sync\n`);
   });
 }
 

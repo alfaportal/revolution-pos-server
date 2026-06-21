@@ -1,5 +1,5 @@
 const express = require("express");
-const { signToken, authRequired } = require("../middleware/auth");
+const { signToken, authRequired, authOwner } = require("../middleware/auth");
 const {
   findUserByEmail,
   verifyUserPassword,
@@ -15,7 +15,7 @@ router.post("/login", async (req, res) => {
     }
 
     const user = await findUserByEmail(email);
-    if (!user) {
+    if (!user || user.roli !== "super_admin") {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
@@ -47,6 +47,59 @@ router.post("/login", async (req, res) => {
         emri: user.emri,
         email: user.email,
         roli: user.roli,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/owner/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ gabim: "Email dhe fjalëkalimi janë të detyrueshëm." });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user || user.roli !== "client_admin") {
+      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+    }
+    if (user.aktiv === false) {
+      return res.status(403).json({ gabim: "Llogaria është çaktivizuar. Kontaktoni supportin." });
+    }
+    if (!user.client_id) {
+      return res.status(403).json({ gabim: "Llogaria nuk është e lidhur me restorant." });
+    }
+
+    const ok = await verifyUserPassword(user, password);
+    if (!ok) {
+      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+    }
+
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      emri: user.emri,
+      roli: user.roli,
+      client_id: user.client_id,
+    });
+
+    res.cookie("owner_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      ok: true,
+      token,
+      user: {
+        id: user.id,
+        emri: user.emri,
+        email: user.email,
+        roli: user.roli,
         client_id: user.client_id,
       },
     });
@@ -60,7 +113,16 @@ router.post("/logout", (_req, res) => {
   res.json({ ok: true });
 });
 
+router.post("/owner/logout", (_req, res) => {
+  res.clearCookie("owner_token");
+  res.json({ ok: true });
+});
+
 router.get("/me", authRequired, (req, res) => {
+  res.json({ ok: true, user: req.user });
+});
+
+router.get("/owner/me", authOwner, (req, res) => {
   res.json({ ok: true, user: req.user });
 });
 
