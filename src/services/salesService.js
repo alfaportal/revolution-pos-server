@@ -15,6 +15,17 @@ function dateRanges() {
   };
 }
 
+function normalizeItems(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr
+    .map(it => ({
+      name: String(it.name || it.emri || "").trim(),
+      quantity: Number(it.quantity ?? it.sasia ?? 1) || 1,
+      price: Number(it.price ?? it.cmimi ?? 0) || 0,
+    }))
+    .filter(it => it.name);
+}
+
 async function syncSaleFromPos(body) {
   const celesi = normalizeKey(body.celesi || body.license_key);
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
@@ -25,8 +36,9 @@ async function syncSaleFromPos(body) {
   }
 
   const deviceId = String(body.device_id || license.device_id || "").trim().toUpperCase();
-  const items = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
-  const total = Number(body.total) || 0;
+  const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
+  const items = normalizeItems(rawItems);
+  const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
   const closedAt = body.closed_at || new Date().toISOString();
 
   const row = {
@@ -86,16 +98,46 @@ async function getOwnerStats(clientId) {
   };
 }
 
-async function listOwnerOrders(clientId, limit = 30) {
+async function listOwnerOrders(clientId, opts = {}) {
+  const limit = Math.min(100, Number(opts.limit) || 50);
   const db = getSupabase();
-  const { data, error } = await db
+  let q = db
     .from("sales_orders")
     .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at")
     .eq("client_id", clientId)
     .order("closed_at", { ascending: false })
     .limit(limit);
+
+  if (opts.waiter) q = q.eq("waiter_name", String(opts.waiter).trim());
+  if (opts.table != null && opts.table !== "") {
+    q = q.eq("table_number", Number(opts.table));
+  }
+
+  const { data, error } = await q;
   if (error) throw error;
-  return data || [];
+  return (data || []).map(o => ({
+    ...o,
+    items_json: normalizeItems(o.items_json),
+  }));
+}
+
+async function getOwnerOrderFilters(clientId) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("sales_orders")
+    .select("waiter_name, table_number")
+    .eq("client_id", clientId)
+    .order("closed_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  const rows = data || [];
+  const waiters = [...new Set(rows.map(r => r.waiter_name).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "sq"),
+  );
+  const tables = [...new Set(rows.map(r => r.table_number).filter(n => n != null && n !== ""))]
+    .map(Number)
+    .sort((a, b) => a - b);
+  return { waiters, tables };
 }
 
 async function getOwnerReport(clientId, from, to) {
@@ -141,9 +183,11 @@ async function getClientById(clientId) {
 }
 
 module.exports = {
+  normalizeItems,
   syncSaleFromPos,
   getOwnerStats,
   listOwnerOrders,
+  getOwnerOrderFilters,
   getOwnerReport,
   getClientById,
 };

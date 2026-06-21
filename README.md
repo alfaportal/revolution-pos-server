@@ -108,7 +108,8 @@ Content-Type: application/json
 ### Owner (Pronar, JWT)
 
 - `GET /api/owner/stats` — shitjet sot / javë / muaj
-- `GET /api/owner/orders` — porositë e fundit
+- `GET /api/owner/orders?waiter=&table=&limit=` — porositë me filtra
+- `GET /api/owner/orders/filters` — lista kamarierësh dhe tavolinash
 - `GET /api/owner/reports?from=YYYY-MM-DD&to=YYYY-MM-DD` — raport të ardhurash
 - `GET /api/owner/client` — info restoranti
 

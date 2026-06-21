@@ -3,6 +3,7 @@ const { authOwner, ownerOnly } = require("../middleware/auth");
 const {
   getOwnerStats,
   listOwnerOrders,
+  getOwnerOrderFilters,
   getOwnerReport,
   getClientById,
 } = require("../services/salesService");
@@ -29,10 +30,22 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+router.get("/orders/filters", async (req, res) => {
+  try {
+    const filters = await getOwnerOrderFilters(req.user.client_id);
+    res.json({ ok: true, ...filters });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
 router.get("/orders", async (req, res) => {
   try {
-    const limit = Math.min(100, Number(req.query.limit) || 30);
-    const orders = await listOwnerOrders(req.user.client_id, limit);
+    const orders = await listOwnerOrders(req.user.client_id, {
+      limit: req.query.limit,
+      waiter: req.query.waiter,
+      table: req.query.table,
+    });
     res.json({ ok: true, orders });
   } catch (e) {
     res.status(500).json({ gabim: e.message });

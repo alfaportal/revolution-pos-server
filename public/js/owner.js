@@ -15,13 +15,47 @@ function euro(n) {
 
 function fmtTime(iso) {
   return new Date(iso).toLocaleString("sq-AL", {
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
-function itemSummary(items) {
+function renderItemsTable(items) {
   const arr = Array.isArray(items) ? items : [];
-  return arr.map(i => `${i.quantity || 1}× ${i.name}`).join(", ") || "—";
+  if (!arr.length) return '<p class="order-items-empty">—</p>';
+  const rows = arr.map(it => {
+    const qty = Number(it.quantity ?? it.sasia ?? 1) || 1;
+    const price = Number(it.price ?? it.cmimi ?? 0) || 0;
+    const name = it.name || it.emri || "—";
+    return `<tr>
+      <td>${name}</td>
+      <td class="num">${qty}</td>
+      <td class="num">${euro(price)}</td>
+      <td class="num">${euro(price * qty)}</td>
+    </tr>`;
+  }).join("");
+  return `<table class="order-items-table">
+    <thead><tr><th>Produkti</th><th>Sasia</th><th>Çmimi</th><th>Nëntotali</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderOrderCard(o) {
+  return `<div class="order-card">
+    <div class="order-card-head">
+      <span class="order-card-title">Tavolina ${o.table_number || "—"}</span>
+      <span class="order-card-total">${euro(o.total)}</span>
+    </div>
+    <div class="order-card-meta">
+      <span>🕐 ${fmtTime(o.closed_at)}</span>
+      <span>👤 ${o.waiter_name || "—"}</span>
+      ${o.receipt_number ? `<span>🧾 ${o.receipt_number}</span>` : ""}
+    </div>
+    ${renderItemsTable(o.items_json)}
+  </div>`;
 }
 
 async function loadClient() {
@@ -42,22 +76,34 @@ async function loadStats() {
     <div class="stat owner-stat"><div class="val">${euro(s.muaj.total)}</div><div class="lbl">Ky muaj (${s.muaj.count})</div></div>`;
 }
 
+async function loadOrderFilters() {
+  const { waiters, tables } = await api("/api/owner/orders/filters");
+  const wSel = document.getElementById("filter-waiter");
+  const tSel = document.getElementById("filter-table");
+  const wVal = wSel.value;
+  const tVal = tSel.value;
+  wSel.innerHTML = '<option value="">Të gjithë</option>' +
+    (waiters || []).map(w => `<option value="${w}">${w}</option>`).join("");
+  tSel.innerHTML = '<option value="">Të gjitha</option>' +
+    (tables || []).map(t => `<option value="${t}">Tavolina ${t}</option>`).join("");
+  wSel.value = wVal;
+  tSel.value = tVal;
+}
+
 async function loadOrders() {
-  const { orders } = await api("/api/owner/orders?limit=25");
+  const q = new URLSearchParams({ limit: "50" });
+  const waiter = document.getElementById("filter-waiter").value;
+  const table = document.getElementById("filter-table").value;
+  if (waiter) q.set("waiter", waiter);
+  if (table) q.set("table", table);
+
+  const { orders } = await api(`/api/owner/orders?${q}`);
   const el = document.getElementById("orders-list");
   if (!orders.length) {
-    el.innerHTML = '<p style="color:var(--muted)">Nuk ka porosi ende. Shitjet shfaqen kur POS-i dërgon të dhëna.</p>';
+    el.innerHTML = '<p style="color:var(--muted)">Nuk ka porosi për këtë filtër.</p>';
     return;
   }
-  el.innerHTML = orders.map(o => `
-    <div class="order-card">
-      <div class="order-card-head">
-        <span>T${o.table_number || "—"} · ${euro(o.total)}</span>
-        <span class="order-card-meta">${fmtTime(o.closed_at)}</span>
-      </div>
-      <div class="order-card-meta">${o.waiter_name || "—"}${o.receipt_number ? ` · Faturë ${o.receipt_number}` : ""}</div>
-      <div class="order-items">${itemSummary(o.items_json)}</div>
-    </div>`).join("");
+  el.innerHTML = orders.map(renderOrderCard).join("");
 }
 
 async function loadReport() {
@@ -105,6 +151,9 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-raport").addEventListener("click", loadReport);
+document.getElementById("btn-filter-orders").addEventListener("click", loadOrders);
+document.getElementById("filter-waiter").addEventListener("change", loadOrders);
+document.getElementById("filter-table").addEventListener("change", loadOrders);
 
 (async () => {
   if (!token) {
@@ -120,10 +169,12 @@ document.getElementById("btn-raport").addEventListener("click", loadReport);
     document.getElementById("raport-deri").value = today;
     await loadClient();
     await loadStats();
+    await loadOrderFilters();
     await loadOrders();
     setInterval(async () => {
       await loadStats();
       if (!document.getElementById("panel-porosite").classList.contains("hidden")) {
+        await loadOrderFilters();
         await loadOrders();
       }
     }, 30000);

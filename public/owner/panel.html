@@ -26,6 +26,21 @@
     <div id="panel-porosite" class="panel-section">
       <div class="card">
         <div class="card-title">Porositë e fundit</div>
+        <div class="filter-row">
+          <div>
+            <label for="filter-waiter">Kamarieri</label>
+            <select id="filter-waiter">
+              <option value="">Të gjithë</option>
+            </select>
+          </div>
+          <div>
+            <label for="filter-table">Tavolina</label>
+            <select id="filter-table">
+              <option value="">Të gjitha</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-filter-orders">Filtro</button>
+        </div>
         <div id="orders-list"></div>
       </div>
     </div>
@@ -58,6 +73,6 @@
     </div>
   </div>
 
-  <script src="/js/owner.js"></script>
+  <script src="/js/owner.js?v=2"></script>
 </body>
 </html>
