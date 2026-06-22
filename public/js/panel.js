@@ -195,9 +195,19 @@ function actionBtns(editId, deleteId, editLabel = "Ndrysho") {
     <button class="btn btn-danger btn-sm" data-del="${deleteId}">Fshi</button>`;
 }
 
+function findOwnerForClient(clientId) {
+  return ownersCache.find(o => o.client_id === clientId);
+}
+
 function openEditClient(id) {
   const c = clientsCache.find(x => x.id === id);
   if (!c) return;
+  const owner = findOwnerForClient(id);
+  const ownerEmail = owner?.email || c.email || "";
+  const ownerPwRequired = owner ? "" : "required";
+  const ownerPwHint = owner
+    ? "Lëreni bosh për të mos ndryshuar fjalëkalimin."
+    : "Vendosni fjalëkalim — krijohet llogaria për /owner/login.";
   openModal("Ndrysho klientin", `
     <label>Emri *</label>
     <input name="emri" required value="${esc(c.emri)}">
@@ -209,11 +219,32 @@ function openEditClient(id) {
     </select>
     <label>Telefoni</label>
     <input name="telefoni" value="${esc(c.telefoni)}">
-    <label>Email</label>
+    <label>Email (kontakt biznesi)</label>
     <input type="email" name="email" value="${esc(c.email)}">
     <label>Adresa</label>
     <input name="adresa" value="${esc(c.adresa)}">
+    <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+    <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
+      <strong>Hyrja e pronarit</strong> — pronari hyn në <code>/owner/login</code> me email dhe fjalëkalim (jo Super Admin).
+    </p>
+    <label>Email i pronarit (hyrje) *</label>
+    <input type="email" name="owner_email" required value="${esc(ownerEmail)}" autocomplete="off">
+    <label>Fjalëkalimi i pronarit ${owner ? "" : "*"}</label>
+    <input
+      type="password"
+      name="owner_password"
+      minlength="6"
+      placeholder="min. 6 karaktere"
+      autocomplete="new-password"
+      ${ownerPwRequired}
+    >
+    <p class="field-hint">${ownerPwHint}</p>
+    ${owner ? `<p class="field-hint" style="margin-top:0.35rem">Llogaria: <strong>${owner.account_status === "aktiv" ? "aktive" : "në pritje"}</strong></p>` : ""}
   `, async fd => {
+    const emri = String(fd.get("emri") ?? "").trim();
+    const ownerEmailVal = String(fd.get("owner_email") ?? "").trim().toLowerCase();
+    const ownerPassword = String(fd.get("owner_password") ?? "").trim();
+
     await api(`/api/admin/clients/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -223,6 +254,30 @@ function openEditClient(id) {
         email: fd.get("email"),
         adresa: fd.get("adresa"),
       }),
+    });
+
+    const existingOwner = findOwnerForClient(id);
+    if (!existingOwner) {
+      if (!ownerPassword) {
+        throw new Error("Vendosni fjalëkalimin e pronarit (min. 6 karaktere) për të krijuar llogarinë e hyrjes.");
+      }
+      await api("/api/admin/owners", {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: id,
+          emri,
+          email: ownerEmailVal,
+          password: ownerPassword,
+        }),
+      });
+      return;
+    }
+
+    const ownerBody = { emri, email: ownerEmailVal };
+    if (ownerPassword) ownerBody.password = ownerPassword;
+    await api(`/api/admin/owners/${existingOwner.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(ownerBody),
     });
   });
 }
