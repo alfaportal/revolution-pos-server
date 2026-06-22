@@ -26,7 +26,7 @@ router.post("/login", async (req, res) => {
 
     if (user.roli === "client_admin") {
       return res.status(403).json({
-        gabim: "Ky panel është vetëm për Super Admin. Përdorni /owner/login për pronarët.",
+        gabim: "Këto kredenciale nuk kanë akses në këtë hyrje.",
       });
     }
     if (user.roli !== "super_admin") {
@@ -81,7 +81,7 @@ router.post("/owner/login", async (req, res) => {
     }
 
     if (user.roli === "super_admin") {
-      return res.status(403).json({ gabim: "Ky panel është vetëm për pronarë lokalesh" });
+      return res.status(403).json({ gabim: "Këto kredenciale nuk kanë akses në këtë hyrje." });
     }
     if (user.roli !== "client_admin") {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
@@ -136,7 +136,7 @@ router.post("/owner/logout", (_req, res) => {
 
 router.get("/me", authRequired, (req, res) => {
   if (req.user?.roli !== "super_admin") {
-    return res.status(403).json({ gabim: "Ky panel është vetëm për Super Admin." });
+    return res.status(403).json({ gabim: "Akses i ndaluar." });
   }
   res.json({ ok: true, user: req.user });
 });

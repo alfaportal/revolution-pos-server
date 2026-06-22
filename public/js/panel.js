@@ -385,6 +385,12 @@ function showApp(user) {
   show("view-login", false);
   show("view-app", true);
   document.getElementById("user-label").textContent = user.emri || user.email;
+  setupOwnerLoginUrl();
+}
+
+function setupOwnerLoginUrl() {
+  const input = document.getElementById("owner-login-url");
+  if (input) input.value = `${window.location.origin}/owner/login`;
 }
 
 function showLogin() {
@@ -393,6 +399,20 @@ function showLogin() {
   show("view-app", false);
   show("view-login", true);
 }
+
+document.getElementById("btn-copy-owner-url")?.addEventListener("click", async function () {
+  const input = document.getElementById("owner-login-url");
+  if (!input?.value) return;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    const orig = this.textContent;
+    this.textContent = "U kopjua!";
+    setTimeout(() => { this.textContent = orig; }, 1500);
+  } catch {
+    input.select();
+    document.execCommand("copy");
+  }
+});
 
 document.getElementById("form-login").addEventListener("submit", async e => {
   e.preventDefault();

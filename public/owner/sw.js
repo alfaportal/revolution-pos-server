@@ -1,9 +1,9 @@
-/* Revolution Invest POS — service worker bazik (owner panel) */
-const CACHE_NAME = "ri-pos-v1";
+/* PWA vetëm për pronarët — scope /owner/ */
+const CACHE_NAME = "ri-pos-owner-v2";
 const PRECACHE = [
   "/owner/panel",
   "/owner/login",
-  "/manifest.json",
+  "/owner/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/css/panel.css",
@@ -31,7 +31,10 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
+  if (!url.pathname.startsWith("/owner/") && !url.pathname.startsWith("/icons/")
+    && !url.pathname.startsWith("/css/") && !url.pathname.startsWith("/js/")) {
+    return;
+  }
   if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
@@ -53,11 +56,9 @@ self.addEventListener("fetch", (event) => {
 
 function shouldCache(pathname) {
   return (
+    pathname.startsWith("/owner/") ||
     pathname.startsWith("/css/") ||
     pathname.startsWith("/js/") ||
-    pathname.startsWith("/icons/") ||
-    pathname === "/manifest.json" ||
-    pathname === "/owner/panel" ||
-    pathname === "/owner/login"
+    pathname.startsWith("/icons/")
   );
 }

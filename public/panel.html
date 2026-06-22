@@ -19,9 +19,6 @@
         <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr</button>
       </form>
-      <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted);text-align:center">
-        Pronar lokal? <a href="/owner/login">Hyr në /owner/login</a>
-      </p>
     </div>
   </div>
 
@@ -118,8 +115,12 @@
             <button type="submit" class="btn btn-primary">Krijo llogarinë</button>
           </form>
           <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
-            Pronari hyn në <a href="/owner/login" target="_blank">/owner/login</a>
+            Linku për pronarin (kopjoje dhe dërgoje privat, p.sh. WhatsApp):
           </p>
+          <div class="link-actions" style="margin-top:0.35rem">
+            <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:0.75rem">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-owner-url">Kopjo</button>
+          </div>
         </div>
       </div>
 
@@ -201,6 +202,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=4"></script>
+  <script src="/js/panel.js?v=5"></script>
 </body>
 </html>

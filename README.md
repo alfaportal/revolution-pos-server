@@ -28,17 +28,17 @@ npm run dev
 
 | Panel | URL |
 |-------|-----|
-| Super Admin | http://localhost:8080/panel |
+| Super Admin | `http://localhost:8080/ri-super` (ndrysho me `ADMIN_PANEL_PATH`) |
 | Pronarët | http://localhost:8080/owner/login |
-| Pronarët (PWA) | `/owner/panel` — «Add to Home Screen» (Android / iOS) |
+| Pronarët (PWA) | `/owner/panel` — app i veçantë në telefon |
 
-## PWA — paneli i pronarit
+**Siguria:** `/panel` publik kthen 404. Faqja kryesore `/` ridrejton te pronarët. Mos i lidh linket në UI — çdo palë merr vetëm linkun e vet.
 
-- `public/manifest.json` — emri **Revolution Invest POS**, ikona **R** (portokalli/kuqe në background `#1a1a2e`)
-- `public/sw.js` — cache bazik për CSS/JS/ikona (API-t mbeten online)
-- Banner në `/owner/panel` me udhëzime Android/iOS
+## PWA — vetëm pronarët
 
-Pas deploy, hapni `/owner/panel` nga telefoni dhe shtoni në ekranin kryesor.
+- `public/owner/manifest.json` + `public/owner/sw.js` (scope `/owner/`)
+- Banner instalimi në `/owner/panel`
+- Super Admin **nuk** ka PWA publike — përdor vetëm `ADMIN_PANEL_PATH`
 
 ## Supabase — krijo tabelat
 
@@ -57,6 +57,7 @@ Nëse ke ekzekutuar `schema.sql` më parë, ekzekuto vetëm `supabase/migrations
 | `SUPER_ADMIN_EMAIL` | Email i panelit |
 | `SUPER_ADMIN_PASSWORD` | Fjalëkalimi fillestar |
 | `LICENSE_API_KEY` | (Opsionale) Kërkohet nga POS në header `x-api-key` |
+| `ADMIN_PANEL_PATH` | Rruga sekrete e Super Admin (default `ri-super`). `/panel` = 404 |
 | `PORT` | Railway e vendos automatikisht |
 
 ## API
@@ -162,7 +163,7 @@ POST /api/v1/pos/catalog/sync
 
 ## Panelet web
 
-### Super Admin (`/panel`)
+### Super Admin (`ADMIN_PANEL_PATH`, default `/ri-super`)
 
 Klientët, liçensat, **pronarët** (krijim + aktivizim/çaktivizim).
 

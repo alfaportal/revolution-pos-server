@@ -31,7 +31,7 @@ function authRequired(req, res, next) {
   try {
     req.user = verifyToken(token);
     if (req.user.roli === "client_admin") {
-      return res.status(403).json({ gabim: "Ky panel është vetëm për Super Admin." });
+      return res.status(403).json({ gabim: "Këto kredenciale nuk kanë akses në këtë hyrje." });
     }
     next();
   } catch {
@@ -58,7 +58,7 @@ function licenseApiKeyOptional(req, res, next) {
 
 function ownerOnly(req, res, next) {
   if (req.user?.roli === "super_admin") {
-    return res.status(403).json({ gabim: "Ky panel është vetëm për pronarë lokalesh" });
+    return res.status(403).json({ gabim: "Këto kredenciale nuk kanë akses në këtë hyrje." });
   }
   if (req.user?.roli !== "client_admin") {
     return res.status(403).json({ gabim: "Vetëm pronarët kanë akses." });
@@ -81,7 +81,7 @@ function authOwner(req, res, next) {
   try {
     req.user = verifyToken(token);
     if (req.user.roli === "super_admin") {
-      return res.status(403).json({ gabim: "Ky panel është vetëm për pronarë lokalesh" });
+      return res.status(403).json({ gabim: "Këto kredenciale nuk kanë akses në këtë hyrje." });
     }
     if (req.user.roli !== "client_admin") {
       return res.status(403).json({ gabim: "Akses i ndaluar." });

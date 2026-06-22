@@ -22,8 +22,10 @@ const kdsRoutes = require("./routes/kds");
 const waiterRoutes = require("./routes/waiter");
 const posRoutes = require("./routes/pos");
 const { ensureSuperAdmin } = require("./services/licenseService");
+const { adminPanelPath } = require("./lib/admin-path");
 
 const pkg = require("../package.json");
+const ADMIN_PATH = adminPanelPath();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 8080;
@@ -62,8 +64,12 @@ app.use("/api/waiter", waiterRoutes);
 
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/panel", (_req, res) => {
+app.get(ADMIN_PATH, (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/panel.html"));
+});
+
+app.get("/panel", (_req, res) => {
+  res.status(404).type("text/plain").send("Not found");
 });
 
 app.get("/owner/login", (_req, res) => {
@@ -83,7 +89,7 @@ app.get("/waiter/:clientId", (_req, res) => {
 });
 
 app.get("/", (_req, res) => {
-  res.redirect("/panel");
+  res.redirect("/owner/login");
 });
 
 app.use((err, req, res, _next) => {
@@ -116,7 +122,7 @@ async function start() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
-    console.log(`  📋 Super Admin: /panel`);
+    console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
     console.log(`  🏪 Pronarët:    /owner/login`);
     console.log(`  🍳 Kuzhina KDS:  /kitchen/:client_id`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:client_id`);

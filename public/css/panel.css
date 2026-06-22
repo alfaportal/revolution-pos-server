@@ -148,6 +148,20 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 }
 .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
+.link-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.link-actions input {
+  flex: 1;
+  min-width: 200px;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
 .login-wrap {
   min-height: 100vh;
   display: flex;

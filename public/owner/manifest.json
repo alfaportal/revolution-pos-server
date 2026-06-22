@@ -3,7 +3,7 @@
   "short_name": "RI POS",
   "description": "Paneli i pronarit — Revolution Invest POS",
   "start_url": "/owner/panel",
-  "scope": "/",
+  "scope": "/owner/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#1a1a2e",
