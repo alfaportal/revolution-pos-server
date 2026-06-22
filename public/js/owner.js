@@ -125,10 +125,12 @@ async function loadClient() {
   const data = await api("/api/owner/client");
   const { client, waiter_url, kitchen_url } = data;
   if (client) {
-    document.getElementById("biz-name").textContent = client.emri;
+    document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
+    const typeLbl = client.tipi === "kafene" ? "Kafene" : client.tipi === "restorant" ? "Restorant" : "Lokali";
     document.getElementById("biz-sub").textContent =
-      (client.tipi === "kafene" ? "Kafene" : "Restorant") +
-      (client.adresa ? ` · ${client.adresa}` : "");
+      typeLbl + (client.adresa ? ` · ${client.adresa}` : "");
+  } else {
+    document.getElementById("biz-sub").textContent = "Shitjet dhe raportet e lokalit tuaj";
   }
   if (waiter_url) {
     document.getElementById("owner-waiter-url").value = waiter_url;

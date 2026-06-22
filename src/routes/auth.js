@@ -7,6 +7,7 @@ const {
 const {
   validateOwnerInvite,
   completeOwnerSetup,
+  getOwnerLoginBranding,
 } = require("../services/userService");
 
 const router = express.Router();
@@ -138,6 +139,18 @@ router.post("/owner/login", async (req, res) => {
 router.post("/logout", (_req, res) => {
   res.clearCookie("rip_token");
   res.json({ ok: true });
+});
+
+router.get("/owner/branding", async (req, res) => {
+  try {
+    const branding = await getOwnerLoginBranding(req.query.email);
+    if (!branding.ok) {
+      return res.json({ ok: false });
+    }
+    res.json({ ok: true, ...branding });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
 });
 
 router.get("/owner/invite/:token", async (req, res) => {

@@ -159,6 +159,31 @@ async function findOwnerByInviteToken(token) {
   return data;
 }
 
+async function getOwnerLoginBranding(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!e) return { ok: false };
+
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("users")
+    .select("emri, email, passwordi, clients(emri, tipi)")
+    .eq("roli", "client_admin")
+    .eq("email", e)
+    .maybeSingle();
+
+  if (error || !data) return { ok: false };
+
+  const clientName = data.clients?.emri || "";
+  const clientType = data.clients?.tipi || "";
+  return {
+    ok: true,
+    owner_name: data.emri || "",
+    client_name: clientName,
+    client_type: clientType,
+    pending_setup: !isOwnerActivated(data),
+  };
+}
+
 async function validateOwnerInvite(token) {
   const user = await findOwnerByInviteToken(token);
   if (!user) {
@@ -288,6 +313,7 @@ module.exports = {
   createOwner,
   regenerateOwnerInvite,
   findOwnerByInviteToken,
+  getOwnerLoginBranding,
   validateOwnerInvite,
   completeOwnerSetup,
   updateOwner,

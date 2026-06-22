@@ -14,19 +14,60 @@
 <body>
   <div class="login-wrap">
     <div class="login-card">
-      <h1>Paneli i pronarit</h1>
-      <p>Shikoni shitjet dhe raportet e restorantit/kafenes tuaj nga telefoni.</p>
+      <div class="owner-login-brand">
+        <div class="owner-login-icon" id="login-icon">🏪</div>
+        <h1 id="login-heading">Paneli i pronarit</h1>
+        <h2 id="login-biz-name" class="owner-login-biz hidden"></h2>
+        <p id="login-sub">Shitjet, raportet dhe tavolinat live — nga telefoni.</p>
+        <p class="owner-login-note">Kjo hyrje është vetëm për pronarët. Kamarierët dhe admini POS përdorin aplikacionin në kompjuter.</p>
+      </div>
       <div id="login-error" class="alert alert-error hidden"></div>
       <form id="form-login">
-        <label for="email">Email</label>
-        <input type="email" id="email" required autocomplete="username" placeholder="pronari@restorant.com">
+        <label for="email">Email i pronarit</label>
+        <input type="email" id="email" required autocomplete="username" placeholder="pronari@email.com">
         <label for="password">Fjalëkalimi</label>
         <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr në panel</button>
       </form>
     </div>
   </div>
   <script>
+    function clientTypeLabel(tipi) {
+      if (tipi === "kafene") return "Kafene";
+      if (tipi === "restorant") return "Restorant";
+      return "";
+    }
+
+    function applyBranding(data) {
+      const bizEl = document.getElementById("login-biz-name");
+      const subEl = document.getElementById("login-sub");
+      const iconEl = document.getElementById("login-icon");
+      const name = (data.client_name || "").trim();
+      if (!name) {
+        bizEl.classList.add("hidden");
+        subEl.textContent = "Shitjet, raportet dhe tavolinat live — nga telefoni.";
+        return;
+      }
+      bizEl.textContent = name;
+      bizEl.classList.remove("hidden");
+      const typeLbl = clientTypeLabel(data.client_type);
+      subEl.textContent = typeLbl
+        ? `${typeLbl} · shitjet dhe raportet tuaja`
+        : "Shitjet, raportet dhe tavolinat live — nga telefoni.";
+      if (data.client_type === "kafene") iconEl.textContent = "☕";
+      else if (data.client_type === "restorant") iconEl.textContent = "🍽️";
+    }
+
+    async function loadBrandingForEmail(email) {
+      const e = String(email || "").trim();
+      if (!e) return;
+      try {
+        const res = await fetch(`/api/auth/owner/branding?email=${encodeURIComponent(e)}`);
+        const data = await res.json();
+        if (data.ok) applyBranding(data);
+      } catch { /* ignore */ }
+    }
+
     (async () => {
       const token = localStorage.getItem("owner_token");
       if (!token) return;
@@ -51,13 +92,22 @@
       if (!email) return;
       const input = document.getElementById("email");
       input.value = email.trim();
+      loadBrandingForEmail(email.trim());
       document.getElementById("password").focus();
     })();
+
+    document.getElementById("email").addEventListener("change", e => {
+      loadBrandingForEmail(e.target.value);
+    });
+    document.getElementById("email").addEventListener("blur", e => {
+      loadBrandingForEmail(e.target.value);
+    });
 
     document.getElementById("form-login").addEventListener("submit", async e => {
       e.preventDefault();
       const errEl = document.getElementById("login-error");
       errEl.classList.add("hidden");
+      errEl.textContent = "";
       try {
         const res = await fetch("/api/auth/owner/login", {
           method: "POST",
@@ -69,7 +119,16 @@
           }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.gabim || "Gabim");
+        if (!res.ok) {
+          if (data.code === "PENDING_SETUP") {
+            errEl.textContent =
+              "Llogaria nuk është aktivizuar ende. Hapni linkun e ftesës nga emaili (Aktivizo llogarinë), pastaj hyni këtu.";
+          } else {
+            throw new Error(data.gabim || "Gabim");
+          }
+          errEl.classList.remove("hidden");
+          return;
+        }
         localStorage.setItem("owner_token", data.token);
         location.href = "/owner/panel";
       } catch (err) {

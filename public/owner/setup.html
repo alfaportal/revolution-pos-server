@@ -89,7 +89,10 @@
         formEl.classList.add("hidden");
         document.getElementById("setup-intro").textContent = data.message || "Llogaria u aktivizua!";
         doneEl.classList.remove("hidden");
-        setTimeout(() => { location.href = "/owner/login"; }, 2500);
+        const loginUrl = data.email
+          ? `/owner/login?email=${encodeURIComponent(data.email)}`
+          : "/owner/login";
+        setTimeout(() => { location.href = loginUrl; }, 2500);
       } catch (err) {
         errEl.textContent = err.message;
         errEl.classList.remove("hidden");
