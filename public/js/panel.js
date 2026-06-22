@@ -146,7 +146,9 @@ function openModal(title, fieldsHtml, onSave) {
     const first = document.getElementById("modal-form").querySelector(
       "input:not([readonly]):not([type=hidden]), select, textarea",
     );
-    if (first) first.focus({ preventScroll: false });
+    if (first && first.id !== "license-edit-device-id") {
+      first.focus({ preventScroll: false });
+    }
   });
 }
 
@@ -341,13 +343,26 @@ function openEditLicense(id) {
   openModal("Ndrysho liçencën", `
     <label>Kodi i licencës</label>
     <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
+    <label for="license-edit-device-id"><strong>ID Pajisjes</strong></label>
+    <input
+      id="license-edit-device-id"
+      name="device_id"
+      value="${esc(l.device_id || "")}"
+      placeholder="p.sh. AD503FC5608A ose 37FEE0F2206"
+      class="mono"
+      autocomplete="off"
+      spellcheck="false"
+      maxlength="32"
+    >
+    <p class="field-hint license-device-hint">
+      Ndryshoje manualisht kur duhet (kopjo nga POS ose nga kolona «ID Pajisjes»).
+      Lëre bosh për «Pa aktivizuar». Ruaj → përditësohet në databazë.
+    </p>
     <label>Tipi i aplikacionit</label>
     <select name="app_type">
       <option value="restorant" ${(l.app_type || l.clients?.tipi) === "restorant" ? "selected" : ""}>Restorant</option>
       <option value="kafene" ${(l.app_type || l.clients?.tipi) === "kafene" ? "selected" : ""}>Kafene</option>
     </select>
-    <label>ID pajisjes (nga POS)</label>
-    <input name="device_id" value="${esc(l.device_id || "")}" placeholder="p.sh. AD503FC5608A" class="mono" autocomplete="off">
     <label>Kompjuteri (hostname)</label>
     <input value="${esc(l.device_hostname || "—")}" readonly class="mono" style="opacity:0.85">
     <label>Aktivizuar për herë të fundit</label>
@@ -355,7 +370,6 @@ function openEditLicense(id) {
     <label>IP e fundit</label>
     <input value="${esc(l.last_ip || "—")}" readonly class="mono" style="opacity:0.85">
     ${l.last_validation_error ? `<div class="alert alert-error" style="margin-bottom:0.75rem">⚠️ ${esc(l.last_validation_error)}</div>` : ""}
-    <p style="font-size:0.8rem;color:var(--muted);margin:-0.35rem 0 0.75rem">Plotësohet kur POS aktivizon online. Lëreni bosh për «Pa aktivizuar».</p>
     <label>Data e skadimit</label>
     <input type="date" name="data_skadimit" required value="${esc(l.data_skadimit)}">
     <label>Statusi</label>
@@ -366,15 +380,23 @@ function openEditLicense(id) {
       <option value="pezulluar" ${l.statusi === "pezulluar" ? "selected" : ""}>pezulluar</option>
     </select>
   `, async fd => {
+    const deviceId = String(fd.get("device_id") ?? "").trim().toUpperCase().replace(/\s+/g, "");
     await api(`/api/admin/licenses/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
-        device_id: fd.get("device_id"),
+        device_id: deviceId,
         app_type: fd.get("app_type"),
       }),
     });
+  });
+  requestAnimationFrame(() => {
+    const el = document.getElementById("license-edit-device-id");
+    if (el) {
+      el.focus();
+      el.select();
+    }
   });
 }
 

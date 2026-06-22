@@ -327,7 +327,8 @@ async function updateLicense(id, body) {
     patch.statusi = body.statusi;
   }
   if (body.device_id != null) {
-    patch.device_id = String(body.device_id).trim().toUpperCase();
+    patch.device_id = String(body.device_id).trim().toUpperCase().replace(/\s+/g, "");
+    patch.last_validation_error = "";
   }
   if (body.app_type != null) {
     const allowedApp = ["restorant", "kafene"];

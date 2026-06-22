@@ -304,7 +304,18 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 
 .mono { font-family: "Courier New", monospace; letter-spacing: 0.05em; }
 
-.hidden { display: none !important; }
+.field-hint,
+.license-device-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: -0.35rem 0 0.85rem;
+}
+
+.license-device-hint strong {
+  color: var(--text);
+  font-weight: 600;
+}
 
 .modal {
   position: fixed;
