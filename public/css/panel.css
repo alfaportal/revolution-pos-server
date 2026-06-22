@@ -239,6 +239,33 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .modal-actions .btn { margin-bottom: 0; }
 
 td.actions { white-space: nowrap; }
+
+th.col-actions,
+td.col-actions {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  background: var(--card);
+  box-shadow: -6px 0 10px rgba(0, 0, 0, 0.35);
+  min-width: 11rem;
+}
+
+thead th.col-actions {
+  background: #162032;
+  z-index: 4;
+}
+
+td.col-actions .btn {
+  margin: 0.1rem 0.15rem 0.1rem 0;
+}
+
+.link-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
 td.kds-link-cell {
   white-space: nowrap;
   font-size: 0.8rem;

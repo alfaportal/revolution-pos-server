@@ -286,23 +286,17 @@ async function loadClients() {
         <td>${c.licenses?.[0]?.count ?? 0}</td>
         <td>${fmtDate(c.created_at)}</td>
         <td class="kds-link-cell">
-          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start">
-            <span class="mono" style="font-size:0.7rem">/waiter/${esc(c.id)}</span>
-            <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kopjo</button>
+          <div class="link-btns">
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
         </td>
-        <td class="kds-link-cell">
-          <div style="display:flex;flex-direction:column;gap:0.35rem;align-items:flex-start">
-            <a href="/kitchen/${esc(c.id)}" target="_blank" rel="noopener" class="mono" style="font-size:0.7rem">Kuzhina</a>
-            <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kopjo</button>
-          </div>
-        </td>
-        <td class="actions">
+        <td class="actions col-actions">
           <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
       </tr>`).join("")
-    : '<tr><td colspan="10" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+    : '<tr><td colspan="9" style="color:var(--muted)">Nuk ka klientë</td></tr>';
   bindTableActions(tbl);
   tbl.querySelectorAll("[data-copy-kitchen]").forEach(btn => {
     btn.addEventListener("click", () => copyKitchenLink(btn.dataset.copyKitchen, btn));
@@ -325,12 +319,12 @@ async function loadLicenses() {
         <td>${badge(l.statusi)}</td>
         <td>${l.data_fillimit}</td>
         <td>${l.data_skadimit}</td>
-        <td class="actions" style="white-space:nowrap">
+        <td class="actions col-actions">
           <button class="btn btn-ghost btn-sm" data-edit-license="${l.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-license="${l.id}">Fshi</button>
           ${l.statusi !== "aktive" ? `<button class="btn btn-ghost btn-sm" data-act="aktive" data-id="${l.id}">Aktivizo</button>` : ""}
           ${l.statusi !== "revokuar" ? `<button class="btn btn-ghost btn-sm" data-act="revokuar" data-id="${l.id}">Revoko</button>` : ""}
-          <button class="btn btn-ghost btn-sm" data-reset="${l.id}">Reset pajisje</button>
+          <button class="btn btn-ghost btn-sm" data-reset="${l.id}" title="Hiq lidhjen me pajisjen">Reset</button>
         </td>
       </tr>`).join("")
     : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
@@ -365,7 +359,7 @@ async function loadOwners() {
         <td>${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
         <td>${o.aktiv !== false ? '<span class="badge badge-aktive">aktiv</span>' : '<span class="badge badge-revokuar">çaktiv</span>'}</td>
         <td>${fmtDate(o.created_at)}</td>
-        <td class="actions">
+        <td class="actions col-actions">
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
