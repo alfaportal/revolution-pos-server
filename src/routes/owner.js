@@ -6,6 +6,7 @@ const {
   getOwnerOrderFilters,
   getOwnerReport,
   getClientById,
+  getLiveTablesForOwner,
 } = require("../services/salesService");
 
 const router = express.Router();
@@ -62,6 +63,15 @@ router.get("/orders", async (req, res) => {
       table: req.query.table,
     });
     res.json({ ok: true, orders });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/tables/live", async (req, res) => {
+  try {
+    const live = await getLiveTablesForOwner(req.user.client_id);
+    res.json({ ok: true, ...live });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
   }

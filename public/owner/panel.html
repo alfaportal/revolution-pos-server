@@ -51,11 +51,23 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="porosite">Porositë</button>
+      <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
+      <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="raportet">Raportet</button>
     </div>
 
-    <div id="panel-porosite" class="panel-section">
+    <div id="panel-tavolinat" class="panel-section">
+      <div class="card">
+        <div class="live-tables-head">
+          <div class="card-title" style="margin:0">Gjendja e tavolinave</div>
+          <span id="live-tables-updated" class="live-updated-label"></span>
+        </div>
+        <p class="links-hint">Rifreskohet automatikisht çdo 15 sekonda — produktet që kamarieri ka shtypur në POS.</p>
+        <div id="live-tables-grid" class="live-tables-grid"></div>
+      </div>
+    </div>
+
+    <div id="panel-porosite" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Porositë e fundit</div>
         <div class="filter-row">
@@ -105,6 +117,6 @@
     </div>
   </div>
 
-  <script src="/js/owner.js?v=4"></script>
+  <script src="/js/owner.js?v=5"></script>
 </body>
 </html>

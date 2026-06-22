@@ -81,6 +81,31 @@ function renderItemsTable(items) {
   </table>`;
 }
 
+function renderLiveTableCard(t) {
+  if (t.status === "free") {
+    return `<div class="live-table-card free">
+      <div class="live-table-title">${t.label}</div>
+      <div class="live-table-status">E lirë</div>
+    </div>`;
+  }
+  const o = t.order || {};
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsHtml = items.length
+    ? `<ul class="live-table-items">${items.map(it => {
+        const qty = Number(it.quantity) || 1;
+        const price = Number(it.price) || 0;
+        return `<li><span>${qty}× ${it.name}</span><span>${euro(price)}</span></li>`;
+      }).join("")}</ul>`
+    : "";
+  return `<div class="live-table-card occupied">
+    <div class="live-table-title">${t.label}</div>
+    <div class="live-table-status">E zënë</div>
+    <div class="live-table-meta">👤 ${o.waiter_name || "—"}<br>🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
+    ${itemsHtml}
+    <div class="live-table-total">${euro(o.total)}</div>
+  </div>`;
+}
+
 function renderOrderCard(o) {
   return `<div class="order-card">
     <div class="order-card-head">
@@ -154,6 +179,17 @@ async function loadOrderFilters() {
   tSel.value = tVal;
 }
 
+async function loadLiveTables() {
+  const data = await api("/api/owner/tables/live");
+  const grid = document.getElementById("live-tables-grid");
+  const updated = document.getElementById("live-tables-updated");
+  if (!grid) return;
+  grid.innerHTML = (data.tables || []).map(renderLiveTableCard).join("");
+  if (updated && data.updated_at) {
+    updated.textContent = `Përditësuar: ${fmtTime(data.updated_at)}`;
+  }
+}
+
 async function loadOrders() {
   const q = new URLSearchParams({ limit: "50" });
   const waiter = document.getElementById("filter-waiter").value;
@@ -204,6 +240,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.add("active");
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
+    if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
   });
 });
@@ -236,15 +273,19 @@ document.getElementById("filter-table").addEventListener("change", loadOrders);
     document.getElementById("raport-deri").value = today;
     await loadClient();
     await loadStats();
+    await loadLiveTables();
     await loadOrderFilters();
     await loadOrders();
     setInterval(async () => {
       await loadStats();
+      if (!document.getElementById("panel-tavolinat").classList.contains("hidden")) {
+        await loadLiveTables();
+      }
       if (!document.getElementById("panel-porosite").classList.contains("hidden")) {
         await loadOrderFilters();
         await loadOrders();
       }
-    }, 30000);
+    }, 15000);
   } catch {
     localStorage.removeItem("owner_token");
     location.href = "/owner/login";

@@ -26,7 +26,7 @@ function normalizeItems(raw) {
     .filter(it => it.name);
 }
 
-async function syncSaleFromPos(body) {
+async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const celesi = normalizeKey(body.celesi || body.license_key);
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
 
@@ -40,16 +40,16 @@ async function syncSaleFromPos(body) {
   const items = normalizeItems(rawItems);
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
-  const incomingStatus = String(body.status || "closed").toLowerCase();
+  const incomingStatus = String(body.status || defaultStatus).toLowerCase();
   const allowed = ["ordered", "ready", "closed", "cancelled"];
-  const status = allowed.includes(incomingStatus) ? incomingStatus : "closed";
+  const status = allowed.includes(incomingStatus) ? incomingStatus : defaultStatus;
 
   const localOrderId = String(body.local_order_id || body.order_id || Date.now());
   const db = getSupabase();
 
   const { data: existing } = await db
     .from("sales_orders")
-    .select("status, closed_at")
+    .select("status, closed_at, ordered_at")
     .eq("client_id", license.client_id)
     .eq("local_order_id", localOrderId)
     .eq("device_id", deviceId)
@@ -76,9 +76,15 @@ async function syncSaleFromPos(body) {
   };
 
   if (finalStatus === "ordered") {
-    row.ordered_at = body.ordered_at || now;
+    row.ordered_at = body.ordered_at || existing?.ordered_at || now;
     row.closed_at = row.ordered_at;
     row.ready_at = null;
+  } else if (finalStatus === "cancelled") {
+    row.ordered_at = body.ordered_at || existing?.ordered_at || now;
+    row.closed_at = now;
+    row.ready_at = null;
+    row.items_json = [];
+    row.total = 0;
   } else if (finalStatus === "ready") {
     row.ready_at = body.ready_at || now;
     row.closed_at = body.closed_at || existing?.closed_at || now;
@@ -97,6 +103,62 @@ async function syncSaleFromPos(body) {
 
   if (error) throw error;
   return data;
+}
+
+async function syncSaleFromPos(body) {
+  return upsertSaleFromPos(body, { defaultStatus: "closed" });
+}
+
+async function updateActiveSaleFromPos(body) {
+  const status = String(body.status || "ordered").toLowerCase();
+  if (!["ordered", "cancelled"].includes(status)) {
+    throw new Error("Statusi duhet të jetë ordered ose cancelled.");
+  }
+  return upsertSaleFromPos({ ...body, status }, { defaultStatus: "ordered" });
+}
+
+async function getLiveTablesForOwner(clientId) {
+  const db = getSupabase();
+
+  const [{ data: settings }, { data: activeOrders, error }] = await Promise.all([
+    db.from("pos_settings").select("table_count").eq("client_id", clientId).maybeSingle(),
+    db
+      .from("sales_orders")
+      .select("table_number, waiter_name, items_json, total, ordered_at, local_order_id")
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .order("ordered_at", { ascending: false }),
+  ]);
+
+  if (error) throw error;
+
+  const tableCount = Math.max(1, Math.min(99, Number(settings?.table_count) || 10));
+  const byTable = new Map();
+  for (const o of activeOrders || []) {
+    const num = Number(o.table_number) || 0;
+    if (num < 1 || byTable.has(num)) continue;
+    byTable.set(num, {
+      table_number: num,
+      waiter_name: o.waiter_name || "",
+      items: normalizeItems(o.items_json),
+      total: Number(o.total) || 0,
+      ordered_at: o.ordered_at,
+      local_order_id: o.local_order_id,
+    });
+  }
+
+  const tables = [];
+  for (let n = 1; n <= tableCount; n += 1) {
+    const order = byTable.get(n) || null;
+    tables.push({
+      number: n,
+      label: `T${n}`,
+      status: order ? "occupied" : "free",
+      order,
+    });
+  }
+
+  return { table_count: tableCount, tables, updated_at: new Date().toISOString() };
 }
 
 async function sumSales(clientId, fromDate, toDate) {
@@ -223,6 +285,8 @@ async function getClientById(clientId) {
 module.exports = {
   normalizeItems,
   syncSaleFromPos,
+  updateActiveSaleFromPos,
+  getLiveTablesForOwner,
   getOwnerStats,
   listOwnerOrders,
   getOwnerOrderFilters,
