@@ -95,10 +95,40 @@ input, select, textarea {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #0b1220;
-  color: var(--text);
+  background: #1e293b;
+  color: #f1f5f9;
+  -webkit-text-fill-color: #f1f5f9;
   font: inherit;
+  font-size: 16px;
   margin-bottom: 0.75rem;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+
+input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset;
+  -webkit-text-fill-color: #f1f5f9;
+  caret-color: #f1f5f9;
+}
+
+select:invalid {
+  color: #94a3b8;
+}
+
+input:disabled, select:disabled, button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }

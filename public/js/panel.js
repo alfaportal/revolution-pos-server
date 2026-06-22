@@ -267,14 +267,56 @@ async function loadStats() {
     <div class="stat"><div class="val">${s.licenses_revoked}</div><div class="lbl">Revokuar</div></div>`;
 }
 
+function showAdminError(text) {
+  const el = document.getElementById("admin-load-error");
+  if (!el) return;
+  if (!text) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.textContent = text;
+  el.classList.remove("hidden");
+}
+
+function updateOwnerFormState(clients) {
+  const prereq = document.getElementById("owner-prereq");
+  const oSel = document.getElementById("o-client");
+  const form = document.getElementById("form-owner");
+  const btn = form?.querySelector('button[type="submit"]');
+  const hasClients = Array.isArray(clients) && clients.length > 0;
+
+  if (prereq) prereq.classList.toggle("hidden", hasClients);
+
+  if (!oSel) return;
+
+  if (!hasClients) {
+    oSel.innerHTML = '<option value="" disabled selected>— Shto klient së pari —</option>';
+    oSel.disabled = true;
+    if (btn) btn.disabled = true;
+    return;
+  }
+
+  oSel.disabled = false;
+  if (btn) btn.disabled = false;
+  const prev = oSel.value;
+  oSel.innerHTML = '<option value="" disabled selected hidden>Zgjidh klientin…</option>' +
+    clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("");
+  if (prev && clients.some(c => c.id === prev)) oSel.value = prev;
+}
+
 async function loadClients() {
   const { clients } = await api("/api/admin/clients");
   clientsCache = clients;
   const sel = document.getElementById("l-client");
-  const oSel = document.getElementById("o-client");
-  const opts = clients.map(c => `<option value="${c.id}">${c.emri} (${c.tipi})</option>`).join("");
-  sel.innerHTML = opts;
-  if (oSel) oSel.innerHTML = opts;
+  const opts = clients.length
+    ? clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
+    : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
+  if (sel) {
+    sel.innerHTML = opts;
+    sel.disabled = !clients.length;
+  }
+  updateOwnerFormState(clients);
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clients.length
     ? clients.map(c => `<tr>
@@ -369,10 +411,16 @@ async function loadOwners() {
 }
 
 async function refreshAll() {
-  await loadStats();
-  await loadClients();
-  await loadLicenses();
-  await loadOwners();
+  showAdminError(null);
+  try {
+    await loadStats();
+    await loadClients();
+    await loadLicenses();
+    await loadOwners();
+  } catch (e) {
+    showAdminError(`Gabim ngarkimi: ${e.message}. Rifresko faqen (Ctrl+F5).`);
+    throw e;
+  }
 }
 
 function showApp(user) {
@@ -499,8 +547,24 @@ document.getElementById("form-license").addEventListener("submit", async e => {
   }
 });
 
+document.getElementById("btn-goto-add-client")?.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector('[data-tab="shto"]')?.classList.add("active");
+  document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
+  document.getElementById("panel-shto")?.classList.remove("hidden");
+  document.getElementById("c-emri")?.focus();
+});
+
 document.getElementById("form-owner").addEventListener("submit", async e => {
   e.preventDefault();
+  if (!clientsCache.length) {
+    showMsg("msg-owner", "Së pari shtoni një klient në tab + Shto.", false);
+    return;
+  }
+  if (!document.getElementById("o-client").value) {
+    showMsg("msg-owner", "Zgjidhni klientin (restorantin) për këtë pronar.", false);
+    return;
+  }
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {

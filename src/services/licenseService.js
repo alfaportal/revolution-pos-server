@@ -96,12 +96,16 @@ async function validateLicense({ celesi, device_id, app_type }) {
 
 async function listClients() {
   const db = getSupabase();
-  const { data, error } = await db
+  let { data, error } = await db
     .from("clients")
     .select("*, licenses(count)")
     .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data;
+  if (error) {
+    const fallback = await db.from("clients").select("*").order("created_at", { ascending: false });
+    if (fallback.error) throw fallback.error;
+    data = fallback.data;
+  }
+  return data || [];
 }
 
 async function listLicenses() {
