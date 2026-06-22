@@ -1,5 +1,43 @@
 let token = localStorage.getItem("owner_token") || "";
 
+const PWA_BANNER_KEY = "ri_pos_pwa_banner_dismissed";
+
+function isStandalonePwa() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function isIosDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function initPwaInstallBanner() {
+  const banner = document.getElementById("pwa-install-banner");
+  const hint = document.getElementById("pwa-install-hint");
+  const closeBtn = document.getElementById("pwa-install-close");
+  if (!banner || !hint || !closeBtn) return;
+
+  if (isStandalonePwa() || localStorage.getItem(PWA_BANNER_KEY) === "1") return;
+
+  hint.textContent = isIosDevice()
+    ? "Kliko Share (□↑) → Add to Home Screen"
+    : "Kliko menunë (3 pika) → Add to Home Screen";
+
+  banner.classList.remove("hidden");
+
+  closeBtn.addEventListener("click", () => {
+    localStorage.setItem(PWA_BANNER_KEY, "1");
+    banner.classList.add("hidden");
+  });
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+}
+
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -182,6 +220,9 @@ document.getElementById("filter-waiter").addEventListener("change", loadOrders);
 document.getElementById("filter-table").addEventListener("change", loadOrders);
 
 (async () => {
+  registerServiceWorker();
+  initPwaInstallBanner();
+
   if (!token) {
     location.href = "/owner/login";
     return;

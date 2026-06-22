@@ -30,6 +30,15 @@ npm run dev
 |-------|-----|
 | Super Admin | http://localhost:8080/panel |
 | Pronarët | http://localhost:8080/owner/login |
+| Pronarët (PWA) | `/owner/panel` — «Add to Home Screen» (Android / iOS) |
+
+## PWA — paneli i pronarit
+
+- `public/manifest.json` — emri **Revolution Invest POS**, ikona **R** (portokalli/kuqe në background `#1a1a2e`)
+- `public/sw.js` — cache bazik për CSS/JS/ikona (API-t mbeten online)
+- Banner në `/owner/panel` me udhëzime Android/iOS
+
+Pas deploy, hapni `/owner/panel` nga telefoni dhe shtoni në ekranin kryesor.
 
 ## Supabase — krijo tabelat
 

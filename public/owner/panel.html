@@ -4,9 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Paneli i pronarit — Revolution POS</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RI POS">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/css/owner.css">
 </head>
 <body>
+  <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Instalo aplikacionin">
+    <button type="button" class="pwa-install-close" id="pwa-install-close" aria-label="Mbyll">×</button>
+    <div class="pwa-install-title">📲 Shto Revolution Invest POS në ekranin kryesor</div>
+    <p class="pwa-install-hint" id="pwa-install-hint"></p>
+  </div>
+
   <header class="header owner-header">
     <div>
       <h1 id="biz-name">Restoranti im</h1>
@@ -92,6 +105,6 @@
     </div>
   </div>
 
-  <script src="/js/owner.js?v=2"></script>
+  <script src="/js/owner.js?v=3"></script>
 </body>
 </html>

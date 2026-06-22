@@ -1,5 +1,54 @@
 @import url('/css/panel.css');
 
+.pwa-install-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 0.85rem 2.5rem 0.85rem 1rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid #e85d04;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.pwa-install-banner.hidden {
+  display: none;
+}
+
+.pwa-install-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+.pwa-install-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pwa-install-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pwa-install-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .owner-header {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
 }
