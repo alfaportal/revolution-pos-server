@@ -12,9 +12,12 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css">
+  <link rel="stylesheet" href="/css/panel.css?v=19">
 </head>
 <body>
+  <script>
+    document.getElementById("modal-qr")?.remove();
+  </script>
   <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Instalo panelin">
     <button type="button" class="pwa-install-close" id="pwa-install-close" aria-label="Mbyll">×</button>
     <div class="pwa-install-title">Shto Super Admin në ekranin kryesor</div>
@@ -26,6 +29,10 @@
       <h1>Revolution Invest POS</h1>
       <p>Panel Super Admin — vetëm për administratorët e platformës</p>
       <div id="login-error" class="alert alert-error hidden"></div>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 1rem;line-height:1.45">
+        Vetëm <strong>Super Admin</strong> — jo email i pronarit.
+        Zakonisht: <code style="font-size:0.9em">admin@revolutioninvest.com</code>
+      </p>
       <form id="form-login">
         <label for="email">Email</label>
         <input type="email" id="email" required autocomplete="username" placeholder="admin@revolutioninvest.com">
@@ -234,6 +241,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=18"></script>
+  <script src="/js/panel.js?v=19"></script>
 </body>
 </html>

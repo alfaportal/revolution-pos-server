@@ -24,6 +24,13 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
+    if (user.roli === "client_admin") {
+      return res.status(403).json({
+        gabim: "Ky email është i pronarit (restorant/kafene). Hyni te /owner/login — jo këtu.",
+        code: "WRONG_PORTAL",
+      });
+    }
+
     const ok = await verifyUserPassword(user, password);
     if (!ok) {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });

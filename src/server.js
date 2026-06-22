@@ -69,6 +69,7 @@ app.get("/panel.html", (_req, res) => {
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.get(ADMIN_PATH, (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/panel.html"));
 });
 

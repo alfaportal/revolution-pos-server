@@ -24,7 +24,6 @@ const {
   setOwnerActive,
   regenerateOwnerInvite,
 } = require("../services/userService");
-const { qrPngBuffer, assertSameOriginUrl } = require("../services/qrService");
 
 function requestBaseUrl(req) {
   const proto = req.get("x-forwarded-proto") || req.protocol || "https";
@@ -35,22 +34,6 @@ function requestBaseUrl(req) {
 const router = express.Router();
 
 router.use(authRequired, superAdminOnly);
-
-router.get("/qr", asyncHandler(async (req, res) => {
-  const raw = String(req.query.url || "").trim();
-  if (!raw) {
-    return res.status(400).json({ gabim: "Mungon parametri url." });
-  }
-  try {
-    const href = assertSameOriginUrl(raw, requestBaseUrl(req));
-    const png = await qrPngBuffer(href);
-    res.set("Content-Type", "image/png");
-    res.set("Cache-Control", "private, max-age=3600");
-    res.send(png);
-  } catch (e) {
-    res.status(400).json({ gabim: e.message });
-  }
-}));
 
 router.get("/stats", asyncHandler(async (_req, res) => {
   res.json({ ok: true, ...(await getDashboardStats()) });

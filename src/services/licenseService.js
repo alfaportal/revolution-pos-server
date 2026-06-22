@@ -4,10 +4,27 @@ const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
 
 function normalizeKey(key) {
-  return String(key || "")
+  const raw = String(key || "")
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
+  if (/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(raw)) return raw;
+
+  const parts = raw.split(/[^A-Z0-9]+/).filter(Boolean);
+  if (parts.length === 5 && parts[0] === parts[1] && parts.every(p => p.length === 4)) {
+    return [parts[0], parts[2], parts[3], parts[4]].join("-");
+  }
+  if (parts.length === 4 && parts.every(p => p.length === 4)) return parts.join("-");
+
+  const alnum = raw.replace(/[^A-Z0-9]/g, "");
+  if (alnum.length === 16) return alnum.match(/.{1,4}/g).join("-");
+  if (alnum.length >= 20) {
+    const groups = alnum.match(/.{1,4}/g) || [];
+    if (groups.length === 5 && groups[0] === groups[1]) {
+      return [groups[0], groups[2], groups[3], groups[4]].join("-");
+    }
+  }
+  return raw;
 }
 
 function compactKey(key) {

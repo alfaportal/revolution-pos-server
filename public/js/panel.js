@@ -585,46 +585,18 @@ async function loadOwners() {
   ownersCache = owners;
   const tbl = document.getElementById("tbl-owners");
   tbl.innerHTML = owners.length
-    ? owners.map(o => {
-        const inviteBtn = o.invite_url
-          ? `<button type="button" class="btn btn-ghost btn-sm" data-copy-invite-id="${o.id}">Kopjo linkun e ftesës</button>`
-          : "";
-        const renewBtn = o.account_status === "pending"
-          ? `<button type="button" class="btn btn-ghost btn-sm" data-renew-invite="${o.id}">Link i ri (48h)</button>`
-          : "";
-        return `<tr>
+    ? owners.map(o => `<tr>
         <td data-label="Emri"><strong>${esc(o.emri)}</strong></td>
         <td data-label="Email">${esc(o.email)}</td>
         <td data-label="Restoranti">${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
         <td data-label="Llogaria">${ownerStatusBadge(o)}</td>
         <td data-label="Regj.">${fmtDate(o.created_at)}</td>
         <td class="actions col-actions" data-label="Veprime">
-          ${inviteBtn}
-          ${renewBtn}
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
-      </tr>`;
-      }).join("")
+      </tr>`).join("")
     : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka pronarë</td></tr>';
-  tbl.querySelectorAll("[data-copy-invite-id]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const o = ownersCache.find(x => x.id === btn.dataset.copyInviteId);
-      if (o?.invite_url) copyText(o.invite_url, btn);
-      else alert("Linku i ftesës nuk është i disponueshëm.");
-    });
-  });
-  tbl.querySelectorAll("[data-renew-invite]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      try {
-        const { owner } = await api(`/api/admin/owners/${btn.dataset.renewInvite}/invite`, { method: "POST" });
-        if (owner?.invite_url) await copyText(owner.invite_url, btn);
-        await refreshAll();
-      } catch (err) {
-        alert(err.message);
-      }
-    });
-  });
   bindTableActions(tbl);
 }
 
