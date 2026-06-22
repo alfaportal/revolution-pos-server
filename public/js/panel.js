@@ -628,6 +628,7 @@ function setupOwnerLoginUrl() {
 function showLogin() {
   token = "";
   localStorage.removeItem("rip_token");
+  closeModal();
   show("view-app", false);
   show("view-login", true);
 }
@@ -783,6 +784,7 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
 });
 
 (async () => {
+  closeModal();
   if (!token) return;
   try {
     const { user } = await api("/api/auth/me");
