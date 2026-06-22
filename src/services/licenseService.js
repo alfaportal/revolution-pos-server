@@ -14,6 +14,35 @@ function compactKey(key) {
   return normalizeKey(key).replace(/-/g, "");
 }
 
+/** Shkronja të ngatërruara shpesh në çelësin e licencës (0/O, 1/I, …). */
+function charsEquivalent(a, b) {
+  if (a === b) return true;
+  const pairs = [
+    ["O", "0"],
+    ["0", "O"],
+    ["I", "1"],
+    ["1", "I"],
+    ["S", "5"],
+    ["5", "S"],
+  ];
+  return pairs.some(([x, y]) => a === x && b === y);
+}
+
+function licenseKeysEquivalent(a, b) {
+  const na = normalizeKey(a);
+  const nb = normalizeKey(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (compactKey(na) === compactKey(nb)) return true;
+  const sa = na.split("-");
+  const sb = nb.split("-");
+  if (sa.length !== 4 || sb.length !== 4) return false;
+  return sa.every((seg, i) => {
+    if (seg.length !== sb[i].length) return false;
+    return [...seg].every((ch, j) => charsEquivalent(ch, sb[i][j]));
+  });
+}
+
 function licenseAppType(license) {
   if (license.app_type) return license.app_type;
   const clientTipi = license.clients?.tipi;
@@ -57,13 +86,18 @@ async function findLicenseByKey(celesi) {
   if (ilikeErr) throw ilikeErr;
   if (ilikeRows?.length === 1) return ilikeRows[0];
 
+  const { data: allRows, error: allErr } = await db.from("licenses").select(select);
+  if (allErr) throw allErr;
+  const rows = allRows || [];
+
   const compact = compactKey(normalized);
   if (compact.length >= 8) {
-    const { data: allRows, error: allErr } = await db.from("licenses").select(select);
-    if (allErr) throw allErr;
-    const match = (allRows || []).find((row) => compactKey(row.celesi) === compact);
-    if (match) return match;
+    const exact = rows.find((row) => compactKey(row.celesi) === compact);
+    if (exact) return exact;
   }
+
+  const fuzzy = rows.filter((row) => licenseKeysEquivalent(normalized, row.celesi));
+  if (fuzzy.length === 1) return fuzzy[0];
 
   return null;
 }
@@ -97,7 +131,7 @@ async function recordValidationFailure(license, code, message, client_ip) {
 async function validateLicense({ celesi, device_id, app_type, hostname, client_ip }) {
   const license = await findLicenseByKey(celesi);
   if (!license) {
-    return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet." };
+    return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë)." };
   }
 
   const fail = async (code, message) => {
@@ -126,10 +160,12 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   const host = sanitizeHostname(hostname);
   const ip = sanitizeClientIp(client_ip);
   const now = new Date().toISOString();
+  let deviceRebound = false;
 
   if (deviceId) {
-    if (license.device_id && license.device_id !== deviceId) {
-      return fail("DEVICE_MISMATCH", "Liçenca është aktivizuar në një pajisje tjetër.");
+    const stored = String(license.device_id || "").trim().toUpperCase();
+    if (stored && stored !== deviceId) {
+      deviceRebound = true;
     }
   }
 
@@ -156,12 +192,15 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     client_type: licenseAppType(license),
     device_id: license.device_id,
     device_hostname: license.device_hostname || host,
+    device_rebound: deviceRebound,
     last_activated_at: now,
     last_ip: ip,
     status: license.statusi,
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
-    message: "Liçenca është aktive.",
+    message: deviceRebound
+      ? "Liçenca u lidh me këtë pajisje (ID u përditësua automatikisht)."
+      : "Liçenca është aktive.",
   };
 }
 
@@ -330,6 +369,7 @@ async function resetLicenseDevice(id) {
     device_hostname: "",
     last_ip: "",
     last_validation_error: "",
+    last_activated_at: null,
   };
   const { data, error } = await db
     .from("licenses")
@@ -340,7 +380,7 @@ async function resetLicenseDevice(id) {
   if (error) {
     const { data: fallback, error: err2 } = await db
       .from("licenses")
-      .update({ device_id: "" })
+      .update({ device_id: "", last_validation_error: "" })
       .eq("id", id)
       .select()
       .single();

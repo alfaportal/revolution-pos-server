@@ -613,7 +613,7 @@ async function loadLicenses() {
   });
   tbl.querySelectorAll("[data-reset]").forEach(btn => {
     btn.onclick = async () => {
-      if (!confirm("Hiq lidhjen me pajisjen aktuale?")) return;
+      if (!confirm("Hiq ID-në e pajisjes? Çdo PC i ri mund të aktivizohet përsëri me të njëjtin çelës.")) return;
       await api(`/api/admin/licenses/${btn.dataset.id}/reset-device`, { method: "POST" });
       await refreshAll();
     };
