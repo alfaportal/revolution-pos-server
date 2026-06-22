@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS licenses (
   app_type        TEXT NOT NULL DEFAULT 'restorant'
                   CHECK (app_type IN ('restorant', 'kafene')),
   device_id       TEXT DEFAULT '',
+  device_hostname TEXT DEFAULT '',
+  last_activated_at TIMESTAMPTZ,
+  last_ip         TEXT DEFAULT '',
+  last_validation_at TIMESTAMPTZ,
+  last_validation_error TEXT DEFAULT '',
   celesi          TEXT NOT NULL UNIQUE,
   statusi         TEXT NOT NULL DEFAULT 'aktive'
                   CHECK (statusi IN ('aktive', 'skaduar', 'revokuar', 'pezulluar')),
@@ -43,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_licenses_app_type ON licenses (app_type);
 CREATE INDEX IF NOT EXISTS idx_licenses_celesi ON licenses (celesi);
 CREATE INDEX IF NOT EXISTS idx_licenses_device ON licenses (device_id);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses (statusi);
+CREATE INDEX IF NOT EXISTS idx_licenses_last_activated ON licenses (last_activated_at DESC NULLS LAST);
 
 -- Përdoruesit e panelit
 CREATE TABLE IF NOT EXISTS users (

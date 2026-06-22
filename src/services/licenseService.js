@@ -68,50 +68,85 @@ async function findLicenseByKey(celesi) {
   return null;
 }
 
-async function validateLicense({ celesi, device_id, app_type }) {
+function sanitizeClientIp(ip) {
+  return String(ip || "").trim().split(",")[0].trim().slice(0, 64);
+}
+
+function sanitizeHostname(hostname) {
+  return String(hostname || "").trim().slice(0, 128);
+}
+
+async function patchLicenseMeta(licenseId, patch) {
+  const db = getSupabase();
+  const { error } = await db.from("licenses").update(patch).eq("id", licenseId);
+  if (error) {
+    const skip = /device_hostname|last_activated|last_validation|last_ip/i.test(error.message || "");
+    if (!skip) throw error;
+  }
+}
+
+async function recordValidationFailure(license, code, message, client_ip) {
+  const ip = sanitizeClientIp(client_ip);
+  await patchLicenseMeta(license.id, {
+    last_validation_at: new Date().toISOString(),
+    last_validation_error: `${code}: ${message}`,
+    ...(ip ? { last_ip: ip } : {}),
+  });
+}
+
+async function validateLicense({ celesi, device_id, app_type, hostname, client_ip }) {
   const license = await findLicenseByKey(celesi);
   if (!license) {
     return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet." };
   }
 
+  const fail = async (code, message) => {
+    await recordValidationFailure(license, code, message, client_ip);
+    return { valid: false, code, message };
+  };
+
   if (license.statusi === "revokuar") {
-    return { valid: false, code: "REVOKED", message: "Liçenca është revokuar." };
+    return fail("REVOKED", "Liçenca është revokuar.");
   }
   if (license.statusi === "pezulluar") {
-    return { valid: false, code: "SUSPENDED", message: "Liçenca është pezulluar." };
+    return fail("SUSPENDED", "Liçenca është pezulluar.");
   }
   if (license.statusi === "skaduar" || isExpired(license.data_skadimit)) {
-    return { valid: false, code: "EXPIRED", message: "Liçenca ka skaduar." };
+    return fail("EXPIRED", "Liçenca ka skaduar.");
   }
 
   if (app_type) {
     const expected = licenseAppType(license);
     if (expected !== "tjeter" && app_type !== expected) {
-      return {
-        valid: false,
-        code: "WRONG_APP",
-        message: `Liçenca është për ${expected}, jo për ${app_type}.`,
-      };
+      return fail("WRONG_APP", `Liçenca është për ${expected}, jo për ${app_type}.`);
     }
   }
 
   const deviceId = String(device_id || "").trim().toUpperCase();
+  const host = sanitizeHostname(hostname);
+  const ip = sanitizeClientIp(client_ip);
+  const now = new Date().toISOString();
+
   if (deviceId) {
-    if (!license.device_id) {
-      const db = getSupabase();
-      await db
-        .from("licenses")
-        .update({ device_id: deviceId })
-        .eq("id", license.id);
-      license.device_id = deviceId;
-    } else if (license.device_id !== deviceId) {
-      return {
-        valid: false,
-        code: "DEVICE_MISMATCH",
-        message: "Liçenca është aktivizuar në një pajisje tjetër.",
-      };
+    if (license.device_id && license.device_id !== deviceId) {
+      return fail("DEVICE_MISMATCH", "Liçenca është aktivizuar në një pajisje tjetër.");
     }
   }
+
+  const successPatch = {
+    last_activated_at: now,
+    last_validation_at: now,
+    last_validation_error: "",
+    ...(ip ? { last_ip: ip } : {}),
+    ...(host ? { device_hostname: host } : {}),
+  };
+  if (deviceId) {
+    successPatch.device_id = deviceId;
+  }
+
+  await patchLicenseMeta(license.id, successPatch);
+  if (deviceId) license.device_id = deviceId;
+  if (host) license.device_hostname = host;
 
   return {
     valid: true,
@@ -120,6 +155,9 @@ async function validateLicense({ celesi, device_id, app_type }) {
     client_name: license.clients?.emri || "",
     client_type: licenseAppType(license),
     device_id: license.device_id,
+    device_hostname: license.device_hostname || host,
+    last_activated_at: now,
+    last_ip: ip,
     status: license.statusi,
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
@@ -287,13 +325,28 @@ async function updateLicenseStatus(id, statusi) {
 
 async function resetLicenseDevice(id) {
   const db = getSupabase();
+  const patch = {
+    device_id: "",
+    device_hostname: "",
+    last_ip: "",
+    last_validation_error: "",
+  };
   const { data, error } = await db
     .from("licenses")
-    .update({ device_id: "" })
+    .update(patch)
     .eq("id", id)
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    const { data: fallback, error: err2 } = await db
+      .from("licenses")
+      .update({ device_id: "" })
+      .eq("id", id)
+      .select()
+      .single();
+    if (err2) throw err2;
+    return fallback;
+  }
   return data;
 }
 

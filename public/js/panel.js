@@ -88,6 +88,42 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("sq-AL");
 }
 
+function fmtDateTime(d) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString("sq-AL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function licenseIsExpired(l) {
+  if (!l?.data_skadimit) return false;
+  return l.data_skadimit < new Date().toISOString().slice(0, 10);
+}
+
+function licenseProblems(l) {
+  const problems = [];
+  if (l.last_validation_error) problems.push(String(l.last_validation_error));
+  if (l.statusi === "revokuar") problems.push("Liçenca është revokuar.");
+  if (l.statusi === "pezulluar") problems.push("Liçenca është pezulluar.");
+  if (l.statusi === "skaduar") problems.push("Liçenca është shënuar si skaduar.");
+  if (licenseIsExpired(l) && l.statusi === "aktive") {
+    problems.push("Data e skadimit ka kaluar.");
+  }
+  return [...new Set(problems)];
+}
+
+function licenseStatusCell(l) {
+  const problems = licenseProblems(l);
+  const warn = problems.length
+    ? `<span class="license-warn" title="${esc(problems.join(" — "))}" aria-label="Problem">⚠️</span> `
+    : "";
+  return `${warn}${badge(l.statusi)}`;
+}
+
 function esc(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -306,6 +342,13 @@ function openEditLicense(id) {
     </select>
     <label>ID pajisjes (nga POS)</label>
     <input name="device_id" value="${esc(l.device_id || "")}" placeholder="p.sh. AD503FC5608A" class="mono" autocomplete="off">
+    <label>Kompjuteri (hostname)</label>
+    <input value="${esc(l.device_hostname || "—")}" readonly class="mono" style="opacity:0.85">
+    <label>Aktivizuar për herë të fundit</label>
+    <input value="${esc(fmtDateTime(l.last_activated_at))}" readonly style="opacity:0.85">
+    <label>IP e fundit</label>
+    <input value="${esc(l.last_ip || "—")}" readonly class="mono" style="opacity:0.85">
+    ${l.last_validation_error ? `<div class="alert alert-error" style="margin-bottom:0.75rem">⚠️ ${esc(l.last_validation_error)}</div>` : ""}
     <p style="font-size:0.8rem;color:var(--muted);margin:-0.35rem 0 0.75rem">Plotësohet kur POS aktivizon online. Lëreni bosh për «Pa aktivizuar».</p>
     <label>Data e skadimit</label>
     <input type="date" name="data_skadimit" required value="${esc(l.data_skadimit)}">
@@ -518,13 +561,16 @@ async function loadLicenses() {
           <code class="mono">${esc(l.celesi)}</code>
           <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(l.celesi)}">Kopjo</button>
         </td>
-        <td class="device-id-cell" data-label="ID pajisjes">
+        <td class="device-id-cell" data-label="ID Pajisjes">
           ${devId
             ? `<code class="mono device-id-badge">${esc(devId)}</code>
-               <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(devId)}">Kopjo</button>`
+               <button type="button" class="btn btn-ghost btn-sm" data-copy-device-id="${l.id}">Kopjo ID</button>`
             : '<span class="device-pending">Pa aktivizuar</span>'}
         </td>
-        <td data-label="Statusi">${badge(l.statusi)}</td>
+        <td data-label="Kompjuteri">${esc(l.device_hostname) || "—"}</td>
+        <td data-label="Aktivizuar">${fmtDateTime(l.last_activated_at)}</td>
+        <td data-label="IP" class="mono">${esc(l.last_ip) || "—"}</td>
+        <td data-label="Statusi">${licenseStatusCell(l)}</td>
         <td data-label="Nga">${l.data_fillimit}</td>
         <td data-label="Deri">${l.data_skadimit}</td>
         <td class="actions col-actions" data-label="Veprime">
@@ -536,10 +582,18 @@ async function loadLicenses() {
         </td>
       </tr>`;
       }).join("")
-    : '<tr><td colspan="8" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
+    : '<tr><td colspan="11" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
 
   tbl.querySelectorAll("[data-copy-text]").forEach(btn => {
     btn.addEventListener("click", () => copyText(btn.dataset.copyText, btn));
+  });
+  tbl.querySelectorAll("[data-copy-device-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const lic = licensesCache.find(x => x.id === btn.dataset.copyDeviceId);
+      const id = (lic?.device_id || "").trim();
+      if (id) copyText(id, btn);
+      else alert("Nuk ka ID pajisje.");
+    });
   });
 
   tbl.querySelectorAll("[data-act]").forEach(btn => {

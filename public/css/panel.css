@@ -387,6 +387,13 @@ td.col-actions .btn {
   font-style: italic;
 }
 
+.license-warn {
+  cursor: help;
+  font-size: 1rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .license-key-cell,
 .device-id-cell {
   white-space: nowrap;
