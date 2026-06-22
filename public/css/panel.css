@@ -296,6 +296,14 @@ td.col-actions .btn {
   align-items: flex-start;
 }
 
+.license-pair-hint {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.45;
+  border-color: #1e40af;
+  background: #0f1a33;
+}
+
 .device-id-badge {
   display: inline-block;
   background: #0f2a44;

@@ -179,7 +179,11 @@ function openEditLicense(id) {
   const l = licensesCache.find(x => x.id === id);
   if (!l) return;
   openModal("Ndrysho liçencën", `
-    <p class="mono" style="margin-bottom:0.75rem;color:var(--muted)">${esc(l.celesi)}</p>
+    <label>Kodi i licencës</label>
+    <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
+    <label>ID pajisjes (nga POS)</label>
+    <input name="device_id" value="${esc(l.device_id || "")}" placeholder="p.sh. AD503FC5608A" class="mono" autocomplete="off">
+    <p style="font-size:0.8rem;color:var(--muted);margin:-0.35rem 0 0.75rem">Plotësohet kur POS aktivizon online. Lëreni bosh për «Pa aktivizuar».</p>
     <label>Data e skadimit</label>
     <input type="date" name="data_skadimit" required value="${esc(l.data_skadimit)}">
     <label>Statusi</label>
@@ -195,6 +199,7 @@ function openEditLicense(id) {
       body: JSON.stringify({
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
+        device_id: fd.get("device_id"),
       }),
     });
   });
@@ -520,6 +525,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.add("active");
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
+    if (tab.dataset.tab === "licensat") loadLicenses().catch(() => {});
   });
 });
 

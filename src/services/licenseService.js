@@ -204,6 +204,9 @@ async function updateLicense(id, body) {
     if (!allowed.includes(body.statusi)) throw new Error("Status i pavlefshëm.");
     patch.statusi = body.statusi;
   }
+  if (body.device_id != null) {
+    patch.device_id = String(body.device_id).trim().toUpperCase();
+  }
   if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
 
   const { data, error } = await db.from("licenses").update(patch).eq("id", id).select("*, clients(emri, tipi)").single();
