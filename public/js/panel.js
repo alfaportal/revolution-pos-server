@@ -349,15 +349,37 @@ async function loadClients() {
   return clients;
 }
 
+async function copyText(text, btn) {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = "U kopjua!";
+    setTimeout(() => { btn.textContent = prev; }, 1500);
+  } catch {
+    prompt("Kopjoni:", text);
+  }
+}
+
 async function loadLicenses() {
   const { licenses } = await api("/api/admin/licenses");
   licensesCache = licenses;
   const tbl = document.getElementById("tbl-licenses");
   tbl.innerHTML = licenses.length
-    ? licenses.map(l => `<tr>
+    ? licenses.map(l => {
+        const devId = (l.device_id || "").trim();
+        return `<tr>
         <td>${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
-        <td class="mono">${esc(l.celesi)}</td>
-        <td class="mono">${esc(l.device_id) || "—"}</td>
+        <td class="license-key-cell">
+          <code class="mono">${esc(l.celesi)}</code>
+          <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(l.celesi)}">Kopjo</button>
+        </td>
+        <td class="device-id-cell">
+          ${devId
+            ? `<code class="mono device-id-badge">${esc(devId)}</code>
+               <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(devId)}">Kopjo</button>`
+            : '<span class="device-pending">Pa aktivizuar</span>'}
+        </td>
         <td>${badge(l.statusi)}</td>
         <td>${l.data_fillimit}</td>
         <td>${l.data_skadimit}</td>
@@ -366,10 +388,15 @@ async function loadLicenses() {
           <button class="btn btn-danger btn-sm" data-del-license="${l.id}">Fshi</button>
           ${l.statusi !== "aktive" ? `<button class="btn btn-ghost btn-sm" data-act="aktive" data-id="${l.id}">Aktivizo</button>` : ""}
           ${l.statusi !== "revokuar" ? `<button class="btn btn-ghost btn-sm" data-act="revokuar" data-id="${l.id}">Revoko</button>` : ""}
-          <button class="btn btn-ghost btn-sm" data-reset="${l.id}" title="Hiq lidhjen me pajisjen">Reset</button>
+          <button class="btn btn-ghost btn-sm" data-reset="${l.id}" title="Hiq lidhjen — lejon ID tjetër">Reset ID</button>
         </td>
-      </tr>`).join("")
+      </tr>`;
+      }).join("")
     : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
+
+  tbl.querySelectorAll("[data-copy-text]").forEach(btn => {
+    btn.addEventListener("click", () => copyText(btn.dataset.copyText, btn));
+  });
 
   tbl.querySelectorAll("[data-act]").forEach(btn => {
     btn.onclick = async () => {

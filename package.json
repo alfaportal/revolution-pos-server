@@ -1,6 +1,6 @@
 {
   "name": "revolution-pos-server",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Revolution Invest POS — backend licensimi dhe panel Super Admin",
   "main": "src/server.js",
   "scripts": {

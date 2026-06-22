@@ -296,6 +296,35 @@ td.col-actions .btn {
   align-items: flex-start;
 }
 
+.device-id-badge {
+  display: inline-block;
+  background: #0f2a44;
+  color: #38bdf8;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.device-pending {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.license-key-cell,
+.device-id-cell {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.license-key-cell code,
+.device-id-cell code {
+  display: inline-block;
+  margin-right: 0.25rem;
+  vertical-align: middle;
+}
+
 td.kds-link-cell {
   white-space: nowrap;
   font-size: 0.8rem;
