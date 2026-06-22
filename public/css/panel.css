@@ -350,8 +350,215 @@ td.kds-link-cell {
 }
 td.kds-link-cell .btn { margin-top: 0.25rem; }
 
-.overflow-x { overflow-x: auto; }
+.overflow-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* PWA — shto në ekranin kryesor (telefon) */
+.pwa-install-banner {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  margin: 0;
+  padding: 0.85rem 2.5rem 0.85rem 1rem;
+  background: linear-gradient(135deg, #0b1220 0%, #1e3a5f 100%);
+  border-bottom: 1px solid var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.pwa-install-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+.pwa-install-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.pwa-install-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pwa-install-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Tabela → karta në telefon */
+@media (max-width: 900px) {
+  .admin-table thead { display: none; }
+
+  .admin-table tbody tr {
+    display: block;
+    background: #0b1220;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.75rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .admin-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.45);
+    white-space: normal;
+    text-align: right;
+  }
+
+  .admin-table tbody td:last-child {
+    border-bottom: none;
+    padding-top: 0.65rem;
+  }
+
+  .admin-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 5rem;
+    text-align: left;
+    padding-top: 0.1rem;
+  }
+
+  .admin-table td.col-actions {
+    position: static;
+    box-shadow: none;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .admin-table td.col-actions::before {
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-table td.col-actions .btn {
+    width: 100%;
+    margin: 0.2rem 0;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .admin-table .license-key-cell,
+  .admin-table .device-id-cell,
+  .admin-table .kds-link-cell {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+
+  .admin-table .link-btns {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
+
+  .admin-table .link-btns .btn {
+    width: auto;
+    min-width: 7rem;
+  }
+
+  .overflow-x { overflow-x: visible; }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    padding-top: max(0.85rem, env(safe-area-inset-top));
+  }
+
+  .header h1 { font-size: 1rem; }
+  .header .sub { font-size: 0.78rem; line-height: 1.35; }
+
+  .container {
+    padding: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .stat { padding: 0.75rem 0.5rem; }
+  .stat .val { font-size: 1.45rem; }
+
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.88rem;
+  }
+
+  .form-row { grid-template-columns: 1fr; }
+
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; padding: 0.45rem 0.75rem; }
+
+  .card { padding: 1rem; }
+
+  .modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-card {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .link-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .link-actions input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #l-celesi { flex: 1; min-width: 0; }
+}
 
 @media (max-width: 640px) {
-  .header { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+  .login-card { padding: 1.5rem; }
 }

@@ -2,11 +2,24 @@
 <html lang="sq">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Revolution Invest POS — Super Admin</title>
+  <meta name="theme-color" content="#0b1220">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RI Admin">
+  <link rel="manifest" href="/admin-manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/css/panel.css">
 </head>
 <body>
+  <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Instalo panelin">
+    <button type="button" class="pwa-install-close" id="pwa-install-close" aria-label="Mbyll">×</button>
+    <div class="pwa-install-title">Shto Super Admin në ekranin kryesor</div>
+    <p class="pwa-install-hint" id="pwa-install-hint"></p>
+  </div>
+
   <div id="view-login" class="login-wrap">
     <div class="login-card">
       <h1>Revolution Invest POS</h1>
@@ -26,7 +39,7 @@
     <header class="header">
       <div>
         <h1>Revolution Invest POS</h1>
-        <div class="sub">Super Admin Panel</div>
+        <div class="sub">Qasje e plotë — restorant &amp; kafene, nga çdo pajisje</div>
       </div>
       <div style="display:flex;align-items:center;gap:0.75rem">
         <span id="user-label" style="color:var(--muted);font-size:0.9rem"></span>
@@ -49,7 +62,7 @@
         <div class="card">
           <div class="card-title">Të gjithë klientët</div>
           <div class="overflow-x">
-            <table>
+            <table class="admin-table">
               <thead>
                 <tr>
                   <th>Emri</th><th>Tipi</th><th>Telefoni</th><th>Email</th><th>Adresa</th><th>Liç.</th><th>Regj.</th><th>Linqet</th><th class="col-actions">Veprime</th>
@@ -68,7 +81,7 @@
         <div class="card">
           <div class="card-title">Të gjitha liçensat</div>
           <div class="overflow-x">
-            <table>
+            <table class="admin-table">
               <thead>
                 <tr>
                   <th>Klienti</th><th>App</th><th>Kodi i licencës</th><th>ID pajisjes</th><th>Statusi</th><th>Nga</th><th>Deri</th><th class="col-actions">Veprime</th>
@@ -85,7 +98,7 @@
           <div class="card-title">Pronarët e restoranteve / kafeneve</div>
           <p class="admin-only-note">Vetëm Super Admin — pronarët nuk shohin liçensa, ID pajisjesh apo këtë listë.</p>
           <div class="overflow-x">
-            <table>
+            <table class="admin-table">
               <thead>
                 <tr>
                   <th>Emri</th><th>Email</th><th>Restoranti</th><th>Statusi</th><th>Regj.</th><th class="col-actions">Veprime</th>
@@ -165,6 +178,7 @@
             <button type="submit" class="btn btn-primary">Krijo liçencën</button>
           </form>
           <p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">
+            <strong>Tipi i aplikacionit</strong> vlen vetëm për POS (restorant vs kafene) — si Super Admin ke qasje në të gjitha.
             ID e pajisjes plotësohet automatikisht kur POS aktivizon çelësin. Përdorni <strong>Reset ID</strong> te tab Liçensat.
           </p>
         </div>
@@ -221,6 +235,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=11"></script>
+  <script src="/js/panel.js?v=12"></script>
 </body>
 </html>

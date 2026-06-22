@@ -1,5 +1,40 @@
 let token = localStorage.getItem("rip_token") || "";
 
+const ADMIN_PWA_BANNER_KEY = "ri_admin_pwa_banner_dismissed";
+
+function isStandalonePwa() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
+function isIosDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function initAdminPwaBanner() {
+  const banner = document.getElementById("pwa-install-banner");
+  const hint = document.getElementById("pwa-install-hint");
+  const closeBtn = document.getElementById("pwa-install-close");
+  if (!banner || !hint || !closeBtn) return;
+
+  if (isStandalonePwa() || localStorage.getItem(ADMIN_PWA_BANNER_KEY) === "1") return;
+
+  hint.textContent = isIosDevice()
+    ? "Share (□↑) → Add to Home Screen — pastaj hap nga ikona, si aplikacion."
+    : "Menu (3 pika) → Add to Home Screen — pastaj hap nga ikona, si aplikacion.";
+
+  banner.classList.remove("hidden");
+
+  closeBtn.addEventListener("click", () => {
+    localStorage.setItem(ADMIN_PWA_BANNER_KEY, "1");
+    banner.classList.add("hidden");
+  });
+}
+
+initAdminPwaBanner();
+
 function apiUrl(path) {
   if (path.startsWith("http")) return path;
   return `${window.location.origin}${path}`;
@@ -350,20 +385,20 @@ async function loadClients() {
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clients.length
     ? clients.map(c => `<tr>
-        <td><strong>${esc(c.emri)}</strong></td>
-        <td>${esc(c.tipi)}</td>
-        <td>${esc(c.telefoni) || "—"}</td>
-        <td>${esc(c.email) || "—"}</td>
-        <td>${esc(c.adresa) || "—"}</td>
-        <td>${c.licenses?.[0]?.count ?? 0}</td>
-        <td>${fmtDate(c.created_at)}</td>
-        <td class="kds-link-cell">
+        <td data-label="Emri"><strong>${esc(c.emri)}</strong></td>
+        <td data-label="Tipi">${esc(c.tipi)}</td>
+        <td data-label="Telefoni">${esc(c.telefoni) || "—"}</td>
+        <td data-label="Email">${esc(c.email) || "—"}</td>
+        <td data-label="Adresa">${esc(c.adresa) || "—"}</td>
+        <td data-label="Liç.">${c.licenses?.[0]?.count ?? 0}</td>
+        <td data-label="Regj.">${fmtDate(c.created_at)}</td>
+        <td class="kds-link-cell" data-label="Linqet">
           <div class="link-btns">
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
         </td>
-        <td class="actions col-actions">
+        <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
@@ -399,22 +434,22 @@ async function loadLicenses() {
     ? licenses.map(l => {
         const devId = (l.device_id || "").trim();
         return `<tr>
-        <td>${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
-        <td>${licenseAppTypeLabel(l)}</td>
-        <td class="license-key-cell">
+        <td data-label="Klienti">${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
+        <td data-label="App">${licenseAppTypeLabel(l)}</td>
+        <td class="license-key-cell" data-label="Kodi">
           <code class="mono">${esc(l.celesi)}</code>
           <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(l.celesi)}">Kopjo</button>
         </td>
-        <td class="device-id-cell">
+        <td class="device-id-cell" data-label="ID pajisjes">
           ${devId
             ? `<code class="mono device-id-badge">${esc(devId)}</code>
                <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(devId)}">Kopjo</button>`
             : '<span class="device-pending">Pa aktivizuar</span>'}
         </td>
-        <td>${badge(l.statusi)}</td>
-        <td>${l.data_fillimit}</td>
-        <td>${l.data_skadimit}</td>
-        <td class="actions col-actions">
+        <td data-label="Statusi">${badge(l.statusi)}</td>
+        <td data-label="Nga">${l.data_fillimit}</td>
+        <td data-label="Deri">${l.data_skadimit}</td>
+        <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-ghost btn-sm" data-edit-license="${l.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-license="${l.id}">Fshi</button>
           ${l.statusi !== "aktive" ? `<button class="btn btn-ghost btn-sm" data-act="aktive" data-id="${l.id}">Aktivizo</button>` : ""}
@@ -454,12 +489,12 @@ async function loadOwners() {
   const tbl = document.getElementById("tbl-owners");
   tbl.innerHTML = owners.length
     ? owners.map(o => `<tr>
-        <td><strong>${esc(o.emri)}</strong></td>
-        <td>${esc(o.email)}</td>
-        <td>${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
-        <td>${o.aktiv !== false ? '<span class="badge badge-aktive">aktiv</span>' : '<span class="badge badge-revokuar">çaktiv</span>'}</td>
-        <td>${fmtDate(o.created_at)}</td>
-        <td class="actions col-actions">
+        <td data-label="Emri"><strong>${esc(o.emri)}</strong></td>
+        <td data-label="Email">${esc(o.email)}</td>
+        <td data-label="Restoranti">${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
+        <td data-label="Statusi">${o.aktiv !== false ? '<span class="badge badge-aktive">aktiv</span>' : '<span class="badge badge-revokuar">çaktiv</span>'}</td>
+        <td data-label="Regj.">${fmtDate(o.created_at)}</td>
+        <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
