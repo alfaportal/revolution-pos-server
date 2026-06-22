@@ -364,6 +364,9 @@ async function updateLicenseStatus(id, statusi) {
 }
 
 async function resetLicenseDevice(id) {
+  const licenseId = String(id || "").trim();
+  if (!licenseId) throw new Error("ID e liçencës mungon.");
+
   const db = getSupabase();
   const patch = {
     device_id: "",
@@ -375,19 +378,21 @@ async function resetLicenseDevice(id) {
   const { data, error } = await db
     .from("licenses")
     .update(patch)
-    .eq("id", id)
-    .select()
+    .eq("id", licenseId)
+    .select("*, clients(emri, tipi)")
     .single();
   if (error) {
     const { data: fallback, error: err2 } = await db
       .from("licenses")
       .update({ device_id: "", last_validation_error: "" })
-      .eq("id", id)
-      .select()
+      .eq("id", licenseId)
+      .select("*, clients(emri, tipi)")
       .single();
     if (err2) throw err2;
+    if (!fallback) throw new Error("Liçenca nuk u gjet.");
     return fallback;
   }
+  if (!data) throw new Error("Liçenca nuk u gjet.");
   return data;
 }
 

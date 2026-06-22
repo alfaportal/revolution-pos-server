@@ -141,8 +141,24 @@ router.patch("/licenses/:id/status", asyncHandler(async (req, res) => {
 }));
 
 router.post("/licenses/:id/reset-device", asyncHandler(async (req, res) => {
-  const license = await resetLicenseDevice(req.params.id);
-  res.json({ ok: true, license });
+  try {
+    const license = await resetLicenseDevice(req.params.id);
+    res.json({ ok: true, license });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /licenses/:id/reset-device", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+/** Alias PATCH — disa klientë/proxy e pranojnë më mirë PATCH */
+router.patch("/licenses/:id/reset-device", asyncHandler(async (req, res) => {
+  try {
+    const license = await resetLicenseDevice(req.params.id);
+    res.json({ ok: true, license });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /licenses/:id/reset-device", e);
+    res.status(400).json({ gabim: msg });
+  }
 }));
 
 router.get("/owners", asyncHandler(async (req, res) => {

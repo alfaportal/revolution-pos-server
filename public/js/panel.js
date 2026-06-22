@@ -635,9 +635,15 @@ async function loadLicenses() {
   });
   tbl.querySelectorAll("[data-reset]").forEach(btn => {
     btn.onclick = async () => {
+      const licenseId = btn.dataset.reset;
+      if (!licenseId) return;
       if (!confirm("Hiq ID-në e pajisjes? Çdo PC i ri mund të aktivizohet përsëri me të njëjtin çelës.")) return;
-      await api(`/api/admin/licenses/${btn.dataset.id}/reset-device`, { method: "POST" });
-      await refreshAll();
+      try {
+        await api(`/api/admin/licenses/${licenseId}/reset-device`, { method: "POST" });
+        await refreshAll();
+      } catch (err) {
+        alert(err.message || "Reset ID dështoi.");
+      }
     };
   });
   bindTableActions(tbl);
