@@ -20,13 +20,28 @@
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr</button>
       </form>
       <p style="margin-top:1rem;font-size:0.8rem;color:var(--muted);text-align:center">
-        Super Admin? <a href="/panel">Hyr këtu</a>
+        Vetëm pronarët e lokaleve. Super Admin → <a href="/panel">/panel</a>
       </p>
     </div>
   </div>
   <script>
-    const token = localStorage.getItem("owner_token");
-    if (token) location.href = "/owner/panel";
+    (async () => {
+      const token = localStorage.getItem("owner_token");
+      if (!token) return;
+      try {
+        const res = await fetch("/api/auth/owner/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (res.ok) {
+          location.href = "/owner/panel";
+          return;
+        }
+        localStorage.removeItem("owner_token");
+      } catch {
+        localStorage.removeItem("owner_token");
+      }
+    })();
 
     document.getElementById("form-login").addEventListener("submit", async e => {
       e.preventDefault();

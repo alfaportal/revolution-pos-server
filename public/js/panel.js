@@ -399,16 +399,20 @@ document.getElementById("form-login").addEventListener("submit", async e => {
   const errEl = document.getElementById("login-error");
   errEl.classList.add("hidden");
   try {
-    const res = await api("/api/auth/login", {
+    const res = await fetch(apiUrl("/api/auth/login"), {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         email: document.getElementById("email").value,
         password: document.getElementById("password").value,
       }),
     });
-    token = res.token;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.gabim || `HTTP ${res.status}`);
+    token = data.token;
     localStorage.setItem("rip_token", token);
-    showApp(res.user);
+    showApp(data.user);
     await refreshAll();
   } catch (err) {
     errEl.textContent = err.message;

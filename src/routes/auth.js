@@ -15,12 +15,21 @@ router.post("/login", async (req, res) => {
     }
 
     const user = await findUserByEmail(email);
-    if (!user || user.roli !== "super_admin") {
+    if (!user) {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
     const ok = await verifyUserPassword(user, password);
     if (!ok) {
+      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+    }
+
+    if (user.roli === "client_admin") {
+      return res.status(403).json({
+        gabim: "Ky panel është vetëm për Super Admin. Përdorni /owner/login për pronarët.",
+      });
+    }
+    if (user.roli !== "super_admin") {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
@@ -62,7 +71,19 @@ router.post("/owner/login", async (req, res) => {
     }
 
     const user = await findUserByEmail(email);
-    if (!user || user.roli !== "client_admin") {
+    if (!user) {
+      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+    }
+
+    const ok = await verifyUserPassword(user, password);
+    if (!ok) {
+      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+    }
+
+    if (user.roli === "super_admin") {
+      return res.status(403).json({ gabim: "Ky panel është vetëm për pronarë lokalesh" });
+    }
+    if (user.roli !== "client_admin") {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
     if (user.aktiv === false) {
@@ -70,11 +91,6 @@ router.post("/owner/login", async (req, res) => {
     }
     if (!user.client_id) {
       return res.status(403).json({ gabim: "Llogaria nuk është e lidhur me restorant." });
-    }
-
-    const ok = await verifyUserPassword(user, password);
-    if (!ok) {
-      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
     const token = signToken({
@@ -119,6 +135,9 @@ router.post("/owner/logout", (_req, res) => {
 });
 
 router.get("/me", authRequired, (req, res) => {
+  if (req.user?.roli !== "super_admin") {
+    return res.status(403).json({ gabim: "Ky panel është vetëm për Super Admin." });
+  }
   res.json({ ok: true, user: req.user });
 });
 
