@@ -26,6 +26,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_kitchen_slug
 CREATE TABLE IF NOT EXISTS licenses (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id       UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  app_type        TEXT NOT NULL DEFAULT 'restorant'
+                  CHECK (app_type IN ('restorant', 'kafene')),
   device_id       TEXT DEFAULT '',
   celesi          TEXT NOT NULL UNIQUE,
   statusi         TEXT NOT NULL DEFAULT 'aktive'
@@ -37,6 +39,7 @@ CREATE TABLE IF NOT EXISTS licenses (
 );
 
 CREATE INDEX IF NOT EXISTS idx_licenses_client ON licenses (client_id);
+CREATE INDEX IF NOT EXISTS idx_licenses_app_type ON licenses (app_type);
 CREATE INDEX IF NOT EXISTS idx_licenses_celesi ON licenses (celesi);
 CREATE INDEX IF NOT EXISTS idx_licenses_device ON licenses (device_id);
 CREATE INDEX IF NOT EXISTS idx_licenses_status ON licenses (statusi);

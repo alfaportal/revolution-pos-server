@@ -167,12 +167,29 @@ async function copyLink(url, btn) {
   }
 }
 
-async function copyKitchenLink(clientId, btn) {
-  await copyLink(kitchenLink(clientId), btn);
+function licenseAppTypeLabel(l) {
+  const t = l.app_type || l.clients?.tipi || "restorant";
+  if (t === "kafene") return "Kafene";
+  if (t === "restorant") return "Restorant";
+  return esc(t);
+}
+
+function syncLicenseAppTypeFromClient() {
+  const clientSel = document.getElementById("l-client");
+  const appSel = document.getElementById("l-app-type");
+  if (!clientSel || !appSel || !clientSel.value) return;
+  const client = clientsCache.find(c => c.id === clientSel.value);
+  if (client && (client.tipi === "restorant" || client.tipi === "kafene")) {
+    appSel.value = client.tipi;
+  }
 }
 
 async function copyWaiterLink(clientId, btn) {
   await copyLink(waiterLink(clientId), btn);
+}
+
+async function copyKitchenLink(clientId, btn) {
+  await copyLink(kitchenLink(clientId), btn);
 }
 
 function openEditLicense(id) {
@@ -181,6 +198,11 @@ function openEditLicense(id) {
   openModal("Ndrysho liçencën", `
     <label>Kodi i licencës</label>
     <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
+    <label>Tipi i aplikacionit</label>
+    <select name="app_type">
+      <option value="restorant" ${(l.app_type || l.clients?.tipi) === "restorant" ? "selected" : ""}>Restorant</option>
+      <option value="kafene" ${(l.app_type || l.clients?.tipi) === "kafene" ? "selected" : ""}>Kafene</option>
+    </select>
     <label>ID pajisjes (nga POS)</label>
     <input name="device_id" value="${esc(l.device_id || "")}" placeholder="p.sh. AD503FC5608A" class="mono" autocomplete="off">
     <p style="font-size:0.8rem;color:var(--muted);margin:-0.35rem 0 0.75rem">Plotësohet kur POS aktivizon online. Lëreni bosh për «Pa aktivizuar».</p>
@@ -200,6 +222,7 @@ function openEditLicense(id) {
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
         device_id: fd.get("device_id"),
+        app_type: fd.get("app_type"),
       }),
     });
   });
@@ -320,6 +343,8 @@ async function loadClients() {
   if (sel) {
     sel.innerHTML = opts;
     sel.disabled = !clients.length;
+    sel.onchange = syncLicenseAppTypeFromClient;
+    syncLicenseAppTypeFromClient();
   }
   updateOwnerFormState(clients);
   const tbl = document.getElementById("tbl-clients");
@@ -375,6 +400,7 @@ async function loadLicenses() {
         const devId = (l.device_id || "").trim();
         return `<tr>
         <td>${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
+        <td>${licenseAppTypeLabel(l)}</td>
         <td class="license-key-cell">
           <code class="mono">${esc(l.celesi)}</code>
           <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(l.celesi)}">Kopjo</button>
@@ -397,7 +423,7 @@ async function loadLicenses() {
         </td>
       </tr>`;
       }).join("")
-    : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
+    : '<tr><td colspan="8" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
 
   tbl.querySelectorAll("[data-copy-text]").forEach(btn => {
     btn.addEventListener("click", () => copyText(btn.dataset.copyText, btn));
@@ -566,6 +592,7 @@ document.getElementById("form-license").addEventListener("submit", async e => {
       method: "POST",
       body: JSON.stringify({
         client_id: document.getElementById("l-client").value,
+        app_type: document.getElementById("l-app-type").value,
         celesi: document.getElementById("l-celesi").value,
         muaj: document.getElementById("l-muaj").value,
         device_id: document.getElementById("l-device").value,

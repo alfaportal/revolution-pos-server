@@ -10,6 +10,17 @@ function normalizeKey(key) {
     .replace(/\s+/g, "");
 }
 
+function compactKey(key) {
+  return normalizeKey(key).replace(/-/g, "");
+}
+
+function licenseAppType(license) {
+  if (license.app_type) return license.app_type;
+  const clientTipi = license.clients?.tipi;
+  if (clientTipi && clientTipi !== "tjeter") return clientTipi;
+  return "restorant";
+}
+
 function generateLicenseKey() {
   const part = () => Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "X");
   return `${part()}-${part()}-${part()}-${part()}`;
@@ -26,14 +37,35 @@ function isExpired(dateStr) {
 
 async function findLicenseByKey(celesi) {
   const db = getSupabase();
+  const normalized = normalizeKey(celesi);
+  if (!normalized) return null;
+
+  const select = "*, clients(id, emri, adresa, telefoni, email, tipi)";
+
   const { data, error } = await db
     .from("licenses")
-    .select("*, clients(id, emri, adresa, telefoni, email, tipi)")
-    .eq("celesi", normalizeKey(celesi))
+    .select(select)
+    .eq("celesi", normalized)
     .maybeSingle();
-
   if (error) throw error;
-  return data;
+  if (data) return data;
+
+  const { data: ilikeRows, error: ilikeErr } = await db
+    .from("licenses")
+    .select(select)
+    .ilike("celesi", normalized);
+  if (ilikeErr) throw ilikeErr;
+  if (ilikeRows?.length === 1) return ilikeRows[0];
+
+  const compact = compactKey(normalized);
+  if (compact.length >= 8) {
+    const { data: allRows, error: allErr } = await db.from("licenses").select(select);
+    if (allErr) throw allErr;
+    const match = (allRows || []).find((row) => compactKey(row.celesi) === compact);
+    if (match) return match;
+  }
+
+  return null;
 }
 
 async function validateLicense({ celesi, device_id, app_type }) {
@@ -52,12 +84,13 @@ async function validateLicense({ celesi, device_id, app_type }) {
     return { valid: false, code: "EXPIRED", message: "Liçenca ka skaduar." };
   }
 
-  if (app_type && license.clients?.tipi && license.clients.tipi !== "tjeter") {
-    if (app_type !== license.clients.tipi) {
+  if (app_type) {
+    const expected = licenseAppType(license);
+    if (expected !== "tjeter" && app_type !== expected) {
       return {
         valid: false,
         code: "WRONG_APP",
-        message: `Liçenca është për ${license.clients.tipi}, jo për ${app_type}.`,
+        message: `Liçenca është për ${expected}, jo për ${app_type}.`,
       };
     }
   }
@@ -85,7 +118,7 @@ async function validateLicense({ celesi, device_id, app_type }) {
     license_id: license.id,
     client_id: license.client_id,
     client_name: license.clients?.emri || "",
-    client_type: license.clients?.tipi || "",
+    client_type: licenseAppType(license),
     device_id: license.device_id,
     status: license.statusi,
     valid_from: license.data_fillimit,
@@ -179,16 +212,28 @@ async function createLicense(body) {
   const endDate = new Date(start);
   endDate.setMonth(endDate.getMonth() + months);
 
+  if (!body.client_id) throw new Error("client_id mungon.");
+
+  let appType = body.app_type ? String(body.app_type).trim().toLowerCase() : "";
+  const allowedApp = ["restorant", "kafene"];
+  if (!allowedApp.includes(appType)) {
+    const { data: client } = await db.from("clients").select("tipi").eq("id", body.client_id).maybeSingle();
+    if (client?.tipi && allowedApp.includes(client.tipi)) {
+      appType = client.tipi;
+    } else {
+      appType = "restorant";
+    }
+  }
+
   const row = {
     client_id: body.client_id,
+    app_type: appType,
     celesi: normalizeKey(body.celesi) || generateLicenseKey(),
     device_id: String(body.device_id || "").trim().toUpperCase(),
     statusi: body.statusi || "aktive",
     data_fillimit: start,
     data_skadimit: body.data_skadimit || endDate.toISOString().slice(0, 10),
   };
-
-  if (!row.client_id) throw new Error("client_id mungon.");
 
   const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
   if (error) throw error;
@@ -206,6 +251,12 @@ async function updateLicense(id, body) {
   }
   if (body.device_id != null) {
     patch.device_id = String(body.device_id).trim().toUpperCase();
+  }
+  if (body.app_type != null) {
+    const allowedApp = ["restorant", "kafene"];
+    const appType = String(body.app_type).trim().toLowerCase();
+    if (!allowedApp.includes(appType)) throw new Error(`Tipi i aplikacionit i pavlefshëm: ${body.app_type}`);
+    patch.app_type = appType;
   }
   if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
 

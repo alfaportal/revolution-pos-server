@@ -71,7 +71,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>Klienti</th><th>Kodi i licencës</th><th>ID pajisjes</th><th>Statusi</th><th>Nga</th><th>Deri</th><th class="col-actions">Veprime</th>
+                  <th>Klienti</th><th>App</th><th>Kodi i licencës</th><th>ID pajisjes</th><th>Statusi</th><th>Nga</th><th>Deri</th><th class="col-actions">Veprime</th>
                 </tr>
               </thead>
               <tbody id="tbl-licenses"></tbody>
@@ -147,6 +147,13 @@
                 </div>
               </div>
               <div>
+                <label>Tipi i aplikacionit *</label>
+                <select id="l-app-type" required>
+                  <option value="restorant">Restorant</option>
+                  <option value="kafene">Kafene</option>
+                </select>
+              </div>
+              <div>
                 <label>Muaj vlefshmërie</label>
                 <input type="number" id="l-muaj" value="12" min="1" max="120">
               </div>
@@ -214,6 +221,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=10"></script>
+  <script src="/js/panel.js?v=11"></script>
 </body>
 </html>
