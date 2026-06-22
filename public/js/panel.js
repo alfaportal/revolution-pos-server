@@ -183,12 +183,68 @@ function openEditClient(id) {
   });
 }
 
-function kitchenLink(clientId) {
-  return `${window.location.origin}/kitchen/${clientId}`;
-}
-
 function waiterLink(clientId) {
   return `${window.location.origin}/waiter/${clientId}`;
+}
+
+function ownerLoginLink(email) {
+  const q = new URLSearchParams({ email: String(email || "").trim() });
+  return `${window.location.origin}/owner/login?${q.toString()}`;
+}
+
+let qrBlobUrl = null;
+
+function closeQrModal() {
+  document.getElementById("modal-qr").classList.add("hidden");
+  const img = document.getElementById("qr-modal-img");
+  if (qrBlobUrl) {
+    URL.revokeObjectURL(qrBlobUrl);
+    qrBlobUrl = null;
+  }
+  if (img) img.removeAttribute("src");
+}
+
+document.getElementById("qr-modal-close")?.addEventListener("click", closeQrModal);
+document.getElementById("qr-modal-backdrop")?.addEventListener("click", closeQrModal);
+document.getElementById("qr-modal-copy")?.addEventListener("click", async function () {
+  const url = document.getElementById("qr-modal-url")?.textContent;
+  if (!url) return;
+  await copyText(url, this);
+});
+
+async function openQrModal(title, hint, targetUrl) {
+  document.getElementById("qr-modal-title").textContent = title;
+  document.getElementById("qr-modal-hint").textContent = hint;
+  document.getElementById("qr-modal-url").textContent = targetUrl;
+  const img = document.getElementById("qr-modal-img");
+  const errEl = document.getElementById("qr-modal-error");
+  errEl.classList.add("hidden");
+  img.alt = "Duke gjeneruar QR…";
+  img.removeAttribute("src");
+  document.getElementById("modal-qr").classList.remove("hidden");
+
+  try {
+    const res = await fetch(apiUrl(`/api/admin/qr?url=${encodeURIComponent(targetUrl)}`), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.gabim || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    if (qrBlobUrl) URL.revokeObjectURL(qrBlobUrl);
+    qrBlobUrl = URL.createObjectURL(blob);
+    img.src = qrBlobUrl;
+    img.alt = "QR Code";
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove("hidden");
+  }
+}
+
+function kitchenLink(clientId) {
+  return `${window.location.origin}/kitchen/${clientId}`;
 }
 
 async function copyLink(url, btn) {
@@ -404,6 +460,7 @@ async function loadClients() {
         <td data-label="Regj.">${fmtDate(c.created_at)}</td>
         <td class="kds-link-cell" data-label="Linqet">
           <div class="link-btns">
+            <button type="button" class="btn btn-ghost btn-sm" data-qr-waiter="${esc(c.id)}">QR Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
@@ -420,6 +477,17 @@ async function loadClients() {
   });
   tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
     btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));
+  });
+  tbl.querySelectorAll("[data-qr-waiter]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const c = clientsCache.find(x => x.id === btn.dataset.qrWaiter);
+      const url = waiterLink(btn.dataset.qrWaiter);
+      openQrModal(
+        `QR Kamarier — ${c?.emri || "Lokal"}`,
+        "Printo dhe vë në lokal. Kamarieri skanon me telefon → hap app-in e porosive.",
+        url,
+      );
+    });
   });
   return clients;
 }
@@ -512,6 +580,7 @@ async function loadOwners() {
         <td data-label="Llogaria">${ownerStatusBadge(o)}</td>
         <td data-label="Regj.">${fmtDate(o.created_at)}</td>
         <td class="actions col-actions" data-label="Veprime">
+          <button type="button" class="btn btn-ghost btn-sm" data-qr-owner="${o.id}">QR Hyrje</button>
           ${inviteBtn}
           ${renewBtn}
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
@@ -525,6 +594,17 @@ async function loadOwners() {
       const o = ownersCache.find(x => x.id === btn.dataset.copyInviteId);
       if (o?.invite_url) copyText(o.invite_url, btn);
       else alert("Linku i ftesës nuk është i disponueshëm.");
+    });
+  });
+  tbl.querySelectorAll("[data-qr-owner]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const o = ownersCache.find(x => x.id === btn.dataset.qrOwner);
+      if (!o?.email) return;
+      openQrModal(
+        `QR Hyrje — ${o.emri}`,
+        "Pronari skanon → hap hyrjen me email të para-plotësuar. Vendos vetëm fjalëkalimin.",
+        ownerLoginLink(o.email),
+      );
     });
   });
   tbl.querySelectorAll("[data-renew-invite]").forEach(btn => {

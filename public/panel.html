@@ -232,6 +232,23 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=13"></script>
+  <div id="modal-qr" class="modal hidden">
+    <div class="modal-backdrop" id="qr-modal-backdrop"></div>
+    <div class="modal-card qr-modal-card">
+      <button type="button" class="qr-modal-close" id="qr-modal-close" aria-label="Mbyll">×</button>
+      <h2 id="qr-modal-title" class="modal-title">QR Code</h2>
+      <p id="qr-modal-hint" class="qr-modal-hint"></p>
+      <div id="qr-modal-error" class="alert alert-error hidden"></div>
+      <div class="qr-wrap">
+        <img id="qr-modal-img" class="qr-image" alt="">
+      </div>
+      <p id="qr-modal-url" class="qr-url mono"></p>
+      <div class="modal-actions" style="margin-top:0.75rem">
+        <button type="button" class="btn btn-ghost" id="qr-modal-copy">Kopjo linkun</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/panel.js?v=14"></script>
 </body>
 </html>

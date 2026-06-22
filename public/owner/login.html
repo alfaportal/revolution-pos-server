@@ -45,6 +45,15 @@
       }
     })();
 
+    (function prefillEmailFromQr() {
+      const params = new URLSearchParams(location.search);
+      const email = params.get("email");
+      if (!email) return;
+      const input = document.getElementById("email");
+      input.value = email.trim();
+      document.getElementById("password").focus();
+    })();
+
     document.getElementById("form-login").addEventListener("submit", async e => {
       e.preventDefault();
       const errEl = document.getElementById("login-error");

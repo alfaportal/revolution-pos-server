@@ -167,6 +167,61 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .badge-pezulluar { background: #78350f; color: #fcd34d; }
 .badge-pending { background: #1e3a5f; color: #93c5fd; }
 
+.qr-modal-card {
+  position: relative;
+  text-align: center;
+  max-width: 360px;
+}
+
+.qr-modal-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: -0.35rem 0 1rem;
+}
+
+.qr-modal-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.qr-modal-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qr-wrap {
+  display: inline-flex;
+  padding: 0.75rem;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.qr-image {
+  display: block;
+  width: 220px;
+  height: 220px;
+  max-width: 100%;
+}
+
+.qr-url {
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-all;
+  line-height: 1.4;
+  margin: 0;
+}
+
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .tab {
   padding: 0.5rem 1rem;
