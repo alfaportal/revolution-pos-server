@@ -1,5 +1,5 @@
 /* PWA vetëm për pronarët — scope /owner/ */
-const CACHE_NAME = "ri-pos-owner-v2";
+const CACHE_NAME = "ri-pos-owner-v3";
 const PRECACHE = [
   "/owner/panel",
   "/owner/login",
@@ -25,17 +25,48 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function shouldCache(pathname) {
+  return (
+    pathname.startsWith("/owner/") ||
+    pathname.startsWith("/css/") ||
+    pathname.startsWith("/js/") ||
+    pathname.startsWith("/icons/")
+  );
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response.ok && shouldCache(new URL(request.url).pathname)) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      }
+      return response;
+    })
+    .catch(() => caches.match(request));
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (!url.pathname.startsWith("/owner/") && !url.pathname.startsWith("/icons/")
-    && !url.pathname.startsWith("/css/") && !url.pathname.startsWith("/js/")) {
+  if (
+    !url.pathname.startsWith("/owner/")
+    && !url.pathname.startsWith("/icons/")
+    && !url.pathname.startsWith("/css/")
+    && !url.pathname.startsWith("/js/")
+  ) {
     return;
   }
   if (url.pathname.startsWith("/api/")) return;
+
+  /* CSS/JS — gjithmonë nga rrjeti që ndryshimet në telefon shfaqen menjëherë */
+  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {
@@ -53,12 +84,3 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
-
-function shouldCache(pathname) {
-  return (
-    pathname.startsWith("/owner/") ||
-    pathname.startsWith("/css/") ||
-    pathname.startsWith("/js/") ||
-    pathname.startsWith("/icons/")
-  );
-}

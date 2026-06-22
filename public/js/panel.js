@@ -142,6 +142,12 @@ function openModal(title, fieldsHtml, onSave) {
   document.getElementById("modal-form").innerHTML = fieldsHtml;
   document.getElementById("modal-error").classList.add("hidden");
   document.getElementById("modal-edit").classList.remove("hidden");
+  requestAnimationFrame(() => {
+    const first = document.getElementById("modal-form").querySelector(
+      "input:not([readonly]):not([type=hidden]), select, textarea",
+    );
+    if (first) first.focus({ preventScroll: false });
+  });
 }
 
 function closeModal() {

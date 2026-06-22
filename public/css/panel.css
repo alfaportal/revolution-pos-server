@@ -10,6 +10,7 @@
   --danger: #ef4444;
   --warning: #f59e0b;
   --radius: 10px;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -95,30 +96,53 @@ input, select, textarea {
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: #1e293b;
-  color: #f1f5f9;
-  -webkit-text-fill-color: #f1f5f9;
+  background-color: #1e293b;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   font: inherit;
   font-size: 16px;
+  line-height: 1.4;
   margin-bottom: 0.75rem;
+  -webkit-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+  opacity: 1;
+  color-scheme: dark;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input:not([readonly]):not(:disabled),
+select:not(:disabled),
+textarea:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
 }
 
 input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
   border-color: var(--primary);
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  background-color: #1e293b;
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: #64748b;
   opacity: 1;
+  -webkit-text-fill-color: #64748b;
 }
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #1e293b inset;
-  -webkit-text-fill-color: #f1f5f9;
+input:-webkit-autofill:focus,
+select:-webkit-autofill,
+textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset !important;
+  box-shadow: 0 0 0 1000px #1e293b inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
   caret-color: #f1f5f9;
 }
 
@@ -245,7 +269,7 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
   flex: 1;
   min-width: 200px;
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: 16px;
 }
 
 .login-wrap {
@@ -620,6 +644,37 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
   }
 
   #l-celesi { flex: 1; min-width: 0; }
+}
+
+/* Telefon — teksti i dukshëm gjatë shkrimit (iOS / Android WebKit) */
+@media (max-width: 900px) {
+  input:not([readonly]):not(:disabled),
+  select:not(:disabled),
+  textarea:not(:disabled) {
+    font-size: 16px !important;
+    min-height: 44px;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
+    caret-color: #f8fafc;
+    background-color: #1e293b !important;
+  }
+
+  input:focus:not([readonly]),
+  select:focus,
+  textarea:focus {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  .login-card input,
+  .modal-card input,
+  .modal-card select,
+  .modal-card textarea,
+  .card input,
+  .card select,
+  .card textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 640px) {
