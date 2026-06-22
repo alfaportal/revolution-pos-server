@@ -62,9 +62,8 @@
       </div>
 
       <div id="panel-licensat" class="panel-section hidden">
-        <div class="card license-pair-hint">
-          <strong>Kodi ↔ ID pajisjes:</strong> Kur POS shtyp «Aktivizo», kodi lidhet me ID-në e ekranit të aktivizimit.
-          Nëse «Pa aktivizuar» — ribuild POS, kliko <strong>Reset ID</strong>, aktivizo përsëri.
+        <div class="card license-pair-hint admin-only-card">
+          <strong>Vetëm Super Admin.</strong> Kodi i licencës ↔ ID pajisjes — pronarët <em>nuk</em> i shohin këto.
         </div>
         <div class="card">
           <div class="card-title">Të gjitha liçensat</div>
@@ -84,6 +83,7 @@
       <div id="panel-pronaret" class="panel-section hidden">
         <div class="card">
           <div class="card-title">Pronarët e restoranteve / kafeneve</div>
+          <p class="admin-only-note">Vetëm Super Admin — pronarët nuk shohin liçensa, ID pajisjesh apo këtë listë.</p>
           <div class="overflow-x">
             <table>
               <thead>
@@ -93,42 +93,6 @@
               </thead>
               <tbody id="tbl-owners"></tbody>
             </table>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">Krijo llogari pronari</div>
-          <div id="owner-prereq" class="alert alert-error hidden">
-            Së pari duhet të shtoni një <strong>klient</strong> (restorant/kafene).
-            <button type="button" class="btn btn-primary btn-sm" id="btn-goto-add-client" style="margin-top:0.5rem">+ Shto klient tani</button>
-          </div>
-          <div id="msg-owner" class="alert hidden"></div>
-          <form id="form-owner">
-            <div class="form-row">
-              <div>
-                <label>Klienti *</label>
-                <select id="o-client" required></select>
-              </div>
-              <div>
-                <label>Emri i pronarit *</label>
-                <input type="text" id="o-emri" required placeholder="p.sh. Agron">
-              </div>
-              <div>
-                <label>Email *</label>
-                <input type="email" id="o-email" required placeholder="agron@restorant.com">
-              </div>
-              <div>
-                <label>Fjalëkalimi *</label>
-                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Krijo llogarinë</button>
-          </form>
-          <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
-            Linku për pronarin (kopjoje dhe dërgoje privat, p.sh. WhatsApp):
-          </p>
-          <div class="link-actions" style="margin-top:0.35rem">
-            <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:0.75rem">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-owner-url">Kopjo</button>
           </div>
         </div>
       </div>
@@ -194,8 +158,44 @@
             <button type="submit" class="btn btn-primary">Krijo liçencën</button>
           </form>
           <p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">
-            ID e pajisjes plotësohet automatikisht kur POS aktivizon çelësin. Përdorni <strong>Reset</strong> për ta lidhur me instalim tjetër.
+            ID e pajisjes plotësohet automatikisht kur POS aktivizon çelësin. Përdorni <strong>Reset ID</strong> te tab Liçensat.
           </p>
+        </div>
+
+        <div class="card admin-only-card">
+          <div class="card-title">Krijo llogari pronari (vetëm admin)</div>
+          <div id="owner-prereq" class="alert alert-error hidden">
+            Së pari shtoni një <strong>klient</strong> më sipër.
+          </div>
+          <div id="msg-owner" class="alert hidden"></div>
+          <form id="form-owner">
+            <div class="form-row">
+              <div>
+                <label>Klienti *</label>
+                <select id="o-client" required></select>
+              </div>
+              <div>
+                <label>Emri i pronarit *</label>
+                <input type="text" id="o-emri" required placeholder="p.sh. Agron">
+              </div>
+              <div>
+                <label>Email *</label>
+                <input type="email" id="o-email" required placeholder="agron@restorant.com">
+              </div>
+              <div>
+                <label>Fjalëkalimi *</label>
+                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Krijo llogarinë</button>
+          </form>
+          <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
+            Linku për pronarin (mos ia jep adminit — vetëm pronarit privat):
+          </p>
+          <div class="link-actions" style="margin-top:0.35rem">
+            <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:0.75rem">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-owner-url">Kopjo</button>
+          </div>
         </div>
       </div>
     </div>
@@ -214,6 +214,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=9"></script>
+  <script src="/js/panel.js?v=10"></script>
 </body>
 </html>

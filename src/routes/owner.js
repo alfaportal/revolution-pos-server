@@ -19,7 +19,15 @@ router.get("/client", async (req, res) => {
     const id = req.user.client_id;
     res.json({
       ok: true,
-      client,
+      client: client
+        ? {
+            emri: client.emri,
+            tipi: client.tipi,
+            adresa: client.adresa,
+            telefoni: client.telefoni,
+            email: client.email,
+          }
+        : null,
       waiter_url: `${base}/waiter/${id}`,
       kitchen_url: `${base}/kitchen/${id}`,
     });

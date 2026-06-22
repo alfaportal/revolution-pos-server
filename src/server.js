@@ -62,6 +62,10 @@ app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
 app.use("/api/waiter", waiterRoutes);
 
+app.get("/panel.html", (_req, res) => {
+  res.status(404).type("text/plain").send("Not found");
+});
+
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.get(ADMIN_PATH, (_req, res) => {
