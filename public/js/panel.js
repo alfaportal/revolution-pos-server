@@ -231,62 +231,6 @@ function waiterLink(clientId) {
   return `${window.location.origin}/waiter/${clientId}`;
 }
 
-function ownerLoginLink(email) {
-  const q = new URLSearchParams({ email: String(email || "").trim() });
-  return `${window.location.origin}/owner/login?${q.toString()}`;
-}
-
-let qrBlobUrl = null;
-
-function closeQrModal() {
-  document.getElementById("modal-qr").classList.add("hidden");
-  const img = document.getElementById("qr-modal-img");
-  if (qrBlobUrl) {
-    URL.revokeObjectURL(qrBlobUrl);
-    qrBlobUrl = null;
-  }
-  if (img) img.removeAttribute("src");
-}
-
-document.getElementById("qr-modal-close")?.addEventListener("click", closeQrModal);
-document.getElementById("qr-modal-backdrop")?.addEventListener("click", closeQrModal);
-document.getElementById("qr-modal-copy")?.addEventListener("click", async function () {
-  const url = document.getElementById("qr-modal-url")?.textContent;
-  if (!url) return;
-  await copyText(url, this);
-});
-
-async function openQrModal(title, hint, targetUrl) {
-  document.getElementById("qr-modal-title").textContent = title;
-  document.getElementById("qr-modal-hint").textContent = hint;
-  document.getElementById("qr-modal-url").textContent = targetUrl;
-  const img = document.getElementById("qr-modal-img");
-  const errEl = document.getElementById("qr-modal-error");
-  errEl.classList.add("hidden");
-  img.alt = "Duke gjeneruar QR…";
-  img.removeAttribute("src");
-  document.getElementById("modal-qr").classList.remove("hidden");
-
-  try {
-    const res = await fetch(apiUrl(`/api/admin/qr?url=${encodeURIComponent(targetUrl)}`), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.gabim || `HTTP ${res.status}`);
-    }
-    const blob = await res.blob();
-    if (qrBlobUrl) URL.revokeObjectURL(qrBlobUrl);
-    qrBlobUrl = URL.createObjectURL(blob);
-    img.src = qrBlobUrl;
-    img.alt = "QR Code";
-  } catch (err) {
-    errEl.textContent = err.message;
-    errEl.classList.remove("hidden");
-  }
-}
-
 function kitchenLink(clientId) {
   return `${window.location.origin}/kitchen/${clientId}`;
 }
@@ -343,20 +287,18 @@ function openEditLicense(id) {
   openModal("Ndrysho liçencën", `
     <label>Kodi i licencës</label>
     <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
-    <label for="license-edit-device-id"><strong>ID Pajisjes</strong></label>
+    <label for="license-edit-device-id"><strong>ID Pajisjes</strong> <span style="font-weight:normal;color:var(--muted)">(automatik nga POS)</span></label>
     <input
       id="license-edit-device-id"
-      name="device_id"
       value="${esc(l.device_id || "")}"
-      placeholder="p.sh. AD503FC5608A ose 37FEE0F2206"
+      readonly
       class="mono"
-      autocomplete="off"
-      spellcheck="false"
-      maxlength="32"
+      style="opacity:0.85"
+      placeholder="Pa aktivizuar — shfaqet pas aktivizimit nga POS"
     >
     <p class="field-hint license-device-hint">
-      Ndryshoje manualisht kur duhet (kopjo nga POS ose nga kolona «ID Pajisjes»).
-      Lëre bosh për «Pa aktivizuar». Ruaj → përditësohet në databazë.
+      <strong>Mos e shkruani manualisht.</strong> Numri vjen nga ekrani i aktivizimit të POS-it.
+      Pas <strong>Reset ID</strong>, klienti aktivizon përsëri — ID e re shfaqet këtu automatikisht.
     </p>
     <label>Tipi i aplikacionit</label>
     <select name="app_type">
@@ -380,23 +322,14 @@ function openEditLicense(id) {
       <option value="pezulluar" ${l.statusi === "pezulluar" ? "selected" : ""}>pezulluar</option>
     </select>
   `, async fd => {
-    const deviceId = String(fd.get("device_id") ?? "").trim().toUpperCase().replace(/\s+/g, "");
     await api(`/api/admin/licenses/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
-        device_id: deviceId,
         app_type: fd.get("app_type"),
       }),
     });
-  });
-  requestAnimationFrame(() => {
-    const el = document.getElementById("license-edit-device-id");
-    if (el) {
-      el.focus();
-      el.select();
-    }
   });
 }
 
@@ -531,7 +464,6 @@ async function loadClients() {
         <td data-label="Regj.">${fmtDate(c.created_at)}</td>
         <td class="kds-link-cell" data-label="Linqet">
           <div class="link-btns">
-            <button type="button" class="btn btn-ghost btn-sm" data-qr-waiter="${esc(c.id)}">QR Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
@@ -548,17 +480,6 @@ async function loadClients() {
   });
   tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
     btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));
-  });
-  tbl.querySelectorAll("[data-qr-waiter]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const c = clientsCache.find(x => x.id === btn.dataset.qrWaiter);
-      const url = waiterLink(btn.dataset.qrWaiter);
-      openQrModal(
-        `QR Kamarier — ${c?.emri || "Lokal"}`,
-        "Printo dhe vë në lokal. Kamarieri skanon me telefon → hap app-in e porosive.",
-        url,
-      );
-    });
   });
   return clients;
 }
@@ -637,10 +558,20 @@ async function loadLicenses() {
     btn.onclick = async () => {
       const licenseId = btn.dataset.reset;
       if (!licenseId) return;
-      if (!confirm("Hiq ID-në e pajisjes? Çdo PC i ri mund të aktivizohet përsëri me të njëjtin çelës.")) return;
+      const lic = licensesCache.find(x => x.id === licenseId);
+      const celesi = lic?.celesi || "—";
+      if (!confirm(`Hiq ID-në e pajisjes për çelësin ${celesi}?\n\nPas kësaj, klienti aktivizon përsëri nga POS — numri i ri do të shfaqet automatikisht në listë.`)) return;
       try {
         await api(`/api/admin/licenses/${licenseId}/reset-device`, { method: "POST" });
         await refreshAll();
+        alert(
+          `✅ ID e pajisjes u fshi.\n\n` +
+          `Hapat e radhës:\n` +
+          `1. Në PC të klientit, hapni POS dhe aktivizoni përsëri me çelësin:\n   ${celesi}\n\n` +
+          `2. Në ekranin e aktivizimit POS shfaqet «ID e pajisjes».\n\n` +
+          `3. Rifreskoni këtë listë — kolona «ID Pajisjes» plotësohet vetë me numrin e ri.\n\n` +
+          `Nuk keni nevojë ta shkruani manualisht.`,
+        );
       } catch (err) {
         alert(err.message || "Reset ID dështoi.");
       }
@@ -668,7 +599,6 @@ async function loadOwners() {
         <td data-label="Llogaria">${ownerStatusBadge(o)}</td>
         <td data-label="Regj.">${fmtDate(o.created_at)}</td>
         <td class="actions col-actions" data-label="Veprime">
-          <button type="button" class="btn btn-ghost btn-sm" data-qr-owner="${o.id}">QR Hyrje</button>
           ${inviteBtn}
           ${renewBtn}
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
@@ -682,17 +612,6 @@ async function loadOwners() {
       const o = ownersCache.find(x => x.id === btn.dataset.copyInviteId);
       if (o?.invite_url) copyText(o.invite_url, btn);
       else alert("Linku i ftesës nuk është i disponueshëm.");
-    });
-  });
-  tbl.querySelectorAll("[data-qr-owner]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const o = ownersCache.find(x => x.id === btn.dataset.qrOwner);
-      if (!o?.email) return;
-      openQrModal(
-        `QR Hyrje — ${o.emri}`,
-        "Pronari skanon → hap hyrjen me email të para-plotësuar. Vendos vetëm fjalëkalimin.",
-        ownerLoginLink(o.email),
-      );
     });
   });
   tbl.querySelectorAll("[data-renew-invite]").forEach(btn => {
@@ -836,12 +755,10 @@ document.getElementById("form-license").addEventListener("submit", async e => {
         app_type: document.getElementById("l-app-type").value,
         celesi: document.getElementById("l-celesi").value,
         muaj: document.getElementById("l-muaj").value,
-        device_id: document.getElementById("l-device").value,
       }),
     });
     showMsg("msg-license", `Liçenca u krijua: ${res.license.celesi}`, true);
     document.getElementById("l-celesi").value = "";
-    document.getElementById("l-device").value = "";
     await refreshAll();
   } catch (err) {
     showMsg("msg-license", err.message, false);
@@ -868,6 +785,7 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
   }
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
+  const loginUrl = `${window.location.origin}/owner/login`;
   try {
     const res = await api("/api/admin/owners", {
       method: "POST",
@@ -875,18 +793,14 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
         client_id: document.getElementById("o-client").value,
         emri: document.getElementById("o-emri").value,
         email: document.getElementById("o-email").value,
+        password: document.getElementById("o-password").value,
       }),
     });
-    let msg = "Llogaria u krijua!";
-    if (res.owner?.invite_url) {
-      try {
-        await navigator.clipboard.writeText(res.owner.invite_url);
-        msg = "U krijua! Linku i ftesës u kopjua — dërgoje pronarit (48 orë).";
-      } catch {
-        msg = `U krijua! Link ftese: ${res.owner.invite_url}`;
-      }
-    }
-    showMsg("msg-owner", msg, true);
+    showMsg(
+      "msg-owner",
+      `Llogaria u krijua! Pronari hyn në ${loginUrl} me email dhe fjalëkalimin që caktuat.`,
+      true,
+    );
     e.target.reset();
     await safeRefresh();
   } catch (err) {

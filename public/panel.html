@@ -171,17 +171,13 @@
                 <label>Muaj vlefshmërie</label>
                 <input type="number" id="l-muaj" value="12" min="1" max="120">
               </div>
-              <div>
-                <label>ID pajisje (opsionale)</label>
-                <input type="text" id="l-device" placeholder="Lidhet automatikisht nga POS">
-              </div>
             </div>
             <button type="submit" class="btn btn-primary">Krijo liçencën</button>
           </form>
           <p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">
-            <strong>Tipi i aplikacionit</strong> vlen vetëm për POS (restorant vs kafene) — si Super Admin ke qasje në të gjitha.
-            Kur POS aktivizon çelësin, <strong>ID e pajisjes lidhet automatikisht</strong> (PC i ri zëvendëson të vjetrin).
-            <strong>Reset ID</strong> e fshin lidhjen — pastaj çdo pajisje e re mund të aktivizohet me të njëjtin çelës.
+            <strong>ID e pajisjes</strong> nuk e shkruani ju — POS e lidh automatikisht kur klienti aktivizon çelësin.
+            Numri i ri shfaqet në listën «Liçensat», kolona <strong>ID Pajisjes</strong>, pas aktivizimit.
+            <strong>Reset ID</strong> e fshin lidhjen; pastaj klienti aktivizon përsëri nga POS dhe sistemi e regjistron ID-në e re vetë.
           </p>
         </div>
 
@@ -203,14 +199,18 @@
               </div>
               <div>
                 <label>Email *</label>
-                <input type="email" id="o-email" required placeholder="agron@restorant.com">
+                <input type="email" id="o-email" required placeholder="agron@restorant.com" autocomplete="off">
+              </div>
+              <div>
+                <label>Fjalëkalimi *</label>
+                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary">Krijo dhe gjenero link ftese</button>
+            <button type="submit" class="btn btn-primary">Krijo llogarinë e pronarit</button>
           </form>
           <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
-            Pronari <strong>nuk</strong> merr fjalëkalim nga ju — kopjoni linkun e ftesës (48 orë) dhe ia dërgoni (WhatsApp, email).
-            Pas aktivizimit hyn në:
+            Pronari hyn me <strong>email</strong> dhe <strong>fjalëkalimin</strong> që i caktoni këtu — pa QR, pa link ftese.
+            Faqja e hyrjes:
           </p>
           <div class="link-actions" style="margin-top:0.35rem">
             <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:16px">
@@ -234,23 +234,6 @@
     </div>
   </div>
 
-  <div id="modal-qr" class="modal hidden">
-    <div class="modal-backdrop" id="qr-modal-backdrop"></div>
-    <div class="modal-card qr-modal-card">
-      <button type="button" class="qr-modal-close" id="qr-modal-close" aria-label="Mbyll">×</button>
-      <h2 id="qr-modal-title" class="modal-title">QR Code</h2>
-      <p id="qr-modal-hint" class="qr-modal-hint"></p>
-      <div id="qr-modal-error" class="alert alert-error hidden"></div>
-      <div class="qr-wrap">
-        <img id="qr-modal-img" class="qr-image" alt="">
-      </div>
-      <p id="qr-modal-url" class="qr-url mono"></p>
-      <div class="modal-actions" style="margin-top:0.75rem">
-        <button type="button" class="btn btn-ghost" id="qr-modal-copy">Kopjo linkun</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/panel.js?v=17"></script>
+  <script src="/js/panel.js?v=18"></script>
 </body>
 </html>
