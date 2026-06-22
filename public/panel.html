@@ -101,7 +101,7 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Emri</th><th>Email</th><th>Restoranti</th><th>Statusi</th><th>Regj.</th><th class="col-actions">Veprime</th>
+                  <th>Emri</th><th>Email</th><th>Restoranti</th><th>Llogaria</th><th>Regj.</th><th class="col-actions">Veprime</th>
                 </tr>
               </thead>
               <tbody id="tbl-owners"></tbody>
@@ -203,15 +203,12 @@
                 <label>Email *</label>
                 <input type="email" id="o-email" required placeholder="agron@restorant.com">
               </div>
-              <div>
-                <label>Fjalëkalimi *</label>
-                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere">
-              </div>
             </div>
-            <button type="submit" class="btn btn-primary">Krijo llogarinë</button>
+            <button type="submit" class="btn btn-primary">Krijo dhe gjenero link ftese</button>
           </form>
           <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
-            Linku për pronarin (mos ia jep adminit — vetëm pronarit privat):
+            Pronari <strong>nuk</strong> merr fjalëkalim nga ju — kopjoni linkun e ftesës (48 orë) dhe ia dërgoni (WhatsApp, email).
+            Pas aktivizimit hyn në:
           </p>
           <div class="link-actions" style="margin-top:0.35rem">
             <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:0.75rem">
@@ -235,6 +232,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=12"></script>
+  <script src="/js/panel.js?v=13"></script>
 </body>
 </html>

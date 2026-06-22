@@ -309,6 +309,7 @@ async function findUserByEmail(email) {
 }
 
 async function verifyUserPassword(user, password) {
+  if (!user?.passwordi) return false;
   return bcrypt.compare(password, user.passwordi);
 }
 

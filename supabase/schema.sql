@@ -49,8 +49,11 @@ CREATE TABLE IF NOT EXISTS users (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id   UUID REFERENCES clients(id) ON DELETE SET NULL,
   emri        TEXT NOT NULL,
-  email       TEXT NOT NULL UNIQUE,
-  passwordi   TEXT NOT NULL,
+  email             TEXT NOT NULL UNIQUE,
+  passwordi         TEXT,
+  invite_token      TEXT,
+  invite_expires_at TIMESTAMPTZ,
+  password_set_at   TIMESTAMPTZ,
   roli        TEXT NOT NULL DEFAULT 'client_admin'
               CHECK (roli IN ('super_admin', 'client_admin')),
   aktiv       BOOLEAN NOT NULL DEFAULT true,
@@ -60,6 +63,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_client ON users (client_id);
 CREATE INDEX IF NOT EXISTS idx_users_roli ON users (roli);
 CREATE INDEX IF NOT EXISTS idx_users_aktiv ON users (aktiv);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_invite_token
+  ON users (invite_token) WHERE invite_token IS NOT NULL AND invite_token <> '';
 
 -- Shitjet e sinkronizuara nga POS
 CREATE TABLE IF NOT EXISTS sales_orders (

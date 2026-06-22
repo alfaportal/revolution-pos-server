@@ -80,6 +80,10 @@ app.get("/owner/login", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/login.html"));
 });
 
+app.get("/owner/setup", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/owner/setup.html"));
+});
+
 app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
 });

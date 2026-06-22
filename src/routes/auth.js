@@ -4,6 +4,10 @@ const {
   findUserByEmail,
   verifyUserPassword,
 } = require("../services/licenseService");
+const {
+  validateOwnerInvite,
+  completeOwnerSetup,
+} = require("../services/userService");
 
 const router = express.Router();
 
@@ -75,6 +79,13 @@ router.post("/owner/login", async (req, res) => {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
     }
 
+    if (!user.passwordi) {
+      return res.status(403).json({
+        gabim: "Llogaria nuk është aktivizuar. Përdorni linkun e ftesës për të vendosur fjalëkalimin.",
+        code: "PENDING_SETUP",
+      });
+    }
+
     const ok = await verifyUserPassword(user, password);
     if (!ok) {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
@@ -127,6 +138,34 @@ router.post("/owner/login", async (req, res) => {
 router.post("/logout", (_req, res) => {
   res.clearCookie("rip_token");
   res.json({ ok: true });
+});
+
+router.get("/owner/invite/:token", async (req, res) => {
+  try {
+    const result = await validateOwnerInvite(req.params.token);
+    const status = result.valid ? 200 : 400;
+    res.status(status).json(result);
+  } catch (e) {
+    res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+router.post("/owner/setup", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ ok: false, gabim: "Token dhe fjalëkalimi janë të detyrueshëm." });
+    }
+    const user = await completeOwnerSetup(token, password);
+    res.json({
+      ok: true,
+      message: "Llogaria u aktivizua. Tani mund të hyni.",
+      email: user.email,
+    });
+  } catch (e) {
+    const status = e.code === "NOT_FOUND" || e.code === "EXPIRED" || e.code === "ALREADY_ACTIVE" ? 400 : 500;
+    res.status(status).json({ ok: false, gabim: e.message, code: e.code || null });
+  }
 });
 
 router.post("/owner/logout", (_req, res) => {

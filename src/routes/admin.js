@@ -22,7 +22,14 @@ const {
   updateOwner,
   deleteOwner,
   setOwnerActive,
+  regenerateOwnerInvite,
 } = require("../services/userService");
+
+function requestBaseUrl(req) {
+  const proto = req.get("x-forwarded-proto") || req.protocol || "https";
+  const host = req.get("x-forwarded-host") || req.get("host");
+  return `${proto}://${host}`;
+}
 
 const router = express.Router();
 
@@ -121,14 +128,14 @@ router.post("/licenses/:id/reset-device", asyncHandler(async (req, res) => {
   res.json({ ok: true, license });
 }));
 
-router.get("/owners", asyncHandler(async (_req, res) => {
-  res.json({ ok: true, owners: await listOwners() });
+router.get("/owners", asyncHandler(async (req, res) => {
+  res.json({ ok: true, owners: await listOwners(requestBaseUrl(req)) });
 }));
 
 router.post("/owners", asyncHandler(async (req, res) => {
   console.log("[admin] POST /owners", { emri: req.body?.emri, email: req.body?.email });
   try {
-    const owner = await createOwner(req.body);
+    const owner = await createOwner(req.body, requestBaseUrl(req));
     console.log("[admin] Pronari u krijua:", owner.id);
     res.status(201).json({ ok: true, owner });
   } catch (e) {
@@ -137,9 +144,19 @@ router.post("/owners", asyncHandler(async (req, res) => {
   }
 }));
 
+router.post("/owners/:id/invite", asyncHandler(async (req, res) => {
+  try {
+    const owner = await regenerateOwnerInvite(req.params.id, requestBaseUrl(req));
+    res.json({ ok: true, owner });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /owners/:id/invite", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
 router.patch("/owners/:id", asyncHandler(async (req, res) => {
   try {
-    const owner = await updateOwner(req.params.id, req.body);
+    const owner = await updateOwner(req.params.id, req.body, requestBaseUrl(req));
     res.json({ ok: true, owner });
   } catch (e) {
     const msg = logRouteError("admin:PATCH /owners", e, { body: { ...req.body, password: "[redacted]" } });
@@ -160,7 +177,7 @@ router.delete("/owners/:id", asyncHandler(async (req, res) => {
 router.post("/users", asyncHandler(async (req, res) => {
   console.log("[admin] POST /users (alias → owners)");
   try {
-    const owner = await createOwner(req.body);
+    const owner = await createOwner(req.body, requestBaseUrl(req));
     res.status(201).json({ ok: true, owner });
   } catch (e) {
     const msg = logRouteError("admin:POST /users", e);
@@ -168,8 +185,8 @@ router.post("/users", asyncHandler(async (req, res) => {
   }
 }));
 
-router.get("/users", asyncHandler(async (_req, res) => {
-  res.json({ ok: true, owners: await listOwners() });
+router.get("/users", asyncHandler(async (req, res) => {
+  res.json({ ok: true, owners: await listOwners(requestBaseUrl(req)) });
 }));
 
 router.patch("/owners/:id/status", asyncHandler(async (req, res) => {

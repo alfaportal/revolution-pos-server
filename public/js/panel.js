@@ -202,6 +202,16 @@ async function copyLink(url, btn) {
   }
 }
 
+function ownerStatusBadge(o) {
+  if (o.account_status === "pending") {
+    return '<span class="badge badge-pending">Pending</span>';
+  }
+  if (o.aktiv === false) {
+    return '<span class="badge badge-revokuar">çaktiv</span>';
+  }
+  return '<span class="badge badge-aktive">Aktiv</span>';
+}
+
 function licenseAppTypeLabel(l) {
   const t = l.app_type || l.clients?.tipi || "restorant";
   if (t === "kafene") return "Kafene";
@@ -488,18 +498,46 @@ async function loadOwners() {
   ownersCache = owners;
   const tbl = document.getElementById("tbl-owners");
   tbl.innerHTML = owners.length
-    ? owners.map(o => `<tr>
+    ? owners.map(o => {
+        const inviteBtn = o.invite_url
+          ? `<button type="button" class="btn btn-ghost btn-sm" data-copy-invite-id="${o.id}">Kopjo linkun e ftesës</button>`
+          : "";
+        const renewBtn = o.account_status === "pending"
+          ? `<button type="button" class="btn btn-ghost btn-sm" data-renew-invite="${o.id}">Link i ri (48h)</button>`
+          : "";
+        return `<tr>
         <td data-label="Emri"><strong>${esc(o.emri)}</strong></td>
         <td data-label="Email">${esc(o.email)}</td>
         <td data-label="Restoranti">${esc(o.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(o.clients?.tipi) || ""})</small></td>
-        <td data-label="Statusi">${o.aktiv !== false ? '<span class="badge badge-aktive">aktiv</span>' : '<span class="badge badge-revokuar">çaktiv</span>'}</td>
+        <td data-label="Llogaria">${ownerStatusBadge(o)}</td>
         <td data-label="Regj.">${fmtDate(o.created_at)}</td>
         <td class="actions col-actions" data-label="Veprime">
+          ${inviteBtn}
+          ${renewBtn}
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
-      </tr>`).join("")
+      </tr>`;
+      }).join("")
     : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka pronarë</td></tr>';
+  tbl.querySelectorAll("[data-copy-invite-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const o = ownersCache.find(x => x.id === btn.dataset.copyInviteId);
+      if (o?.invite_url) copyText(o.invite_url, btn);
+      else alert("Linku i ftesës nuk është i disponueshëm.");
+    });
+  });
+  tbl.querySelectorAll("[data-renew-invite]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        const { owner } = await api(`/api/admin/owners/${btn.dataset.renewInvite}/invite`, { method: "POST" });
+        if (owner?.invite_url) await copyText(owner.invite_url, btn);
+        await refreshAll();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
   bindTableActions(tbl);
 }
 
@@ -663,16 +701,24 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
-    await api("/api/admin/owners", {
+    const res = await api("/api/admin/owners", {
       method: "POST",
       body: JSON.stringify({
         client_id: document.getElementById("o-client").value,
         emri: document.getElementById("o-emri").value,
         email: document.getElementById("o-email").value,
-        password: document.getElementById("o-password").value,
       }),
     });
-    showMsg("msg-owner", "Llogaria e pronarit u krijua!", true);
+    let msg = "Llogaria u krijua!";
+    if (res.owner?.invite_url) {
+      try {
+        await navigator.clipboard.writeText(res.owner.invite_url);
+        msg = "U krijua! Linku i ftesës u kopjua — dërgoje pronarit (48 orë).";
+      } catch {
+        msg = `U krijua! Link ftese: ${res.owner.invite_url}`;
+      }
+    }
+    showMsg("msg-owner", msg, true);
     e.target.reset();
     await safeRefresh();
   } catch (err) {
