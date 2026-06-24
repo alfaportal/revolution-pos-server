@@ -8,6 +8,10 @@ const {
   getClientById,
   getLiveTablesForOwner,
 } = require("../services/salesService");
+const {
+  getOwnerLicenseView,
+  verifyOwnerLicenseKey,
+} = require("../services/licenseService");
 
 const router = express.Router();
 
@@ -87,6 +91,28 @@ router.get("/reports", async (req, res) => {
     res.json({ ok: true, report });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/license", async (req, res) => {
+  try {
+    res.json({ ok: true, ...(await getOwnerLicenseView(req.user.client_id)) });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.put("/license", async (req, res) => {
+  try {
+    const { license_key } = req.body || {};
+    const view = await verifyOwnerLicenseKey(req.user.client_id, license_key);
+    res.json({
+      ok: true,
+      ...view,
+      info: "Çelësi u verifikua. Për aktivizim të plotë, vendoseni të njëjtin çelës te POS: Admin → Licenca (në kompjuterin e restorantit).",
+    });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 

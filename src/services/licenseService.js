@@ -455,6 +455,65 @@ async function ensureSuperAdmin() {
   return data;
 }
 
+async function listLicensesForClient(clientId) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .select(
+      "id, celesi, device_id, device_hostname, statusi, app_type, data_fillimit, data_skadimit, last_activated_at, last_validation_error",
+    )
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+async function getOwnerLicenseView(clientId) {
+  const licenses = await listLicensesForClient(clientId);
+  const primary = licenses.find(l => l.statusi === "aktive") || licenses[0] || null;
+  if (!primary) {
+    return {
+      activated: false,
+      machine_id: "",
+      has_license: false,
+      license_key: "",
+      message: "Nuk ka licencë për lokalin tuaj. Kontaktoni administratorin.",
+    };
+  }
+
+  const expired = isExpired(primary.data_skadimit);
+  const revoked = primary.statusi === "revokuar" || primary.statusi === "pezulluar";
+  const deviceId = String(primary.device_id || "").trim().toUpperCase();
+  const activated = primary.statusi === "aktive" && !expired && !revoked && !!deviceId;
+
+  let message = "Licenca nuk është aktive.";
+  if (revoked) message = primary.statusi === "revokuar" ? "Licenca është revokuar." : "Licenca është pezulluar.";
+  else if (expired) message = "Licenca ka skaduar.";
+  else if (!deviceId) message = "Vendosni çelësin në kompjuterin POS (Admin → Licenca). ID-ja shfaqet këtu pas aktivizimit.";
+  else if (activated) message = "Licenca është aktive për pajisjen POS.";
+
+  return {
+    activated,
+    machine_id: deviceId,
+    has_license: true,
+    license_key: primary.celesi,
+    statusi: primary.statusi,
+    app_type: primary.app_type,
+    valid_until: primary.data_skadimit,
+    last_activated_at: primary.last_activated_at,
+    message,
+  };
+}
+
+async function verifyOwnerLicenseKey(clientId, licenseKey) {
+  const normalized = normalizeKey(licenseKey);
+  if (!normalized) throw new Error("Shkruani çelësin e licencës.");
+  const license = await findLicenseByKey(normalized);
+  if (!license) throw new Error("Çelësi i licencës nuk u gjet.");
+  if (license.client_id !== clientId) throw new Error("Ky çelës nuk i përket lokalit tuaj.");
+  return getOwnerLicenseView(clientId);
+}
+
 async function getDashboardStats() {
   const db = getSupabase();
   const [clients, licenses] = await Promise.all([
@@ -489,4 +548,7 @@ module.exports = {
   verifyUserPassword,
   ensureSuperAdmin,
   getDashboardStats,
+  listLicensesForClient,
+  getOwnerLicenseView,
+  verifyOwnerLicenseKey,
 };

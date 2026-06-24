@@ -236,6 +236,70 @@ async function loadReport() {
     : '<tr><td colspan="4" style="color:var(--muted)">—</td></tr>';
 }
 
+function formatLicenseKey(raw) {
+  const clean = String(raw || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 16);
+  const parts = [];
+  for (let i = 0; i < clean.length; i += 4) parts.push(clean.slice(i, i + 4));
+  return parts.join("-");
+}
+
+function setOwnerLicenseStatus(activated, text) {
+  const box = document.getElementById("owner-license-status");
+  const icon = document.getElementById("owner-license-icon");
+  const label = document.getElementById("owner-license-text");
+  if (!box || !icon || !label) return;
+  box.className = "owner-license-status " + (activated ? "active" : "inactive");
+  icon.textContent = activated ? "✅" : "❌";
+  label.textContent = text || (activated ? "Licenca është aktive." : "Licenca nuk është aktive.");
+}
+
+async function loadLicense() {
+  const msg = document.getElementById("owner-license-msg");
+  if (msg) msg.textContent = "";
+  try {
+    const s = await api("/api/owner/license");
+    document.getElementById("owner-license-device-id").value = s.machine_id || "— (aktivizoni në POS)";
+    const keyEl = document.getElementById("owner-license-key");
+    if (keyEl && s.license_key && !keyEl.value.trim()) {
+      keyEl.value = s.license_key;
+    }
+    setOwnerLicenseStatus(!!s.activated, s.message || "");
+  } catch (err) {
+    setOwnerLicenseStatus(false, err.message || "Nuk u lexua licenca.");
+  }
+}
+
+document.getElementById("owner-license-key")?.addEventListener("input", e => {
+  const el = e.target;
+  el.value = formatLicenseKey(el.value);
+});
+
+document.getElementById("btn-owner-copy-device-id")?.addEventListener("click", function () {
+  kopjoLinkun("owner-license-device-id", this);
+});
+
+document.getElementById("btn-owner-license-save")?.addEventListener("click", async () => {
+  const msg = document.getElementById("owner-license-msg");
+  const license_key = formatLicenseKey(document.getElementById("owner-license-key").value);
+  if (!license_key) {
+    msg.textContent = "Shkruani çelësin e licencës.";
+    msg.className = "owner-license-msg err";
+    return;
+  }
+  try {
+    const r = await api("/api/owner/license", {
+      method: "PUT",
+      body: JSON.stringify({ license_key }),
+    });
+    msg.textContent = r.info || "Çelësi u verifikua.";
+    msg.className = "owner-license-msg ok";
+    await loadLicense();
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = "owner-license-msg err";
+  }
+});
+
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -244,6 +308,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
+    if (tab.dataset.tab === "licenca") loadLicense();
   });
 });
 

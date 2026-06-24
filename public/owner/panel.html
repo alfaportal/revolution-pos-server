@@ -55,6 +55,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="raportet">Raportet</button>
+      <button class="tab" data-tab="licenca">Licenca</button>
     </div>
 
     <div id="panel-tavolinat" class="panel-section">
@@ -116,8 +117,44 @@
         </div>
       </div>
     </div>
+
+    <div id="panel-licenca" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Licenca e aplikacionit POS</div>
+        <p class="links-hint">
+          ID-ja është e kompjuterit ku punon POS-i (jo e telefonit). Pas aktivizimit në POS, shfaqet këtu automatikisht.
+        </p>
+        <div id="owner-license-status" class="owner-license-status pending">
+          <strong id="owner-license-icon">⏳</strong>
+          <span id="owner-license-text">Duke kontrolluar licencën…</span>
+        </div>
+        <div class="link-row">
+          <label>ID e pajisjes (POS)</label>
+          <div class="link-actions">
+            <input type="text" id="owner-license-device-id" readonly class="mono-input">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-device-id">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row">
+          <label for="owner-license-key">Çelësi i licencës</label>
+          <input
+            type="text"
+            id="owner-license-key"
+            class="mono-input license-key-field"
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            autocomplete="off"
+            maxlength="19"
+          >
+        </div>
+        <button type="button" class="btn btn-primary owner-license-save" id="btn-owner-license-save">Ruaj / verifiko</button>
+        <p class="owner-license-note" id="owner-license-note">
+          Aktivizimi i plotë bëhet në kompjuterin POS: <strong>Admin → Licenca</strong> (i njëjti Wi‑Fi).
+        </p>
+        <div id="owner-license-msg" class="owner-license-msg"></div>
+      </div>
+    </div>
   </div>
 
-  <script src="/js/owner.js?v=5"></script>
+  <script src="/js/owner.js?v=6"></script>
 </body>
 </html>
