@@ -43,9 +43,18 @@ function line(str = "") {
   return concat(text(str), text("\n"));
 }
 
+function latinizeForEscPos(str) {
+  return String(str ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/€/g, " EUR")
+    .replace(/…/g, "...")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?");
+}
+
 /**
  * Ndërton buffer ESC/POS nga rreshta plain-text me markime speciale:
- * ^B...^b = bold, ^C...^c = center, ^L...^l = large (2x height)
+ * ^B = bold, ^C = center, ^R = right, ^L = large (2x height)
  */
 function buildEscPosFromLines(lines) {
   const chunks = [init()];
@@ -81,7 +90,7 @@ function buildEscPosFromLines(lines) {
       s = s.slice(2);
     }
 
-    s = s.replace(/\^b/g, "");
+    s = latinizeForEscPos(s.replace(/\^b/g, ""));
     chunks.push(text(s), text("\n"), ...resets);
   }
 

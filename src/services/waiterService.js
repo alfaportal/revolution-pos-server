@@ -215,6 +215,7 @@ async function closeWaiterTable(clientId, body) {
       ? {
           ...receiptBundle.receipt,
           text: receiptBundle.text,
+          lines: receiptBundle.lines,
           html: receiptBundle.html,
           escpos_base64: receiptBundle.escpos_base64,
           paper_width_mm: receiptBundle.paper_width_mm,

@@ -97,45 +97,30 @@ function buildReceiptPayload(clientId, business, body) {
   };
 }
 
-function formatItemRows(items, width) {
-  const rows = [];
-  if (width >= 48) {
-    rows.push(
-      pad("Emërtimi", 22)
-        + pad("Sasia", 6, "right")
-        + pad("Çmimi", 8, "right")
-        + pad("Vlera", 8, "right"),
-    );
-    for (const item of items) {
-      const qty = String(item.quantity);
-      const unit = formatMoney(item.price);
-      const lineTotal = formatMoney(item.price * item.quantity);
-      rows.push(
-        pad(item.name, 22)
-          + pad(qty, 6, "right")
-          + pad(`x${unit}`, 8, "right")
-          + pad(`=${lineTotal}`, 8, "right"),
-      );
-    }
-    return rows;
+/** Një rresht artikulli për printer termal: "Emri    1x  1.50  =  1.50" */
+function formatItemLine(item, width) {
+  const qty = Number(item.quantity) || 1;
+  const unit = formatMoney(item.price);
+  const lineTotal = formatMoney(item.price * qty);
+  const tail = `${qty}x  ${unit}  =  ${lineTotal}`;
+  const nameMax = Math.max(6, width - tail.length - 1);
+  let name = String(item.name || "").trim();
+  if (name.length > nameMax) {
+    name = `${name.slice(0, Math.max(4, nameMax - 1))}…`;
   }
+  const gap = Math.max(1, width - name.length - tail.length);
+  return `${name}${" ".repeat(gap)}${tail}`;
+}
 
-  rows.push(
-    pad("Emërtimi", 16)
-      + pad("S", 3, "right")
-      + pad("Vlera", 9, "right"),
-  );
-  for (const item of items) {
-    const name = item.name.length > 16 ? `${item.name.slice(0, 15)}…` : item.name;
-    const lineTotal = formatMoney(item.price * item.quantity);
-    rows.push(
-      pad(name, 16)
-        + pad(String(item.quantity), 3, "right")
-        + pad(lineTotal, 9, "right"),
-    );
-    rows.push(pad(`  x ${formatMoney(item.price)}`, width));
-  }
-  return rows;
+function formatTotalLine(total, width) {
+  const totalLabel = "TOTALI:";
+  const totalVal = `${formatMoney(total)} EUR`;
+  const gap = Math.max(1, width - totalLabel.length - totalVal.length);
+  return `${totalLabel}${" ".repeat(gap)}${totalVal}`;
+}
+
+function formatItemRows(items, width) {
+  return items.map(item => formatItemLine(item, width));
 }
 
 function buildReceiptLines(receipt) {
@@ -161,14 +146,7 @@ function buildReceiptLines(receipt) {
   lines.push(...formatItemRows(receipt.items, w));
   lines.push(divider(w));
 
-  const totalLabel = "GJITHSEJ:";
-  const totalVal = `${formatMoney(receipt.total)}€`;
-  if (w >= 48) {
-    lines.push(pad(totalLabel, w - totalVal.length, "left") + totalVal);
-  } else {
-    lines.push(totalLabel);
-    lines.push(pad(totalVal, w, "right"));
-  }
+  lines.push(formatTotalLine(receipt.total, w));
 
   lines.push(divider(w));
   lines.push(pad("Faleminderit!", w, "center"));
@@ -200,14 +178,7 @@ function buildMarkedReceiptLines(receipt) {
   lines.push(...formatItemRows(receipt.items, w));
   lines.push(divider(w));
 
-  const totalLabel = "GJITHSEJ:";
-  const totalVal = `${formatMoney(receipt.total)}€`;
-  if (w >= 48) {
-    lines.push(`^R^L^B${totalLabel}${" ".repeat(Math.max(1, w - totalLabel.length - totalVal.length))}${totalVal}`);
-  } else {
-    lines.push(`^R^L^B${totalLabel}`);
-    lines.push(`^R^L^B${totalVal}`);
-  }
+  lines.push(`^R^B${formatTotalLine(receipt.total, w)}`);
 
   lines.push(divider(w));
   lines.push("^CFaleminderit!");
@@ -314,6 +285,7 @@ async function formatReceiptBundle(clientId, body) {
   return {
     receipt,
     text: formatReceiptText(receipt),
+    lines: buildReceiptLines(receipt),
     escpos_base64: formatReceiptEscPosBase64(receipt),
     html: formatReceiptHtml(receipt),
     paper_width_mm: business.receipt_width_mm,
@@ -365,6 +337,8 @@ async function syncPosSettingsFromClient(clientId) {
 
 module.exports = {
   paperChars,
+  formatItemLine,
+  formatTotalLine,
   getBusinessProfile,
   buildReceiptPayload,
   formatReceiptText,
