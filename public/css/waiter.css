@@ -365,6 +365,26 @@ html, body {
   margin-bottom: 0.5rem;
 }
 
+.cart-msg {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.cart-msg.ok {
+  color: #bbf7d0;
+  background: #14532d;
+  border: 1px solid var(--ok);
+}
+
+.cart-msg.err {
+  color: #fecaca;
+  background: #450a0a;
+  border: 1px solid var(--danger);
+}
+
 .cart-actions {
   display: flex;
   flex-direction: column;

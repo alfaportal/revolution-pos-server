@@ -109,13 +109,28 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     }
   }
 
-  const { data, error } = await db
+  let { data, error } = await db
     .from("sales_orders")
     .upsert(row, { onConflict: "client_id,local_order_id,device_id" })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error && row.waiter_id && /waiter_id|schema cache/i.test(String(error.message || ""))) {
+    delete row.waiter_id;
+    ({ data, error } = await db
+      .from("sales_orders")
+      .upsert(row, { onConflict: "client_id,local_order_id,device_id" })
+      .select()
+      .single());
+  }
+
+  if (error) {
+    const msg = String(error.message || error.details || error.hint || "Gabim në ruajtjen e porosisë.");
+    if (/waiter_id|schema cache/i.test(msg)) {
+      throw new Error("Mungon migrimi i bazës së të dhënave (014_waiter_pin.sql). Ekzekutojeni në Supabase.");
+    }
+    throw new Error(msg);
+  }
 
   if (finalStatus === "ordered") {
     try {

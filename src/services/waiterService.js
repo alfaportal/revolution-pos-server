@@ -54,10 +54,15 @@ async function getLicenseForClient(clientId) {
   return license;
 }
 
+function sameWaiterId(a, b) {
+  if (!a || !b) return false;
+  return String(a).toLowerCase() === String(b).toLowerCase();
+}
+
 function assertWaiterOnTable(existing, waiter, tableNumber) {
   if (!existing?.waiter_name) return;
   if (isKioskWaiterName(existing.waiter_name)) return;
-  if (waiter?.id && existing.waiter_id && existing.waiter_id !== waiter.id) {
+  if (waiter?.id && existing.waiter_id && !sameWaiterId(existing.waiter_id, waiter.id)) {
     throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
   }
   if (existing.waiter_name.toLowerCase() !== waiter.name.toLowerCase()) {
@@ -130,13 +135,16 @@ async function submitWaiterOrder(clientId, body) {
   const tableNumber = Number(body.table_number);
   if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
 
-  const items = normalizeItems(body.items);
-  if (!items.length) throw new Error("Shtoni të paktën një artikull.");
+  const newItems = normalizeItems(body.items);
+  if (!newItems.length) throw new Error("Shtoni të paktën një artikull.");
 
   const active = await getActiveTableOrders(clientId);
   const existing = active.get(tableNumber);
   assertWaiterOnTable(existing, waiter, tableNumber);
 
+  const items = existing
+    ? mergeOrderItems(existing.items_json, newItems)
+    : newItems;
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
   const license = await getLicenseForClient(clientId);

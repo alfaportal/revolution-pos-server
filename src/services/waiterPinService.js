@@ -79,13 +79,13 @@ async function getWaiterById(clientId, waiterId) {
   const db = getSupabase();
   const { data, error } = await db
     .from("pos_staff")
-    .select("id, name, role, active, pin_hash")
+    .select("id, name, role, active")
     .eq("client_id", clientId)
     .eq("id", waiterId)
     .eq("role", "waiter")
     .maybeSingle();
   if (error) throw error;
-  if (!data?.id || !data.pin_hash) return null;
+  if (!data?.id) return null;
   if (data.active === false) return null;
   return { id: data.id, name: data.name };
 }

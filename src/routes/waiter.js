@@ -28,14 +28,17 @@ router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"
   }
 });
 
-router.post("/:slug/orders", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+async function postWaiterOrder(req, res) {
   try {
     const result = await submitWaiterOrder(req.kitchenClient.id, req.body);
     res.status(201).json(result);
   } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
+    res.status(400).json({ ok: false, gabim: e.message || "Porosia nuk u dërgua." });
   }
-});
+}
+
+router.post("/:slug/orders", resolveKitchenClient, requirePackageFeature("waiter"), postWaiterOrder);
+router.post("/:slug/order", resolveKitchenClient, requirePackageFeature("waiter"), postWaiterOrder);
 
 router.post("/:slug/orders/close", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {

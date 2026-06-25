@@ -40,6 +40,7 @@
   }
 
   function showErr(el, msg) {
+    if (!el) return;
     if (!msg) {
       el.classList.add("hidden");
       el.textContent = "";
@@ -47,6 +48,7 @@
     }
     el.textContent = msg;
     el.classList.remove("hidden");
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function formatEuro(n) {
@@ -116,7 +118,28 @@
   }
 
   function escapeAttr(s) {
-    return String(s || "").replace(/"/g, "&quot;");
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+  }
+
+  function sameWaiterId(a, b) {
+    if (!a || !b) return false;
+    return String(a).toLowerCase() === String(b).toLowerCase();
+  }
+
+  function showOrderMsg(msg, ok) {
+    const el = $("cart-msg");
+    if (!el) return;
+    if (!msg) {
+      el.textContent = "";
+      el.className = "cart-msg hidden";
+      return;
+    }
+    el.textContent = msg;
+    el.className = "cart-msg " + (ok ? "ok" : "err");
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function escapeHtml(s) {
@@ -245,7 +268,7 @@
     tableNumber = num;
     const table = bootstrap.tables?.find(t => t.number === num);
     const sameWaiter = table?.waiter_id
-      ? table.waiter_id === activeWaiter.id
+      ? sameWaiterId(table.waiter_id, activeWaiter.id)
       : table?.waiter_name?.toLowerCase() === activeWaiter.name.toLowerCase();
     if (table?.active_items?.length && sameWaiter) {
       cart = table.active_items.map(i => ({
@@ -258,6 +281,7 @@
     }
     activeCategory = pickDefaultCategory();
     $("order-title").textContent = `T${num}`;
+    showOrderMsg("", false);
     renderCategories();
     renderMenu();
     renderCart();
@@ -379,10 +403,11 @@
   $("pin-back")?.addEventListener("click", backspacePin);
   $("btn-pin-login")?.addEventListener("click", submitPinLogin);
 
-  $("btn-logout").addEventListener("click", lockSession);
+  $("btn-logout")?.addEventListener("click", lockSession);
 
-  $("btn-back").addEventListener("click", () => {
+  $("btn-back")?.addEventListener("click", () => {
     tableNumber = 0;
+    showOrderMsg("", false);
     showScreen("screen-tables");
     refreshBootstrap();
   });
@@ -430,9 +455,9 @@
     $("receipt-modal").classList.add("hidden");
   }
 
-  $("btn-print").addEventListener("click", () => window.print());
+  $("btn-print")?.addEventListener("click", () => window.print());
 
-  $("btn-receipt-done").addEventListener("click", async () => {
+  $("btn-receipt-done")?.addEventListener("click", async () => {
     hideReceipt();
     cart = [];
     renderCart();
@@ -442,7 +467,7 @@
     startAutoLock();
   });
 
-  $("btn-close").addEventListener("click", async () => {
+  $("btn-close")?.addEventListener("click", async () => {
     const err = $("order-err");
     showErr(err, "");
     const table = bootstrap.tables?.find(t => t.number === tableNumber);
@@ -478,42 +503,80 @@
     }
   });
 
-  $("btn-send").addEventListener("click", async () => {
+  async function submitOrder() {
     const err = $("order-err");
     showErr(err, "");
-    if (!cart.length) {
-      showErr(err, "Shtoni të paktën një artikull.");
+    showOrderMsg("", false);
+
+    if (!activeWaiter?.id) {
+      const msg = "Sesioni i kamarierit ka skaduar. Shkruani PIN-in.";
+      showErr(err, msg);
+      showOrderMsg(msg, false);
+      lockSession();
       return;
     }
+    if (!tableNumber || tableNumber < 1) {
+      const msg = "Zgjidhni tavolinën para se të dërgoni porosinë.";
+      showErr(err, msg);
+      showOrderMsg(msg, false);
+      return;
+    }
+    if (!cart.length) {
+      const msg = "Shtoni të paktën një artikull.";
+      showErr(err, msg);
+      showOrderMsg(msg, false);
+      return;
+    }
+
     const btn = $("btn-send");
+    if (!btn) return;
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
+
+    const sentTable = tableNumber;
+    let payload;
+    try {
+      payload = {
+        ...waiterPayload(),
+        table_number: sentTable,
+        items: cart.map(c => ({
+          name: c.name,
+          quantity: c.quantity,
+          price: c.price,
+        })),
+      };
+    } catch (e) {
+      showErr(err, e.message);
+      showOrderMsg(e.message, false);
+      btn.disabled = false;
+      btn.textContent = "Dërgo te banaku";
+      return;
+    }
+
     try {
       await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
         method: "POST",
-        body: JSON.stringify({
-          ...waiterPayload(),
-          table_number: tableNumber,
-          items: cart.map(c => ({
-            name: c.name,
-            quantity: c.quantity,
-            price: c.price,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
       cart = [];
       renderCart();
       tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");
+      showOrderMsg("", false);
+      alert(`Porosia u dërgua te banaku për T${sentTable}!`);
       startAutoLock();
     } catch (e) {
-      showErr(err, e.message);
+      const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
+      showErr(err, msg);
+      showOrderMsg(msg, false);
     } finally {
       btn.disabled = false;
       btn.textContent = "Dërgo te banaku";
     }
-  });
+  }
+
+  $("btn-send")?.addEventListener("click", submitOrder);
 
   (async () => {
     try {
