@@ -35,7 +35,7 @@ async function fetchDayClosedSales(clientId, dateStr) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at, payment_status, fiscal_receipt_id")
+    .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at, payment_status, payment_method, fiscal_receipt_id")
     .eq("client_id", clientId)
     .eq("status", "closed")
     .gte("closed_at", from)
@@ -73,6 +73,7 @@ async function buildDailyZReport(clientId, dateStr) {
 
   const salesDetail = sales.map(s => {
     const receipt = receipts.find(r => r.sale_order_id === s.id);
+    const pm = s.payment_method === "karte" ? "karte" : "cash";
     return {
       id: s.id,
       time: s.closed_at,
@@ -80,12 +81,19 @@ async function buildDailyZReport(clientId, dateStr) {
       waiter_name: s.waiter_name,
       total: Number(s.total),
       payment_status: s.payment_status,
+      payment_method: pm,
+      payment_label: pm === "karte" ? "Kartë" : "Cash",
       receipt_number: s.receipt_number,
       coupon_nr: receipt?.coupon_nr || "",
       serial_nr: receipt?.serial_nr || "",
       items: s.items_json,
     };
   });
+
+  const payment_totals = { cash: 0, karte: 0 };
+  for (const s of salesDetail) {
+    payment_totals[s.payment_method] = Math.round((payment_totals[s.payment_method] + s.total) * 100) / 100;
+  }
 
   return {
     report_date: date,
@@ -102,6 +110,7 @@ async function buildDailyZReport(clientId, dateStr) {
     cumulative_turnover: cumulativeTurnover,
     cumulative_before: cumulativeBefore,
     sales: salesDetail,
+    payment_totals,
     fiscal_receipts: receipts,
     generated_at: new Date().toISOString(),
   };
@@ -170,6 +179,8 @@ function zReportToCsv(report) {
   lines.push(`TVSH total (€),${report.turnover_vat}`);
   lines.push(`Gjendja e arkës (€),${report.cash_register_balance}`);
   lines.push(`Qarkullimi kumulativ (€),${report.cumulative_turnover}`);
+  lines.push(`Pagesa Cash (€),${report.payment_totals?.cash ?? 0}`);
+  lines.push(`Pagesa Kartë (€),${report.payment_totals?.karte ?? 0}`);
   lines.push("");
   lines.push("TVSH breakdown");
   lines.push("Kategoria,Neto,VAT,Bruto");
@@ -179,13 +190,14 @@ function zReportToCsv(report) {
   }
   lines.push("");
   lines.push("Shitjet");
-  lines.push("Koha,Tavolina,Kamarieri,Totali,Kupon,Serial,Statusi");
+  lines.push("Koha,Tavolina,Kamarieri,Totali,Pagesa,Kupon,Serial,Statusi");
   for (const s of report.sales || []) {
     lines.push([
       s.time || "",
       s.table_number || "",
       csvEsc(s.waiter_name),
       s.total,
+      csvEsc(s.payment_label || s.payment_method || "Cash"),
       csvEsc(s.coupon_nr),
       csvEsc(s.serial_nr),
       s.payment_status || "",
@@ -212,6 +224,7 @@ function zReportToHtml(report) {
       <td>T${s.table_number || "—"}</td>
       <td>${escHtml(s.waiter_name)}</td>
       <td>${Number(s.total).toFixed(2)} €</td>
+      <td>${escHtml(s.payment_label || "Cash")}</td>
       <td>${escHtml(s.coupon_nr || "—")}</td>
       <td>${escHtml(s.payment_status || "")}</td>
     </tr>`).join("");
@@ -237,6 +250,8 @@ th{background:#f5f5f5}
   <div><strong>Totali pa TVSH:</strong> ${report.turnover_net.toFixed(2)} €</div>
   <div><strong>TVSH total:</strong> ${report.turnover_vat.toFixed(2)} €</div>
   <div><strong>Gjendja e arkës:</strong> ${report.cash_register_balance.toFixed(2)} €</div>
+  <div><strong>Pagesa Cash:</strong> ${(report.payment_totals?.cash ?? 0).toFixed(2)} €</div>
+  <div><strong>Pagesa Kartë:</strong> ${(report.payment_totals?.karte ?? 0).toFixed(2)} €</div>
   <div><strong>Qarkullimi kumulativ:</strong> ${report.cumulative_turnover.toFixed(2)} €</div>
   <div><strong>Përgjegjësi:</strong> ${escHtml(report.responsible_person)}</div>
 </div>
@@ -244,8 +259,8 @@ th{background:#f5f5f5}
 <table><thead><tr><th>Kategoria</th><th>Neto</th><th>TVSH</th><th>Bruto</th></tr></thead>
 <tbody>${vatRows}</tbody></table></div>
 <div class="box"><strong>Shitjet e ditës</strong>
-<table><thead><tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Kupon</th><th>Statusi</th></tr></thead>
-<tbody>${salesRows || "<tr><td colspan='6'>—</td></tr>"}</tbody></table></div>
+<table><thead><tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Pagesa</th><th>Kupon</th><th>Statusi</th></tr></thead>
+<tbody>${salesRows || "<tr><td colspan='7'>—</td></tr>"}</tbody></table></div>
 <p class="meta">Gjeneruar: ${new Date(report.generated_at).toLocaleString("sq-AL")} · RKS MF</p>
 </body></html>`;
 }

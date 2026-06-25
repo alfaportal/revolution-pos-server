@@ -71,6 +71,12 @@ function normalizeReceiptItems(items) {
   })).filter(i => i.name);
 }
 
+function paymentMethodLabel(raw) {
+  const v = String(raw || "cash").trim().toLowerCase();
+  if (["karte", "kartë", "card", "kart"].includes(v)) return "Kartë";
+  return "Cash";
+}
+
 function buildReceiptPayload(clientId, business, body) {
   const items = normalizeReceiptItems(body.items);
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -96,6 +102,8 @@ function buildReceiptPayload(clientId, business, body) {
     paper_width_mm: [58, 80].includes(Number(body.receipt_width_mm))
       ? Number(body.receipt_width_mm)
       : business.receipt_width_mm,
+    payment_method: String(body.payment_method || "cash").trim().toLowerCase() === "karte" ? "karte" : "cash",
+    payment_label: paymentMethodLabel(body.payment_method),
   };
 }
 
@@ -149,6 +157,7 @@ function buildReceiptLines(receipt) {
   lines.push(divider(w));
 
   lines.push(formatTotalLine(receipt.total, w));
+  if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
 
   lines.push(divider(w));
   lines.push(pad("Faleminderit!", w, "center"));
@@ -181,6 +190,7 @@ function buildMarkedReceiptLines(receipt) {
   lines.push(divider(w));
 
   lines.push(`^R^B${formatTotalLine(receipt.total, w)}`);
+  if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
 
   lines.push(divider(w));
   lines.push("^CFaleminderit!");
@@ -243,6 +253,7 @@ function formatReceiptHtml(receipt) {
     receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
     receipt.cashier_name ? `<div><span class="rc-meta-label">Operatori</span> ${escapeHtml(receipt.cashier_name)}</div>` : "",
     `<div><span class="rc-meta-label">Data</span> ${receipt.date} &nbsp; ${receipt.time}</div>`,
+    receipt.payment_label ? `<div><span class="rc-meta-label">Pagesa</span> ${escapeHtml(receipt.payment_label)}</div>` : "",
   ].filter(Boolean).join("");
 
   const tableHead = narrow

@@ -205,6 +205,16 @@
         <p class="links-hint">Nëse nuk shtoni hapësira, përdoret numri i tavolinave nga POS ose vlera e vjetër (<span id="venue-fallback-count">—</span> tavolina).</p>
       </div>
 
+      <div class="card" id="kiosk-qr-card" style="margin-top:1rem">
+        <div class="card-title card-title-row">
+          <span>QR Kodi i tavolinave (Kiosk)</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-print-kiosk-qrs">Printo QR Kodet</button>
+        </div>
+        <p class="links-hint">Çdo kod lidhet me <code>/kiosk/:slug?key=SECRET&amp;table=N</code>. Klientët skanojnë për të porositur nga tavolina.</p>
+        <div id="kiosk-qr-grid" class="kiosk-qr-grid"></div>
+        <div id="kiosk-qr-msg" class="owner-license-msg"></div>
+      </div>
+
       <div class="card" style="margin-top:1rem">
         <div class="card-title">Stafi — kamarierë dhe kuzhinierë</div>
         <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte). Për tabletat e kamarierit me PIN, përdorni tabin <strong>Kamarierët</strong>.</p>
@@ -254,7 +264,7 @@
         <div class="overflow-x" style="margin-top:1rem">
           <table>
             <thead>
-              <tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Kupon fiskal</th><th>Statusi</th></tr>
+              <tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Pagesa</th><th>Kupon fiskal</th><th>Statusi</th></tr>
             </thead>
             <tbody id="zreport-sales"></tbody>
           </table>

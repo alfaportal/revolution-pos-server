@@ -641,6 +641,46 @@
 .owner-license-msg.ok { color: #86efac; }
 .owner-license-msg.err { color: #fca5a5; }
 
+.kiosk-qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 0.75rem;
+}
+
+.kiosk-qr-card {
+  background: #0b1220;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem;
+  text-align: center;
+}
+
+.kiosk-qr-card img {
+  width: 100%;
+  max-width: 140px;
+  height: auto;
+  display: block;
+  margin: 0 auto 0.5rem;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.kiosk-qr-table {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #38bdf8;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .header h1 { font-size: 1rem; }

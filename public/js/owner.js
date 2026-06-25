@@ -316,6 +316,8 @@ function renderZReport(report) {
       <div class="zreport-stat"><div class="lbl">Totali pa TVSH</div><div class="val">${euro(report.turnover_net)}</div></div>
       <div class="zreport-stat"><div class="lbl">TVSH total</div><div class="val">${euro(report.turnover_vat)}</div></div>
       <div class="zreport-stat"><div class="lbl">Gjendja e arkës</div><div class="val">${euro(report.cash_register_balance)}</div></div>
+      <div class="zreport-stat"><div class="lbl">Pagesa Cash</div><div class="val">${euro(report.payment_totals?.cash)}</div></div>
+      <div class="zreport-stat"><div class="lbl">Pagesa Kartë</div><div class="val">${euro(report.payment_totals?.karte)}</div></div>
       <div class="zreport-stat"><div class="lbl">Qarkullimi kumulativ</div><div class="val">${euro(report.cumulative_turnover)}</div></div>`;
   }
 
@@ -338,10 +340,11 @@ function renderZReport(report) {
           <td>T${s.table_number || "—"}</td>
           <td>${s.waiter_name || "—"}</td>
           <td class="num">${euro(s.total)}</td>
+          <td>${s.payment_label || "Cash"}</td>
           <td>${s.coupon_nr || "—"}</td>
           <td>${s.payment_status || "—"}</td>
         </tr>`).join("")
-      : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka shitje për këtë ditë.</td></tr>';
+      : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka shitje për këtë ditë.</td></tr>';
   }
 }
 
@@ -963,7 +966,41 @@ async function loadOwnerVenue() {
   renderVenueAreas();
   renderVenueStaff();
   updateVenueSyncHint(data.synced_at, data.table_count);
+  await loadKioskQrs();
 }
+
+async function loadKioskQrs() {
+  const grid = document.getElementById("kiosk-qr-grid");
+  const msg = document.getElementById("kiosk-qr-msg");
+  const card = document.getElementById("kiosk-qr-card");
+  if (!grid || !card) return;
+  grid.innerHTML = "<p class=\"links-hint\">Duke gjeneruar QR kodet…</p>";
+  if (msg) msg.textContent = "";
+  try {
+    const data = await api("/api/owner/kiosk/qrs");
+    if (!data.tables?.length) {
+      grid.innerHTML = "<p class=\"links-hint\">Nuk ka tavolina për QR.</p>";
+      return;
+    }
+    grid.innerHTML = data.tables.map(t => `
+      <div class="kiosk-qr-card">
+        <img src="${t.data_url}" alt="QR T${t.table}" loading="lazy">
+        <div class="kiosk-qr-table">T${t.table}</div>
+      </div>`).join("");
+    card.hidden = false;
+  } catch (err) {
+    grid.innerHTML = "";
+    if (msg) {
+      msg.textContent = err.message || "QR nuk u ngarkuan.";
+      msg.className = "owner-license-msg err";
+    }
+    if (/paketa|kiosk/i.test(err.message || "")) card.hidden = true;
+  }
+}
+
+document.getElementById("btn-print-kiosk-qrs")?.addEventListener("click", () => {
+  window.open("/api/owner/kiosk/qrs/print", "_blank", "noopener");
+});
 
 async function saveAreaRow(row) {
   if (!row) return;
@@ -985,6 +1022,7 @@ async function saveAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at, ownerVenueCache.table_count);
     setVenueMsg("Hapësira u ruajt.", true);
+    await loadKioskQrs();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1005,6 +1043,7 @@ async function toggleAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg(updated.active ? "Hapësira u aktivizua." : "Hapësira u fsheh.", true);
+    await loadKioskQrs();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1022,6 +1061,7 @@ async function deleteAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u fshi.", true);
+    await loadKioskQrs();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1285,6 +1325,7 @@ document.getElementById("btn-area-add")?.addEventListener("click", async () => {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u shtua.", true);
+    await loadKioskQrs();
   } catch (err) {
     setVenueMsg(err.message, false);
   }

@@ -89,6 +89,9 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const waiterId = String(body.waiter_id || "").trim();
   if (waiterId) row.waiter_id = waiterId;
 
+  const pmRaw = String(body.payment_method || "cash").trim().toLowerCase();
+  row.payment_method = ["karte", "kartë", "card", "kart"].includes(pmRaw) ? "karte" : "cash";
+
   if (finalStatus === "ordered") {
     row.ordered_at = body.ordered_at || existing?.ordered_at || now;
     row.closed_at = row.ordered_at;
@@ -104,8 +107,11 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     row.closed_at = body.closed_at || existing?.closed_at || now;
   } else {
     row.closed_at = body.closed_at || now;
-    if (finalStatus === "closed" && !existing) {
-      row.ordered_at = body.ordered_at || row.closed_at;
+    if (finalStatus === "closed") {
+      row.payment_status = "paid";
+      if (!existing) {
+        row.ordered_at = body.ordered_at || row.closed_at;
+      }
     }
   }
 

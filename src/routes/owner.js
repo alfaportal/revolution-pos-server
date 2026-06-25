@@ -43,6 +43,7 @@ const {
 } = require("../services/waiterPinService");
 const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
+const { listKioskQrCodes, qrPrintHtml } = require("../services/kioskQrService");
 
 const router = express.Router();
 
@@ -374,6 +375,29 @@ router.delete("/waiters/:id", async (req, res) => {
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/kiosk/qrs", async (req, res) => {
+  try {
+    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const data = await listKioskQrCodes(req.user.client_id, base);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/kiosk/qrs/print", async (req, res) => {
+  try {
+    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const client = await getClientById(req.user.client_id);
+    const data = await listKioskQrCodes(req.user.client_id, base);
+    const html = qrPrintHtml(data.tables, client?.emri || "");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (e) {
+    res.status(400).send(`<pre>${e.message}</pre>`);
   }
 });
 
