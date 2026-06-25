@@ -23,6 +23,10 @@
   let activeCategory = "";
   let pinDigits = [];
   let lockTimer = null;
+  let currentMenuItems = [];
+  let successToastTimer = null;
+  let menuGridBound = false;
+  let cartLinesBound = false;
 
   const $ = id => document.getElementById(id);
 
@@ -139,7 +143,56 @@
     }
     el.textContent = msg;
     el.className = "cart-msg " + (ok ? "ok" : "err");
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function showSuccessToast(msg) {
+    const el = $("success-toast");
+    if (!el) return;
+    if (successToastTimer) clearTimeout(successToastTimer);
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    successToastTimer = setTimeout(() => {
+      el.classList.add("hidden");
+      el.textContent = "";
+    }, 4500);
+  }
+
+  /** Reliable tap/click for mobile — one action per gesture, works with touch. */
+  function bindTap(el, handler, { preventTouchScroll = false } = {}) {
+    if (!el || el.dataset.tapBound) return;
+    el.dataset.tapBound = "1";
+    let lastFire = 0;
+    const fire = (e, sourceEl) => {
+      const now = Date.now();
+      if (now - lastFire < 280) return;
+      lastFire = now;
+      return handler(e, sourceEl);
+    };
+    el.addEventListener("click", e => fire(e, e.target));
+    el.addEventListener("touchend", e => {
+      const touch = e.changedTouches?.[0];
+      const target = touch
+        ? document.elementFromPoint(touch.clientX, touch.clientY)
+        : e.target;
+      if (!target || !el.contains(target)) return;
+      const handled = fire(e, target);
+      if (preventTouchScroll && handled !== false) e.preventDefault();
+    }, { passive: false });
+  }
+
+  function syncCartBarLayout() {
+    const screen = $("screen-order");
+    const bar = $("cart-bar");
+    if (!screen || !bar) return;
+    const hasItems = cart.length > 0;
+    screen.classList.toggle("has-cart", hasItems);
+    bar.classList.toggle("hidden", !hasItems);
+    if (hasItems) {
+      const h = Math.ceil(bar.getBoundingClientRect().height);
+      screen.style.setProperty("--cart-bar-height", `${h}px`);
+    } else {
+      screen.style.removeProperty("--cart-bar-height");
+    }
   }
 
   function escapeHtml(s) {
@@ -158,7 +211,62 @@
 
   function bindTableCards(root) {
     (root || $("tables-grid")).querySelectorAll("[data-table]").forEach(btn => {
-      btn.addEventListener("click", () => openOrder(Number(btn.dataset.table)));
+      bindTap(btn, () => openOrder(Number(btn.dataset.table)));
+    });
+  }
+
+  function bindMenuGrid() {
+    const grid = $("menu-grid");
+    if (!grid || menuGridBound) return;
+    menuGridBound = true;
+    bindTap(grid, (_e, target) => {
+      const btn = target?.closest?.(".menu-item");
+      if (!btn || !grid.contains(btn)) return false;
+      const idx = Number(btn.getAttribute("data-idx"));
+      const item = currentMenuItems[idx];
+      if (!item) return false;
+      addToCart({
+        id: item.id,
+        name: item.name,
+        price: Number(item.price),
+      }, btn);
+      return true;
+    }, { preventTouchScroll: true });
+  }
+
+  function bindCartLines() {
+    const lines = $("cart-lines");
+    if (!lines || cartLinesBound) return;
+    cartLinesBound = true;
+    bindTap(lines, (_e, target) => {
+      const minus = target?.closest?.("[data-minus]");
+      const plus = target?.closest?.("[data-plus]");
+      if (minus) {
+        const i = Number(minus.getAttribute("data-minus"));
+        if (Number.isNaN(i) || !cart[i]) return;
+        cart[i].quantity -= 1;
+        if (cart[i].quantity <= 0) cart.splice(i, 1);
+        renderCart();
+        return;
+      }
+      if (plus) {
+        const i = Number(plus.getAttribute("data-plus"));
+        if (Number.isNaN(i) || !cart[i]) return;
+        cart[i].quantity += 1;
+        renderCart();
+      }
+    });
+  }
+
+  function bindCategoryTabs() {
+    const tabs = $("cat-tabs");
+    if (!tabs || tabs.dataset.tapBound) return;
+    bindTap(tabs, (_e, target) => {
+      const btn = target?.closest?.(".cat-tab");
+      if (!btn || !tabs.contains(btn)) return;
+      activeCategory = btn.getAttribute("data-cat") || "";
+      renderCategories();
+      renderMenu();
     });
   }
 
@@ -211,6 +319,9 @@
     cart = [];
     clearPin();
     hideReceipt();
+    $("cart-badge")?.classList.add("hidden");
+    $("cart-bar")?.classList.add("hidden");
+    $("screen-order")?.classList.remove("has-cart");
     showScreen("screen-pin");
   }
 
@@ -294,19 +405,13 @@
     tabs.innerHTML = cats.map(c => `
       <button type="button" class="cat-tab${c === activeCategory ? " active" : ""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>
     `).join("");
-    tabs.querySelectorAll(".cat-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        activeCategory = btn.getAttribute("data-cat") || "";
-        renderCategories();
-        renderMenu();
-      });
-    });
   }
 
   function renderMenu() {
     const filtered = MenuCatalog.filterMenuItems(bootstrap, activeCategory);
     activeCategory = filtered.category;
     const items = filtered.items;
+    currentMenuItems = items;
     const menu = bootstrap.menu || [];
     const grid = $("menu-grid");
     if (!menu.length) {
@@ -317,58 +422,55 @@
       grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
       return;
     }
-    grid.innerHTML = items.map(m => `
-      <button type="button" class="menu-item" data-id="${m.id}" data-name="${escapeAttr(m.name)}" data-price="${m.price}">
+    grid.innerHTML = items.map((m, idx) => `
+      <button type="button" class="menu-item" data-idx="${idx}">
         <strong>${escapeHtml(m.name)}</strong>
         <span>${formatEuro(m.price)}</span>
       </button>`).join("");
-    grid.querySelectorAll(".menu-item").forEach(btn => {
-      btn.addEventListener("click", () => addToCart({
-        id: Number(btn.dataset.id),
-        name: btn.dataset.name,
-        price: Number(btn.dataset.price),
-      }));
-    });
   }
 
-  function addToCart(item) {
-    const existing = cart.find(c => c.name === item.name);
+  function addToCart(item, btnEl) {
+    const existing = cart.find(c => c.name === item.name && Number(c.price) === Number(item.price));
     if (existing) existing.quantity += 1;
     else cart.push({ ...item, quantity: 1 });
+    if (btnEl) {
+      btnEl.classList.add("menu-item-flash");
+      setTimeout(() => btnEl.classList.remove("menu-item-flash"), 350);
+    }
     renderCart();
   }
 
   function renderCart() {
     const lines = $("cart-lines");
+    const count = cart.reduce((s, i) => s + i.quantity, 0);
+    const badge = $("cart-badge");
+    const countLabel = $("cart-count-label");
+
+    if (badge) {
+      badge.textContent = String(count);
+      badge.classList.toggle("hidden", count === 0);
+    }
+    if (countLabel) {
+      countLabel.textContent = count === 1 ? "1 artikull" : `${count} artikuj`;
+    }
+
     if (!cart.length) {
-      lines.innerHTML = '<p class="hint" style="margin:0">Shtoni artikuj nga menuja</p>';
+      lines.innerHTML = "";
     } else {
       lines.innerHTML = cart.map((it, idx) => `
         <div class="cart-line">
           <span>${it.quantity}× ${escapeHtml(it.name)} <small class="cart-unit-price">${formatEuro(it.price)}</small></span>
           <span class="cart-line-total">${formatEuro(it.price * it.quantity)}</span>
           <span class="cart-line-actions">
-            <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem;margin-right:0.25rem" data-minus="${idx}">−</button>
-            <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem" data-plus="${idx}">+</button>
+            <button type="button" class="btn btn-ghost cart-qty-btn" data-minus="${idx}">−</button>
+            <button type="button" class="btn btn-ghost cart-qty-btn" data-plus="${idx}">+</button>
           </span>
         </div>`).join("");
-      lines.querySelectorAll("[data-minus]").forEach(b => {
-        b.addEventListener("click", () => {
-          const i = Number(b.dataset.minus);
-          cart[i].quantity -= 1;
-          if (cart[i].quantity <= 0) cart.splice(i, 1);
-          renderCart();
-        });
-      });
-      lines.querySelectorAll("[data-plus]").forEach(b => {
-        b.addEventListener("click", () => {
-          cart[Number(b.dataset.plus)].quantity += 1;
-          renderCart();
-        });
-      });
     }
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     $("cart-total").textContent = formatEuro(total);
+    syncCartBarLayout();
+    requestAnimationFrame(syncCartBarLayout);
   }
 
   async function refreshBootstrap() {
@@ -504,6 +606,9 @@
   });
 
   async function submitOrder() {
+    const btn = $("btn-send");
+    if (btn?.disabled) return;
+
     const err = $("order-err");
     showErr(err, "");
     showOrderMsg("", false);
@@ -528,11 +633,9 @@
       return;
     }
 
-    const btn = $("btn-send");
     if (!btn) return;
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
-
     const sentTable = tableNumber;
     let payload;
     try {
@@ -549,7 +652,7 @@
       showErr(err, e.message);
       showOrderMsg(e.message, false);
       btn.disabled = false;
-      btn.textContent = "Dërgo te banaku";
+      btn.textContent = "Dërgo Porosinë";
       return;
     }
 
@@ -560,11 +663,12 @@
       });
       cart = [];
       renderCart();
+      const sentMsg = `✅ Porosia u dërgua te banaku për T${sentTable}!`;
       tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");
       showOrderMsg("", false);
-      alert(`Porosia u dërgua te banaku për T${sentTable}!`);
+      showSuccessToast(sentMsg);
       startAutoLock();
     } catch (e) {
       const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
@@ -572,11 +676,14 @@
       showOrderMsg(msg, false);
     } finally {
       btn.disabled = false;
-      btn.textContent = "Dërgo te banaku";
+      btn.textContent = "Dërgo Porosinë";
     }
   }
 
-  $("btn-send")?.addEventListener("click", submitOrder);
+  bindMenuGrid();
+  bindCartLines();
+  bindCategoryTabs();
+  bindTap($("btn-send"), submitOrder);
 
   (async () => {
     try {

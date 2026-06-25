@@ -59,29 +59,33 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
         <button type="button" class="btn btn-ghost" id="btn-back">← Tavolinat</button>
         <h1 id="order-title" style="margin:0;font-size:1.1rem">T1</h1>
-        <span style="width:4rem"></span>
+        <span id="cart-badge" class="cart-badge hidden">0</span>
       </div>
     </div>
-    <div class="waiter-main" style="padding-bottom:0">
+    <div class="waiter-main order-main">
       <div id="order-err" class="err hidden"></div>
       <div class="order-layout">
         <div id="cat-tabs" class="cat-tabs"></div>
         <div id="menu-grid" class="menu-grid"></div>
       </div>
     </div>
-    <div class="cart-bar">
+    <div id="cart-bar" class="cart-bar hidden" aria-live="polite">
+      <div class="cart-bar-head">
+        <span class="cart-bar-title">🛒 Shporta</span>
+        <span id="cart-count-label" class="cart-count-label">0 artikuj</span>
+      </div>
       <div id="cart-lines" class="cart-lines"></div>
       <div class="cart-total">
         <span>Totali</span>
         <span id="cart-total">0.00 €</span>
       </div>
-      <div id="cart-msg" class="cart-msg hidden" aria-live="polite"></div>
-      <div class="cart-actions">
-        <button type="button" class="btn btn-primary" id="btn-send">Dërgo te banaku</button>
-        <button type="button" class="btn btn-close" id="btn-close">Mbyll tavolinën + Printo faturën</button>
-      </div>
+      <div id="cart-msg" class="cart-msg hidden"></div>
+      <button type="button" class="btn btn-send-order" id="btn-send">Dërgo Porosinë</button>
+      <button type="button" class="btn btn-close btn-close-secondary" id="btn-close">Mbyll tavolinën + Printo faturën</button>
     </div>
   </div>
+
+  <div id="success-toast" class="success-toast hidden" role="status" aria-live="polite"></div>
 
   <div id="receipt-modal" class="receipt-modal hidden">
     <div class="receipt-sheet" id="receipt-print"></div>
@@ -98,6 +102,6 @@
   </div>
 
   <script src="/js/menuCatalog.js?v=1"></script>
-  <script src="/js/waiter.js?v=7"></script>
+  <script src="/js/waiter.js?v=8"></script>
 </body>
 </html>
