@@ -448,14 +448,8 @@ function licenseAppTypeLabel(l) {
   return esc(t);
 }
 
-function syncLicenseAppTypeFromClient() {
-  const clientSel = document.getElementById("l-client");
-  const appSel = document.getElementById("l-app-type");
-  if (!clientSel || !appSel || !clientSel.value) return;
-  const client = clientsCache.find(c => c.id === clientSel.value);
-  if (client && (client.tipi === "restorant" || client.tipi === "kafene")) {
-    appSel.value = client.tipi;
-  }
+function licenseAppTypeFromClientTipi(tipi) {
+  return tipi === "kafene" ? "kafene" : "restorant";
 }
 
 async function copyWaiterLink(clientId, btn) {
@@ -837,53 +831,19 @@ function showAdminError(text) {
   el.classList.remove("hidden");
 }
 
-function updateOwnerFormState(clients) {
-  const prereq = document.getElementById("owner-prereq");
-  const oSel = document.getElementById("o-client");
-  const form = document.getElementById("form-owner");
-  const btn = form?.querySelector('button[type="submit"]');
-  const hasClients = Array.isArray(clients) && clients.length > 0;
-
-  if (prereq) prereq.classList.toggle("hidden", hasClients);
-
-  if (!oSel) return;
-
-  if (!hasClients) {
-    oSel.innerHTML = '<option value="" disabled selected>— Shto klient së pari —</option>';
-    oSel.disabled = true;
-    if (btn) btn.disabled = true;
-    return;
-  }
-
-  oSel.disabled = false;
-  if (btn) btn.disabled = false;
-  const prev = oSel.value;
-  oSel.innerHTML = '<option value="" disabled selected hidden>Zgjidh klientin…</option>' +
-    clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("");
-  if (prev && clients.some(c => c.id === prev)) oSel.value = prev;
-}
-
 async function loadClients() {
   const { clients } = await api("/api/admin/clients");
   clientsCache = clients;
-  const sel = document.getElementById("l-client");
   const lmSel = document.getElementById("lm-client");
   const opts = clients.length
     ? clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
     : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
-  if (sel) {
-    sel.innerHTML = opts;
-    sel.disabled = !clients.length;
-    sel.onchange = syncLicenseAppTypeFromClient;
-    syncLicenseAppTypeFromClient();
-  }
   if (lmSel) {
     lmSel.innerHTML = clients.length
       ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + opts
       : '<option value="" disabled selected>— Shto klient së pari —</option>';
     lmSel.disabled = !clients.length;
   }
-  updateOwnerFormState(clients);
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clients.length
     ? clients.map(c => `<tr>
@@ -1435,32 +1395,42 @@ document.getElementById("form-client").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
+  const loginUrl = `${window.location.origin}/owner/login`;
+  const tipi = document.getElementById("c-tipi").value;
   try {
-    await api("/api/admin/clients", {
+    const res = await api("/api/admin/clients/onboard", {
       method: "POST",
       body: JSON.stringify({
         emri: document.getElementById("c-emri").value,
-        tipi: document.getElementById("c-tipi").value,
+        tipi,
         package_tier: document.getElementById("c-package-tier").value,
         telefoni: document.getElementById("c-telefoni").value,
         email: document.getElementById("c-email").value,
         adresa: document.getElementById("c-adresa").value,
+        app_type: licenseAppTypeFromClientTipi(tipi),
+        muaj: document.getElementById("c-muaj").value,
+        device_id: document.getElementById("c-device-id")?.value || "",
+        owner_emri: document.getElementById("c-owner-emri").value,
+        owner_email: document.getElementById("c-owner-email").value,
+        owner_password: document.getElementById("c-owner-password").value,
       }),
     });
-    showMsg("msg-client", "Klienti u shtua!", true);
+    showMsg(
+      "msg-client",
+      `Klienti u krijua! Liçenca: ${res.license.celesi}. Pronari hyn në ${loginUrl} me email dhe fjalëkalimin që caktuat.`,
+      true,
+    );
     e.target.reset();
     populatePackageTierSelect(document.getElementById("c-package-tier"), "pako_1");
+    const muajEl = document.getElementById("c-muaj");
+    if (muajEl) muajEl.value = "12";
+    setupOwnerLoginUrl();
     await safeRefresh();
   } catch (err) {
     showMsg("msg-client", err.message, false);
   } finally {
     btn.disabled = false;
   }
-});
-
-document.getElementById("btn-gen-key").addEventListener("click", async () => {
-  const { celesi } = await api("/api/admin/licenses/generate-key");
-  document.getElementById("l-celesi").value = celesi;
 });
 
 document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () => {
@@ -1483,27 +1453,6 @@ async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, ms
   resetFields();
   await refreshAll();
 }
-
-document.getElementById("form-license").addEventListener("submit", async e => {
-  e.preventDefault();
-  try {
-    await submitLicenseForm({
-      clientId: document.getElementById("l-client").value,
-      appType: document.getElementById("l-app-type").value,
-      celesi: document.getElementById("l-celesi").value,
-      muaj: document.getElementById("l-muaj").value,
-      deviceId: document.getElementById("l-device-id")?.value || "",
-      msgId: "msg-license",
-      resetFields: () => {
-        document.getElementById("l-celesi").value = "";
-        const devEl = document.getElementById("l-device-id");
-        if (devEl) devEl.value = "";
-      },
-    });
-  } catch (err) {
-    showMsg("msg-license", err.message, false);
-  }
-});
 
 document.getElementById("form-license-mobile")?.addEventListener("submit", async e => {
   e.preventDefault();
@@ -1539,43 +1488,6 @@ document.getElementById("btn-goto-add-client")?.addEventListener("click", () => 
   document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
   document.getElementById("panel-shto")?.classList.remove("hidden");
   document.getElementById("c-emri")?.focus();
-});
-
-document.getElementById("form-owner").addEventListener("submit", async e => {
-  e.preventDefault();
-  if (!clientsCache.length) {
-    showMsg("msg-owner", "Së pari shtoni një klient në tab + Shto.", false);
-    return;
-  }
-  if (!document.getElementById("o-client").value) {
-    showMsg("msg-owner", "Zgjidhni klientin (restorantin) për këtë pronar.", false);
-    return;
-  }
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  const loginUrl = `${window.location.origin}/owner/login`;
-  try {
-    const res = await api("/api/admin/owners", {
-      method: "POST",
-      body: JSON.stringify({
-        client_id: document.getElementById("o-client").value,
-        emri: document.getElementById("o-emri").value,
-        email: document.getElementById("o-email").value,
-        password: document.getElementById("o-password").value,
-      }),
-    });
-    showMsg(
-      "msg-owner",
-      `Llogaria u krijua! Pronari hyn në ${loginUrl} me email dhe fjalëkalimin që caktuat.`,
-      true,
-    );
-    e.target.reset();
-    await safeRefresh();
-  } catch (err) {
-    showMsg("msg-owner", err.message, false);
-  } finally {
-    btn.disabled = false;
-  }
 });
 
 document.getElementById("hub-close")?.addEventListener("click", closeClientHub);

@@ -171,8 +171,12 @@
       <div id="panel-shto" class="panel-section hidden">
         <div class="card">
           <div class="card-title">Shto klient të ri</div>
+          <p class="field-hint" style="margin-bottom:1rem">
+            Klienti, liçenca dhe llogaria e pronarit krijohen njëherësh me një klik.
+          </p>
           <div id="msg-client" class="alert hidden"></div>
           <form id="form-client">
+            <p class="field-hint" style="margin-bottom:0.75rem"><strong>Biznesi</strong></p>
             <div class="form-row">
               <div>
                 <label>Emri *</label>
@@ -201,85 +205,47 @@
             </div>
             <label>Adresa</label>
             <input type="text" id="c-adresa" placeholder="Rruga, qyteti">
-            <button type="submit" class="btn btn-primary">Ruaj klientin</button>
-          </form>
-        </div>
 
-        <div class="card">
-          <div class="card-title">Krijo liçencë të re</div>
-          <div id="msg-license" class="alert hidden"></div>
-          <form id="form-license">
+            <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+            <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
+              <strong>Liçenca</strong> — çelësi gjenerohet automatikisht sipas tipit të biznesit.
+            </p>
             <div class="form-row">
               <div>
-                <label>Klienti *</label>
-                <select id="l-client" required></select>
-              </div>
-              <div>
-                <label>Çelësi</label>
-                <div style="display:flex;gap:0.5rem">
-                  <input type="text" id="l-celesi" class="mono" placeholder="Auto-gjenerohet">
-                  <button type="button" class="btn btn-ghost btn-sm" id="btn-gen-key" style="margin-bottom:0.75rem;white-space:nowrap">Gjenero</button>
-                </div>
-              </div>
-              <div>
-                <label>Tipi i aplikacionit *</label>
-                <select id="l-app-type" required>
-                  <option value="restorant">Restorant</option>
-                  <option value="kafene">Kafene</option>
-                </select>
-              </div>
-              <div>
                 <label>Muaj vlefshmërie</label>
-                <input type="number" id="l-muaj" value="12" min="1" max="120">
+                <input type="number" id="c-muaj" value="12" min="1" max="120">
               </div>
               <div>
                 <label>ID e pajisjes <span class="label-muted">(opsionale)</span></label>
-                <input type="text" id="l-device-id" class="mono" placeholder="Nga ekrani POS — ose lëreni bosh" autocomplete="off" autocapitalize="characters">
+                <input type="text" id="c-device-id" class="mono" placeholder="Nga ekrani POS — ose lëreni bosh" autocomplete="off" autocapitalize="characters">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary">Krijo liçencën</button>
-          </form>
-          <p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">
-            <strong>ID e pajisjes</strong> shfaqet në tab «Liçensat» pas aktivizimit nga POS, ose e vendosni ju manualisht (edhe nga telefoni).
-            <strong>Reset ID</strong> e fshin lidhjen; pastaj klienti aktivizon përsëri nga POS dhe sistemi e regjistron ID-në e re.
-          </p>
-        </div>
 
-        <div class="card admin-only-card">
-          <div class="card-title">Krijo llogari pronari (vetëm admin)</div>
-          <div id="owner-prereq" class="alert alert-error hidden">
-            Së pari shtoni një <strong>klient</strong> më sipër.
-          </div>
-          <div id="msg-owner" class="alert hidden"></div>
-          <form id="form-owner">
+            <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+            <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
+              <strong>Llogaria e pronarit</strong> — pronari hyn në <code>/owner/login</code> me email dhe fjalëkalim.
+            </p>
             <div class="form-row">
               <div>
-                <label>Klienti *</label>
-                <select id="o-client" required></select>
-              </div>
-              <div>
                 <label>Emri i pronarit *</label>
-                <input type="text" id="o-emri" required placeholder="p.sh. Agron">
+                <input type="text" id="c-owner-emri" required placeholder="p.sh. Agron">
               </div>
               <div>
-                <label>Email *</label>
-                <input type="email" id="o-email" required placeholder="agron@restorant.com" autocomplete="off">
+                <label>Email i pronarit *</label>
+                <input type="email" id="c-owner-email" required placeholder="agron@restorant.com" autocomplete="off">
               </div>
               <div>
-                <label>Fjalëkalimi *</label>
-                <input type="password" id="o-password" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
+                <label>Fjalëkalimi i pronarit *</label>
+                <input type="password" id="c-owner-password" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
               </div>
             </div>
-            <button type="submit" class="btn btn-primary">Krijo llogarinë e pronarit</button>
+            <div class="link-actions" style="margin-top:0.5rem;margin-bottom:1rem">
+              <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:16px">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-owner-url">Kopjo</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Ruaj klientin</button>
           </form>
-          <p style="margin-top:0.75rem;color:var(--muted);font-size:0.85rem">
-            Pronari hyn me <strong>email</strong> dhe <strong>fjalëkalimin</strong> që i caktoni këtu — pa QR, pa link ftese.
-            Faqja e hyrjes:
-          </p>
-          <div class="link-actions" style="margin-top:0.35rem">
-            <input type="text" id="owner-login-url" readonly style="flex:1;font-family:monospace;font-size:16px">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-owner-url">Kopjo</button>
-          </div>
         </div>
       </div>
     </div>

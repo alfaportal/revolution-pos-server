@@ -357,6 +357,68 @@ async function regenerateKitchenAccess(id) {
   return data;
 }
 
+async function createClientOnboard(body, baseUrl) {
+  const { createOwner } = require("./userService");
+
+  const ownerEmri = String(body.owner_emri ?? "").trim();
+  const ownerEmail = String(body.owner_email ?? "").trim().toLowerCase();
+  const ownerPassword = String(body.owner_password ?? "").trim();
+
+  if (!ownerEmri) throw new Error("Emri i pronarit është i detyrueshëm.");
+  if (!ownerEmail) throw new Error("Email i pronarit është i detyrueshëm.");
+  if (!ownerPassword || ownerPassword.length < 6) {
+    throw new Error("Fjalëkalimi i pronarit min. 6 karaktere.");
+  }
+
+  let client = null;
+  let license = null;
+  try {
+    client = await createClient({
+      emri: body.emri,
+      tipi: body.tipi,
+      package_tier: body.package_tier,
+      telefoni: body.telefoni,
+      email: body.email,
+      adresa: body.adresa,
+    });
+
+    license = await createLicense({
+      client_id: client.id,
+      app_type: body.app_type,
+      muaj: body.muaj ?? 12,
+      device_id: body.device_id || "",
+    });
+
+    const owner = await createOwner(
+      {
+        client_id: client.id,
+        emri: ownerEmri,
+        email: ownerEmail,
+        password: ownerPassword,
+      },
+      baseUrl,
+    );
+
+    return { client, license, owner };
+  } catch (e) {
+    if (license?.id) {
+      try {
+        await deleteLicense(license.id);
+      } catch {
+        /* best effort */
+      }
+    }
+    if (client?.id) {
+      try {
+        await deleteClient(client.id);
+      } catch {
+        /* best effort */
+      }
+    }
+    throw e;
+  }
+}
+
 async function createLicense(body) {
   const db = getSupabase();
   const months = Number(body.muaj) || 12;
@@ -613,6 +675,7 @@ module.exports = {
   listClients,
   listLicenses,
   createClient,
+  createClientOnboard,
   updateClient,
   deleteClient,
   regenerateKitchenAccess,

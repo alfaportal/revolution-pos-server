@@ -6,6 +6,7 @@ const {
   listClients,
   listLicenses,
   createClient,
+  createClientOnboard,
   updateClient,
   deleteClient,
   createLicense,
@@ -101,6 +102,33 @@ router.post("/clients", asyncHandler(async (req, res) => {
     res.status(201).json({ ok: true, client });
   } catch (e) {
     const msg = logRouteError("admin:POST /clients", e, { body: req.body });
+    res.status(400).json({ gabim: msg, code: e?.code || null });
+  }
+}));
+
+router.post("/clients/onboard", asyncHandler(async (req, res) => {
+  console.log("[admin] POST /clients/onboard", { emri: req.body?.emri, tipi: req.body?.tipi });
+  try {
+    const { client, license, owner } = await createClientOnboard(req.body, requestBaseUrl(req));
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_onboard",
+      targetType: "client",
+      targetId: client.id,
+      targetLabel: client.emri,
+      details: {
+        license_id: license.id,
+        license_celesi: license.celesi,
+        owner_id: owner.id,
+        owner_email: owner.email,
+      },
+    });
+    console.log("[admin] Klienti u onboard-ua:", client.id);
+    res.status(201).json({ ok: true, client, license, owner });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /clients/onboard", e, {
+      body: { ...req.body, owner_password: "[redacted]" },
+    });
     res.status(400).json({ gabim: msg, code: e?.code || null });
   }
 }));
