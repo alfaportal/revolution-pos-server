@@ -169,7 +169,12 @@ CREATE TABLE IF NOT EXISTS pos_settings (
   fiscal_enabled    BOOLEAN NOT NULL DEFAULT true,
   fiscal_operator_name TEXT DEFAULT '',
   fiscal_device_model  TEXT DEFAULT '',
-  synced_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  synced_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  public_enabled    BOOLEAN NOT NULL DEFAULT true,
+  public_description TEXT NOT NULL DEFAULT '',
+  public_hours      JSONB NOT NULL DEFAULT '{}',
+  public_logo       TEXT NOT NULL DEFAULT '',
+  public_theme_color TEXT NOT NULL DEFAULT '#c2410c'
 );
 
 CREATE TABLE IF NOT EXISTS pos_categories (

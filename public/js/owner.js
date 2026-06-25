@@ -141,6 +141,7 @@ async function loadClient() {
     ["owner-link-kitchen-row", "owner-kitchen-url", features.kds, links.kitchen || data.kitchen_url],
     ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar],
     ["owner-link-kiosk-row", "owner-kiosk-url", features.kiosk, links.kiosk],
+    ["owner-link-public-row", "owner-public-url", features.website, links.public_page],
   ];
   for (const [rowId, inputId, enabled, url] of rows) {
     const row = document.getElementById(rowId);
@@ -150,7 +151,7 @@ async function loadClient() {
   }
   const empty = document.getElementById("owner-links-empty");
   if (empty) {
-    empty.classList.toggle("hidden", !!(features.waiter || features.kds || features.kiosk));
+    empty.classList.toggle("hidden", !!(features.waiter || features.kds || features.kiosk || features.website));
   }
 }
 
@@ -179,6 +180,9 @@ document.getElementById("btn-owner-copy-bar")?.addEventListener("click", functio
 });
 document.getElementById("btn-owner-copy-kiosk")?.addEventListener("click", function () {
   kopjoLinkun("owner-kiosk-url", this);
+});
+document.getElementById("btn-owner-copy-public")?.addEventListener("click", function () {
+  kopjoLinkun("owner-public-url", this);
 });
 
 async function loadStats() {
@@ -1160,6 +1164,177 @@ document.getElementById("btn-owner-license-save")?.addEventListener("click", asy
   }
 });
 
+const PUBLIC_DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const PUBLIC_DAY_LABELS = {
+  mon: "E hënë",
+  tue: "E martë",
+  wed: "E mërkurë",
+  thu: "E enjte",
+  fri: "E premte",
+  sat: "E shtunë",
+  sun: "E diel",
+};
+
+let publicPageLogoData = undefined;
+let publicPageLogoDirty = false;
+
+function setPublicPageMsg(text, ok) {
+  const msg = document.getElementById("public-page-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function renderPublicHoursGrid(hours) {
+  const grid = document.getElementById("public-hours-grid");
+  if (!grid) return;
+  grid.innerHTML = PUBLIC_DAY_KEYS.map(key => {
+    const row = hours?.[key] || { open: "09:00", close: "22:00", closed: false };
+    return `
+      <div class="public-hours-row" data-day="${key}">
+        <span class="public-hours-day">${PUBLIC_DAY_LABELS[key]}</span>
+        <label class="public-hours-closed">
+          <input type="checkbox" class="public-hours-closed-cb" ${row.closed ? "checked" : ""}>
+          Mbyllur
+        </label>
+        <input type="time" class="public-hours-open" value="${row.open || "09:00"}" ${row.closed ? "disabled" : ""}>
+        <span class="public-hours-sep">–</span>
+        <input type="time" class="public-hours-close" value="${row.close || "22:00"}" ${row.closed ? "disabled" : ""}>
+      </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".public-hours-closed-cb").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const row = cb.closest(".public-hours-row");
+      const disabled = cb.checked;
+      row.querySelector(".public-hours-open").disabled = disabled;
+      row.querySelector(".public-hours-close").disabled = disabled;
+    });
+  });
+}
+
+function collectPublicHours() {
+  const hours = {};
+  document.querySelectorAll(".public-hours-row").forEach(row => {
+    const key = row.dataset.day;
+    const closed = row.querySelector(".public-hours-closed-cb")?.checked;
+    hours[key] = {
+      open: row.querySelector(".public-hours-open")?.value || "09:00",
+      close: row.querySelector(".public-hours-close")?.value || "22:00",
+      closed: Boolean(closed),
+    };
+  });
+  return hours;
+}
+
+function updatePublicLogoPreview(dataUrl) {
+  const img = document.getElementById("public-logo-preview");
+  const ph = document.getElementById("public-logo-placeholder");
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove("hidden");
+    ph?.classList.add("hidden");
+  } else {
+    img.removeAttribute("src");
+    img.classList.add("hidden");
+    ph?.classList.remove("hidden");
+  }
+}
+
+async function loadPublicPage() {
+  setPublicPageMsg("");
+  try {
+    const data = await api("/api/owner/public-page");
+    const upgrade = document.getElementById("public-page-upgrade");
+    if (upgrade) {
+      if (data.website_enabled === false) {
+        upgrade.textContent = "Paketa juaj nuk përfshin faqen publike. Kontaktoni administratorin.";
+        upgrade.classList.remove("hidden");
+      } else {
+        upgrade.classList.add("hidden");
+      }
+    }
+
+    document.getElementById("public-enabled").checked = data.public_enabled !== false;
+    document.getElementById("public-description").value = data.public_description || "";
+    document.getElementById("public-theme").value = data.public_theme_color || "#c2410c";
+    document.getElementById("public-page-url").value = data.public_url || "";
+    const preview = document.getElementById("btn-public-preview");
+    if (preview && data.public_url) preview.href = data.public_url;
+
+    publicPageLogoData = data.logo_preview || null;
+    publicPageLogoDirty = false;
+    updatePublicLogoPreview(publicPageLogoData);
+    renderPublicHoursGrid(data.public_hours);
+  } catch (err) {
+    setPublicPageMsg(err.message, false);
+  }
+}
+
+async function savePublicPage() {
+  setPublicPageMsg("Duke ruajtur…", true);
+  try {
+    const body = {
+      public_enabled: document.getElementById("public-enabled").checked,
+      public_description: document.getElementById("public-description").value,
+      public_hours: collectPublicHours(),
+      public_theme_color: document.getElementById("public-theme").value,
+    };
+    if (publicPageLogoDirty) {
+      body.public_logo = publicPageLogoData || "";
+    }
+    const data = await api("/api/owner/public-page", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+    publicPageLogoData = data.logo_preview || null;
+    publicPageLogoDirty = false;
+    updatePublicLogoPreview(publicPageLogoData);
+    document.getElementById("public-page-url").value = data.public_url || "";
+    setPublicPageMsg("Faqja publike u ruajt.", true);
+  } catch (err) {
+    setPublicPageMsg(err.message, false);
+  }
+}
+
+document.getElementById("public-logo-input")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 280_000) {
+    setPublicPageMsg("Logo max ~250 KB.", false);
+    e.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    publicPageLogoData = reader.result;
+    publicPageLogoDirty = true;
+    updatePublicLogoPreview(publicPageLogoData);
+    setPublicPageMsg("");
+  };
+  reader.readAsDataURL(file);
+  e.target.value = "";
+});
+
+document.getElementById("btn-public-logo-remove")?.addEventListener("click", () => {
+  publicPageLogoData = null;
+  publicPageLogoDirty = true;
+  updatePublicLogoPreview(null);
+});
+
+document.getElementById("btn-public-save")?.addEventListener("click", savePublicPage);
+
+document.getElementById("btn-public-copy-url")?.addEventListener("click", async () => {
+  const url = document.getElementById("public-page-url")?.value;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    setPublicPageMsg("URL u kopjua.", true);
+  } catch {
+    setPublicPageMsg("Nuk u kopjua.", false);
+  }
+});
+
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -1172,6 +1347,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
+    if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
     if (tab.dataset.tab === "fiskale") loadFiscalSettings();
     if (tab.dataset.tab === "licenca") loadLicense();

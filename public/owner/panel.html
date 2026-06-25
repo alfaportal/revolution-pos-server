@@ -64,6 +64,13 @@
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
         </div>
       </div>
+      <div class="link-row" id="owner-link-public-row">
+        <label>Faqja publike</label>
+        <div class="link-actions">
+          <input type="text" id="owner-public-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-public">Kopjo</button>
+        </div>
+      </div>
     </div>
 
     <div class="tabs">
@@ -72,6 +79,7 @@
       <button class="tab" data-tab="menuja">Menuja</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
+      <button class="tab" data-tab="faqja">Faqja publike</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
       <button class="tab" data-tab="fiskale">Fiskale</button>
       <button class="tab" data-tab="raportet">Raportet</button>
@@ -243,6 +251,56 @@
       </div>
     </div>
 
+    <div id="panel-faqja" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Faqja publike e restorantit</span>
+          <a class="btn btn-ghost btn-sm" id="btn-public-preview" href="#" target="_blank" rel="noopener">Shiko faqen</a>
+        </div>
+        <p class="links-hint">
+          Faqja publike shfaqet në <code>/r/:slug</code> — emri, logo, menuja nga POS, dhe butoni për porosi online.
+          Adresa dhe telefoni merren nga cilësimet e biznesit (POS / Super Admin).
+        </p>
+        <div id="public-page-upgrade" class="owner-license-msg err hidden"></div>
+        <label class="hub-check" style="margin:0.75rem 0">
+          <input type="checkbox" id="public-enabled" checked>
+          <span>Faqja publike është aktive</span>
+        </label>
+        <div class="public-page-form">
+          <div class="public-logo-row">
+            <div class="public-logo-preview-wrap">
+              <img id="public-logo-preview" class="public-logo-preview hidden" alt="Logo">
+              <div id="public-logo-placeholder" class="public-logo-placeholder">Logo</div>
+            </div>
+            <div class="public-logo-actions">
+              <label class="btn btn-ghost btn-sm" for="public-logo-input">Ngarko logo</label>
+              <input type="file" id="public-logo-input" accept="image/png,image/jpeg,image/webp" hidden>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-public-logo-remove">Hiq logon</button>
+            </div>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="public-description">Përshkrim i shkurtër</label>
+            <textarea id="public-description" rows="3" maxlength="2000" placeholder="p.sh. Restorant tradicional me specialitete të kuzhinës shqiptare…"></textarea>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="public-theme">Ngjyra kryesore</label>
+            <input type="color" id="public-theme" value="#c2410c">
+          </div>
+          <div class="card-title" style="margin-top:1rem;font-size:0.95rem">Orari i punës</div>
+          <div id="public-hours-grid" class="public-hours-grid"></div>
+          <div class="link-row" style="margin-top:0.75rem">
+            <label>URL publike</label>
+            <div class="link-actions">
+              <input type="text" id="public-page-url" readonly class="mono-input">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-public-copy-url">Kopjo</button>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-public-save" style="margin-top:1rem">Ruaj faqen publike</button>
+          <div id="public-page-msg" class="owner-license-msg"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-zreport" class="panel-section hidden">
       <div class="card">
         <div class="card-title card-title-row">
@@ -392,6 +450,6 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=11"></script>
+  <script src="/js/owner.js?v=12"></script>
 </body>
 </html>

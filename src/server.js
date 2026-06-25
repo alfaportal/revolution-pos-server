@@ -24,6 +24,8 @@ const kioskRoutes = require("./routes/kiosk");
 const posRoutes = require("./routes/pos");
 const receiptRoutes = require("./routes/receipt");
 const fiscalRoutes = require("./routes/fiscal");
+const { apiRouter: publicApiRouter, manifestHandler, serviceWorkerHandler } = require("./routes/public");
+const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { adminPanelPath } = require("./lib/admin-path");
@@ -68,6 +70,7 @@ app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
 app.use("/api/waiter", waiterRoutes);
 app.use("/api/kiosk", kioskRoutes);
+app.use("/api/r", publicApiRouter);
 
 app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
@@ -112,6 +115,12 @@ app.get("/waiter/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/waiter.html"));
 });
 
+app.get("/r/:slug/manifest.json", manifestHandler);
+app.get("/r/:slug/sw.js", resolvePublicClient, serviceWorkerHandler);
+app.get("/r/:slug", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/r.html"));
+});
+
 app.get("/", (_req, res) => {
   res.redirect("/owner/login");
 });
@@ -154,6 +163,7 @@ async function start() {
     console.log(`  🍹 Banak:       /bar/:slug?key=...`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
     console.log(`  🪑 Tavolinë:    /kiosk/:slug?key=...&table=5`);
+    console.log(`  🍽️  Restorant:   /r/:slug`);
     console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);

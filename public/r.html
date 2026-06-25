@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c2410c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Restorant</title>
+  <link rel="stylesheet" href="/css/r.css">
+  <link rel="apple-touch-icon" id="apple-icon" href="/icons/icon-192.png">
+  <script>
+    (function () {
+      const parts = location.pathname.split("/").filter(Boolean);
+      const slug = parts[0] === "r" ? parts[1] : "";
+      if (!slug) return;
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = "/r/" + encodeURIComponent(slug) + "/manifest.json";
+      document.head.appendChild(link);
+    })();
+  </script>
+</head>
+<body>
+  <div id="pwa-banner" class="pwa-banner hidden" role="region" aria-label="Instalo aplikacionin">
+    <button type="button" class="pwa-banner-close" id="pwa-close" aria-label="Mbyll">×</button>
+    <div class="pwa-banner-title">📲 Shto në ekranin kryesor</div>
+    <p class="pwa-banner-hint" id="pwa-hint"></p>
+    <button type="button" class="pwa-banner-btn hidden" id="pwa-install-btn">Instalo</button>
+  </div>
+
+  <div id="screen-loading" class="screen active">
+    <div class="loader"></div>
+    <p>Duke ngarkuar…</p>
+  </div>
+
+  <div id="screen-error" class="screen hidden">
+    <div class="error-card">
+      <h1>Faqja nuk u gjet</h1>
+      <p id="error-msg">Restoranti nuk është i disponueshëm.</p>
+    </div>
+  </div>
+
+  <div id="screen-main" class="screen hidden">
+    <header class="hero" id="hero">
+      <div class="hero-inner">
+        <div class="hero-logo-wrap" id="hero-logo-wrap" hidden>
+          <img id="hero-logo" class="hero-logo" alt="" width="88" height="88">
+        </div>
+        <h1 id="biz-name">Restorant</h1>
+        <p class="hero-desc" id="biz-desc" hidden></p>
+      </div>
+    </header>
+
+    <section class="info-section">
+      <div class="info-grid">
+        <div class="info-card" id="info-address" hidden>
+          <span class="info-icon">📍</span>
+          <div>
+            <div class="info-label">Adresa</div>
+            <div class="info-value" id="val-address"></div>
+          </div>
+        </div>
+        <div class="info-card" id="info-phone" hidden>
+          <span class="info-icon">📞</span>
+          <div>
+            <div class="info-label">Telefoni</div>
+            <a class="info-value info-link" id="val-phone" href="#"></a>
+          </div>
+        </div>
+      </div>
+      <div class="hours-card" id="hours-card">
+        <div class="hours-title">Orari i punës</div>
+        <ul class="hours-list" id="hours-list"></ul>
+      </div>
+    </section>
+
+    <section class="menu-section">
+      <h2 class="section-title">Menuja</h2>
+      <div class="cat-nav-wrap">
+        <nav class="cat-nav" id="cat-nav"></nav>
+      </div>
+      <div id="menu-sections"></div>
+    </section>
+
+    <footer class="site-footer">
+      <p>Powered by Revolution Invest POS</p>
+    </footer>
+
+    <div class="order-bar" id="order-bar" hidden>
+      <a class="order-btn" id="btn-order" href="#">Porosit online</a>
+    </div>
+  </div>
+
+  <script src="/js/r.js?v=1"></script>
+</body>
+</html>

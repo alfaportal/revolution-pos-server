@@ -6,7 +6,7 @@ const TIER_FEATURES = {
   pako_1: {
     pos: true,
     owner_panel: true,
-    website: false,
+    website: true,
     mobile: false,
     kds: false,
     kiosk: false,
@@ -15,7 +15,7 @@ const TIER_FEATURES = {
   pako_1_1: {
     pos: true,
     owner_panel: true,
-    website: false,
+    website: true,
     mobile: true,
     kds: false,
     kiosk: false,
@@ -24,7 +24,7 @@ const TIER_FEATURES = {
   pako_2: {
     pos: true,
     owner_panel: true,
-    website: false,
+    website: true,
     mobile: false,
     kds: true,
     kiosk: true,
@@ -33,7 +33,7 @@ const TIER_FEATURES = {
   pako_2_1: {
     pos: true,
     owner_panel: true,
-    website: false,
+    website: true,
     mobile: true,
     kds: true,
     kiosk: true,

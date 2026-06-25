@@ -44,6 +44,10 @@ const {
 const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { listKioskQrCodes, qrPrintHtml } = require("../services/kioskQrService");
+const {
+  getOwnerPublicPageSettings,
+  updateOwnerPublicPageSettings,
+} = require("../services/publicPageService");
 
 const router = express.Router();
 
@@ -67,6 +71,9 @@ router.get("/client", async (req, res) => {
     }
     if (client?.id && features.kiosk) {
       links.kiosk = `${buildKitchenUrl(base, client, "kiosk")}&table=1`;
+    }
+    if (client?.kitchen_slug && features.website) {
+      links.public_page = `${base}/r/${encodeURIComponent(client.kitchen_slug)}`;
     }
     res.json({
       ok: true,
@@ -398,6 +405,27 @@ router.get("/kiosk/qrs/print", async (req, res) => {
     res.send(html);
   } catch (e) {
     res.status(400).send(`<pre>${e.message}</pre>`);
+  }
+});
+
+router.get("/public-page", async (req, res) => {
+  try {
+    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
+    res.json({ ok: true, ...settings });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/public-page", async (req, res) => {
+  try {
+    await updateOwnerPublicPageSettings(req.user.client_id, req.body);
+    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
+    res.json({ ok: true, ...settings });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 
