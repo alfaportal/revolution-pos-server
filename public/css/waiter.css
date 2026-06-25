@@ -83,6 +83,85 @@ html, body {
   margin-bottom: 1rem;
 }
 
+.pin-box {
+  max-width: 320px;
+}
+
+.pin-display {
+  text-align: center;
+  font-size: 2rem;
+  letter-spacing: 0.45em;
+  font-weight: 800;
+  padding: 0.75rem 0 1rem;
+  color: var(--text);
+  min-height: 3rem;
+}
+
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.pin-key {
+  aspect-ratio: 1.35;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-family: inherit;
+}
+
+.pin-key:active {
+  transform: scale(0.97);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.pin-key-muted {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.pin-submit {
+  margin-top: 0.25rem;
+}
+
+.lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.lock-overlay.hidden {
+  display: none;
+}
+
+.lock-overlay-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  max-width: 320px;
+}
+
+.lock-overlay-box p {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

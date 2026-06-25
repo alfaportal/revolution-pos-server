@@ -92,7 +92,7 @@
             <div class="ticket-table">T${o.table_number || "?"}</div>
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
-          ${src ? `<div class="ticket-waiter">${src.icon} ${src.label} · 👤 ${escapeHtml(o.waiter_name || "—")}</div>` : `<div class="ticket-waiter">👤 ${escapeHtml(o.waiter_name || "—")}</div>`}
+          ${src ? `<div class="ticket-waiter">${src.icon} ${src.label} · 👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>` : `<div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>`}
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
           <button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>
         </article>`;

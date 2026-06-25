@@ -21,6 +21,7 @@ function buildTablesFromAreas(areas, fallbackTableCount, activeByTable) {
           area_name: area.name,
           status: active ? "occupied" : "free",
           waiter_name: active?.waiter_name || null,
+          waiter_id: active?.waiter_id || null,
           order_total: active ? Number(active.total) : 0,
           active_items: active?.active_items || [],
         });
@@ -40,6 +41,7 @@ function buildTablesFromAreas(areas, fallbackTableCount, activeByTable) {
         area_name: null,
         status: active ? "occupied" : "free",
         waiter_name: active?.waiter_name || null,
+        waiter_id: active?.waiter_id || null,
         order_total: active ? Number(active.total) : 0,
         active_items: active?.active_items || [],
       });

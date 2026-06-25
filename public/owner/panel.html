@@ -70,6 +70,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="menuja">Menuja</button>
+      <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
       <button class="tab" data-tab="raportet">Raportet</button>
@@ -147,6 +148,34 @@
       </div>
     </div>
 
+    <div id="panel-kamarieret" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Kamarierët me PIN</div>
+        <p class="links-hint">Çdo kamarier hyn në tablet me PIN 4-shifror. Pas porosisë ose faturës, ekrani kyçet automatikisht pas 5 sekondash.</p>
+        <div class="filter-row menu-add-row">
+          <div>
+            <label for="waiter-add-name">Emri</label>
+            <input type="text" id="waiter-add-name" placeholder="p.sh. Sherif">
+          </div>
+          <div>
+            <label for="waiter-add-pin">PIN (4 shifra)</label>
+            <input type="password" id="waiter-add-pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="1234">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-waiter-add">Shto kamarier</button>
+        </div>
+        <div id="waiters-msg" class="owner-license-msg"></div>
+        <p id="waiters-sync-hint" class="links-hint" style="margin-top:0"></p>
+        <div class="table-wrap">
+          <table class="menu-owner-table venue-owner-table">
+            <thead>
+              <tr><th>Emri</th><th>PIN</th><th>Statusi</th><th>Veprimet</th></tr>
+            </thead>
+            <tbody id="waiters-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-lokal" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Hapësirat dhe tavolinat</div>
@@ -177,7 +206,7 @@
 
       <div class="card" style="margin-top:1rem">
         <div class="card-title">Stafi — kamarierë dhe kuzhinierë</div>
-        <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte).</p>
+        <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte). Për tabletat e kamarierit me PIN, përdorni tabin <strong>Kamarierët</strong>.</p>
         <div class="filter-row menu-add-row">
           <div>
             <label for="staff-add-name">Emri</label>

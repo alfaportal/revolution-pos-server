@@ -107,6 +107,9 @@ function renderLiveTableCard(t) {
 }
 
 function renderOrderCard(o) {
+  const waiterLabel = o.waiter_name
+    ? `${o.waiter_name}${o.waiter_id ? ` <small style="color:var(--muted)">#${String(o.waiter_id).slice(0, 8)}</small>` : ""}`
+    : "—";
   return `<div class="order-card">
     <div class="order-card-head">
       <span class="order-card-title">Tavolina ${o.table_number || "—"}</span>
@@ -114,7 +117,7 @@ function renderOrderCard(o) {
     </div>
     <div class="order-card-meta">
       <span>🕐 ${fmtTime(o.closed_at)}</span>
-      <span>👤 ${o.waiter_name || "—"}</span>
+      <span>👤 ${waiterLabel}</span>
       ${o.receipt_number ? `<span>🧾 ${o.receipt_number}</span>` : ""}
     </div>
     ${renderItemsTable(o.items_json)}
@@ -573,6 +576,150 @@ async function deleteMenuRow(row) {
   }
 }
 
+let ownerWaitersCache = [];
+
+function setWaitersMsg(text, ok) {
+  const msg = document.getElementById("waiters-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function updateWaitersSyncHint(syncedAt) {
+  const hint = document.getElementById("waiters-sync-hint");
+  if (!hint) return;
+  hint.textContent = syncedAt
+    ? `U përditësua: ${fmtTime(syncedAt)} — tabletat e kamarierit e marrin brenda ~15 sekondave.`
+    : "Kamarierët me PIN shfaqen menjëherë te hyrja e tabletit.";
+}
+
+function renderWaitersTable() {
+  const body = document.getElementById("waiters-body");
+  if (!body) return;
+  const waiters = ownerWaitersCache || [];
+  if (!waiters.length) {
+    body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Nuk ka kamarierë. Shtoni të parin më sipër.</td></tr>';
+    return;
+  }
+  body.innerHTML = waiters.map(w => `
+    <tr class="${w.active ? "" : "inactive-row"}" data-id="${w.id}">
+      <td><input type="text" class="waiter-edit-name" value="${escAttr(w.name)}"></td>
+      <td><span class="menu-status active">****</span></td>
+      <td><span class="menu-status ${w.active ? "active" : "inactive"}">${w.active ? "Aktiv" : "Joaktiv"}</span></td>
+      <td>
+        <div class="menu-row-actions">
+          <button type="button" class="btn btn-primary btn-sm btn-waiter-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-waiter-pin">Rivendos PIN</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-waiter-toggle">${w.active ? "Fshih" : "Aktivizo"}</button>
+          <button type="button" class="btn btn-danger btn-sm btn-waiter-delete">Fshi</button>
+        </div>
+      </td>
+    </tr>`).join("");
+  body.querySelectorAll(".btn-waiter-save").forEach(btn => {
+    btn.addEventListener("click", () => saveWaiterRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-waiter-pin").forEach(btn => {
+    btn.addEventListener("click", () => resetWaiterPin(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-waiter-toggle").forEach(btn => {
+    btn.addEventListener("click", () => toggleWaiterRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-waiter-delete").forEach(btn => {
+    btn.addEventListener("click", () => deleteWaiterRow(btn.closest("tr")));
+  });
+}
+
+async function loadOwnerWaiters() {
+  const data = await api("/api/owner/waiters");
+  ownerWaitersCache = data.waiters || [];
+  renderWaitersTable();
+  updateWaitersSyncHint(data.synced_at);
+}
+
+async function saveWaiterRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".waiter-edit-name")?.value?.trim();
+  if (!name) {
+    setWaitersMsg("Shkruani emrin e kamarierit.", false);
+    return;
+  }
+  try {
+    setWaitersMsg("");
+    const { waiter, synced_at } = await api(`/api/owner/waiters/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    const idx = ownerWaitersCache.findIndex(w => w.id === id);
+    if (idx >= 0) ownerWaitersCache[idx] = waiter;
+    renderWaitersTable();
+    updateWaitersSyncHint(synced_at);
+    setWaitersMsg("Kamarieri u ruajt.", true);
+  } catch (err) {
+    setWaitersMsg(err.message, false);
+  }
+}
+
+async function resetWaiterPin(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".waiter-edit-name")?.value?.trim() || "kamarierin";
+  const pin = window.prompt(`PIN i ri (4 shifra) për ${name}:`);
+  if (pin == null) return;
+  if (!/^\d{4}$/.test(String(pin).trim())) {
+    setWaitersMsg("PIN duhet të jetë 4 shifra.", false);
+    return;
+  }
+  try {
+    setWaitersMsg("");
+    const { synced_at } = await api(`/api/owner/waiters/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ pin: String(pin).trim() }),
+    });
+    updateWaitersSyncHint(synced_at);
+    setWaitersMsg("PIN u rivendos.", true);
+  } catch (err) {
+    setWaitersMsg(err.message, false);
+  }
+}
+
+async function toggleWaiterRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const waiter = ownerWaitersCache.find(w => w.id === id);
+  if (!waiter) return;
+  try {
+    setWaitersMsg("");
+    const { waiter: updated, synced_at } = await api(`/api/owner/waiters/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !waiter.active }),
+    });
+    Object.assign(waiter, updated);
+    renderWaitersTable();
+    updateWaitersSyncHint(synced_at);
+    setWaitersMsg(updated.active ? "Kamarieri u aktivizua." : "Kamarieri u çaktivizua.", true);
+  } catch (err) {
+    setWaitersMsg(err.message, false);
+  }
+}
+
+async function deleteWaiterRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".waiter-edit-name")?.value?.trim() || "kamarierin";
+  if (!confirm(`Fshi ${name}?`)) return;
+  try {
+    setWaitersMsg("");
+    const { synced_at } = await api(`/api/owner/waiters/${id}`, { method: "DELETE" });
+    ownerWaitersCache = ownerWaitersCache.filter(w => w.id !== id);
+    renderWaitersTable();
+    updateWaitersSyncHint(synced_at);
+    setWaitersMsg("Kamarieri u fshi.", true);
+  } catch (err) {
+    setWaitersMsg(err.message, false);
+  }
+}
+
 let ownerVenueCache = { areas: [], staff: [], table_count: 0 };
 
 function setVenueMsg(text, ok) {
@@ -842,6 +989,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
+    if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "zreport") {
       loadZReport();
@@ -940,6 +1088,34 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     setMenuMsg("Artikulli u shtua — shfaqet te tabletat e porosive.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
+  }
+});
+
+document.getElementById("btn-waiter-add")?.addEventListener("click", async () => {
+  const name = document.getElementById("waiter-add-name")?.value?.trim();
+  const pin = document.getElementById("waiter-add-pin")?.value?.trim();
+  if (!name) {
+    setWaitersMsg("Shkruani emrin e kamarierit.", false);
+    return;
+  }
+  if (!/^\d{4}$/.test(pin || "")) {
+    setWaitersMsg("PIN duhet të jetë 4 shifra.", false);
+    return;
+  }
+  try {
+    setWaitersMsg("");
+    const { waiter, synced_at } = await api("/api/owner/waiters", {
+      method: "POST",
+      body: JSON.stringify({ name, pin }),
+    });
+    ownerWaitersCache.push(waiter);
+    document.getElementById("waiter-add-name").value = "";
+    document.getElementById("waiter-add-pin").value = "";
+    renderWaitersTable();
+    updateWaitersSyncHint(synced_at);
+    setWaitersMsg("Kamarieri u shtua.", true);
+  } catch (err) {
+    setWaitersMsg(err.message, false);
   }
 });
 

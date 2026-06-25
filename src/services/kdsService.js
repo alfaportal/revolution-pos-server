@@ -18,7 +18,7 @@ async function listKitchenOrders(clientId) {
   const { data, error } = await db
     .from("sales_orders")
     .select(
-      "id, table_number, waiter_name, items_json, total, ordered_at, created_at, local_order_id, device_id",
+      "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id",
     )
     .eq("client_id", clientId)
     .eq("status", "ordered")

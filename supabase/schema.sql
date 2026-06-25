@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   device_id       TEXT NOT NULL DEFAULT '',
   table_number    INTEGER DEFAULT 0,
   waiter_name     TEXT DEFAULT '',
+  waiter_id       UUID REFERENCES pos_staff(id) ON DELETE SET NULL,
   items_json      JSONB NOT NULL DEFAULT '[]'::jsonb,
   total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
   receipt_number  TEXT DEFAULT '',
@@ -197,6 +198,7 @@ CREATE TABLE IF NOT EXISTS pos_staff (
   role        TEXT NOT NULL DEFAULT 'waiter' CHECK (role IN ('waiter', 'kitchen')),
   source      TEXT NOT NULL DEFAULT 'owner' CHECK (source IN ('owner', 'pos')),
   sort_order  INTEGER NOT NULL DEFAULT 0,
+  pin_hash    TEXT,
   active      BOOLEAN NOT NULL DEFAULT true,
   UNIQUE (client_id, name)
 );

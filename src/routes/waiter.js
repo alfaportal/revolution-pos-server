@@ -1,7 +1,12 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { getWaiterBootstrap, submitWaiterOrder, closeWaiterTable } = require("../services/waiterService");
+const {
+  getWaiterBootstrap,
+  loginWaiterWithPin,
+  submitWaiterOrder,
+  closeWaiterTable,
+} = require("../services/waiterService");
 
 const router = express.Router();
 
@@ -11,6 +16,15 @@ router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("wait
     res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const waiter = await loginWaiterWithPin(req.kitchenClient.id, req.body?.pin);
+    res.json({ ok: true, waiter });
+  } catch (e) {
+    res.status(401).json({ ok: false, gabim: e.message });
   }
 });
 

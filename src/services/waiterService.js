@@ -7,8 +7,8 @@ const { buildMenuCategories, mapMenuItemForWeb } = require("./menuCatalogService
 const {
   buildTablesFromAreas,
   loadAreasForClient,
-  loadWaiterStaff,
 } = require("./venueService");
+const { resolveWaiterForOrder } = require("./waiterPinService");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = WEB_WAITER;
@@ -25,7 +25,7 @@ async function getActiveTableOrders(clientId) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, status, total, ordered_at, items_json, local_order_id, device_id")
+    .select("id, table_number, waiter_name, waiter_id, status, total, ordered_at, items_json, local_order_id, device_id")
     .eq("client_id", clientId)
     .in("status", ["ordered", "ready"])
     .order("ordered_at", { ascending: false });
@@ -54,10 +54,13 @@ async function getLicenseForClient(clientId) {
   return license;
 }
 
-function assertWaiterOnTable(existing, waiterName, tableNumber) {
+function assertWaiterOnTable(existing, waiter, tableNumber) {
   if (!existing?.waiter_name) return;
   if (isKioskWaiterName(existing.waiter_name)) return;
-  if (existing.waiter_name.toLowerCase() !== waiterName.toLowerCase()) {
+  if (waiter?.id && existing.waiter_id && existing.waiter_id !== waiter.id) {
+    throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
+  }
+  if (existing.waiter_name.toLowerCase() !== waiter.name.toLowerCase()) {
     throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
   }
 }
@@ -79,30 +82,50 @@ async function getWaiterBootstrap(clientId) {
   for (const [n, row] of activeTables) {
     activeByTable.set(n, {
       waiter_name: row.waiter_name,
+      waiter_id: row.waiter_id || null,
       total: row.total,
       active_items: normalizeItems(row.items_json),
     });
   }
   const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
-  const staff = await loadWaiterStaff(clientId);
+  const pinWaiters = await loadPinWaitersCount(clientId);
 
   return {
     client_name: client.emri,
     restaurant_name: settings?.restaurant_name || client.emri,
     table_count: layout.table_count,
     synced_at: settings?.synced_at || null,
+    pin_auth: true,
+    waiter_count: pinWaiters,
     categories: buildMenuCategories(categories, menu),
     menu: (menu || []).map(mapMenuItemForWeb),
-    staff,
     areas: layout.areas,
     tables: layout.tables,
   };
 }
 
+async function loadPinWaitersCount(clientId) {
+  const db = getSupabase();
+  const { count, error } = await db
+    .from("pos_staff")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientId)
+    .eq("role", "waiter")
+    .eq("active", true)
+    .not("pin_hash", "is", null);
+  if (error) return 0;
+  return count || 0;
+}
+
+async function loginWaiterWithPin(clientId, pin) {
+  await assertClient(clientId);
+  const { verifyWaiterPin } = require("./waiterPinService");
+  return verifyWaiterPin(clientId, pin);
+}
+
 async function submitWaiterOrder(clientId, body) {
   await assertClient(clientId);
-  const waiterName = String(body.waiter_name || "").trim();
-  if (!waiterName) throw new Error("Shkruani emrin e kamarierit.");
+  const waiter = await resolveWaiterForOrder(clientId, body.waiter_id, body.waiter_name);
 
   const tableNumber = Number(body.table_number);
   if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
@@ -112,7 +135,7 @@ async function submitWaiterOrder(clientId, body) {
 
   const active = await getActiveTableOrders(clientId);
   const existing = active.get(tableNumber);
-  assertWaiterOnTable(existing, waiterName, tableNumber);
+  assertWaiterOnTable(existing, waiter, tableNumber);
 
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
@@ -124,27 +147,27 @@ async function submitWaiterOrder(clientId, body) {
     device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
-    waiter_name: waiterName,
+    waiter_name: waiter.name,
+    waiter_id: waiter.id,
     items,
     total,
     status: "ordered",
     ordered_at: existing?.ordered_at || now,
   });
 
-  return { ok: true, order: sale, sent_to: "bar" };
+  return { ok: true, order: sale, sent_to: "bar", waiter };
 }
 
 async function closeWaiterTable(clientId, body) {
   await assertClient(clientId);
-  const waiterName = String(body.waiter_name || "").trim();
-  if (!waiterName) throw new Error("Shkruani emrin e kamarierit.");
+  const waiter = await resolveWaiterForOrder(clientId, body.waiter_id, body.waiter_name);
 
   const tableNumber = Number(body.table_number);
   if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
 
   const active = await getActiveTableOrders(clientId);
   const existing = active.get(tableNumber);
-  assertWaiterOnTable(existing, waiterName, tableNumber);
+  assertWaiterOnTable(existing, waiter, tableNumber);
 
   const cartItems = normalizeItems(body.items);
   const items = cartItems.length
@@ -165,7 +188,8 @@ async function closeWaiterTable(clientId, body) {
     device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
-    waiter_name: waiterName,
+    waiter_name: waiter.name,
+    waiter_id: waiter.id,
     items,
     total,
     receipt_number: receiptNumber,
@@ -190,7 +214,7 @@ async function closeWaiterTable(clientId, body) {
       : {
           receipt_number: receiptNumber,
           table_number: tableNumber,
-          waiter_name: waiterName,
+          waiter_name: waiter.name,
           items,
           total,
           closed_at: now,
@@ -200,6 +224,7 @@ async function closeWaiterTable(clientId, body) {
 
 module.exports = {
   getWaiterBootstrap,
+  loginWaiterWithPin,
   submitWaiterOrder,
   closeWaiterTable,
   getActiveTableOrders,

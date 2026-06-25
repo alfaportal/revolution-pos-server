@@ -9,18 +9,30 @@
   <link rel="stylesheet" href="/css/waiter.css">
 </head>
 <body>
-  <div id="screen-login" class="screen active">
+  <div id="screen-pin" class="screen active">
     <div class="waiter-header">
       <h1 id="login-title">Kamarieri</h1>
-      <div class="sub" id="login-sub">Hyni me emrin tuaj</div>
+      <div class="sub" id="login-sub">Shkruani PIN-in tuaj (4 shifra)</div>
     </div>
     <div class="waiter-main">
-      <div class="login-box">
+      <div class="login-box pin-box">
         <div id="login-err" class="err hidden"></div>
-        <label for="waiter-name">Emri i kamarierit</label>
-        <input id="waiter-name" type="text" placeholder="p.sh. Agron" autocomplete="name" list="staff-list">
-        <datalist id="staff-list"></datalist>
-        <button type="button" class="btn btn-primary" id="btn-login">Vazhdo</button>
+        <div id="pin-display" class="pin-display" aria-live="polite">••••</div>
+        <div class="pin-keypad" id="pin-keypad">
+          <button type="button" class="pin-key" data-digit="1">1</button>
+          <button type="button" class="pin-key" data-digit="2">2</button>
+          <button type="button" class="pin-key" data-digit="3">3</button>
+          <button type="button" class="pin-key" data-digit="4">4</button>
+          <button type="button" class="pin-key" data-digit="5">5</button>
+          <button type="button" class="pin-key" data-digit="6">6</button>
+          <button type="button" class="pin-key" data-digit="7">7</button>
+          <button type="button" class="pin-key" data-digit="8">8</button>
+          <button type="button" class="pin-key" data-digit="9">9</button>
+          <button type="button" class="pin-key pin-key-muted" id="pin-clear">C</button>
+          <button type="button" class="pin-key" data-digit="0">0</button>
+          <button type="button" class="pin-key pin-key-muted" id="pin-back">⌫</button>
+        </div>
+        <button type="button" class="btn btn-primary pin-submit" id="btn-pin-login">Hyr</button>
         <p class="hint" id="sync-hint"></p>
       </div>
     </div>
@@ -33,7 +45,7 @@
           <h1 id="tables-title">Tavolinat</h1>
           <div class="sub" id="tables-waiter"></div>
         </div>
-        <button type="button" class="btn btn-ghost" id="btn-logout">Dil</button>
+        <button type="button" class="btn btn-ghost" id="btn-logout">Kyçu</button>
       </div>
     </div>
     <div class="waiter-main">
@@ -78,7 +90,13 @@
     </div>
   </div>
 
+  <div id="lock-overlay" class="lock-overlay hidden" aria-live="assertive">
+    <div class="lock-overlay-box">
+      <p id="lock-countdown">Duke u kyçur në 5...</p>
+    </div>
+  </div>
+
   <script src="/js/menuCatalog.js?v=1"></script>
-  <script src="/js/waiter.js?v=5"></script>
+  <script src="/js/waiter.js?v=6"></script>
 </body>
 </html>

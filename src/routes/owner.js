@@ -35,6 +35,12 @@ const {
   updateStaff,
   deleteStaff,
 } = require("../services/venueService");
+const {
+  listWaitersForOwner,
+  addWaiterWithPin,
+  updateWaiterWithPin,
+  deleteWaiterWithPin,
+} = require("../services/waiterPinService");
 const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 
@@ -320,6 +326,42 @@ router.patch("/venue/staff/:id", async (req, res) => {
 router.delete("/venue/staff/:id", async (req, res) => {
   try {
     const result = await deleteStaff(req.user.client_id, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/waiters", async (req, res) => {
+  try {
+    const waiters = await listWaitersForOwner(req.user.client_id);
+    res.json({ ok: true, waiters });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/waiters", async (req, res) => {
+  try {
+    const result = await addWaiterWithPin(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/waiters/:id", async (req, res) => {
+  try {
+    const result = await updateWaiterWithPin(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.delete("/waiters/:id", async (req, res) => {
+  try {
+    const result = await deleteWaiterWithPin(req.user.client_id, req.params.id);
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

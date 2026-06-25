@@ -86,6 +86,9 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     status: finalStatus,
   };
 
+  const waiterId = String(body.waiter_id || "").trim();
+  if (waiterId) row.waiter_id = waiterId;
+
   if (finalStatus === "ordered") {
     row.ordered_at = body.ordered_at || existing?.ordered_at || now;
     row.closed_at = row.ordered_at;
@@ -162,7 +165,7 @@ async function getLiveTablesForOwner(clientId) {
     db.from("pos_settings").select("table_count").eq("client_id", clientId).maybeSingle(),
     db
       .from("sales_orders")
-      .select("table_number, waiter_name, items_json, total, ordered_at, local_order_id")
+      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id")
       .eq("client_id", clientId)
       .eq("status", "ordered")
       .order("ordered_at", { ascending: false }),
@@ -178,6 +181,7 @@ async function getLiveTablesForOwner(clientId) {
     byTable.set(num, {
       table_number: num,
       waiter_name: o.waiter_name || "",
+      waiter_id: o.waiter_id || null,
       items: normalizeItems(o.items_json),
       total: Number(o.total) || 0,
       ordered_at: o.ordered_at,
@@ -238,7 +242,7 @@ async function listOwnerOrders(clientId, opts = {}) {
   const db = getSupabase();
   let q = db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at, status")
+    .select("id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status")
     .eq("client_id", clientId)
     .eq("status", "closed")
     .order("closed_at", { ascending: false })

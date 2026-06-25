@@ -3,8 +3,6 @@
   const slug = parts[0] === "waiter" ? parts[1] : "";
   const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
 
-  const LS_WAITER = `waiter_name_${slug}`;
-
   function apiQuery() {
     return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
   }
@@ -18,12 +16,23 @@
   }
 
   let bootstrap = null;
-  let waiterName = "";
+  /** @type {{ id: string, name: string } | null} */
+  let activeWaiter = null;
   let tableNumber = 0;
   let cart = [];
   let activeCategory = "";
+  let pinDigits = [];
+  let lockTimer = null;
 
   const $ = id => document.getElementById(id);
+
+  function waiterPayload() {
+    if (!activeWaiter?.id) throw new Error("Sesioni i kamarierit ka skaduar. Shkruani PIN-in.");
+    return {
+      waiter_id: activeWaiter.id,
+      waiter_name: activeWaiter.name,
+    };
+  }
 
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -57,6 +66,36 @@
     return data;
   }
 
+  function renderPinDisplay() {
+    const el = $("pin-display");
+    if (!el) return;
+    if (!pinDigits.length) {
+      el.textContent = "••••";
+      return;
+    }
+    el.textContent = pinDigits.map(() => "●").join(" ") + " ".repeat(Math.max(0, 3 - pinDigits.length) * 2);
+  }
+
+  function clearPin() {
+    pinDigits = [];
+    renderPinDisplay();
+    showErr($("login-err"), "");
+  }
+
+  function appendPin(digit) {
+    if (pinDigits.length >= 4) return;
+    pinDigits.push(String(digit));
+    renderPinDisplay();
+    if (pinDigits.length === 4) {
+      submitPinLogin();
+    }
+  }
+
+  function backspacePin() {
+    pinDigits.pop();
+    renderPinDisplay();
+  }
+
   async function loadBootstrap() {
     if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...");
     if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
@@ -64,17 +103,24 @@
     $("login-title").textContent = bootstrap.restaurant_name || bootstrap.client_name || "Kamarieri";
     $("tables-title").textContent = bootstrap.restaurant_name || "Tavolinat";
     const hint = $("sync-hint");
-    if (bootstrap.synced_at) {
-      hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
-    } else {
-      hint.textContent = "Menuja ende nuk është sinkronizuar nga POS-i lokal.";
+    const parts = [];
+    if (bootstrap.waiter_count != null) {
+      parts.push(`${bootstrap.waiter_count} kamarierë me PIN`);
     }
-    const dl = $("staff-list");
-    dl.innerHTML = (bootstrap.staff || []).map(n => `<option value="${escapeAttr(n)}">`).join("");
+    if (bootstrap.synced_at) {
+      parts.push(`Menuja: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`);
+    }
+    hint.textContent = parts.length
+      ? parts.join(" · ")
+      : "Pronari shton kamarierët te paneli → Kamarierët.";
   }
 
   function escapeAttr(s) {
     return String(s || "").replace(/"/g, "&quot;");
+  }
+
+  function escapeHtml(s) {
+    return String(s || "").replace(/</g, "&lt;");
   }
 
   function renderTableCard(t) {
@@ -112,10 +158,6 @@
     bindTableCards(grid);
   }
 
-  function escapeHtml(s) {
-    return String(s || "").replace(/</g, "&lt;");
-  }
-
   function getCategoryList() {
     return MenuCatalog.getCategoryList(bootstrap);
   }
@@ -124,11 +166,88 @@
     return MenuCatalog.pickDefaultCategory(bootstrap);
   }
 
+  function enterWaiterSession(waiter) {
+    activeWaiter = { id: waiter.id, name: waiter.name };
+    $("tables-waiter").textContent = `Kamarieri: ${waiter.name}`;
+    renderTables();
+    showScreen("screen-tables");
+  }
+
+  function clearLockTimer() {
+    if (lockTimer) {
+      clearInterval(lockTimer);
+      lockTimer = null;
+    }
+    $("lock-overlay")?.classList.add("hidden");
+  }
+
+  function lockSession() {
+    clearLockTimer();
+    activeWaiter = null;
+    tableNumber = 0;
+    cart = [];
+    clearPin();
+    hideReceipt();
+    showScreen("screen-pin");
+  }
+
+  function startAutoLock() {
+    clearLockTimer();
+    const overlay = $("lock-overlay");
+    const label = $("lock-countdown");
+    if (!overlay || !label) {
+      lockSession();
+      return;
+    }
+    overlay.classList.remove("hidden");
+    let sec = 5;
+    label.textContent = `Duke u kyçur në ${sec}...`;
+    lockTimer = setInterval(() => {
+      sec -= 1;
+      if (sec <= 0) {
+        lockSession();
+      } else {
+        label.textContent = `Duke u kyçur në ${sec}...`;
+      }
+    }, 1000);
+  }
+
+  async function submitPinLogin() {
+    const err = $("login-err");
+    showErr(err, "");
+    if (pinDigits.length !== 4) {
+      showErr(err, "PIN duhet të jetë 4 shifra.");
+      return;
+    }
+    const btn = $("btn-pin-login");
+    btn.disabled = true;
+    try {
+      if (!bootstrap) await loadBootstrap();
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/login${apiQuery()}`, {
+        method: "POST",
+        body: JSON.stringify({ pin: pinDigits.join("") }),
+      });
+      clearPin();
+      enterWaiterSession(data.waiter);
+    } catch (e) {
+      clearPin();
+      showErr(err, e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function openOrder(num) {
+    if (!activeWaiter) {
+      lockSession();
+      return;
+    }
     tableNumber = num;
     const table = bootstrap.tables?.find(t => t.number === num);
-    if (table?.active_items?.length &&
-        table.waiter_name?.toLowerCase() === waiterName.toLowerCase()) {
+    const sameWaiter = table?.waiter_id
+      ? table.waiter_id === activeWaiter.id
+      : table?.waiter_name?.toLowerCase() === activeWaiter.name.toLowerCase();
+    if (table?.active_items?.length && sameWaiter) {
       cart = table.active_items.map(i => ({
         name: i.name,
         price: Number(i.price),
@@ -229,14 +348,15 @@
   }
 
   async function refreshBootstrap() {
+    if (!activeWaiter) return;
     try {
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
       bootstrap.tables = data.tables;
       bootstrap.areas = data.areas;
-      bootstrap.staff = data.staff;
       bootstrap.synced_at = data.synced_at;
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;
+      bootstrap.waiter_count = data.waiter_count;
       const hint = $("sync-hint");
       if (bootstrap.synced_at) {
         hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
@@ -252,35 +372,14 @@
     } catch { /* ignore background refresh */ }
   }
 
-  $("btn-login").addEventListener("click", async () => {
-    const err = $("login-err");
-    showErr(err, "");
-    const name = $("waiter-name").value.trim();
-    if (!name) {
-      showErr(err, "Shkruani emrin tuaj.");
-      return;
-    }
-    try {
-      if (!bootstrap) await loadBootstrap();
-      waiterName = name;
-      localStorage.setItem(LS_WAITER, name);
-      $("tables-waiter").textContent = `Kamarieri: ${name}`;
-      renderTables();
-      showScreen("screen-tables");
-    } catch (e) {
-      showErr(err, e.message);
-    }
+  $("pin-keypad")?.querySelectorAll("[data-digit]").forEach(btn => {
+    btn.addEventListener("click", () => appendPin(btn.dataset.digit));
   });
+  $("pin-clear")?.addEventListener("click", clearPin);
+  $("pin-back")?.addEventListener("click", backspacePin);
+  $("btn-pin-login")?.addEventListener("click", submitPinLogin);
 
-  $("waiter-name").addEventListener("keydown", e => {
-    if (e.key === "Enter") $("btn-login").click();
-  });
-
-  $("btn-logout").addEventListener("click", () => {
-    localStorage.removeItem(LS_WAITER);
-    waiterName = "";
-    showScreen("screen-login");
-  });
+  $("btn-logout").addEventListener("click", lockSession);
 
   $("btn-back").addEventListener("click", () => {
     tableNumber = 0;
@@ -337,8 +436,10 @@
     hideReceipt();
     cart = [];
     renderCart();
+    tableNumber = 0;
     await refreshBootstrap();
     showScreen("screen-tables");
+    startAutoLock();
   });
 
   $("btn-close").addEventListener("click", async () => {
@@ -358,7 +459,7 @@
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
-          waiter_name: waiterName,
+          ...waiterPayload(),
           table_number: tableNumber,
           items: cart.map(c => ({
             name: c.name,
@@ -391,7 +492,7 @@
       await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
-          waiter_name: waiterName,
+          ...waiterPayload(),
           table_number: tableNumber,
           items: cart.map(c => ({
             name: c.name,
@@ -402,9 +503,10 @@
       });
       cart = [];
       renderCart();
-      alert("Porosia u dërgua te banaku!");
+      tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");
+      startAutoLock();
     } catch (e) {
       showErr(err, e.message);
     } finally {
@@ -416,21 +518,15 @@
   (async () => {
     try {
       await loadBootstrap();
-      const saved = localStorage.getItem(LS_WAITER);
-      if (saved) {
-        $("waiter-name").value = saved;
-        waiterName = saved;
-        $("tables-waiter").textContent = `Kamarieri: ${saved}`;
-        renderTables();
-        showScreen("screen-tables");
-      }
+      renderPinDisplay();
+      showScreen("screen-pin");
     } catch (e) {
       showErr($("login-err"), e.message);
     }
   })();
 
   setInterval(() => {
-    if (bootstrap && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
+    if (activeWaiter && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
       refreshBootstrap();
     }
   }, 15000);
