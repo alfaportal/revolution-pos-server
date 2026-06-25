@@ -370,11 +370,24 @@
       </div>
 
       <div id="hub-panel-linqe" class="hub-panel hidden">
-        <p class="field-hint">Linqet e aksesit për këtë biznes (kamarier, banak, tavolinë, kuzhina).</p>
-        <div class="link-row-hub"><label>Kamarier</label><div class="link-actions"><input type="text" id="hub-link-waiter" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-waiter">Kopjo</button></div></div>
-        <div class="link-row-hub"><label>Banak</label><div class="link-actions"><input type="text" id="hub-link-bar" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-bar">Kopjo</button></div></div>
-        <div class="link-row-hub"><label>Tavolinë</label><div class="link-actions"><input type="text" id="hub-link-kiosk" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kiosk">Kopjo</button></div></div>
-        <div class="link-row-hub"><label>Kuzhina</label><div class="link-actions"><input type="text" id="hub-link-kitchen" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kitchen">Kopjo</button></div></div>
+        <p class="field-hint">Linqet e aksesit për këtë biznes — me <code>?key=</code> sekret. Shfaqen sipas paketës së klientit.</p>
+        <div class="link-row-hub" id="hub-row-waiter">
+          <label>Kamarier</label>
+          <div class="link-actions"><input type="text" id="hub-link-waiter" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-waiter">Kopjo</button></div>
+        </div>
+        <div class="link-row-hub" id="hub-row-bar">
+          <label>Banak</label>
+          <div class="link-actions"><input type="text" id="hub-link-bar" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-bar">Kopjo</button></div>
+        </div>
+        <div class="link-row-hub" id="hub-row-kitchen">
+          <label>Kuzhina (KDS)</label>
+          <div class="link-actions"><input type="text" id="hub-link-kitchen" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kitchen">Kopjo</button></div>
+        </div>
+        <div class="link-row-hub" id="hub-row-kiosk">
+          <label>Tavolinë (Kiosk)</label>
+          <div class="link-actions"><input type="text" id="hub-link-kiosk" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kiosk">Kopjo</button></div>
+        </div>
+        <p id="hub-links-empty" class="field-hint hidden">Kjo paketë nuk përfshin module web (KDS/Kiosk/Kamarier). Ndryshoni paketën në Ndrysho klientin.</p>
         <button type="button" class="btn btn-ghost btn-sm" id="hub-regenerate-links">Rigjenero kodet e aksesit</button>
       </div>
     </div>
@@ -393,6 +406,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=26"></script>
+  <script src="/js/panel.js?v=27"></script>
 </body>
 </html>

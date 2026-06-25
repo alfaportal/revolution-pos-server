@@ -26,6 +26,8 @@ const {
   updateMenuItem,
   deleteMenuItem,
 } = require("../services/menuService");
+const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
+const { featuresForTier } = require("../lib/packages");
 
 const router = express.Router();
 
@@ -33,9 +35,23 @@ router.use(authOwner, ownerOnly);
 
 router.get("/client", async (req, res) => {
   try {
-    const client = await getClientById(req.user.client_id);
+    let client = await getClientById(req.user.client_id);
+    if (client) {
+      client = await ensureKitchenCredentials(client);
+    }
     const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
-    const id = req.user.client_id;
+    const features = featuresForTier(client?.package_tier);
+    const links = {};
+    if (client?.id && features.waiter) {
+      links.waiter = buildKitchenUrl(base, client, "waiter");
+    }
+    if (client?.id && features.kds) {
+      links.kitchen = buildKitchenUrl(base, client, "kitchen");
+      links.bar = buildKitchenUrl(base, client, "bar");
+    }
+    if (client?.id && features.kiosk) {
+      links.kiosk = `${buildKitchenUrl(base, client, "kiosk")}&table=1`;
+    }
     res.json({
       ok: true,
       client: client
@@ -45,10 +61,13 @@ router.get("/client", async (req, res) => {
             adresa: client.adresa,
             telefoni: client.telefoni,
             email: client.email,
+            package_tier: client.package_tier,
           }
         : null,
-      waiter_url: `${base}/waiter/${id}`,
-      kitchen_url: `${base}/kitchen/${id}`,
+      features,
+      links,
+      waiter_url: links.waiter || null,
+      kitchen_url: links.kitchen || null,
     });
   } catch (e) {
     res.status(500).json({ gabim: e.message });

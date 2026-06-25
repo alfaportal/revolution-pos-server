@@ -357,9 +357,22 @@ function clientAccessLink(client, kind, extraQuery = "") {
   const slug = client?.kitchen_slug || client?.id || "";
   const key = client?.kitchen_key || "";
   const base = `${window.location.origin}/${kind}/${encodeURIComponent(slug)}`;
-  if (!key) return base;
   const q = `key=${encodeURIComponent(key)}${extraQuery ? `&${extraQuery}` : ""}`;
   return `${base}?${q}`;
+}
+
+function clientTierFeatures(clientId) {
+  const c = clientsCache.find(x => x.id === clientId);
+  const tierId = c?.package_tier || "pako_1";
+  const tier = packageTiersCache.find(t => t.id === tierId);
+  return tier?.features || { kds: false, kiosk: false, waiter: false };
+}
+
+function setHubLinkRow(rowId, visible, inputId, url) {
+  const row = document.getElementById(rowId);
+  if (row) row.classList.toggle("hidden", !visible);
+  const input = document.getElementById(inputId);
+  if (input) input.value = visible ? (url || "") : "";
 }
 
 function waiterLink(clientId) {
@@ -489,10 +502,16 @@ function closeClientHub() {
 }
 
 function fillHubLinks(clientId) {
-  document.getElementById("hub-link-waiter").value = waiterLink(clientId);
-  document.getElementById("hub-link-bar").value = barLink(clientId);
-  document.getElementById("hub-link-kiosk").value = kioskTableLink(clientId, 1);
-  document.getElementById("hub-link-kitchen").value = kitchenLink(clientId);
+  const features = clientTierFeatures(clientId);
+  setHubLinkRow("hub-row-waiter", features.waiter, "hub-link-waiter", waiterLink(clientId));
+  setHubLinkRow("hub-row-bar", features.kds, "hub-link-bar", barLink(clientId));
+  setHubLinkRow("hub-row-kitchen", features.kds, "hub-link-kitchen", kitchenLink(clientId));
+  setHubLinkRow("hub-row-kiosk", features.kiosk, "hub-link-kiosk", kioskTableLink(clientId, 1));
+  const empty = document.getElementById("hub-links-empty");
+  if (empty) {
+    const any = features.waiter || features.kds || features.kiosk;
+    empty.classList.toggle("hidden", any);
+  }
 }
 
 async function loadAdminHubSettings() {
@@ -1531,7 +1550,10 @@ document.getElementById("hub-close")?.addEventListener("click", closeClientHub);
 document.getElementById("hub-backdrop")?.addEventListener("click", closeClientHub);
 
 document.querySelectorAll(".hub-tab").forEach(tab => {
-  tab.addEventListener("click", () => switchHubTab(tab.dataset.hubTab));
+  tab.addEventListener("click", () => {
+    switchHubTab(tab.dataset.hubTab);
+    if (tab.dataset.hubTab === "linqe" && hubClientId) fillHubLinks(hubClientId);
+  });
 });
 
 document.getElementById("hub-menu-add")?.addEventListener("click", async () => {

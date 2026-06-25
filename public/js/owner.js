@@ -123,7 +123,7 @@ function renderOrderCard(o) {
 
 async function loadClient() {
   const data = await api("/api/owner/client");
-  const { client, waiter_url, kitchen_url } = data;
+  const { client, links = {}, features = {} } = data;
   if (client) {
     document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
     const typeLbl = client.tipi === "kafene" ? "Kafene" : client.tipi === "restorant" ? "Restorant" : "Lokali";
@@ -132,9 +132,22 @@ async function loadClient() {
   } else {
     document.getElementById("biz-sub").textContent = "Shitjet dhe raportet e lokalit tuaj";
   }
-  if (waiter_url) {
-    document.getElementById("owner-waiter-url").value = waiter_url;
-    document.getElementById("owner-kitchen-url").value = kitchen_url || "";
+
+  const rows = [
+    ["owner-link-waiter-row", "owner-waiter-url", features.waiter, links.waiter || data.waiter_url],
+    ["owner-link-kitchen-row", "owner-kitchen-url", features.kds, links.kitchen || data.kitchen_url],
+    ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar],
+    ["owner-link-kiosk-row", "owner-kiosk-url", features.kiosk, links.kiosk],
+  ];
+  for (const [rowId, inputId, enabled, url] of rows) {
+    const row = document.getElementById(rowId);
+    if (row) row.classList.toggle("hidden", !enabled);
+    const input = document.getElementById(inputId);
+    if (input) input.value = enabled ? (url || "") : "";
+  }
+  const empty = document.getElementById("owner-links-empty");
+  if (empty) {
+    empty.classList.toggle("hidden", !!(features.waiter || features.kds || features.kiosk));
   }
 }
 
@@ -157,6 +170,12 @@ document.getElementById("btn-owner-copy-waiter").addEventListener("click", funct
 });
 document.getElementById("btn-owner-copy-kitchen").addEventListener("click", function () {
   kopjoLinkun("owner-kitchen-url", this);
+});
+document.getElementById("btn-owner-copy-bar")?.addEventListener("click", function () {
+  kopjoLinkun("owner-bar-url", this);
+});
+document.getElementById("btn-owner-copy-kiosk")?.addEventListener("click", function () {
+  kopjoLinkun("owner-kiosk-url", this);
 });
 
 async function loadStats() {

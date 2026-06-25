@@ -34,19 +34,34 @@
 
     <div class="card links-card" id="owner-links-card">
       <div class="card-title">Linqet e lokalit tuaj</div>
-      <p class="links-hint">Çdo restorant/kafene ka linkun e vet — kamarierët e këtij lokali përdorin të njëjtin link (shkruajnë emrin kur hyjnë).</p>
-      <div class="link-row">
+      <p class="links-hint">Linket me <code>?key=</code> — kopjojini për kamarierët, banakun, kuzhinën ose tavolinat (sipas paketës suaj).</p>
+      <p id="owner-links-empty" class="links-hint hidden">Paketa juaj nuk përfshin module web (KDS/Kiosk/Kamarier). Kontaktoni administratorin për upgrade.</p>
+      <div class="link-row" id="owner-link-waiter-row">
         <label>Kamarierët (telefon)</label>
         <div class="link-actions">
           <input type="text" id="owner-waiter-url" readonly>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-waiter">Kopjo</button>
         </div>
       </div>
-      <div class="link-row">
+      <div class="link-row" id="owner-link-kitchen-row">
         <label>Kuzhina (KDS)</label>
         <div class="link-actions">
           <input type="text" id="owner-kitchen-url" readonly>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kitchen">Kopjo</button>
+        </div>
+      </div>
+      <div class="link-row" id="owner-link-bar-row">
+        <label>Banak</label>
+        <div class="link-actions">
+          <input type="text" id="owner-bar-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-bar">Kopjo</button>
+        </div>
+      </div>
+      <div class="link-row" id="owner-link-kiosk-row">
+        <label>Tavolinë (Kiosk)</label>
+        <div class="link-actions">
+          <input type="text" id="owner-kiosk-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
         </div>
       </div>
     </div>
@@ -246,6 +261,6 @@
     </div>
   </div>
 
-  <script src="/js/owner.js?v=9"></script>
+  <script src="/js/owner.js?v=10"></script>
 </body>
 </html>
