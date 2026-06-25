@@ -840,3 +840,93 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
 @media (max-width: 640px) {
   .login-card { padding: 1.5rem; }
 }
+
+.modal-card-wide {
+  max-width: min(920px, 96vw);
+}
+
+.hub-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.hub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.hub-tab {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.hub-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.hub-menu-add {
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.hub-menu-add .btn { margin-bottom: 0; white-space: nowrap; }
+
+.hub-menu-table input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.hub-menu-table .menu-price-input { max-width: 5.5rem; }
+
+.hub-menu-status {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hub-menu-status.on { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+.hub-menu-status.off { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+
+.hub-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.hub-menu-table tr.inactive-row { opacity: 0.65; }
+
+.link-row-hub {
+  margin-bottom: 0.65rem;
+}
+
+.link-row-hub label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.hub-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}

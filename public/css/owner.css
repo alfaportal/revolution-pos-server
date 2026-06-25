@@ -289,6 +289,56 @@
   padding: 0.45rem 0;
   border-bottom: 1px solid var(--border);
 }
+
+.menu-add-row {
+  align-items: flex-end;
+}
+
+.menu-add-row .btn {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.menu-owner-table input,
+.menu-owner-table select {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.menu-owner-table .menu-price-input {
+  max-width: 5.5rem;
+}
+
+.menu-status {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.menu-status.active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+}
+
+.menu-status.inactive {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--muted);
+}
+
+.menu-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.menu-owner-table tr.inactive-row {
+  opacity: 0.65;
+}
 .filter-row button { margin-bottom: 0; }
 
 .live-tables-head {

@@ -404,6 +404,218 @@ async function copyKioskLink(clientId, btn) {
   await copyLink(kioskTableLink(clientId, 1), btn);
 }
 
+let hubClientId = null;
+let adminMenuCache = { items: [], categories: [] };
+
+function escAttr(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+function showHubMsg(text, ok) {
+  const el = document.getElementById("hub-msg");
+  if (!el) return;
+  if (!text) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.textContent = text;
+  el.className = ok ? "alert alert-success" : "alert alert-error";
+  el.classList.remove("hidden");
+}
+
+function switchHubTab(tab) {
+  document.querySelectorAll(".hub-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.hubTab === tab);
+  });
+  document.querySelectorAll(".hub-panel").forEach(p => p.classList.add("hidden"));
+  document.getElementById(`hub-panel-${tab}`)?.classList.remove("hidden");
+}
+
+function openClientHub(id) {
+  const c = clientsCache.find(x => x.id === id);
+  if (!c) return;
+  hubClientId = id;
+  document.getElementById("hub-title").textContent = `Menaxho: ${c.emri}`;
+  document.getElementById("modal-client-hub").classList.remove("hidden");
+  showHubMsg("");
+  switchHubTab("menu");
+  loadAdminHubSettings();
+  loadAdminMenu();
+  fillHubLinks(id);
+}
+
+function closeClientHub() {
+  hubClientId = null;
+  document.getElementById("modal-client-hub")?.classList.add("hidden");
+  showHubMsg("");
+}
+
+function fillHubLinks(clientId) {
+  document.getElementById("hub-link-waiter").value = waiterLink(clientId);
+  document.getElementById("hub-link-bar").value = barLink(clientId);
+  document.getElementById("hub-link-kiosk").value = kioskTableLink(clientId, 1);
+  document.getElementById("hub-link-kitchen").value = kitchenLink(clientId);
+}
+
+async function loadAdminHubSettings() {
+  if (!hubClientId) return;
+  try {
+    const { settings } = await api(`/api/admin/clients/${hubClientId}/settings`);
+    document.getElementById("hub-restaurant-name").value = settings.restaurant_name || "";
+    document.getElementById("hub-table-count").value = settings.table_count || 10;
+    document.getElementById("hub-address").value = settings.address || "";
+    document.getElementById("hub-phone").value = settings.phone || "";
+    document.getElementById("hub-nui").value = settings.nui || "";
+    document.getElementById("hub-tvsh").value = settings.tvsh_nr || "";
+    document.getElementById("hub-receipt-width").value = String(settings.receipt_width_mm || 80);
+    document.getElementById("hub-fiscal-nr").value = settings.fiscal_nr || "";
+    document.getElementById("hub-fiscal-com").value = settings.fiscal_com_port || "";
+    document.getElementById("hub-fiscal-operator").value = settings.fiscal_operator_name || "";
+    document.getElementById("hub-fiscal-model").value = settings.fiscal_device_model || "";
+    document.getElementById("hub-fiscal-enabled").checked = settings.fiscal_enabled !== false;
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+}
+
+function renderAdminCategoryList(categories) {
+  const list = document.getElementById("hub-category-list");
+  if (!list) return;
+  list.innerHTML = (categories || []).map(c => `<option value="${escAttr(c)}">`).join("");
+}
+
+function renderAdminMenuTable() {
+  const body = document.getElementById("hub-menu-body");
+  if (!body) return;
+  const items = adminMenuCache.items || [];
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Nuk ka artikuj — shtoni ose sinkronizoni nga POS.</td></tr>';
+    return;
+  }
+  body.innerHTML = items.map(item => `
+    <tr class="${item.active ? "" : "inactive-row"}" data-id="${item.id}">
+      <td data-label="Emri"><input type="text" class="hub-edit-name" value="${escAttr(item.name)}"></td>
+      <td data-label="Kategoria"><input type="text" class="hub-edit-category" list="hub-category-list" value="${escAttr(item.category)}"></td>
+      <td data-label="Çmimi"><input type="number" class="hub-edit-price menu-price-input" min="0" step="0.01" value="${Number(item.price).toFixed(2)}"></td>
+      <td data-label="Statusi"><span class="hub-menu-status ${item.active ? "on" : "off"}">${item.active ? "Aktiv" : "Joaktiv"}</span></td>
+      <td class="col-actions" data-label="Veprime">
+        <div class="hub-row-actions">
+          <button type="button" class="btn btn-primary btn-sm hub-save-row">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm hub-toggle-row">${item.active ? "Fshih" : "Aktivizo"}</button>
+          <button type="button" class="btn btn-danger btn-sm hub-del-row">Fshi</button>
+        </div>
+      </td>
+    </tr>`).join("");
+
+  body.querySelectorAll(".hub-save-row").forEach(btn => {
+    btn.addEventListener("click", () => saveAdminMenuRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".hub-toggle-row").forEach(btn => {
+    btn.addEventListener("click", () => toggleAdminMenuRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".hub-del-row").forEach(btn => {
+    btn.addEventListener("click", () => deleteAdminMenuRow(btn.closest("tr")));
+  });
+}
+
+async function loadAdminMenu() {
+  if (!hubClientId) return;
+  try {
+    const data = await api(`/api/admin/clients/${hubClientId}/menu`);
+    adminMenuCache = {
+      items: data.items || [],
+      categories: data.categories || [],
+      synced_at: data.synced_at,
+    };
+    renderAdminCategoryList(adminMenuCache.categories);
+    renderAdminMenuTable();
+    const hint = document.getElementById("hub-menu-sync");
+    if (hint) {
+      hint.textContent = data.synced_at
+        ? `Menuja u përditësua: ${fmtDateTime(data.synced_at)} — shfaqet te tabletat brenda ~15 sek.`
+        : "Pas ruajtjes, menuja shfaqet te kamarieri dhe tavolina.";
+    }
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+}
+
+async function saveAdminMenuRow(row) {
+  if (!row || !hubClientId) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".hub-edit-name")?.value?.trim();
+  const category = row.querySelector(".hub-edit-category")?.value?.trim();
+  const price = Number(row.querySelector(".hub-edit-price")?.value);
+  if (!name || !category) {
+    showHubMsg("Emri dhe kategoria janë të detyrueshme.", false);
+    return;
+  }
+  try {
+    showHubMsg("");
+    const { item } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, category, price }),
+    });
+    const idx = adminMenuCache.items.findIndex(i => i.id === id);
+    if (idx >= 0) adminMenuCache.items[idx] = item;
+    if (!adminMenuCache.categories.includes(item.category)) {
+      adminMenuCache.categories.push(item.category);
+    }
+    renderAdminCategoryList(adminMenuCache.categories);
+    renderAdminMenuTable();
+    showHubMsg("Artikulli u ruajt.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+}
+
+async function toggleAdminMenuRow(row) {
+  if (!row || !hubClientId) return;
+  const id = row.dataset.id;
+  const item = adminMenuCache.items.find(i => i.id === id);
+  if (!item) return;
+  try {
+    showHubMsg("");
+    const { item: updated } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !item.active }),
+    });
+    item.active = updated.active;
+    renderAdminMenuTable();
+    showHubMsg(updated.active ? "Artikulli u aktivizua." : "Artikulli u fsheh.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+}
+
+async function deleteAdminMenuRow(row) {
+  if (!row || !hubClientId) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".hub-edit-name")?.value?.trim() || "artikullin";
+  if (!confirm(`Fshi "${name}" përgjithmonë?`)) return;
+  try {
+    showHubMsg("");
+    await api(`/api/admin/clients/${hubClientId}/menu/${id}`, { method: "DELETE" });
+    adminMenuCache.items = adminMenuCache.items.filter(i => i.id !== id);
+    renderAdminMenuTable();
+    showHubMsg("Artikulli u fshi.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("sq-AL", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function openEditLicense(id) {
   const l = licensesCache.find(x => x.id === id);
   if (!l) return;
@@ -486,6 +698,9 @@ function openEditOwner(id) {
 }
 
 function bindTableActions(scope) {
+  scope.querySelectorAll("[data-manage-client]").forEach(btn => {
+    btn.onclick = () => openClientHub(btn.dataset.manageClient);
+  });
   scope.querySelectorAll("[data-edit-client]").forEach(btn => {
     btn.onclick = () => openEditClient(btn.dataset.editClient);
   });
@@ -603,6 +818,7 @@ async function loadClients() {
           </div>
         </td>
         <td class="actions col-actions" data-label="Veprime">
+          <button class="btn btn-primary btn-sm" data-manage-client="${c.id}">Menaxho</button>
           <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
@@ -1271,6 +1487,106 @@ document.getElementById("form-owner").addEventListener("submit", async e => {
   } finally {
     btn.disabled = false;
   }
+});
+
+document.getElementById("hub-close")?.addEventListener("click", closeClientHub);
+document.getElementById("hub-backdrop")?.addEventListener("click", closeClientHub);
+
+document.querySelectorAll(".hub-tab").forEach(tab => {
+  tab.addEventListener("click", () => switchHubTab(tab.dataset.hubTab));
+});
+
+document.getElementById("hub-menu-add")?.addEventListener("click", async () => {
+  if (!hubClientId) return;
+  const name = document.getElementById("hub-menu-name")?.value?.trim();
+  const category = document.getElementById("hub-menu-category")?.value?.trim();
+  const price = Number(document.getElementById("hub-menu-price")?.value);
+  if (!name || !category) {
+    showHubMsg("Shkruani emrin dhe kategorinë.", false);
+    return;
+  }
+  try {
+    showHubMsg("");
+    const { item } = await api(`/api/admin/clients/${hubClientId}/menu`, {
+      method: "POST",
+      body: JSON.stringify({ name, category, price }),
+    });
+    adminMenuCache.items.push(item);
+    if (!adminMenuCache.categories.includes(item.category)) {
+      adminMenuCache.categories.push(item.category);
+    }
+    document.getElementById("hub-menu-name").value = "";
+    document.getElementById("hub-menu-price").value = "";
+    renderAdminCategoryList(adminMenuCache.categories);
+    renderAdminMenuTable();
+    showHubMsg("Artikulli u shtua.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+});
+
+document.getElementById("hub-save-biznesi")?.addEventListener("click", async () => {
+  if (!hubClientId) return;
+  try {
+    showHubMsg("");
+    await api(`/api/admin/clients/${hubClientId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        restaurant_name: document.getElementById("hub-restaurant-name").value.trim(),
+        table_count: Number(document.getElementById("hub-table-count").value),
+        address: document.getElementById("hub-address").value.trim(),
+        phone: document.getElementById("hub-phone").value.trim(),
+        nui: document.getElementById("hub-nui").value.trim(),
+        tvsh_nr: document.getElementById("hub-tvsh").value.trim(),
+        receipt_width_mm: Number(document.getElementById("hub-receipt-width").value),
+      }),
+    });
+    showHubMsg("Settings e biznesit u ruajtën.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+});
+
+document.getElementById("hub-save-fiskale")?.addEventListener("click", async () => {
+  if (!hubClientId) return;
+  try {
+    showHubMsg("");
+    await api(`/api/admin/clients/${hubClientId}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        fiscal_nr: document.getElementById("hub-fiscal-nr").value.trim(),
+        fiscal_com_port: document.getElementById("hub-fiscal-com").value.trim(),
+        fiscal_operator_name: document.getElementById("hub-fiscal-operator").value.trim(),
+        fiscal_device_model: document.getElementById("hub-fiscal-model").value.trim(),
+        fiscal_enabled: document.getElementById("hub-fiscal-enabled").checked,
+      }),
+    });
+    showHubMsg("Settings fiskale u ruajtën.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+});
+
+document.getElementById("hub-regenerate-links")?.addEventListener("click", async () => {
+  if (!hubClientId) return;
+  if (!confirm("Rigjenero kodet e aksesit? Linqet e vjetra nuk do të funksionojnë.")) return;
+  try {
+    showHubMsg("");
+    await api(`/api/admin/clients/${hubClientId}/regenerate-kitchen-access`, { method: "POST" });
+    await loadClients();
+    fillHubLinks(hubClientId);
+    showHubMsg("Linqet u rigjeneruan.", true);
+  } catch (err) {
+    showHubMsg(err.message, false);
+  }
+});
+
+document.querySelectorAll("[data-hub-copy]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const input = document.getElementById(btn.dataset.hubCopy);
+    if (!input?.value) return;
+    copyText(input.value, btn);
+  });
 });
 
 (async () => {

@@ -197,11 +197,27 @@
     $("cart-total").textContent = formatEuro(total);
   }
 
-  async function refreshTables() {
+  async function refreshBootstrap() {
     try {
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
+      const menuChanged = !bootstrap?.synced_at || data.synced_at !== bootstrap.synced_at;
       bootstrap.tables = data.tables;
-      bootstrap.synced_at = data.synced_at;
+      if (menuChanged) {
+        bootstrap.synced_at = data.synced_at;
+        bootstrap.menu = data.menu;
+        bootstrap.categories = data.categories;
+        const hint = $("sync-hint");
+        if (bootstrap.synced_at) {
+          hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
+        }
+        if ($("screen-order").classList.contains("active")) {
+          if (activeCategory && !bootstrap.categories.includes(activeCategory)) {
+            activeCategory = bootstrap.categories?.[0] || "";
+          }
+          renderCategories();
+          renderMenu();
+        }
+      }
       renderTables();
     } catch { /* ignore background refresh */ }
   }
@@ -383,6 +399,8 @@
   })();
 
   setInterval(() => {
-    if ($("screen-tables").classList.contains("active")) refreshTables();
-  }, 8000);
+    if (bootstrap && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
+      refreshBootstrap();
+    }
+  }, 15000);
 })();

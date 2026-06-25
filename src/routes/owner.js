@@ -20,6 +20,12 @@ const {
   zReportToHtml,
 } = require("../services/zReportService");
 const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
+const {
+  listOwnerMenu,
+  addMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+} = require("../services/menuService");
 
 const router = express.Router();
 
@@ -190,6 +196,42 @@ router.get("/z-report/export", async (req, res) => {
     res.send("\uFEFF" + csv);
   } catch (e) {
     res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/menu", async (req, res) => {
+  try {
+    const menu = await listOwnerMenu(req.user.client_id);
+    res.json({ ok: true, ...menu });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/menu", async (req, res) => {
+  try {
+    const result = await addMenuItem(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/menu/:id", async (req, res) => {
+  try {
+    const result = await updateMenuItem(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.delete("/menu/:id", async (req, res) => {
+  try {
+    const result = await deleteMenuItem(req.user.client_id, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 

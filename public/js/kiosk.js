@@ -184,4 +184,26 @@
   });
 
   loadBootstrap().catch(e => showErr($("order-err"), e.message));
+
+  async function refreshMenu() {
+    if (!bootstrap) return;
+    try {
+      const data = await api(`/api/kiosk/${encodeURIComponent(slug)}/menu${apiQuery()}`);
+      if (data.synced_at && data.synced_at === bootstrap.synced_at) return;
+      bootstrap.synced_at = data.synced_at;
+      bootstrap.menu = data.menu;
+      bootstrap.categories = data.categories;
+      const hint = $("sync-hint");
+      if (bootstrap.synced_at) {
+        hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}. Porosia shkon te banaku — jo faturë.`;
+      }
+      if (activeCategory && !bootstrap.categories.includes(activeCategory)) {
+        activeCategory = bootstrap.categories?.[0] || "";
+      }
+      renderCategories();
+      renderMenu();
+    } catch { /* ignore */ }
+  }
+
+  setInterval(refreshMenu, 15000);
 })();

@@ -404,6 +404,147 @@ async function printZReport() {
   w.onload = () => w.print();
 }
 
+let ownerMenuCache = { items: [], categories: [] };
+
+function setMenuMsg(text, ok) {
+  const msg = document.getElementById("menu-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function renderMenuCategoryOptions(categories) {
+  const list = document.getElementById("menu-category-list");
+  if (!list) return;
+  list.innerHTML = (categories || []).map(c => `<option value="${c.replace(/"/g, "&quot;")}">`).join("");
+}
+
+function renderMenuTable() {
+  const body = document.getElementById("menu-items-body");
+  if (!body) return;
+  const items = ownerMenuCache.items || [];
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = items.map(item => {
+    return `<tr class="${item.active ? "" : "inactive-row"}" data-id="${item.id}">
+      <td><input type="text" class="menu-edit-name" value="${escAttr(item.name)}"></td>
+      <td>
+        <input type="text" class="menu-edit-category" list="menu-category-list" value="${escAttr(item.category)}">
+      </td>
+      <td><input type="number" class="menu-edit-price menu-price-input" min="0" step="0.01" value="${Number(item.price).toFixed(2)}"></td>
+      <td><span class="menu-status ${item.active ? "active" : "inactive"}">${item.active ? "Aktiv" : "Joaktiv"}</span></td>
+      <td>
+        <div class="menu-row-actions">
+          <button type="button" class="btn btn-primary btn-sm btn-menu-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-menu-toggle">${item.active ? "Fshih" : "Aktivizo"}</button>
+          <button type="button" class="btn btn-danger btn-sm btn-menu-delete">Fshi</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  body.querySelectorAll(".btn-menu-save").forEach(btn => {
+    btn.addEventListener("click", () => saveMenuRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-menu-toggle").forEach(btn => {
+    btn.addEventListener("click", () => toggleMenuRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-menu-delete").forEach(btn => {
+    btn.addEventListener("click", () => deleteMenuRow(btn.closest("tr")));
+  });
+}
+
+function escAttr(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+async function loadOwnerMenu() {
+  const data = await api("/api/owner/menu");
+  ownerMenuCache = {
+    items: data.items || [],
+    categories: data.categories || [],
+    synced_at: data.synced_at,
+  };
+  renderMenuCategoryOptions(ownerMenuCache.categories);
+  renderMenuTable();
+  const hint = document.getElementById("menu-sync-hint");
+  if (hint) {
+    hint.textContent = data.synced_at
+      ? `Menuja u përditësua: ${fmtTime(data.synced_at)} — tabletat e porosive e marrin brenda ~15 sekondave.`
+      : "Menuja do të shfaqet te kamarieri dhe tavolina pas ruajtjes.";
+  }
+}
+
+async function saveMenuRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".menu-edit-name")?.value?.trim();
+  const category = row.querySelector(".menu-edit-category")?.value?.trim();
+  const price = Number(row.querySelector(".menu-edit-price")?.value);
+  if (!name || !category) {
+    setMenuMsg("Emri dhe kategoria janë të detyrueshme.", false);
+    return;
+  }
+  try {
+    setMenuMsg("");
+    const { item } = await api(`/api/owner/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, category, price }),
+    });
+    const idx = ownerMenuCache.items.findIndex(i => i.id === id);
+    if (idx >= 0) ownerMenuCache.items[idx] = item;
+    if (!ownerMenuCache.categories.includes(item.category)) {
+      ownerMenuCache.categories.push(item.category);
+      renderMenuCategoryOptions(ownerMenuCache.categories);
+    }
+    renderMenuTable();
+    setMenuMsg("Artikulli u ruajt — shfaqet te tabletat e porosive.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
+  }
+}
+
+async function toggleMenuRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const item = ownerMenuCache.items.find(i => i.id === id);
+  if (!item) return;
+  try {
+    setMenuMsg("");
+    const { item: updated } = await api(`/api/owner/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !item.active }),
+    });
+    item.active = updated.active;
+    renderMenuTable();
+    setMenuMsg(updated.active ? "Artikulli u aktivizua." : "Artikulli u fsheh nga tabletat.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
+  }
+}
+
+async function deleteMenuRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".menu-edit-name")?.value?.trim() || "artikullin";
+  if (!confirm(`Fshi "${name}" përgjithmonë?`)) return;
+  try {
+    setMenuMsg("");
+    await api(`/api/owner/menu/${id}`, { method: "DELETE" });
+    ownerMenuCache.items = ownerMenuCache.items.filter(i => i.id !== id);
+    renderMenuTable();
+    setMenuMsg("Artikulli u fshi.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
+  }
+}
+
 document.getElementById("owner-license-key")?.addEventListener("input", e => {
   const el = e.target;
   el.value = formatLicenseKey(el.value);
@@ -443,6 +584,8 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
+    if (tab.dataset.tab === "porosite") loadOrders();
+    if (tab.dataset.tab === "menuja") loadOwnerMenu();
     if (tab.dataset.tab === "zreport") {
       loadZReport();
       loadFiscalSettings();
@@ -511,6 +654,34 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
       msg.textContent = err.message;
       msg.className = "owner-license-msg err";
     }
+  }
+});
+
+document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
+  const name = document.getElementById("menu-add-name")?.value?.trim();
+  const category = document.getElementById("menu-add-category")?.value?.trim();
+  const price = Number(document.getElementById("menu-add-price")?.value);
+  if (!name || !category) {
+    setMenuMsg("Shkruani emrin dhe kategorinë.", false);
+    return;
+  }
+  try {
+    setMenuMsg("");
+    const { item } = await api("/api/owner/menu", {
+      method: "POST",
+      body: JSON.stringify({ name, category, price }),
+    });
+    ownerMenuCache.items.push(item);
+    if (!ownerMenuCache.categories.includes(item.category)) {
+      ownerMenuCache.categories.push(item.category);
+    }
+    document.getElementById("menu-add-name").value = "";
+    document.getElementById("menu-add-price").value = "";
+    renderMenuCategoryOptions(ownerMenuCache.categories);
+    renderMenuTable();
+    setMenuMsg("Artikulli u shtua — shfaqet te tabletat e porosive.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
   }
 });
 

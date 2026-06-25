@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=21">
+  <link rel="stylesheet" href="/css/panel.css?v=22">
 </head>
 <body>
   <script>
@@ -281,6 +281,101 @@
     </div>
   </div>
 
+  <div id="modal-client-hub" class="modal hidden">
+    <div class="modal-backdrop" id="hub-backdrop"></div>
+    <div class="modal-card modal-card-wide">
+      <div class="hub-head">
+        <h2 id="hub-title" class="modal-title">Menaxho klientin</h2>
+        <button type="button" class="btn btn-ghost btn-sm" id="hub-close">Mbyll</button>
+      </div>
+      <p class="field-hint admin-only-note" style="margin-top:0">
+        <strong>Vetëm Super Admin</strong> — menu, biznes, fiskale, linqe. Ndryshimet shkojnë direkt te tabletat e porosive.
+      </p>
+      <div class="hub-tabs">
+        <button type="button" class="hub-tab active" data-hub-tab="menu">Menuja</button>
+        <button type="button" class="hub-tab" data-hub-tab="biznesi">Biznesi</button>
+        <button type="button" class="hub-tab" data-hub-tab="fiskale">Fiskale</button>
+        <button type="button" class="hub-tab" data-hub-tab="linqe">Linqe</button>
+      </div>
+      <div id="hub-msg" class="alert hidden"></div>
+
+      <div id="hub-panel-menu" class="hub-panel">
+        <div class="hub-menu-add filter-row">
+          <div>
+            <label>Emri</label>
+            <input type="text" id="hub-menu-name" placeholder="Emri i artikullit">
+          </div>
+          <div>
+            <label>Kategoria</label>
+            <input type="text" id="hub-menu-category" list="hub-category-list" placeholder="Kategoria">
+            <datalist id="hub-category-list"></datalist>
+          </div>
+          <div>
+            <label>Çmimi (€)</label>
+            <input type="number" id="hub-menu-price" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="hub-menu-add">Shto</button>
+        </div>
+        <p id="hub-menu-sync" class="field-hint"></p>
+        <div class="overflow-x">
+          <table class="admin-table hub-menu-table">
+            <thead>
+              <tr><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>Statusi</th><th class="col-actions">Veprime</th></tr>
+            </thead>
+            <tbody id="hub-menu-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="hub-panel-biznesi" class="hub-panel hidden">
+        <div class="form-row">
+          <div><label>Emri në faturë</label><input type="text" id="hub-restaurant-name"></div>
+          <div><label>Nr. tavolinave</label><input type="number" id="hub-table-count" min="1" max="30"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Adresa</label><input type="text" id="hub-address"></div>
+          <div><label>Telefoni</label><input type="text" id="hub-phone"></div>
+        </div>
+        <div class="form-row">
+          <div><label>NUI</label><input type="text" id="hub-nui"></div>
+          <div><label>Nr. TVSH</label><input type="text" id="hub-tvsh"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label>Gjerësia faturës</label>
+            <select id="hub-receipt-width">
+              <option value="80">80 mm</option>
+              <option value="58">58 mm</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="hub-save-biznesi">Ruaj biznesin</button>
+      </div>
+
+      <div id="hub-panel-fiskale" class="hub-panel hidden">
+        <div class="form-row">
+          <div><label>Nr.Fisk</label><input type="text" id="hub-fiscal-nr"></div>
+          <div><label>COM Port</label><input type="text" id="hub-fiscal-com" placeholder="COM3"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Operatori</label><input type="text" id="hub-fiscal-operator"></div>
+          <div><label>Modeli arkës</label><input type="text" id="hub-fiscal-model"></div>
+        </div>
+        <label class="hub-check"><input type="checkbox" id="hub-fiscal-enabled" checked> Arka fiskale aktive</label>
+        <button type="button" class="btn btn-primary btn-sm" id="hub-save-fiskale">Ruaj fiskale</button>
+      </div>
+
+      <div id="hub-panel-linqe" class="hub-panel hidden">
+        <p class="field-hint">Linqet e aksesit për këtë biznes (kamarier, banak, tavolinë, kuzhina).</p>
+        <div class="link-row-hub"><label>Kamarier</label><div class="link-actions"><input type="text" id="hub-link-waiter" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-waiter">Kopjo</button></div></div>
+        <div class="link-row-hub"><label>Banak</label><div class="link-actions"><input type="text" id="hub-link-bar" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-bar">Kopjo</button></div></div>
+        <div class="link-row-hub"><label>Tavolinë</label><div class="link-actions"><input type="text" id="hub-link-kiosk" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kiosk">Kopjo</button></div></div>
+        <div class="link-row-hub"><label>Kuzhina</label><div class="link-actions"><input type="text" id="hub-link-kitchen" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kitchen">Kopjo</button></div></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="hub-regenerate-links">Rigjenero kodet e aksesit</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-edit" class="modal hidden">
     <div class="modal-backdrop" id="modal-backdrop"></div>
     <div class="modal-card">
@@ -294,6 +389,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=24"></script>
+  <script src="/js/panel.js?v=25"></script>
 </body>
 </html>

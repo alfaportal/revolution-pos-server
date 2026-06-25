@@ -21,6 +21,16 @@ const {
 } = require("../services/licenseService");
 const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
 const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
+const {
+  listOwnerMenu,
+  addMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+} = require("../services/menuService");
+const {
+  getClientAdminSettings,
+  updateClientAdminSettings,
+} = require("../services/clientAdminService");
 const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
@@ -121,6 +131,93 @@ router.patch("/clients/:id/fiscal", asyncHandler(async (req, res) => {
     res.json({ ok: true, settings });
   } catch (e) {
     const msg = logRouteError("admin:PATCH /clients/:id/fiscal", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/settings", asyncHandler(async (req, res) => {
+  try {
+    const settings = await getClientAdminSettings(req.params.id);
+    res.json({ ok: true, settings });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/settings", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.patch("/clients/:id/settings", asyncHandler(async (req, res) => {
+  try {
+    const settings = await updateClientAdminSettings(req.params.id, req.body);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_settings_update",
+      targetType: "client",
+      targetId: req.params.id,
+    });
+    res.json({ ok: true, settings });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /clients/:id/settings", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/menu", asyncHandler(async (req, res) => {
+  try {
+    const menu = await listOwnerMenu(req.params.id);
+    res.json({ ok: true, ...menu });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/menu", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.post("/clients/:id/menu", asyncHandler(async (req, res) => {
+  try {
+    const result = await addMenuItem(req.params.id, req.body);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "menu_item_create",
+      targetType: "client",
+      targetId: req.params.id,
+      details: { name: req.body?.name },
+    });
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /clients/:id/menu", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.patch("/clients/:id/menu/:itemId", asyncHandler(async (req, res) => {
+  try {
+    const result = await updateMenuItem(req.params.id, req.params.itemId, req.body);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "menu_item_update",
+      targetType: "client",
+      targetId: req.params.id,
+      details: { item_id: req.params.itemId },
+    });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /clients/:id/menu/:itemId", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.delete("/clients/:id/menu/:itemId", asyncHandler(async (req, res) => {
+  try {
+    const result = await deleteMenuItem(req.params.id, req.params.itemId);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "menu_item_delete",
+      targetType: "client",
+      targetId: req.params.id,
+      details: { item_id: req.params.itemId },
+    });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    const msg = logRouteError("admin:DELETE /clients/:id/menu/:itemId", e);
     res.status(400).json({ gabim: msg });
   }
 }));
