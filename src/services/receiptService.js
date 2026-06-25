@@ -93,7 +93,9 @@ function buildReceiptPayload(clientId, business, body) {
     time,
     printed_date: printed.date,
     printed_time: printed.time,
-    paper_width_mm: business.receipt_width_mm,
+    paper_width_mm: [58, 80].includes(Number(body.receipt_width_mm))
+      ? Number(body.receipt_width_mm)
+      : business.receipt_width_mm,
   };
 }
 
