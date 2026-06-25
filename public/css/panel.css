@@ -930,3 +930,64 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
   margin: 0.75rem 0;
   font-size: 0.9rem;
 }
+
+.hub-fiscal-intro {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.hub-fiscal-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.15rem 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hub-fiscal-field label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.45rem;
+}
+
+.hub-fiscal-field input {
+  margin-bottom: 0.4rem;
+  font-size: 16px;
+  padding: 0.65rem 0.85rem;
+}
+
+.hub-field-note {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.hub-fiscal-check {
+  align-items: flex-start;
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.hub-fiscal-check input {
+  width: auto;
+  margin: 0.2rem 0 0;
+  flex-shrink: 0;
+}
+
+.hub-fiscal-actions {
+  margin-top: 1.25rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border);
+}
+
+.hub-fiscal-actions .btn {
+  min-width: 220px;
+  padding: 0.7rem 1.35rem;
+  font-size: 1rem;
+}

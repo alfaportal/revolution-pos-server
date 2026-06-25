@@ -323,16 +323,38 @@
       </div>
 
       <div id="hub-panel-fiskale" class="hub-panel hidden">
-        <div class="form-row">
-          <div><label>Nr.Fisk</label><input type="text" id="hub-fiscal-nr"></div>
-          <div><label>COM Port</label><input type="text" id="hub-fiscal-com" placeholder="COM3"></div>
+        <p class="hub-fiscal-intro">
+          Konfiguroni arkën fiskale ATK për këtë biznes. POS lidhet me arkën përmes portit COM në kompjuterin lokal ku është instaluar.
+        </p>
+        <div class="hub-fiscal-form">
+          <div class="hub-fiscal-field">
+            <label for="hub-fiscal-nr">Numri fiskal (Nr.Fisk)</label>
+            <input type="text" id="hub-fiscal-nr" placeholder="p.sh. 123456789" autocomplete="off">
+            <p class="hub-field-note">Numri i regjistrimit fiskal nga ATK — shfaqet në faturat e printuara dhe raportet Z.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="hub-fiscal-com">Porti COM</label>
+            <input type="text" id="hub-fiscal-com" class="mono" placeholder="p.sh. COM3" autocomplete="off" autocapitalize="characters">
+            <p class="hub-field-note">Porti serial (USB) ku lidhet POS me arkën fiskale. Gjeni në Menaxherin e Pajisjeve të Windows (p.sh. COM3, COM4).</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="hub-fiscal-operator">Operatori / përgjegjësi</label>
+            <input type="text" id="hub-fiscal-operator" placeholder="p.sh. Agron Berisha" autocomplete="off">
+            <p class="hub-field-note">Emri i operatorit që regjistrohet në arkë dhe shfaqet në faturat fiskale si përgjegjës i shitjes.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="hub-fiscal-model">Modeli i arkës fiskale</label>
+            <input type="text" id="hub-fiscal-model" placeholder="p.sh. Fiscal Albania FA-500" autocomplete="off">
+            <p class="hub-field-note">Marka dhe modeli i arkës (opsionale) — për referencë teknike dhe mbështetje.</p>
+          </div>
         </div>
-        <div class="form-row">
-          <div><label>Operatori</label><input type="text" id="hub-fiscal-operator"></div>
-          <div><label>Modeli arkës</label><input type="text" id="hub-fiscal-model"></div>
+        <label class="hub-check hub-fiscal-check">
+          <input type="checkbox" id="hub-fiscal-enabled" checked>
+          <span>Arka fiskale aktive — çaktivizoni vetëm nëse biznesi nuk përdor ATK për momentin</span>
+        </label>
+        <div class="hub-fiscal-actions">
+          <button type="button" class="btn btn-primary" id="hub-save-fiskale">Ruaj settings fiskale</button>
         </div>
-        <label class="hub-check"><input type="checkbox" id="hub-fiscal-enabled" checked> Arka fiskale aktive</label>
-        <button type="button" class="btn btn-primary btn-sm" id="hub-save-fiskale">Ruaj fiskale</button>
       </div>
 
       <div id="hub-panel-linqe" class="hub-panel hidden">
