@@ -87,6 +87,37 @@
   line-height: 1.4;
 }
 
+.owner-auth-form.hidden {
+  display: none;
+}
+
+.owner-forgot-link {
+  width: 100%;
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+}
+
+.owner-reset-hint {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.alert-ok {
+  background: #052e16;
+  color: #86efac;
+  border: 1px solid #166534;
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-ok.hidden {
+  display: none;
+}
+
 .owner-header {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
 }

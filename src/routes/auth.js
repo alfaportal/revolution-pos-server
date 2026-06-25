@@ -9,6 +9,13 @@ const {
   completeOwnerSetup,
   getOwnerLoginBranding,
 } = require("../services/userService");
+const {
+  clearFailCount,
+  handleOwnerWrongPassword,
+  requestOwnerPasswordReset,
+  completeOwnerPasswordReset,
+  MIN_PASSWORD,
+} = require("../services/ownerPasswordReset");
 
 const router = express.Router();
 
@@ -96,7 +103,8 @@ router.post("/owner/login", async (req, res) => {
 
     const ok = await verifyUserPassword(user, password);
     if (!ok) {
-      return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
+      const body = await handleOwnerWrongPassword(user, email);
+      return res.status(401).json(body);
     }
 
     if (user.roli === "super_admin") {
@@ -111,6 +119,8 @@ router.post("/owner/login", async (req, res) => {
     if (!user.client_id) {
       return res.status(403).json({ gabim: "Llogaria nuk është e lidhur me restorant." });
     }
+
+    clearFailCount(email);
 
     const token = signToken({
       sub: user.id,
@@ -191,6 +201,64 @@ router.post("/owner/setup", async (req, res) => {
 router.post("/owner/logout", (_req, res) => {
   res.clearCookie("owner_token");
   res.json({ ok: true });
+});
+
+router.post("/owner/password/forgot", async (req, res) => {
+  try {
+    const email = req.body?.email;
+    const result = await requestOwnerPasswordReset(email);
+    res.json(result);
+  } catch (e) {
+    if (e.message === "EMAIL_NOT_CONFIGURED") {
+      return res.status(503).json({
+        gabim: "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY + EMAIL_FROM.",
+        code: "EMAIL_NOT_CONFIGURED",
+      });
+    }
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/owner/password/reset", async (req, res) => {
+  try {
+    const { email, code, new_password: newPassword } = req.body || {};
+    const user = await completeOwnerPasswordReset(email, code, newPassword);
+
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      emri: user.emri,
+      roli: user.roli,
+      client_id: user.client_id,
+    });
+
+    res.cookie("owner_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      ok: true,
+      message: "Fjalëkalimi u ndryshua. Je i kyçur.",
+      token,
+      user: {
+        id: user.id,
+        emri: user.emri,
+        email: user.email,
+        roli: user.roli,
+        client_id: user.client_id,
+      },
+    });
+  } catch (e) {
+    const status =
+      e.code === "INVALID_CODE" || e.code === "CODE_EXPIRED" ? 400 : 500;
+    res.status(status).json({
+      gabim: e.message,
+      code: e.code || null,
+    });
+  }
 });
 
 router.get("/me", authRequired, (req, res) => {
