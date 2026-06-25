@@ -176,6 +176,63 @@ async function processFiscalPayment(body) {
   };
 }
 
+function suggestComPorts(current) {
+  const cur = String(current || "").trim().toUpperCase();
+  const alts = [];
+  for (let n = 1; n <= 8 && alts.length < 3; n += 1) {
+    const label = `COM${n}`;
+    if (label !== cur) alts.push(label);
+  }
+  return alts;
+}
+
+async function getFiscalDiagnostics(clientId) {
+  const settings = await getFiscalSettings(clientId);
+  const db = getSupabase();
+  const { data: lastReceipt } = await db
+    .from("fiscal_receipts")
+    .select("register_connected, com_port, printed_at, status")
+    .eq("client_id", clientId)
+    .order("printed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const com = String(settings.fiscal_com_port || "").trim();
+  const issues = [];
+  if (!settings.fiscal_enabled) {
+    issues.push("Arka fiskale është çaktivizuar në settings.");
+  }
+  if (!com) {
+    issues.push("Porti COM nuk është konfiguruar.");
+  } else if (!/^COM\d+$/i.test(com)) {
+    issues.push("Formati i portit COM duket i pavlefshëm (p.sh. COM3).");
+  }
+
+  let server_status = "unknown";
+  if (lastReceipt?.printed_at) {
+    const ageMs = Date.now() - new Date(lastReceipt.printed_at).getTime();
+    if (ageMs <= 7 * 24 * 60 * 60 * 1000) {
+      server_status = lastReceipt.register_connected ? "connected" : "disconnected";
+    }
+  }
+
+  return {
+    fiscal_enabled: settings.fiscal_enabled,
+    fiscal_com_port: com,
+    server_status,
+    last_receipt: lastReceipt
+      ? {
+          register_connected: lastReceipt.register_connected,
+          com_port: lastReceipt.com_port || "",
+          printed_at: lastReceipt.printed_at,
+          status: lastReceipt.status,
+        }
+      : null,
+    issues,
+    com_port_suggestions: suggestComPorts(com),
+  };
+}
+
 /** Payload që POS Electron përdor për të dërguar komandë në COM port */
 async function getFiscalPrintPayload(body) {
   const license = await resolveLicense(body);
@@ -211,6 +268,7 @@ async function getFiscalPrintPayload(body) {
 module.exports = {
   getFiscalSettings,
   updateFiscalSettings,
+  getFiscalDiagnostics,
   processFiscalPayment,
   getFiscalPrintPayload,
 };

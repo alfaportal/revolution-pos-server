@@ -270,6 +270,20 @@
         <p class="owner-fiscal-intro">
           Këto të dhëna lidhen me arkën tuaj ATK. COM Port gjendet në Device Manager të Windows.
         </p>
+
+        <div class="fiscal-diagnostics">
+          <div class="fiscal-status-row">
+            <span class="fiscal-status-label">Statusi i lidhjes</span>
+            <span id="fiscal-conn-status" class="fiscal-conn-badge unknown">Duke kontrolluar…</span>
+          </div>
+          <div class="fiscal-diag-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-fiscal-test">Testo lidhjen</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-fiscal-autofind">Gjej automatikisht</button>
+          </div>
+          <div id="fiscal-diag-msg" class="fiscal-diag-msg hidden"></div>
+          <ul id="fiscal-diag-suggestions" class="fiscal-diag-suggestions hidden"></ul>
+        </div>
+
         <div class="hub-fiscal-form">
           <div class="hub-fiscal-field">
             <label for="fiscal-nr">Numri fiskal (Nr.Fisk)</label>
@@ -367,6 +381,7 @@
     </div>
   </div>
 
-  <script src="/js/owner.js?v=10"></script>
+  <script src="/js/fiscalDiagnostics.js?v=1"></script>
+  <script src="/js/owner.js?v=11"></script>
 </body>
 </html>

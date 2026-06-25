@@ -384,7 +384,144 @@ async function loadFiscalSettings() {
     if (op) op.value = settings.fiscal_operator_name || "";
     if (model) model.value = settings.fiscal_device_model || "";
     if (enabled) enabled.checked = settings.fiscal_enabled !== false;
+    await loadFiscalDiagnostics();
   } catch { /* */ }
+}
+
+function setFiscalConnStatus(state, label) {
+  const el = document.getElementById("fiscal-conn-status");
+  if (!el) return;
+  el.className = "fiscal-conn-badge " + state;
+  el.textContent = label;
+}
+
+function escHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
+}
+
+function showFiscalDiagMsg(text, ok, suggestions) {
+  const msg = document.getElementById("fiscal-diag-msg");
+  const list = document.getElementById("fiscal-diag-suggestions");
+  if (msg) {
+    if (!text) {
+      msg.textContent = "";
+      msg.className = "fiscal-diag-msg hidden";
+    } else {
+      msg.textContent = text;
+      msg.className = "fiscal-diag-msg " + (ok ? "ok" : "err");
+    }
+  }
+  if (list) {
+    if (!suggestions?.length) {
+      list.innerHTML = "";
+      list.classList.add("hidden");
+    } else {
+      list.innerHTML = suggestions.map(s => `<li>${escHtml(s)}</li>`).join("");
+      list.classList.remove("hidden");
+    }
+  }
+}
+
+async function loadFiscalDiagnostics() {
+  try {
+    const { diagnostics } = await api("/api/owner/fiscal/diagnostics");
+    if (!diagnostics.fiscal_enabled) {
+      setFiscalConnStatus("unknown", "Çaktivizuar");
+      return;
+    }
+    if (diagnostics.server_status === "connected") {
+      setFiscalConnStatus("connected", "E lidhur");
+      return;
+    }
+    if (diagnostics.server_status === "disconnected") {
+      setFiscalConnStatus("disconnected", "E shkëputur");
+      return;
+    }
+    setFiscalConnStatus("unknown", "E panjohur — testoni");
+  } catch {
+    setFiscalConnStatus("unknown", "E panjohur");
+  }
+}
+
+async function runFiscalConnectionTest() {
+  const testBtn = document.getElementById("btn-fiscal-test");
+  const autoBtn = document.getElementById("btn-fiscal-autofind");
+  const com = document.getElementById("fiscal-com")?.value || "";
+  const enabled = document.getElementById("fiscal-enabled")?.checked !== false;
+
+  if (!enabled) {
+    showFiscalDiagMsg("Arka fiskale është çaktivizuar. Aktivizojeni për të testuar lidhjen.", false, []);
+    setFiscalConnStatus("unknown", "Çaktivizuar");
+    return;
+  }
+
+  if (!window.FiscalDiagnostics) {
+    showFiscalDiagMsg("Moduli i diagnostikës nuk u ngarkua. Rifreskoni faqen.", false, []);
+    return;
+  }
+
+  showFiscalDiagMsg("");
+  setFiscalConnStatus("testing", "Duke testuar…");
+  if (testBtn) testBtn.disabled = true;
+  if (autoBtn) autoBtn.disabled = true;
+
+  try {
+    const result = await FiscalDiagnostics.testConnection(com);
+    if (result.ok) {
+      setFiscalConnStatus("connected", "E lidhur");
+      showFiscalDiagMsg(result.message || "Lidhja me arkën fiskale u verifikua.", true, []);
+      return;
+    }
+    setFiscalConnStatus("disconnected", "E shkëputur");
+    showFiscalDiagMsg(result.error || "Lidhja dështoi.", false, result.suggestions || []);
+  } catch (err) {
+    setFiscalConnStatus("disconnected", "E shkëputur");
+    showFiscalDiagMsg(err.message || "Gabim gjatë testit.", false, FiscalDiagnostics.comSuggestions(com).length
+      ? [`Provo ${FiscalDiagnostics.comSuggestions(com).join(", ")}`, "Kontrollo kabllot"]
+      : ["Kontrollo kabllot"]);
+  } finally {
+    if (testBtn) testBtn.disabled = false;
+    if (autoBtn) autoBtn.disabled = false;
+  }
+}
+
+async function runFiscalAutoFind() {
+  const testBtn = document.getElementById("btn-fiscal-test");
+  const autoBtn = document.getElementById("btn-fiscal-autofind");
+  const comInput = document.getElementById("fiscal-com");
+
+  if (!window.FiscalDiagnostics) {
+    showFiscalDiagMsg("Moduli i diagnostikës nuk u ngarkua. Rifreskoni faqen.", false, []);
+    return;
+  }
+
+  showFiscalDiagMsg("");
+  setFiscalConnStatus("testing", "Duke skanuar…");
+  if (testBtn) testBtn.disabled = true;
+  if (autoBtn) autoBtn.disabled = true;
+
+  try {
+    const result = await FiscalDiagnostics.autoFindPort();
+    if (result.ok) {
+      setFiscalConnStatus("connected", "E lidhur");
+      if (result.com_port && comInput) {
+        comInput.value = result.com_port;
+      }
+      showFiscalDiagMsg(result.message || "Pajisja u gjet.", true, result.com_port ? [] : ["Ruajeni settings pas përditësimit të COM portit"]);
+      return;
+    }
+    setFiscalConnStatus("disconnected", "E shkëputur");
+    showFiscalDiagMsg(result.error || "Nuk u gjet arkë fiskale.", false, result.suggestions || []);
+  } catch (err) {
+    setFiscalConnStatus("disconnected", "E shkëputur");
+    showFiscalDiagMsg(err.message || "Skanimi dështoi.", false, ["Kontrollo kabllot", "Provo COM1, COM2, COM4"]);
+  } finally {
+    if (testBtn) testBtn.disabled = false;
+    if (autoBtn) autoBtn.disabled = false;
+  }
 }
 
 async function exportZReport(format) {
@@ -1037,6 +1174,12 @@ document.getElementById("btn-zreport-csv")?.addEventListener("click", () => {
 document.getElementById("btn-zreport-html")?.addEventListener("click", () => {
   exportZReport("html").catch(err => alert(err.message));
 });
+document.getElementById("btn-fiscal-test")?.addEventListener("click", () => {
+  runFiscalConnectionTest();
+});
+document.getElementById("btn-fiscal-autofind")?.addEventListener("click", () => {
+  runFiscalAutoFind();
+});
 document.getElementById("btn-fiscal-save")?.addEventListener("click", async () => {
   const msg = document.getElementById("fiscal-msg");
   if (msg) {
@@ -1058,6 +1201,7 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
       msg.textContent = "Settings fiskale u ruajtën.";
       msg.className = "owner-license-msg ok";
     }
+    await loadFiscalDiagnostics();
   } catch (err) {
     if (msg) {
       msg.textContent = err.message;

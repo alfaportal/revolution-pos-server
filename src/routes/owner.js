@@ -19,7 +19,7 @@ const {
   zReportToCsv,
   zReportToHtml,
 } = require("../services/zReportService");
-const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
+const { getFiscalSettings, updateFiscalSettings, getFiscalDiagnostics } = require("../services/fiscalService");
 const {
   listOwnerMenu,
   addMenuItem,
@@ -168,6 +168,15 @@ router.get("/fiscal/settings", async (req, res) => {
   try {
     const settings = await getFiscalSettings(req.user.client_id);
     res.json({ ok: true, settings });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/fiscal/diagnostics", async (req, res) => {
+  try {
+    const diagnostics = await getFiscalDiagnostics(req.user.client_id);
+    res.json({ ok: true, diagnostics });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
   }
