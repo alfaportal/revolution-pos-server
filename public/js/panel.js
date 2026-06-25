@@ -598,6 +598,17 @@ function renderAdminMenuTable() {
   });
 }
 
+function updateAdminMenuSyncHint(syncedAt) {
+  const hint = document.getElementById("hub-menu-sync");
+  if (!hint) return;
+  if (syncedAt) {
+    adminMenuCache.synced_at = syncedAt;
+    hint.textContent = `Menuja u përditësua: ${fmtDateTime(syncedAt)} — kamarieri, tavolina, banaku dhe POS e marrin brenda ~15 sek.`;
+  } else {
+    hint.textContent = "Pas ruajtjes, menuja shfaqet te kamarieri, tavolina dhe banaku.";
+  }
+}
+
 async function loadAdminMenu() {
   if (!hubClientId) return;
   try {
@@ -609,12 +620,7 @@ async function loadAdminMenu() {
     };
     renderAdminCategoryList(adminMenuCache.categories);
     renderAdminMenuTable();
-    const hint = document.getElementById("hub-menu-sync");
-    if (hint) {
-      hint.textContent = data.synced_at
-        ? `Menuja u përditësua: ${fmtDateTime(data.synced_at)} — shfaqet te tabletat brenda ~15 sek.`
-        : "Pas ruajtjes, menuja shfaqet te kamarieri dhe tavolina.";
-    }
+    updateAdminMenuSyncHint(data.synced_at);
   } catch (err) {
     showHubMsg(err.message, false);
   }
@@ -632,7 +638,7 @@ async function saveAdminMenuRow(row) {
   }
   try {
     showHubMsg("");
-    const { item } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
+    const { item, synced_at } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ name, category, price }),
     });
@@ -643,6 +649,7 @@ async function saveAdminMenuRow(row) {
     }
     renderAdminCategoryList(adminMenuCache.categories);
     renderAdminMenuTable();
+    updateAdminMenuSyncHint(synced_at);
     showHubMsg("Artikulli u ruajt.", true);
   } catch (err) {
     showHubMsg(err.message, false);
@@ -656,12 +663,13 @@ async function toggleAdminMenuRow(row) {
   if (!item) return;
   try {
     showHubMsg("");
-    const { item: updated } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
+    const { item: updated, synced_at } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ active: !item.active }),
     });
     item.active = updated.active;
     renderAdminMenuTable();
+    updateAdminMenuSyncHint(synced_at);
     showHubMsg(updated.active ? "Artikulli u aktivizua." : "Artikulli u fsheh.", true);
   } catch (err) {
     showHubMsg(err.message, false);
@@ -675,9 +683,10 @@ async function deleteAdminMenuRow(row) {
   if (!confirm(`Fshi "${name}" përgjithmonë?`)) return;
   try {
     showHubMsg("");
-    await api(`/api/admin/clients/${hubClientId}/menu/${id}`, { method: "DELETE" });
+    const { synced_at } = await api(`/api/admin/clients/${hubClientId}/menu/${id}`, { method: "DELETE" });
     adminMenuCache.items = adminMenuCache.items.filter(i => i.id !== id);
     renderAdminMenuTable();
+    updateAdminMenuSyncHint(synced_at);
     showHubMsg("Artikulli u fshi.", true);
   } catch (err) {
     showHubMsg(err.message, false);
@@ -1590,7 +1599,7 @@ document.getElementById("hub-menu-add")?.addEventListener("click", async () => {
   }
   try {
     showHubMsg("");
-    const { item } = await api(`/api/admin/clients/${hubClientId}/menu`, {
+    const { item, synced_at } = await api(`/api/admin/clients/${hubClientId}/menu`, {
       method: "POST",
       body: JSON.stringify({ name, category, price }),
     });
@@ -1602,6 +1611,7 @@ document.getElementById("hub-menu-add")?.addEventListener("click", async () => {
     document.getElementById("hub-menu-price").value = "";
     renderAdminCategoryList(adminMenuCache.categories);
     renderAdminMenuTable();
+    updateAdminMenuSyncHint(synced_at);
     showHubMsg("Artikulli u shtua.", true);
   } catch (err) {
     showHubMsg(err.message, false);

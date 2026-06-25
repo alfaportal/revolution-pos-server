@@ -3,6 +3,7 @@ const { getSupabase } = require("../db");
 const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos, syncSaleFromPos } = require("./salesService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
+const { buildMenuCategories, mapMenuItemForWeb } = require("./menuCatalogService");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = WEB_WAITER;
@@ -56,23 +57,6 @@ function assertWaiterOnTable(existing, waiterName, tableNumber) {
   }
 }
 
-function buildMenuCategories(dbCategories, menuItems) {
-  const fromDb = (dbCategories || []).map(c => String(c.name || "").trim()).filter(Boolean);
-  const fromMenu = [
-    ...new Set((menuItems || []).map(m => String(m.category || "").trim()).filter(Boolean)),
-  ];
-  if (!fromDb.length) return fromMenu;
-  const seen = new Set(fromDb);
-  const merged = [...fromDb];
-  for (const name of fromMenu) {
-    if (!seen.has(name)) {
-      seen.add(name);
-      merged.push(name);
-    }
-  }
-  return merged;
-}
-
 async function getWaiterBootstrap(clientId) {
   const client = await assertClient(clientId);
   const db = getSupabase();
@@ -106,12 +90,7 @@ async function getWaiterBootstrap(clientId) {
     table_count: tableCount,
     synced_at: settings?.synced_at || null,
     categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).map(m => ({
-      id: m.local_id,
-      name: m.name,
-      category: String(m.category || "").trim(),
-      price: Number(m.price),
-    })),
+    menu: (menu || []).map(mapMenuItemForWeb),
     staff: (staff || []).map(s => s.name),
     tables,
   };

@@ -100,15 +100,11 @@
   }
 
   function getCategoryList() {
-    if (bootstrap.categories?.length) return bootstrap.categories;
-    return [...new Set((bootstrap.menu || []).map(m => m.category).filter(Boolean))];
+    return MenuCatalog.getCategoryList(bootstrap);
   }
 
   function pickDefaultCategory() {
-    const cats = getCategoryList();
-    if (!cats.length) return "";
-    const withItems = cats.find(c => (bootstrap.menu || []).some(m => m.category === c));
-    return withItems || cats[0] || "";
+    return MenuCatalog.pickDefaultCategory(bootstrap);
   }
 
   function openOrder(num) {
@@ -148,15 +144,13 @@
   }
 
   function renderMenu() {
+    const filtered = MenuCatalog.filterMenuItems(bootstrap, activeCategory);
+    activeCategory = filtered.category;
+    const items = filtered.items;
     const menu = bootstrap.menu || [];
-    let items = menu.filter(m => !activeCategory || m.category === activeCategory);
-    if (!items.length && menu.length) {
-      activeCategory = pickDefaultCategory();
-      items = menu.filter(m => !activeCategory || m.category === activeCategory);
-    }
     const grid = $("menu-grid");
     if (!menu.length) {
-      grid.innerHTML = '<p class="hint">Menuja është bosh. Shtoni artikuj nga Super Admin (Menu) ose sinkronizoni nga POS-i lokal.</p>';
+      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
       return;
     }
     if (!items.length) {
@@ -191,8 +185,9 @@
     } else {
       lines.innerHTML = cart.map((it, idx) => `
         <div class="cart-line">
-          <span>${it.quantity}× ${escapeHtml(it.name)}</span>
-          <span>
+          <span>${it.quantity}× ${escapeHtml(it.name)} <small class="cart-unit-price">${formatEuro(it.price)}</small></span>
+          <span class="cart-line-total">${formatEuro(it.price * it.quantity)}</span>
+          <span class="cart-line-actions">
             <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem;margin-right:0.25rem" data-minus="${idx}">−</button>
             <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem" data-plus="${idx}">+</button>
           </span>

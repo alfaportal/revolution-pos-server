@@ -432,6 +432,17 @@ function setMenuMsg(text, ok) {
   msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
 }
 
+function updateOwnerMenuSyncHint(syncedAt) {
+  const hint = document.getElementById("menu-sync-hint");
+  if (!hint) return;
+  if (syncedAt) {
+    ownerMenuCache.synced_at = syncedAt;
+    hint.textContent = `Menuja u përditësua: ${fmtTime(syncedAt)} — kamarieri, tavolina, banaku dhe POS e marrin brenda ~15 sekondave.`;
+  } else {
+    hint.textContent = "Menuja do të shfaqet te kamarieri, tavolina dhe banaku pas ruajtjes.";
+  }
+}
+
 function renderMenuCategoryOptions(categories) {
   const list = document.getElementById("menu-category-list");
   if (!list) return;
@@ -492,12 +503,7 @@ async function loadOwnerMenu() {
   };
   renderMenuCategoryOptions(ownerMenuCache.categories);
   renderMenuTable();
-  const hint = document.getElementById("menu-sync-hint");
-  if (hint) {
-    hint.textContent = data.synced_at
-      ? `Menuja u përditësua: ${fmtTime(data.synced_at)} — tabletat e porosive e marrin brenda ~15 sekondave.`
-      : "Menuja do të shfaqet te kamarieri dhe tavolina pas ruajtjes.";
-  }
+  updateOwnerMenuSyncHint(data.synced_at);
 }
 
 async function saveMenuRow(row) {
@@ -512,7 +518,7 @@ async function saveMenuRow(row) {
   }
   try {
     setMenuMsg("");
-    const { item } = await api(`/api/owner/menu/${id}`, {
+    const { item, synced_at } = await api(`/api/owner/menu/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ name, category, price }),
     });
@@ -523,6 +529,7 @@ async function saveMenuRow(row) {
       renderMenuCategoryOptions(ownerMenuCache.categories);
     }
     renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
     setMenuMsg("Artikulli u ruajt — shfaqet te tabletat e porosive.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
@@ -536,12 +543,13 @@ async function toggleMenuRow(row) {
   if (!item) return;
   try {
     setMenuMsg("");
-    const { item: updated } = await api(`/api/owner/menu/${id}`, {
+    const { item: updated, synced_at } = await api(`/api/owner/menu/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ active: !item.active }),
     });
     item.active = updated.active;
     renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
     setMenuMsg(updated.active ? "Artikulli u aktivizua." : "Artikulli u fsheh nga tabletat.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
@@ -555,9 +563,10 @@ async function deleteMenuRow(row) {
   if (!confirm(`Fshi "${name}" përgjithmonë?`)) return;
   try {
     setMenuMsg("");
-    await api(`/api/owner/menu/${id}`, { method: "DELETE" });
+    const { synced_at } = await api(`/api/owner/menu/${id}`, { method: "DELETE" });
     ownerMenuCache.items = ownerMenuCache.items.filter(i => i.id !== id);
     renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
     setMenuMsg("Artikulli u fshi.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
@@ -686,7 +695,7 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
   }
   try {
     setMenuMsg("");
-    const { item } = await api("/api/owner/menu", {
+    const { item, synced_at } = await api("/api/owner/menu", {
       method: "POST",
       body: JSON.stringify({ name, category, price }),
     });
@@ -698,6 +707,7 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     document.getElementById("menu-add-price").value = "";
     renderMenuCategoryOptions(ownerMenuCache.categories);
     renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
     setMenuMsg("Artikulli u shtua — shfaqet te tabletat e porosive.", true);
   } catch (err) {
     setMenuMsg(err.message, false);

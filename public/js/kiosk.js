@@ -53,6 +53,16 @@
     return data;
   }
 
+  function updateSyncHint() {
+    const hint = $("sync-hint");
+    if (!hint) return;
+    if (bootstrap?.synced_at) {
+      hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}. Porosia shkon te banaku — jo faturë.`;
+    } else {
+      hint.textContent = "Menuja ende nuk është sinkronizuar nga POS ose pronari.";
+    }
+  }
+
   async function loadBootstrap() {
     if (!slug) throw new Error("URL i gabuar. Duhet /kiosk/[slug]?key=...&table=5");
     if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
@@ -63,28 +73,22 @@
     $("kiosk-table-label").textContent = `T${tableNumber}`;
     document.title = `${bootstrap.restaurant_name || "Tavolinë"} — T${tableNumber}`;
 
-    const hint = $("sync-hint");
-    if (bootstrap.synced_at) {
-      hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}. Porosia shkon te banaku — jo faturë.`;
-    }
-
-    activeCategory = bootstrap.categories?.[0] || "";
+    activeCategory = MenuCatalog.pickDefaultCategory(bootstrap);
+    updateSyncHint();
     renderCategories();
     renderMenu();
     renderCart();
   }
 
   function renderCategories() {
-    const cats = bootstrap.categories?.length
-      ? bootstrap.categories
-      : [...new Set((bootstrap.menu || []).map(m => m.category))];
+    const cats = MenuCatalog.getCategoryList(bootstrap);
     const tabs = $("cat-tabs");
     tabs.innerHTML = cats.map(c => `
       <button type="button" class="cat-tab${c === activeCategory ? " active" : ""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>
     `).join("");
     tabs.querySelectorAll(".cat-tab").forEach(btn => {
       btn.addEventListener("click", () => {
-        activeCategory = btn.dataset.cat;
+        activeCategory = btn.getAttribute("data-cat") || "";
         renderCategories();
         renderMenu();
       });
@@ -92,10 +96,17 @@
   }
 
   function renderMenu() {
-    const items = (bootstrap.menu || []).filter(m => !activeCategory || m.category === activeCategory);
+    const filtered = MenuCatalog.filterMenuItems(bootstrap, activeCategory);
+    activeCategory = filtered.category;
+    const items = filtered.items;
+    const menu = bootstrap.menu || [];
     const grid = $("menu-grid");
+    if (!menu.length) {
+      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
+      return;
+    }
     if (!items.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka artikuj. Sinkronizoni menuën nga POS.</p>';
+      grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
       return;
     }
     grid.innerHTML = items.map(m => `
@@ -105,8 +116,8 @@
       </button>`).join("");
     grid.querySelectorAll(".menu-item").forEach(btn => {
       btn.addEventListener("click", () => addToCart({
-        name: btn.dataset.name,
-        price: Number(btn.dataset.price),
+        name: btn.getAttribute("data-name") || btn.dataset.name,
+        price: Number(btn.getAttribute("data-price") || btn.dataset.price),
       }));
     });
   }
@@ -125,8 +136,9 @@
     } else {
       lines.innerHTML = cart.map((it, idx) => `
         <div class="cart-line">
-          <span>${it.quantity}× ${escapeHtml(it.name)}</span>
-          <span>
+          <span>${it.quantity}× ${escapeHtml(it.name)} <small class="cart-unit-price">${formatEuro(it.price)}</small></span>
+          <span class="cart-line-total">${formatEuro(it.price * it.quantity)}</span>
+          <span class="cart-line-actions">
             <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem;margin-right:0.25rem" data-minus="${idx}">−</button>
             <button type="button" class="btn btn-ghost" style="padding:0.2rem 0.4rem" data-plus="${idx}">+</button>
           </span>
@@ -183,27 +195,22 @@
     }
   });
 
-  loadBootstrap().catch(e => showErr($("order-err"), e.message));
-
   async function refreshMenu() {
     if (!bootstrap) return;
     try {
       const data = await api(`/api/kiosk/${encodeURIComponent(slug)}/menu${apiQuery()}`);
-      if (data.synced_at && data.synced_at === bootstrap.synced_at) return;
       bootstrap.synced_at = data.synced_at;
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;
-      const hint = $("sync-hint");
-      if (bootstrap.synced_at) {
-        hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}. Porosia shkon te banaku — jo faturë.`;
-      }
-      if (activeCategory && !bootstrap.categories.includes(activeCategory)) {
-        activeCategory = bootstrap.categories?.[0] || "";
+      updateSyncHint();
+      if (activeCategory && !MenuCatalog.getCategoryList(bootstrap).includes(activeCategory)) {
+        activeCategory = MenuCatalog.pickDefaultCategory(bootstrap);
       }
       renderCategories();
       renderMenu();
     } catch { /* ignore */ }
   }
 
+  loadBootstrap().catch(e => showErr($("order-err"), e.message));
   setInterval(refreshMenu, 15000);
 })();

@@ -1,8 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
-const { getSupabase } = require("../db");
-const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");
-const { getActiveTableOrders, getLicenseForClient } = require("./waiterService");
+const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");const { getActiveTableOrders, getLicenseForClient } = require("./waiterService");
 const { WEB_KIOSK, isKioskWaiterName } = require("../lib/orderSource");
+const { getClientMenuCatalog } = require("./menuCatalogService");
 
 const KIOSK_DEVICE = WEB_KIOSK;
 
@@ -11,31 +10,7 @@ function tableWaiterLabel(tableNumber) {
 }
 
 async function getKioskMenu(clientId) {
-  const db = getSupabase();
-  const [{ data: settings }, { data: categories }, { data: menu }] = await Promise.all([
-    db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
-    db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
-    db
-      .from("pos_menu_items")
-      .select("local_id, name, category, price, active")
-      .eq("client_id", clientId)
-      .eq("active", true)
-      .order("category")
-      .order("name"),
-  ]);
-
-  return {
-    restaurant_name: settings?.restaurant_name || "",
-    table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
-    synced_at: settings?.synced_at || null,
-    categories: (categories || []).map(c => c.name),
-    menu: (menu || []).map(m => ({
-      id: m.local_id,
-      name: m.name,
-      category: m.category,
-      price: Number(m.price),
-    })),
-  };
+  return getClientMenuCatalog(clientId, { activeOnly: true });
 }
 
 async function submitKioskOrder(client, body) {

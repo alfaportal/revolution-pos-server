@@ -64,6 +64,21 @@
       .replace(/"/g, "&quot;");
   }
 
+  function formatEuro(n) {
+    return Number(n || 0).toFixed(2) + " €";
+  }
+
+  function renderOrderItem(it) {
+    const qty = Number(it.quantity) || 1;
+    const price = Number(it.price) || 0;
+    const lineTotal = price * qty;
+    return `<li>
+      <span class="qty">${qty}×</span>
+      <span class="item-name">${escapeHtml(it.name)}</span>
+      <span class="item-price">${formatEuro(price)}${qty > 1 ? `<small> = ${formatEuro(lineTotal)}</small>` : ""}</span>
+    </li>`;
+  }
+
   function renderOrders(orders) {
     hideError();
     countEl.textContent = `${orders.length} porosi`;
@@ -80,9 +95,7 @@
     gridEl.innerHTML = orders.map(o => {
       const isNew = !knownIds.has(o.id);
       const src = sourceMeta(o);
-      const items = (o.items_json || [])
-        .map(it => `<li><span class="qty">${it.quantity}×</span><span>${escapeHtml(it.name)}</span></li>`)
-        .join("");
+      const items = (o.items_json || []).map(renderOrderItem).join("");
       return `
         <article class="order-ticket${isNew ? " new" : ""}" data-id="${o.id}">
           <div class="ticket-kind">Porosi — jo faturë</div>

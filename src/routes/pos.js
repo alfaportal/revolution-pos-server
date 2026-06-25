@@ -1,8 +1,28 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
-const { syncCatalogFromPos } = require("../services/posSyncService");
+const { syncCatalogFromPos, pullCatalogForLicense } = require("../services/posSyncService");
 
 const router = express.Router();
+
+function catalogLicenseBody(req) {
+  return {
+    celesi:
+      req.query.celesi ||
+      req.query.license_key ||
+      req.body?.celesi ||
+      req.body?.license_key ||
+      req.headers["x-license-key"],
+  };
+}
+
+router.get("/catalog", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const catalog = await pullCatalogForLicense(catalogLicenseBody(req));
+    res.json({ ok: true, ...catalog });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
 
 router.post("/catalog/sync", licenseApiKeyOptional, async (req, res) => {
   try {

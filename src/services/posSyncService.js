@@ -2,6 +2,7 @@ const { findLicenseByKey, normalizeKey } = require("./licenseService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { getSupabase } = require("../db");
 const { withPgTransaction } = require("../lib/pgPool");
+const { getCatalogForPos } = require("./menuCatalogService");
 
 async function resolveLicense(body) {
   const celesi = normalizeKey(body.celesi || body.license_key);
@@ -250,4 +251,9 @@ async function syncCatalogFromPos(body) {
   return syncCatalogFromPosSupabase(license, body);
 }
 
-module.exports = { syncCatalogFromPos };
+async function pullCatalogForLicense(body) {
+  const license = await resolveLicense(body);
+  return getCatalogForPos(license.client_id);
+}
+
+module.exports = { syncCatalogFromPos, pullCatalogForLicense };

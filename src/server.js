@@ -154,7 +154,7 @@ async function start() {
     console.log(`  🍹 Banak:       /bar/:slug?key=...`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
     console.log(`  🪑 Tavolinë:    /kiosk/:slug?key=...&table=5`);
-    console.log(`  📋 POS catalog:  POST /api/v1/pos/catalog/sync`);
+    console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
     console.log(`  🧾 Fiscal pay:  POST /api/v1/fiscal/pay`);

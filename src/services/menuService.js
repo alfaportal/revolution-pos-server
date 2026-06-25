@@ -1,4 +1,5 @@
 const { getSupabase } = require("../db");
+const { buildMenuCategories } = require("./menuCatalogService");
 
 async function touchMenuSync(clientId) {
   const db = getSupabase();
@@ -79,10 +80,10 @@ async function listOwnerMenu(clientId) {
     db.from("pos_settings").select("synced_at").eq("client_id", clientId).maybeSingle(),
   ]);
 
-  const catNames = (categories || []).map(c => c.name);
-  for (const item of items || []) {
-    if (item.category && !catNames.includes(item.category)) catNames.push(item.category);
-  }
+  const catNames = buildMenuCategories(
+    (categories || []).map(c => ({ name: c.name })),
+    items || [],
+  );
 
   return {
     items: (items || []).map(row => ({

@@ -228,11 +228,29 @@ html, body {
 }
 
 .cart-line {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+.cart-unit-price {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.cart-line-total {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.cart-line-actions {
+  display: flex;
+  align-items: center;
 }
 
 .cart-total {
