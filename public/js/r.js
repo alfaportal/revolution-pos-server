@@ -10,7 +10,9 @@
 
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach(el => {
-      el.classList.toggle("active", el.id === id);
+      const on = el.id === id;
+      el.classList.toggle("active", on);
+      el.classList.toggle("hidden", !on);
     });
   }
 

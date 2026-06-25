@@ -234,7 +234,7 @@ function buildServiceWorkerScript(slug) {
   const encSlug = encodeURIComponent(slug);
   const scope = `/r/${encSlug}/`;
   return `/* PWA — ${scope} */
-const CACHE = "ri-restaurant-${encSlug}-v1";
+const CACHE = "ri-restaurant-${encSlug}-v2";
 const PRECACHE = [
   "/r/${encSlug}",
   "/css/r.css",
