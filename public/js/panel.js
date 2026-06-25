@@ -135,7 +135,36 @@ function esc(s) {
 let clientsCache = [];
 let licensesCache = [];
 let ownersCache = [];
+let packageTiersCache = [];
 let modalState = null;
+
+async function loadPackageTiers() {
+  const { tiers } = await api("/api/admin/package-tiers");
+  packageTiersCache = tiers || [];
+  populatePackageTierSelect(document.getElementById("c-package-tier"), "pako_1");
+}
+
+function packageTierLabel(id) {
+  const tier = packageTiersCache.find(t => t.id === id);
+  return tier?.label || id || "pako_1";
+}
+
+function packageTierOptionsHtml(selected) {
+  const sel = selected || "pako_1";
+  if (!packageTiersCache.length) {
+    return ["pako_1", "pako_1_1", "pako_2", "pako_2_1"]
+      .map(id => `<option value="${id}"${id === sel ? " selected" : ""}>${id}</option>`)
+      .join("");
+  }
+  return packageTiersCache
+    .map(t => `<option value="${esc(t.id)}"${t.id === sel ? " selected" : ""}>${esc(t.label)}</option>`)
+    .join("");
+}
+
+function populatePackageTierSelect(el, selected) {
+  if (!el) return;
+  el.innerHTML = packageTierOptionsHtml(selected);
+}
 
 function openModal(title, fieldsHtml, onSave) {
   modalState = { onSave };
@@ -219,6 +248,10 @@ function openEditClient(id) {
       <option value="kafene" ${c.tipi === "kafene" ? "selected" : ""}>Kafene</option>
       <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
     </select>
+    <label>Pakoja</label>
+    <select name="package_tier" id="modal-package-tier">
+      ${packageTierOptionsHtml(c.package_tier || "pako_1")}
+    </select>
     <label>Telefoni</label>
     <input name="telefoni" value="${esc(c.telefoni)}">
     <label>Email (kontakt biznesi)</label>
@@ -264,6 +297,7 @@ function openEditClient(id) {
       body: JSON.stringify({
         emri: fd.get("emri"),
         tipi: fd.get("tipi"),
+        package_tier: fd.get("package_tier"),
         telefoni: fd.get("telefoni"),
         email: fd.get("email"),
         adresa: fd.get("adresa"),
@@ -804,6 +838,7 @@ async function loadClients() {
     ? clients.map(c => `<tr>
         <td data-label="Emri"><strong>${esc(c.emri)}</strong></td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
+        <td data-label="Pakoja">${esc(packageTierLabel(c.package_tier))}</td>
         <td data-label="Telefoni">${esc(c.telefoni) || "—"}</td>
         <td data-label="Email">${esc(c.email) || "—"}</td>
         <td data-label="Adresa">${esc(c.adresa) || "—"}</td>
@@ -823,7 +858,7 @@ async function loadClients() {
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
       </tr>`).join("")
-    : '<tr><td colspan="9" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+    : '<tr><td colspan="10" style="color:var(--muted)">Nuk ka klientë</td></tr>';
   bindTableActions(tbl);
   tbl.querySelectorAll("[data-copy-kitchen]").forEach(btn => {
     btn.addEventListener("click", () => copyKitchenLink(btn.dataset.copyKitchen, btn));
@@ -1214,6 +1249,7 @@ async function loadActivityLog() {
 async function refreshAll() {
   showAdminError(null);
   try {
+    await loadPackageTiers();
     await loadStats();
     await loadClients();
     await loadLicenses();
@@ -1354,6 +1390,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
       body: JSON.stringify({
         emri: document.getElementById("c-emri").value,
         tipi: document.getElementById("c-tipi").value,
+        package_tier: document.getElementById("c-package-tier").value,
         telefoni: document.getElementById("c-telefoni").value,
         email: document.getElementById("c-email").value,
         adresa: document.getElementById("c-adresa").value,
@@ -1361,6 +1398,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
     });
     showMsg("msg-client", "Klienti u shtua!", true);
     e.target.reset();
+    populatePackageTierSelect(document.getElementById("c-package-tier"), "pako_1");
     await safeRefresh();
   } catch (err) {
     showMsg("msg-client", err.message, false);
