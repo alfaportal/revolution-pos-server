@@ -169,6 +169,7 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
 .info-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
 .info-value { font-size: 0.95rem; font-weight: 600; margin-top: 0.1rem; }
 .info-link { color: var(--accent); text-decoration: none; }
+.info-link:hover { text-decoration: underline; }
 
 .hours-card {
   margin-top: 0.65rem;
@@ -298,6 +299,8 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
 }
 
 /* Order CTA */
+.order-bar[hidden] { display: none !important; }
+
 .order-bar {
   position: fixed;
   left: 0;

@@ -137,6 +137,12 @@
       .replace(/"/g, "&quot;");
   }
 
+  function googleMapsUrl(address, name) {
+    const query = [name, address].filter(Boolean).join(", ").trim();
+    if (!query) return "";
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
   function renderPage(data) {
     pageData = data;
     document.title = data.name || "Restorant";
@@ -162,7 +168,11 @@
 
     if (data.address) {
       document.getElementById("info-address").hidden = false;
-      document.getElementById("val-address").textContent = data.address;
+      const addrEl = document.getElementById("val-address");
+      const mapsUrl = googleMapsUrl(data.address, data.name);
+      addrEl.textContent = data.address;
+      addrEl.href = mapsUrl || "#";
+      addrEl.setAttribute("aria-label", `Hap ${data.address} në Google Maps`);
     }
 
     if (data.phone) {
@@ -178,9 +188,14 @@
 
     const orderBar = document.getElementById("order-bar");
     const orderBtn = document.getElementById("btn-order");
-    if (data.kiosk_url && orderBar && orderBtn) {
-      orderBtn.href = data.kiosk_url;
-      orderBar.hidden = false;
+    if (orderBar && orderBtn) {
+      if (data.kiosk_url) {
+        orderBtn.href = data.kiosk_url;
+        orderBar.hidden = false;
+      } else {
+        orderBtn.removeAttribute("href");
+        orderBar.hidden = true;
+      }
     }
 
     showScreen("screen-main");
