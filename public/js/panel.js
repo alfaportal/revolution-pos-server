@@ -1,4 +1,5 @@
 let token = localStorage.getItem("rip_token") || "";
+let licensesPollTimer = null;
 
 const ADMIN_PWA_BANNER_KEY = "ri_admin_pwa_banner_dismissed";
 
@@ -558,7 +559,9 @@ async function loadLicenses() {
   tbl.innerHTML = licenses.length
     ? licenses.map(l => {
         const devId = (l.device_id || "").trim();
-        return `<tr>
+        const isActive = l.statusi === "aktive";
+        const rowClass = isActive && devId ? "license-row-bound" : "";
+        return `<tr class="${rowClass}">
         <td data-label="Klienti">${esc(l.clients?.emri) || "—"} <small style="color:var(--muted)">(${esc(l.clients?.tipi) || ""})</small></td>
         <td data-label="App">${licenseAppTypeLabel(l)}</td>
         <td class="license-key-cell" data-label="Kodi">
@@ -759,6 +762,22 @@ async function refreshAll() {
   }
 }
 
+function stopLicensesPoll() {
+  if (licensesPollTimer) {
+    clearInterval(licensesPollTimer);
+    licensesPollTimer = null;
+  }
+}
+
+function startLicensesPoll() {
+  stopLicensesPoll();
+  licensesPollTimer = setInterval(() => {
+    const panel = document.getElementById("panel-licensat");
+    if (!panel || panel.classList.contains("hidden")) return;
+    loadLicenses().catch(() => {});
+  }, 20000);
+}
+
 function showApp(user) {
   show("view-login", false);
   show("view-app", true);
@@ -821,7 +840,23 @@ document.getElementById("form-login").addEventListener("submit", async e => {
 
 document.getElementById("btn-logout").addEventListener("click", async () => {
   try { await api("/api/auth/logout", { method: "POST" }); } catch { /* ignore */ }
+  stopLicensesPoll();
   showLogin();
+});
+
+document.getElementById("btn-refresh-licenses")?.addEventListener("click", async function () {
+  const btn = this;
+  const prev = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Duke ngarkuar…";
+  try {
+    await loadLicenses();
+  } catch (err) {
+    alert(err.message || "Rifreskimi dështoi.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
 });
 
 document.querySelectorAll(".tab").forEach(tab => {
@@ -830,7 +865,12 @@ document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.add("active");
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
-    if (tab.dataset.tab === "licensat") loadLicenses().catch(() => {});
+    if (tab.dataset.tab === "licensat") {
+      loadLicenses().catch(() => {});
+      startLicensesPoll();
+    } else {
+      stopLicensesPoll();
+    }
     if (tab.dataset.tab === "logu") {
       loadActivityLog().catch(() => {});
       loadEmergencyCode().catch(() => {});

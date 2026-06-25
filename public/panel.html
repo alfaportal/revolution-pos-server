@@ -88,7 +88,11 @@
           <strong>Vetëm Super Admin.</strong> Kodi i licencës ↔ ID pajisjes — pronarët <em>nuk</em> i shohin këto.
         </div>
         <div class="card">
-          <div class="card-title">Të gjitha liçensat</div>
+          <div class="card-title card-title-row">
+            <span>Të gjitha liçensat</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-licenses" title="Rifresko listën">Rifresko</button>
+          </div>
+          <p class="field-hint licenses-live-hint">ID Pajisjes shfaqet automatikisht kur POS aktivizon çelësin — lista rifreskohet çdo 20 sekonda.</p>
           <div class="overflow-x">
             <table class="admin-table">
               <thead>

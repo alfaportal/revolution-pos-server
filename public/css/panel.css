@@ -54,6 +54,24 @@ a { color: var(--primary); }
   margin-bottom: 1rem;
 }
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.licenses-live-hint {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.admin-table tr.license-row-bound td.device-id-cell {
+  background: rgba(56, 189, 248, 0.06);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

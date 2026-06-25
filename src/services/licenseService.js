@@ -122,13 +122,28 @@ function sanitizeHostname(hostname) {
   return String(hostname || "").trim().slice(0, 128);
 }
 
+const OPTIONAL_LICENSE_META = [
+  "device_hostname",
+  "last_activated_at",
+  "last_validation_at",
+  "last_validation_error",
+  "last_ip",
+];
+
 async function patchLicenseMeta(licenseId, patch) {
   const db = getSupabase();
   const { error } = await db.from("licenses").update(patch).eq("id", licenseId);
-  if (error) {
-    const skip = /device_hostname|last_activated|last_validation|last_ip/i.test(error.message || "");
-    if (!skip) throw error;
-  }
+  if (!error) return;
+
+  const optionalInPatch = OPTIONAL_LICENSE_META.filter((k) => k in patch);
+  if (!optionalInPatch.length) throw error;
+
+  const fallback = { ...patch };
+  for (const k of optionalInPatch) delete fallback[k];
+  if (!Object.keys(fallback).length) return;
+
+  const retry = await db.from("licenses").update(fallback).eq("id", licenseId);
+  if (retry.error) throw retry.error;
 }
 
 async function recordValidationFailure(license, code, message, client_ip) {
