@@ -90,13 +90,15 @@ async function syncCatalogFromPosSupabase(license, body) {
   }
 
   const staff = Array.isArray(body.staff) ? body.staff : [];
-  await db.from("pos_staff").delete().eq("client_id", clientId);
+  await db.from("pos_staff").delete().eq("client_id", clientId).eq("source", "pos");
   let staffCount = 0;
   if (staff.length) {
     const staffRows = staff
       .map(s => ({
         client_id: clientId,
         name: String(s.name || s.emri || "").trim(),
+        role: "waiter",
+        source: "pos",
         active: s.active !== false && s.active !== 0,
       }))
       .filter(s => s.name);
@@ -217,10 +219,10 @@ async function syncCatalogFromPosTransactional(license, body) {
       );
     }
 
-    await client.query(`DELETE FROM pos_staff WHERE client_id = $1`, [clientId]);
+    await client.query(`DELETE FROM pos_staff WHERE client_id = $1 AND source = 'pos'`, [clientId]);
     for (const s of staffRows) {
       await client.query(
-        `INSERT INTO pos_staff (client_id, name, active) VALUES ($1, $2, $3)`,
+        `INSERT INTO pos_staff (client_id, name, active, role, source) VALUES ($1, $2, $3, 'waiter', 'pos')`,
         [clientId, s.name, s.active],
       );
     }

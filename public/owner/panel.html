@@ -70,6 +70,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="menuja">Menuja</button>
+      <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
       <button class="tab" data-tab="raportet">Raportet</button>
       <button class="tab" data-tab="licenca">Licenca</button>
@@ -141,6 +142,62 @@
               </tr>
             </thead>
             <tbody id="menu-items-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-lokal" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Hapësirat dhe tavolinat</div>
+        <p class="links-hint">Shtoni zona si <strong>Salla</strong>, <strong>Terasa</strong>, <strong>Oborr</strong>. Tavolinat numërohen automatikisht (T1, T2, …) dhe shfaqen te kamarieri brenda ~15 sekondave.</p>
+        <div class="filter-row menu-add-row">
+          <div>
+            <label for="area-add-name">Emri i hapësirës</label>
+            <input type="text" id="area-add-name" placeholder="p.sh. Terasa">
+          </div>
+          <div>
+            <label for="area-add-count">Nr. tavolinave</label>
+            <input type="number" id="area-add-count" min="1" max="30" value="4">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-area-add">Shto hapësirë</button>
+        </div>
+        <div id="venue-msg" class="owner-license-msg"></div>
+        <p id="venue-sync-hint" class="links-hint" style="margin-top:0"></p>
+        <div class="table-wrap">
+          <table class="menu-owner-table venue-owner-table">
+            <thead>
+              <tr><th>Hapësira</th><th>Tavolina</th><th>Statusi</th><th>Veprimet</th></tr>
+            </thead>
+            <tbody id="venue-areas-body"></tbody>
+          </table>
+        </div>
+        <p class="links-hint">Nëse nuk shtoni hapësira, përdoret numri i tavolinave nga POS ose vlera e vjetër (<span id="venue-fallback-count">—</span> tavolina).</p>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Stafi — kamarierë dhe kuzhinierë</div>
+        <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte).</p>
+        <div class="filter-row menu-add-row">
+          <div>
+            <label for="staff-add-name">Emri</label>
+            <input type="text" id="staff-add-name" placeholder="p.sh. Agron">
+          </div>
+          <div>
+            <label for="staff-add-role">Roli</label>
+            <select id="staff-add-role">
+              <option value="waiter">Kamarier</option>
+              <option value="kitchen">Kuzhinier</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-staff-add">Shto staf</button>
+        </div>
+        <div class="table-wrap">
+          <table class="menu-owner-table venue-owner-table">
+            <thead>
+              <tr><th>Emri</th><th>Roli</th><th>Statusi</th><th>Veprimet</th></tr>
+            </thead>
+            <tbody id="venue-staff-body"></tbody>
           </table>
         </div>
       </div>

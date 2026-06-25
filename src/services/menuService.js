@@ -203,4 +203,5 @@ module.exports = {
   addMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  touchMenuSync,
 };

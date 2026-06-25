@@ -194,9 +194,26 @@ CREATE TABLE IF NOT EXISTS pos_staff (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id   UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   name        TEXT NOT NULL,
+  role        TEXT NOT NULL DEFAULT 'waiter' CHECK (role IN ('waiter', 'kitchen')),
+  source      TEXT NOT NULL DEFAULT 'owner' CHECK (source IN ('owner', 'pos')),
+  sort_order  INTEGER NOT NULL DEFAULT 0,
   active      BOOLEAN NOT NULL DEFAULT true,
   UNIQUE (client_id, name)
 );
+
+CREATE TABLE IF NOT EXISTS pos_areas (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id     UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  table_count   INTEGER NOT NULL DEFAULT 1 CHECK (table_count >= 0 AND table_count <= 30),
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  active        BOOLEAN NOT NULL DEFAULT true,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (client_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pos_areas_client ON pos_areas (client_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_pos_staff_role ON pos_staff (client_id, role, active);
 
 -- Përditëso updated_at te licenses
 CREATE OR REPLACE FUNCTION set_licenses_updated_at()

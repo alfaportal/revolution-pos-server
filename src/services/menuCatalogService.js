@@ -46,15 +46,24 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
     .order("name");
   if (activeOnly) menuQuery = menuQuery.eq("active", true);
 
-  const [{ data: settings }, { data: categories }, { data: menu }, { data: staff }] =
+  const [{ data: settings }, { data: categories }, { data: menu }, { data: staff }, { data: areas }] =
     await Promise.all([
       db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
       db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
       menuQuery,
-      db.from("pos_staff").select("name, active").eq("client_id", clientId).eq("active", true).order("name"),
+      db
+        .from("pos_staff")
+        .select("name, role, active, source")
+        .eq("client_id", clientId)
+        .order("name"),
+      db
+        .from("pos_areas")
+        .select("name, table_count, sort_order, active")
+        .eq("client_id", clientId)
+        .order("sort_order"),
     ]);
 
-  return { settings, categories, menu, staff };
+  return { settings, categories, menu, staff, areas };
 }
 
 async function getClientMenuCatalog(clientId, { activeOnly = true } = {}) {
@@ -70,7 +79,7 @@ async function getClientMenuCatalog(clientId, { activeOnly = true } = {}) {
 }
 
 async function getCatalogForPos(clientId) {
-  const { settings, categories, menu, staff } = await loadMenuCatalogRows(clientId, { activeOnly: false });
+  const { settings, categories, menu, staff, areas } = await loadMenuCatalogRows(clientId, { activeOnly: false });
   return {
     client_id: clientId,
     restaurant_name: settings?.restaurant_name || "",
@@ -81,6 +90,12 @@ async function getCatalogForPos(clientId) {
     receipt_width_mm: settings?.receipt_width_mm || 80,
     table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
     synced_at: settings?.synced_at || null,
+    areas: (areas || []).map(a => ({
+      name: a.name,
+      table_count: Number(a.table_count) || 0,
+      sort_order: Number(a.sort_order) || 0,
+      active: a.active !== false,
+    })),
     categories: (categories || []).map(c => ({
       name: c.name,
       sort_order: Number(c.sort_order) || 0,
@@ -88,7 +103,9 @@ async function getCatalogForPos(clientId) {
     menu_items: (menu || []).map(mapMenuItemForPos),
     staff: (staff || []).map(s => ({
       name: s.name,
+      role: s.role || "waiter",
       active: s.active !== false,
+      source: s.source || "owner",
     })),
   };
 }

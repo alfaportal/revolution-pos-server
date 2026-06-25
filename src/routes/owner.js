@@ -26,6 +26,15 @@ const {
   updateMenuItem,
   deleteMenuItem,
 } = require("../services/menuService");
+const {
+  listVenue,
+  addArea,
+  updateArea,
+  deleteArea,
+  addStaff,
+  updateStaff,
+  deleteStaff,
+} = require("../services/venueService");
 const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 
@@ -248,6 +257,69 @@ router.patch("/menu/:id", async (req, res) => {
 router.delete("/menu/:id", async (req, res) => {
   try {
     const result = await deleteMenuItem(req.user.client_id, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/venue", async (req, res) => {
+  try {
+    const venue = await listVenue(req.user.client_id);
+    res.json({ ok: true, ...venue });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/venue/areas", async (req, res) => {
+  try {
+    const result = await addArea(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/venue/areas/:id", async (req, res) => {
+  try {
+    const result = await updateArea(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.delete("/venue/areas/:id", async (req, res) => {
+  try {
+    const result = await deleteArea(req.user.client_id, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.post("/venue/staff", async (req, res) => {
+  try {
+    const result = await addStaff(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/venue/staff/:id", async (req, res) => {
+  try {
+    const result = await updateStaff(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.delete("/venue/staff/:id", async (req, res) => {
+  try {
+    const result = await deleteStaff(req.user.client_id, req.params.id);
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

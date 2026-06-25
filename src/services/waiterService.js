@@ -4,6 +4,11 @@ const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos,
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
 const { buildMenuCategories, mapMenuItemForWeb } = require("./menuCatalogService");
+const {
+  buildTablesFromAreas,
+  loadAreasForClient,
+  loadWaiterStaff,
+} = require("./venueService");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = WEB_WAITER;
@@ -61,38 +66,36 @@ async function getWaiterBootstrap(clientId) {
   const client = await assertClient(clientId);
   const db = getSupabase();
 
-  const [{ data: settings }, { data: categories }, { data: menu }, { data: staff }] =
+  const [{ data: settings }, { data: categories }, { data: menu }] =
     await Promise.all([
       db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
       db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
       db.from("pos_menu_items").select("local_id, name, category, price, active").eq("client_id", clientId).eq("active", true).order("category").order("name"),
-      db.from("pos_staff").select("name").eq("client_id", clientId).eq("active", true).order("name"),
     ]);
 
-  const tableCount = Math.min(30, Math.max(1, Number(settings?.table_count) || 10));
+  const areas = await loadAreasForClient(clientId);
   const activeTables = await getActiveTableOrders(clientId);
-
-  const tables = [];
-  for (let n = 1; n <= tableCount; n++) {
-    const active = activeTables.get(n);
-    tables.push({
-      number: n,
-      status: active ? "occupied" : "free",
-      waiter_name: active?.waiter_name || null,
-      order_total: active ? Number(active.total) : 0,
-      active_items: active ? normalizeItems(active.items_json) : [],
+  const activeByTable = new Map();
+  for (const [n, row] of activeTables) {
+    activeByTable.set(n, {
+      waiter_name: row.waiter_name,
+      total: row.total,
+      active_items: normalizeItems(row.items_json),
     });
   }
+  const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
+  const staff = await loadWaiterStaff(clientId);
 
   return {
     client_name: client.emri,
     restaurant_name: settings?.restaurant_name || client.emri,
-    table_count: tableCount,
+    table_count: layout.table_count,
     synced_at: settings?.synced_at || null,
     categories: buildMenuCategories(categories, menu),
     menu: (menu || []).map(mapMenuItemForWeb),
-    staff: (staff || []).map(s => s.name),
-    tables,
+    staff,
+    areas: layout.areas,
+    tables: layout.tables,
   };
 }
 

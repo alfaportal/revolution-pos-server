@@ -115,6 +115,31 @@ html, body {
 }
 
 .tables-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.waiter-area-block {
+  margin-bottom: 0.25rem;
+}
+
+.waiter-area-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tables-grid-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.tables-grid:not(:has(.waiter-area-block)) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 10px;

@@ -77,22 +77,39 @@
     return String(s || "").replace(/"/g, "&quot;");
   }
 
-  function renderTables() {
-    const grid = $("tables-grid");
-    if (!bootstrap?.tables?.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka tavolina. Sinkronizoni nga POS.</p>';
-      return;
-    }
-    grid.innerHTML = bootstrap.tables.map(t => `
+  function renderTableCard(t) {
+    return `
       <button type="button" class="table-card ${t.status}" data-table="${t.number}">
         <div class="num">T${t.number}</div>
         <div class="meta">${t.status === "occupied"
           ? `${escapeHtml(t.waiter_name || "E zënë")}<br>${formatEuro(t.order_total || 0)}`
           : "E lirë"}</div>
-      </button>`).join("");
-    grid.querySelectorAll("[data-table]").forEach(btn => {
+      </button>`;
+  }
+
+  function bindTableCards(root) {
+    (root || $("tables-grid")).querySelectorAll("[data-table]").forEach(btn => {
       btn.addEventListener("click", () => openOrder(Number(btn.dataset.table)));
     });
+  }
+
+  function renderTables() {
+    const grid = $("tables-grid");
+    if (!bootstrap?.tables?.length) {
+      grid.innerHTML = '<p class="hint">Nuk ka tavolina. Pronari shton hapësira te Lokal &amp; Stafi në panel.</p>';
+      return;
+    }
+    const areas = bootstrap.areas?.filter(a => a.tables?.length) || [];
+    if (areas.length > 1) {
+      grid.innerHTML = areas.map(area => `
+        <section class="waiter-area-block">
+          <h2 class="waiter-area-title">${escapeHtml(area.name)}</h2>
+          <div class="tables-grid-area">${area.tables.map(renderTableCard).join("")}</div>
+        </section>`).join("");
+    } else {
+      grid.innerHTML = bootstrap.tables.map(renderTableCard).join("");
+    }
+    bindTableCards(grid);
   }
 
   function escapeHtml(s) {
@@ -215,6 +232,8 @@
     try {
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
       bootstrap.tables = data.tables;
+      bootstrap.areas = data.areas;
+      bootstrap.staff = data.staff;
       bootstrap.synced_at = data.synced_at;
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;

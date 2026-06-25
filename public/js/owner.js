@@ -573,6 +573,234 @@ async function deleteMenuRow(row) {
   }
 }
 
+let ownerVenueCache = { areas: [], staff: [], table_count: 0 };
+
+function setVenueMsg(text, ok) {
+  const msg = document.getElementById("venue-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function updateVenueSyncHint(syncedAt, tableCount) {
+  const hint = document.getElementById("venue-sync-hint");
+  const fallback = document.getElementById("venue-fallback-count");
+  if (fallback) fallback.textContent = String(tableCount ?? ownerVenueCache.table_count ?? "—");
+  if (!hint) return;
+  if (syncedAt) {
+    ownerVenueCache.synced_at = syncedAt;
+    hint.textContent = `U përditësua: ${fmtTime(syncedAt)} — kamarieri e merr brenda ~15 sekondave.`;
+  } else {
+    hint.textContent = "Ndryshimet shfaqen te tabletat e kamarierit pas ruajtjes.";
+  }
+}
+
+function renderVenueAreas() {
+  const body = document.getElementById("venue-areas-body");
+  if (!body) return;
+  const areas = ownerVenueCache.areas || [];
+  if (!areas.length) {
+    body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Nuk ka hapësira. Shtoni Sallë, Terasë etj.</td></tr>';
+    return;
+  }
+  body.innerHTML = areas.map(area => `
+    <tr class="${area.active ? "" : "inactive-row"}" data-id="${area.id}">
+      <td><input type="text" class="venue-edit-name" value="${escAttr(area.name)}"></td>
+      <td><input type="number" class="venue-edit-count" min="1" max="30" value="${Number(area.table_count)}"></td>
+      <td><span class="menu-status ${area.active ? "active" : "inactive"}">${area.active ? "Aktive" : "Joaktive"}</span></td>
+      <td>
+        <div class="menu-row-actions">
+          <button type="button" class="btn btn-primary btn-sm btn-area-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-area-toggle">${area.active ? "Fshih" : "Aktivizo"}</button>
+          <button type="button" class="btn btn-danger btn-sm btn-area-delete">Fshi</button>
+        </div>
+      </td>
+    </tr>`).join("");
+  body.querySelectorAll(".btn-area-save").forEach(btn => {
+    btn.addEventListener("click", () => saveAreaRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-area-toggle").forEach(btn => {
+    btn.addEventListener("click", () => toggleAreaRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-area-delete").forEach(btn => {
+    btn.addEventListener("click", () => deleteAreaRow(btn.closest("tr")));
+  });
+}
+
+function renderVenueStaff() {
+  const body = document.getElementById("venue-staff-body");
+  if (!body) return;
+  const staff = ownerVenueCache.staff || [];
+  if (!staff.length) {
+    body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Nuk ka staf. Shtoni kamarierë ose kuzhinierë.</td></tr>';
+    return;
+  }
+  body.innerHTML = staff.map(member => `
+    <tr class="${member.active ? "" : "inactive-row"}" data-id="${member.id}">
+      <td><input type="text" class="venue-edit-staff-name" value="${escAttr(member.name)}"></td>
+      <td>
+        <select class="venue-edit-staff-role">
+          <option value="waiter"${member.role === "waiter" ? " selected" : ""}>Kamarier</option>
+          <option value="kitchen"${member.role === "kitchen" ? " selected" : ""}>Kuzhinier</option>
+        </select>
+      </td>
+      <td><span class="menu-status ${member.active ? "active" : "inactive"}">${member.active ? "Aktiv" : "Joaktiv"}</span></td>
+      <td>
+        <div class="menu-row-actions">
+          <button type="button" class="btn btn-primary btn-sm btn-staff-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-staff-toggle">${member.active ? "Fshih" : "Aktivizo"}</button>
+          <button type="button" class="btn btn-danger btn-sm btn-staff-delete">Fshi</button>
+        </div>
+      </td>
+    </tr>`).join("");
+  body.querySelectorAll(".btn-staff-save").forEach(btn => {
+    btn.addEventListener("click", () => saveStaffRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-staff-toggle").forEach(btn => {
+    btn.addEventListener("click", () => toggleStaffRow(btn.closest("tr")));
+  });
+  body.querySelectorAll(".btn-staff-delete").forEach(btn => {
+    btn.addEventListener("click", () => deleteStaffRow(btn.closest("tr")));
+  });
+}
+
+async function loadOwnerVenue() {
+  const data = await api("/api/owner/venue");
+  ownerVenueCache = {
+    areas: data.areas || [],
+    staff: data.staff || [],
+    table_count: data.table_count || 0,
+    synced_at: data.synced_at,
+  };
+  renderVenueAreas();
+  renderVenueStaff();
+  updateVenueSyncHint(data.synced_at, data.table_count);
+}
+
+async function saveAreaRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".venue-edit-name")?.value?.trim();
+  const table_count = Number(row.querySelector(".venue-edit-count")?.value);
+  if (!name) {
+    setVenueMsg("Shkruani emrin e hapësirës.", false);
+    return;
+  }
+  try {
+    setVenueMsg("");
+    const { area, synced_at } = await api(`/api/owner/venue/areas/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, table_count }),
+    });
+    const idx = ownerVenueCache.areas.findIndex(a => a.id === id);
+    if (idx >= 0) ownerVenueCache.areas[idx] = area;
+    renderVenueAreas();
+    updateVenueSyncHint(synced_at, ownerVenueCache.table_count);
+    setVenueMsg("Hapësira u ruajt.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
+async function toggleAreaRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const area = ownerVenueCache.areas.find(a => a.id === id);
+  if (!area) return;
+  try {
+    setVenueMsg("");
+    const { area: updated, synced_at } = await api(`/api/owner/venue/areas/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !area.active }),
+    });
+    Object.assign(area, updated);
+    renderVenueAreas();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg(updated.active ? "Hapësira u aktivizua." : "Hapësira u fsheh.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
+async function deleteAreaRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".venue-edit-name")?.value?.trim() || "hapësirën";
+  if (!confirm(`Fshi "${name}"?`)) return;
+  try {
+    setVenueMsg("");
+    const { synced_at } = await api(`/api/owner/venue/areas/${id}`, { method: "DELETE" });
+    ownerVenueCache.areas = ownerVenueCache.areas.filter(a => a.id !== id);
+    renderVenueAreas();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg("Hapësira u fshi.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
+async function saveStaffRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".venue-edit-staff-name")?.value?.trim();
+  const role = row.querySelector(".venue-edit-staff-role")?.value;
+  if (!name) {
+    setVenueMsg("Shkruani emrin e stafit.", false);
+    return;
+  }
+  try {
+    setVenueMsg("");
+    const { member, synced_at } = await api(`/api/owner/venue/staff/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name, role }),
+    });
+    const idx = ownerVenueCache.staff.findIndex(s => s.id === id);
+    if (idx >= 0) ownerVenueCache.staff[idx] = member;
+    renderVenueStaff();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg("Stafi u ruajt.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
+async function toggleStaffRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const member = ownerVenueCache.staff.find(s => s.id === id);
+  if (!member) return;
+  try {
+    setVenueMsg("");
+    const { member: updated, synced_at } = await api(`/api/owner/venue/staff/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: !member.active }),
+    });
+    Object.assign(member, updated);
+    renderVenueStaff();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg(updated.active ? "Stafi u aktivizua." : "Stafi u fsheh.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
+async function deleteStaffRow(row) {
+  if (!row) return;
+  const id = row.dataset.id;
+  const name = row.querySelector(".venue-edit-staff-name")?.value?.trim() || "anëtarin";
+  if (!confirm(`Fshi "${name}"?`)) return;
+  try {
+    setVenueMsg("");
+    const { synced_at } = await api(`/api/owner/venue/staff/${id}`, { method: "DELETE" });
+    ownerVenueCache.staff = ownerVenueCache.staff.filter(s => s.id !== id);
+    renderVenueStaff();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg("Stafi u fshi.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+}
+
 document.getElementById("owner-license-key")?.addEventListener("input", e => {
   const el = e.target;
   el.value = formatLicenseKey(el.value);
@@ -614,6 +842,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
+    if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "zreport") {
       loadZReport();
       loadFiscalSettings();
@@ -711,6 +940,52 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     setMenuMsg("Artikulli u shtua — shfaqet te tabletat e porosive.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
+  }
+});
+
+document.getElementById("btn-area-add")?.addEventListener("click", async () => {
+  const name = document.getElementById("area-add-name")?.value?.trim();
+  const table_count = Number(document.getElementById("area-add-count")?.value);
+  if (!name) {
+    setVenueMsg("Shkruani emrin e hapësirës.", false);
+    return;
+  }
+  try {
+    setVenueMsg("");
+    const { area, synced_at } = await api("/api/owner/venue/areas", {
+      method: "POST",
+      body: JSON.stringify({ name, table_count }),
+    });
+    ownerVenueCache.areas.push(area);
+    document.getElementById("area-add-name").value = "";
+    renderVenueAreas();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg("Hapësira u shtua.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
+  }
+});
+
+document.getElementById("btn-staff-add")?.addEventListener("click", async () => {
+  const name = document.getElementById("staff-add-name")?.value?.trim();
+  const role = document.getElementById("staff-add-role")?.value || "waiter";
+  if (!name) {
+    setVenueMsg("Shkruani emrin e stafit.", false);
+    return;
+  }
+  try {
+    setVenueMsg("");
+    const { member, synced_at } = await api("/api/owner/venue/staff", {
+      method: "POST",
+      body: JSON.stringify({ name, role }),
+    });
+    ownerVenueCache.staff.push(member);
+    document.getElementById("staff-add-name").value = "";
+    renderVenueStaff();
+    updateVenueSyncHint(synced_at);
+    setVenueMsg("Stafi u shtua.", true);
+  } catch (err) {
+    setVenueMsg(err.message, false);
   }
 });
 

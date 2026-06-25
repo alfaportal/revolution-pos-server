@@ -339,6 +339,18 @@
 .menu-owner-table tr.inactive-row {
   opacity: 0.65;
 }
+
+.venue-owner-table .venue-edit-count {
+  max-width: 4.5rem;
+}
+
+.venue-owner-table select {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
 .filter-row button { margin-bottom: 0; }
 
 .live-tables-head {
