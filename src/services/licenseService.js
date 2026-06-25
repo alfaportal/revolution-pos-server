@@ -607,6 +607,7 @@ async function getDashboardStats() {
 
 module.exports = {
   normalizeKey,
+  findLicenseByKey,
   generateLicenseKey,
   validateLicense,
   listClients,
