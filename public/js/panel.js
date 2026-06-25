@@ -579,10 +579,11 @@ async function loadLicenses() {
         <td data-label="Deri">${l.data_skadimit}</td>
         <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-ghost btn-sm" data-edit-license="${l.id}">Ndrysho</button>
+          ${l.statusi === "aktive"
+            ? `<button class="btn btn-danger btn-sm" data-block-license="${l.id}" title="Blloko POS — shkyçet brenda ~60s">Blloko POS</button>`
+            : `<button class="btn btn-primary btn-sm" data-unblock-license="${l.id}">Hape POS</button>`}
+          <button class="btn btn-ghost btn-sm" data-reset="${l.id}" title="Reset pajisje — instalim në PC të ri">Reset Device</button>
           <button class="btn btn-danger btn-sm" data-del-license="${l.id}">Fshi</button>
-          ${l.statusi !== "aktive" ? `<button class="btn btn-ghost btn-sm" data-act="aktive" data-id="${l.id}">Aktivizo</button>` : ""}
-          ${l.statusi !== "revokuar" ? `<button class="btn btn-ghost btn-sm" data-act="revokuar" data-id="${l.id}">Revoko</button>` : ""}
-          <button class="btn btn-ghost btn-sm" data-reset="${l.id}" title="Hiq lidhjen — lejon ID tjetër">Reset ID</button>
         </td>
       </tr>`;
       }).join("")
@@ -609,6 +610,31 @@ async function loadLicenses() {
       await refreshAll();
     };
   });
+
+  tbl.querySelectorAll("[data-block-license]").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Blloko POS-in e këtij klienti? Aplikacioni do të shkyçet brenda ~60 sekondave.")) return;
+      try {
+        const res = await api(`/api/admin/licenses/${btn.dataset.blockLicense}/block`, { method: "POST" });
+        alert(res.message || "POS u bllokua.");
+        await refreshAll();
+      } catch (err) {
+        alert(err.message || "Bllokimi dështoi.");
+      }
+    };
+  });
+
+  tbl.querySelectorAll("[data-unblock-license]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await api(`/api/admin/licenses/${btn.dataset.unblockLicense}/unblock`, { method: "POST" });
+        await refreshAll();
+      } catch (err) {
+        alert(err.message || "Hapja dështoi.");
+      }
+    };
+  });
+
   tbl.querySelectorAll("[data-reset]").forEach(btn => {
     btn.onclick = async () => {
       const licenseId = btn.dataset.reset;
@@ -648,11 +674,76 @@ async function loadOwners() {
         <td data-label="Regj.">${fmtDate(o.created_at)}</td>
         <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-ghost btn-sm" data-edit-owner="${o.id}">Ndrysho</button>
+          <button class="btn btn-ghost btn-sm" data-reset-owner-pw="${o.id}" title="Dërgo email rivendosjeje / link ftese">Reset Password</button>
           <button class="btn btn-danger btn-sm" data-del-owner="${o.id}">Fshi</button>
         </td>
       </tr>`).join("")
     : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka pronarë</td></tr>';
+  tbl.querySelectorAll("[data-reset-owner-pw]").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Dërgo email me link/kod rivendosjeje te pronari?")) return;
+      try {
+        const res = await api(`/api/admin/owners/${btn.dataset.resetOwnerPw}/reset-password`, { method: "POST" });
+        alert(res.message || "Email u dërgua.");
+        await loadOwners();
+        await loadActivityLog().catch(() => {});
+      } catch (err) {
+        alert(err.message || "Dështoi dërgimi i emailit.");
+      }
+    };
+  });
   bindTableActions(tbl);
+}
+
+const ACTION_LABELS = {
+  admin_login: "Hyrje admin",
+  client_create: "Klient i ri",
+  license_block: "Bllokim POS",
+  license_unblock: "Hapje POS",
+  license_reset_device: "Reset device",
+  owner_reset_password: "Reset fjalëkalim pronar",
+  owner_invite_resend: "Ftesë pronar",
+  emergency_unlock_pin: "Emergjencë PIN",
+  emergency_unlock_code: "Emergjencë kod",
+};
+
+async function loadEmergencyCode() {
+  const hint = document.getElementById("emergency-code-hint");
+  const codeEl = document.getElementById("emergency-daily-code");
+  if (!hint || !codeEl) return;
+  try {
+    const data = await api("/api/admin/emergency-code");
+    if (!data.configured) {
+      hint.textContent = "Vendosni MASTER_EMERGENCY_PIN në Railway për kod emergjence.";
+      codeEl.textContent = "—";
+      return;
+    }
+    hint.textContent = data.hint || "Kodi ditor për POS offline.";
+    codeEl.textContent = data.daily_code || "—";
+  } catch (e) {
+    hint.textContent = e.message || "Nuk u ngarkua kodi emergjence.";
+    codeEl.textContent = "—";
+  }
+}
+
+async function loadActivityLog() {
+  const tbl = document.getElementById("tbl-activity");
+  if (!tbl) return;
+  const { logs } = await api("/api/admin/activity-log?limit=120");
+  tbl.innerHTML = (logs || []).length
+    ? logs.map(row => {
+        const details = row.details && Object.keys(row.details).length
+          ? esc(JSON.stringify(row.details))
+          : "—";
+        return `<tr>
+          <td data-label="Koha">${fmtDateTime(row.created_at)}</td>
+          <td data-label="Veprimi">${esc(ACTION_LABELS[row.action] || row.action)}</td>
+          <td data-label="Objekti">${esc(row.target_label || row.target_id || "—")}</td>
+          <td data-label="Admin">${esc(row.actor_email || "—")}</td>
+          <td data-label="Detaje"><small>${details}</small></td>
+        </tr>`;
+      }).join("")
+    : '<tr><td colspan="5" style="color:var(--muted)">Nuk ka veprime të regjistruara</td></tr>';
 }
 
 async function refreshAll() {
@@ -740,7 +831,15 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "licensat") loadLicenses().catch(() => {});
+    if (tab.dataset.tab === "logu") {
+      loadActivityLog().catch(() => {});
+      loadEmergencyCode().catch(() => {});
+    }
   });
+});
+
+document.getElementById("btn-refresh-emergency")?.addEventListener("click", () => {
+  loadEmergencyCode().catch(err => alert(err.message));
 });
 
 document.getElementById("form-client").addEventListener("submit", async e => {

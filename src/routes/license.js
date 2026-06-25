@@ -1,6 +1,8 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
 const { validateLicense } = require("../services/licenseService");
+const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
+const { logAdminActivity } = require("../services/activityLogService");
 
 const router = express.Router();
 
@@ -12,8 +14,6 @@ function clientIp(req) {
 
 /**
  * POST /api/v1/license/validate
- * Body: { celesi, device_id, app_type?, hostname? }
- * Headers (opsionale): x-api-key
  */
 router.post("/validate", licenseApiKeyOptional, async (req, res) => {
   try {
@@ -39,10 +39,91 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
 });
 
 /**
- * GET /api/v1/license/health — për POS të kontrollojë serverin
+ * POST /api/v1/license/heartbeat — POS kontrollon çdo ≤60s për bllokim / force logout
  */
+router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, valid: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const result = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+
+    res.status(result.valid ? 200 : 403).json({
+      ok: result.valid,
+      ...result,
+      server_time: new Date().toISOString(),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, valid: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/emergency-unlock — Master PIN (online) ose kod ditor (offline backup)
+ * Body: { master_pin?, emergency_code?, device_id, app_type?, hostname? }
+ */
+router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { master_pin, emergency_code, device_id, app_type, hostname } = req.body;
+    const pinOk = verifyMasterPin(master_pin);
+    const codeOk = verifyDailyEmergencyCode(emergency_code);
+
+    if (!pinOk && !codeOk) {
+      return res.status(403).json({
+        valid: false,
+        code: "EMERGENCY_DENIED",
+        message: "PIN ose kodi emergjence i gabuar.",
+      });
+    }
+
+    if (!isMasterPinConfigured() && !codeOk) {
+      return res.status(503).json({
+        valid: false,
+        code: "NOT_CONFIGURED",
+        message: "MASTER_EMERGENCY_PIN nuk është konfiguruar në server.",
+      });
+    }
+
+    await logAdminActivity({
+      actorEmail: "emergency@pos",
+      action: pinOk ? "emergency_unlock_pin" : "emergency_unlock_code",
+      targetType: "device",
+      targetId: String(device_id || "").trim().toUpperCase(),
+      targetLabel: hostname || "",
+      details: { app_type: app_type || null, method: pinOk ? "pin" : "daily_code" },
+    });
+
+    const until = new Date();
+    until.setHours(23, 59, 59, 999);
+
+    res.json({
+      valid: true,
+      emergency: true,
+      message: "Hapje emergjence e autorizuar.",
+      valid_until: until.toISOString(),
+      device_id: String(device_id || "").trim().toUpperCase(),
+    });
+  } catch (e) {
+    res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
 router.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "revolution-pos-license" });
+  res.json({
+    ok: true,
+    service: "revolution-pos-license",
+    emergency_pin_configured: isMasterPinConfigured(),
+    daily_emergency_code: isMasterPinConfigured() ? getDailyEmergencyCode() : null,
+  });
 });
 
 module.exports = router;

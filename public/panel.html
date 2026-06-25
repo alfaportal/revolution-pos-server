@@ -63,6 +63,7 @@
         <button class="tab active" data-tab="klientet">Klientët</button>
         <button class="tab" data-tab="licensat">Liçensat</button>
         <button class="tab" data-tab="pronaret">Pronarët</button>
+        <button class="tab" data-tab="logu">Log aktiviteti</button>
         <button class="tab" data-tab="shto">+ Shto</button>
       </div>
 
@@ -113,6 +114,30 @@
                 </tr>
               </thead>
               <tbody id="tbl-owners"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-logu" class="panel-section hidden">
+        <div class="card admin-only-card">
+          <div class="card-title">Kodi emergjence ditor (POS offline)</div>
+          <p id="emergency-code-hint" class="field-hint" style="margin-bottom:0.5rem">Duke ngarkuar...</p>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+            <code id="emergency-daily-code" style="font-size:1.4rem;letter-spacing:0.2em;padding:0.35rem 0.75rem;background:#1e293b;border-radius:8px">—</code>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-emergency">Rifresko</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Log aktiviteti</div>
+          <div class="overflow-x">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Koha</th><th>Veprimi</th><th>Objekti</th><th>Admin</th><th>Detaje</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-activity"></tbody>
             </table>
           </div>
         </div>
@@ -241,6 +266,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=21"></script>
+  <script src="/js/panel.js?v=22"></script>
 </body>
 </html>

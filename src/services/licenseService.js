@@ -148,7 +148,8 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
 
   const fail = async (code, message) => {
     await recordValidationFailure(license, code, message, client_ip);
-    return { valid: false, code, message };
+    const forceLogout = ["REVOKED", "SUSPENDED", "EXPIRED", "DEVICE_MISMATCH"].includes(code);
+    return { valid: false, code, message, force_logout: forceLogout };
   };
 
   if (license.statusi === "revokuar") {
@@ -387,14 +388,32 @@ async function deleteLicense(id) {
 
 async function updateLicenseStatus(id, statusi) {
   const db = getSupabase();
+  const now = new Date().toISOString();
+  const patch = { statusi, updated_at: now };
+
+  if (statusi === "pezulluar" || statusi === "revokuar" || statusi === "skaduar") {
+    patch.force_logout_at = now;
+    patch.blocked_at = now;
+  } else if (statusi === "aktive") {
+    patch.blocked_at = null;
+  }
+
   const { data, error } = await db
     .from("licenses")
-    .update({ statusi })
+    .update(patch)
     .eq("id", id)
-    .select()
+    .select("*, clients(emri, tipi)")
     .single();
   if (error) throw error;
   return data;
+}
+
+async function blockLicense(id) {
+  return updateLicenseStatus(id, "pezulluar");
+}
+
+async function unblockLicense(id) {
+  return updateLicenseStatus(id, "aktive");
 }
 
 async function resetLicenseDevice(id) {
@@ -561,6 +580,8 @@ module.exports = {
   updateLicense,
   deleteLicense,
   updateLicenseStatus,
+  blockLicense,
+  unblockLicense,
   resetLicenseDevice,
   findUserByEmail,
   verifyUserPassword,

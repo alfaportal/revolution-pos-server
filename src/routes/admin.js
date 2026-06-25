@@ -12,6 +12,8 @@ const {
   updateLicense,
   deleteLicense,
   updateLicenseStatus,
+  blockLicense,
+  unblockLicense,
   resetLicenseDevice,
   regenerateKitchenAccess,
   getDashboardStats,
@@ -19,6 +21,8 @@ const {
 } = require("../services/licenseService");
 const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
 const { buildKitchenUrl } = require("../lib/kitchenAccess");
+const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
+const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
   listOwners,
   createOwner,
@@ -26,6 +30,7 @@ const {
   deleteOwner,
   setOwnerActive,
   regenerateOwnerInvite,
+  adminResetOwnerPassword,
 } = require("../services/userService");
 
 function requestBaseUrl(req) {
@@ -53,6 +58,20 @@ router.get("/package-tiers", (_req, res) => {
   });
 });
 
+router.get("/emergency-code", (_req, res) => {
+  res.json({
+    ok: true,
+    configured: isMasterPinConfigured(),
+    daily_code: isMasterPinConfigured() ? getDailyEmergencyCode() : null,
+    hint: "Kodi ditor për hapje offline POS në emergjence (ndryshon çdo ditë).",
+  });
+});
+
+router.get("/activity-log", asyncHandler(async (req, res) => {
+  const logs = await listAdminActivityLog({ limit: req.query.limit });
+  res.json({ ok: true, logs });
+}));
+
 router.get("/clients", asyncHandler(async (_req, res) => {
   res.json({ ok: true, clients: await listClients() });
 }));
@@ -61,6 +80,13 @@ router.post("/clients", asyncHandler(async (req, res) => {
   console.log("[admin] POST /clients", { emri: req.body?.emri, tipi: req.body?.tipi });
   try {
     const client = await createClient(req.body);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_create",
+      targetType: "client",
+      targetId: client.id,
+      targetLabel: client.emri,
+    });
     console.log("[admin] Klienti u krijua:", client.id);
     res.status(201).json({ ok: true, client });
   } catch (e) {
@@ -151,12 +177,53 @@ router.patch("/licenses/:id/status", asyncHandler(async (req, res) => {
     return res.status(400).json({ gabim: "Status i pavlefshëm." });
   }
   const license = await updateLicenseStatus(req.params.id, statusi);
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: statusi === "aktive" ? "license_unblock" : "license_block",
+    targetType: "license",
+    targetId: license.id,
+    targetLabel: license.clients?.emri || license.celesi,
+    details: { statusi, force_logout: statusi !== "aktive" },
+  });
+  res.json({ ok: true, license, force_logout: statusi !== "aktive" });
+}));
+
+router.post("/licenses/:id/block", asyncHandler(async (req, res) => {
+  const license = await blockLicense(req.params.id);
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: "license_block",
+    targetType: "license",
+    targetId: license.id,
+    targetLabel: license.clients?.emri || license.celesi,
+    details: { statusi: "pezulluar", force_logout: true },
+  });
+  res.json({ ok: true, license, force_logout: true, message: "POS do të shkyçet brenda ~60 sekondave." });
+}));
+
+router.post("/licenses/:id/unblock", asyncHandler(async (req, res) => {
+  const license = await unblockLicense(req.params.id);
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: "license_unblock",
+    targetType: "license",
+    targetId: license.id,
+    targetLabel: license.clients?.emri || license.celesi,
+    details: { statusi: "aktive" },
+  });
   res.json({ ok: true, license });
 }));
 
 router.post("/licenses/:id/reset-device", asyncHandler(async (req, res) => {
   try {
     const license = await resetLicenseDevice(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_reset_device",
+      targetType: "license",
+      targetId: license.id,
+      targetLabel: license.clients?.emri || license.celesi,
+    });
     res.json({ ok: true, license });
   } catch (e) {
     const msg = logRouteError("admin:POST /licenses/:id/reset-device", e);
@@ -194,10 +261,40 @@ router.post("/owners", asyncHandler(async (req, res) => {
 router.post("/owners/:id/invite", asyncHandler(async (req, res) => {
   try {
     const owner = await regenerateOwnerInvite(req.params.id, requestBaseUrl(req));
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "owner_invite_resend",
+      targetType: "owner",
+      targetId: owner.id,
+      targetLabel: owner.email,
+    });
     res.json({ ok: true, owner });
   } catch (e) {
     const msg = logRouteError("admin:POST /owners/:id/invite", e);
     res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.post("/owners/:id/reset-password", asyncHandler(async (req, res) => {
+  try {
+    const owner = await adminResetOwnerPassword(req.params.id, requestBaseUrl(req));
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "owner_reset_password",
+      targetType: "owner",
+      targetId: owner.id,
+      targetLabel: owner.email,
+    });
+    res.json({
+      ok: true,
+      owner,
+      message: owner.account_status === "pending"
+        ? "U dërgua email me link ftese të ri."
+        : "U dërgua email me kod rivendosjeje fjalëkalimi.",
+    });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /owners/:id/reset-password", e);
+    res.status(400).json({ gabim: msg, code: e?.code || null });
   }
 }));
 

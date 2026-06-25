@@ -346,6 +346,26 @@ async function setOwnerActive(id, aktiv) {
   return data;
 }
 
+async function adminResetOwnerPassword(id, baseUrl) {
+  const db = getSupabase();
+  const { data: owner, error } = await db
+    .from("users")
+    .select(OWNER_SELECT)
+    .eq("id", id)
+    .eq("roli", "client_admin")
+    .maybeSingle();
+  if (error) throw error;
+  if (!owner) throw new Error("Pronari nuk u gjet.");
+
+  if (!isOwnerActivated(owner)) {
+    return regenerateOwnerInvite(id, baseUrl);
+  }
+
+  const { requestOwnerPasswordReset } = require("./ownerPasswordReset");
+  await requestOwnerPasswordReset(owner.email);
+  return sanitizeOwnerForAdmin(owner, baseUrl);
+}
+
 module.exports = {
   listOwners,
   createOwner,
@@ -359,4 +379,5 @@ module.exports = {
   setOwnerActive,
   ownerAccountStatus,
   buildInviteUrl,
+  adminResetOwnerPassword,
 };

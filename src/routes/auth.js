@@ -67,6 +67,20 @@ router.post("/login", async (req, res) => {
       maxAge: 12 * 60 * 60 * 1000,
     });
 
+    try {
+      const { logAdminActivity } = require("../services/activityLogService");
+      await logAdminActivity({
+        actorUserId: user.id,
+        actorEmail: user.email,
+        action: "admin_login",
+        targetType: "user",
+        targetId: user.id,
+        targetLabel: user.email,
+      });
+    } catch {
+      /* optional */
+    }
+
     res.json({
       ok: true,
       token,
