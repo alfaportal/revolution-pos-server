@@ -1,0 +1,106 @@
+/** ESC/POS komanda për printer termal 58mm / 80mm */
+
+const ESC = 0x1b;
+const GS = 0x1d;
+
+function buf(bytes) {
+  return Buffer.from(bytes);
+}
+
+function text(str) {
+  return Buffer.from(String(str ?? ""), "utf8");
+}
+
+function concat(...parts) {
+  return Buffer.concat(parts.map(p => (Buffer.isBuffer(p) ? p : text(p))));
+}
+
+function init() {
+  return buf([ESC, 0x40]);
+}
+
+function bold(on = true) {
+  return buf([ESC, 0x45, on ? 1 : 0]);
+}
+
+function align(mode = 0) {
+  return buf([ESC, 0x61, mode]);
+}
+
+function size(mode = 0) {
+  return buf([GS, 0x21, mode]);
+}
+
+function cut(partial = false) {
+  return buf([GS, 0x56, partial ? 1 : 0]);
+}
+
+function feed(lines = 3) {
+  return text("\n".repeat(Math.max(1, lines)));
+}
+
+function line(str = "") {
+  return concat(text(str), text("\n"));
+}
+
+/**
+ * Ndërton buffer ESC/POS nga rreshta plain-text me markime speciale:
+ * ^B...^b = bold, ^C...^c = center, ^L...^l = large (2x height)
+ */
+function buildEscPosFromLines(lines) {
+  const chunks = [init()];
+
+  for (const raw of lines) {
+    let s = String(raw ?? "");
+    const resets = [];
+
+    if (!s) {
+      chunks.push(line());
+      continue;
+    }
+
+    if (s.startsWith("^C")) {
+      chunks.push(align(1));
+      resets.push(align(0));
+      s = s.slice(2);
+    } else if (s.startsWith("^R")) {
+      chunks.push(align(2));
+      resets.push(align(0));
+      s = s.slice(2);
+    }
+
+    if (s.startsWith("^L")) {
+      chunks.push(size(0x11));
+      resets.unshift(size(0));
+      s = s.slice(2);
+    }
+
+    if (s.startsWith("^B")) {
+      chunks.push(bold(true));
+      resets.unshift(bold(false));
+      s = s.slice(2);
+    }
+
+    s = s.replace(/\^b/g, "");
+    chunks.push(text(s), text("\n"), ...resets);
+  }
+
+  chunks.push(feed(2), cut(false));
+  return concat(...chunks);
+}
+
+function toBase64(buffer) {
+  return buffer.toString("base64");
+}
+
+module.exports = {
+  init,
+  bold,
+  align,
+  size,
+  cut,
+  feed,
+  line,
+  buildEscPosFromLines,
+  toBase64,
+};

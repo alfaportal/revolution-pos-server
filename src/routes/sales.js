@@ -10,8 +10,8 @@ const router = express.Router();
  */
 router.post("/sync", licenseApiKeyOptional, async (req, res) => {
   try {
-    const sale = await syncSaleFromPos(req.body);
-    res.status(201).json({ ok: true, sale });
+    const { sale, receipt } = await syncSaleFromPos(req.body);
+    res.status(201).json({ ok: true, sale, receipt });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

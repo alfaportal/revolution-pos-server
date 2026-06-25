@@ -103,6 +103,11 @@ CREATE INDEX IF NOT EXISTS idx_sales_kitchen_queue
 CREATE TABLE IF NOT EXISTS pos_settings (
   client_id         UUID PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
   restaurant_name   TEXT DEFAULT '',
+  address           TEXT DEFAULT '',
+  phone             TEXT DEFAULT '',
+  nui               TEXT DEFAULT '',
+  tvsh_nr           TEXT DEFAULT '',
+  receipt_width_mm  INTEGER NOT NULL DEFAULT 80 CHECK (receipt_width_mm IN (58, 80)),
   table_count       INTEGER NOT NULL DEFAULT 10,
   synced_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );

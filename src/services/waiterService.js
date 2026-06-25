@@ -118,7 +118,7 @@ async function submitWaiterOrder(clientId, body) {
   const license = await getLicenseForClient(clientId);
   const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
 
-  const sale = await syncSaleFromPos({
+  const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
     device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
@@ -130,7 +130,7 @@ async function submitWaiterOrder(clientId, body) {
     ordered_at: existing?.ordered_at || now,
   });
 
-  return { ok: true, order: sale };
+  return { ok: true, order: saleResult.sale };
 }
 
 async function closeWaiterTable(clientId, body) {
@@ -159,7 +159,7 @@ async function closeWaiterTable(clientId, body) {
   const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
   const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
 
-  const sale = await syncSaleFromPos({
+  const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
     device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
@@ -173,26 +173,27 @@ async function closeWaiterTable(clientId, body) {
     closed_at: now,
   });
 
-  const client = await getClientById(clientId);
-  const db = getSupabase();
-  const { data: settings } = await db
-    .from("pos_settings")
-    .select("restaurant_name")
-    .eq("client_id", clientId)
-    .maybeSingle();
+  const receiptBundle = saleResult.receipt || null;
 
   return {
     ok: true,
-    order: sale,
-    receipt: {
-      receipt_number: receiptNumber,
-      restaurant_name: settings?.restaurant_name || client?.emri || "",
-      table_number: tableNumber,
-      waiter_name: waiterName,
-      items,
-      total,
-      closed_at: now,
-    },
+    order: saleResult.sale,
+    receipt: receiptBundle
+      ? {
+          ...receiptBundle.receipt,
+          text: receiptBundle.text,
+          html: receiptBundle.html,
+          escpos_base64: receiptBundle.escpos_base64,
+          paper_width_mm: receiptBundle.paper_width_mm,
+        }
+      : {
+          receipt_number: receiptNumber,
+          table_number: tableNumber,
+          waiter_name: waiterName,
+          items,
+          total,
+          closed_at: now,
+        },
   };
 }
 

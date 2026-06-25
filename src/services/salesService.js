@@ -113,8 +113,26 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   return data;
 }
 
+async function buildSaleReceipt(sale, body = {}) {
+  if (!sale || sale.status !== "closed") return null;
+  const { formatReceiptBundle } = require("./receiptService");
+  return formatReceiptBundle(sale.client_id, {
+    receipt_number: sale.receipt_number || body.receipt_number,
+    order_number: sale.local_order_id || body.local_order_id,
+    table_number: sale.table_number ?? body.table_number,
+    waiter_name: sale.waiter_name || body.waiter_name,
+    items: sale.items_json || body.items,
+    total: sale.total ?? body.total,
+    closed_at: sale.closed_at || body.closed_at,
+    register_name: body.register_name || body.arka,
+    cashier_name: body.cashier_name || body.operator_name,
+  });
+}
+
 async function syncSaleFromPos(body) {
-  return upsertSaleFromPos(body, { defaultStatus: "closed" });
+  const sale = await upsertSaleFromPos(body, { defaultStatus: "closed" });
+  const receipt = await buildSaleReceipt(sale, body);
+  return { sale, receipt };
 }
 
 async function updateActiveSaleFromPos(body) {
@@ -293,6 +311,7 @@ async function getClientById(clientId) {
 module.exports = {
   normalizeItems,
   syncSaleFromPos,
+  buildSaleReceipt,
   updateActiveSaleFromPos,
   getLiveTablesForOwner,
   getOwnerStats,

@@ -17,11 +17,23 @@ async function syncCatalogFromPosSupabase(license, body) {
 
   const restaurantName = String(body.restaurant_name || "").trim();
   const tableCount = Math.min(30, Math.max(1, Number(body.table_count) || 10));
+  const address = String(body.address || body.adresa || "").trim();
+  const phone = String(body.phone || body.telefoni || "").trim();
+  const nui = String(body.nui || "").trim();
+  const tvshNr = String(body.tvsh_nr || body.tvsh || "").trim();
+  const receiptWidth = [58, 80].includes(Number(body.receipt_width_mm))
+    ? Number(body.receipt_width_mm)
+    : 80;
   const now = new Date().toISOString();
 
   await db.from("pos_settings").upsert({
     client_id: clientId,
     restaurant_name: restaurantName,
+    address,
+    phone,
+    nui,
+    tvsh_nr: tvshNr,
+    receipt_width_mm: receiptWidth,
     table_count: tableCount,
     synced_at: now,
   });
@@ -99,6 +111,13 @@ async function syncCatalogFromPosTransactional(license, body) {
   const clientId = license.client_id;
   const restaurantName = String(body.restaurant_name || "").trim();
   const tableCount = Math.min(30, Math.max(1, Number(body.table_count) || 10));
+  const address = String(body.address || body.adresa || "").trim();
+  const phone = String(body.phone || body.telefoni || "").trim();
+  const nui = String(body.nui || "").trim();
+  const tvshNr = String(body.tvsh_nr || body.tvsh || "").trim();
+  const receiptWidth = [58, 80].includes(Number(body.receipt_width_mm))
+    ? Number(body.receipt_width_mm)
+    : 80;
   const now = new Date().toISOString();
 
   const categories = Array.isArray(body.categories) ? body.categories : [];
@@ -131,13 +150,18 @@ async function syncCatalogFromPosTransactional(license, body) {
 
   return withPgTransaction(async client => {
     await client.query(
-      `INSERT INTO pos_settings (client_id, restaurant_name, table_count, synced_at)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO pos_settings (client_id, restaurant_name, address, phone, nui, tvsh_nr, receipt_width_mm, table_count, synced_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (client_id) DO UPDATE SET
          restaurant_name = EXCLUDED.restaurant_name,
+         address = EXCLUDED.address,
+         phone = EXCLUDED.phone,
+         nui = EXCLUDED.nui,
+         tvsh_nr = EXCLUDED.tvsh_nr,
+         receipt_width_mm = EXCLUDED.receipt_width_mm,
          table_count = EXCLUDED.table_count,
          synced_at = EXCLUDED.synced_at`,
-      [clientId, restaurantName, tableCount, now],
+      [clientId, restaurantName, address, phone, nui, tvshNr, receiptWidth, tableCount, now],
     );
 
     await client.query(`DELETE FROM pos_categories WHERE client_id = $1`, [clientId]);

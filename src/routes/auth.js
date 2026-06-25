@@ -225,7 +225,7 @@ router.post("/owner/password/forgot", async (req, res) => {
   } catch (e) {
     if (e.message === "EMAIL_NOT_CONFIGURED") {
       return res.status(503).json({
-        gabim: "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY + EMAIL_FROM.",
+        gabim: "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY në Railway.",
         code: "EMAIL_NOT_CONFIGURED",
       });
     }

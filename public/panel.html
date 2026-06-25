@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=20">
+  <link rel="stylesheet" href="/css/panel.css?v=21">
 </head>
 <body>
   <script>
@@ -86,8 +86,29 @@
       <div id="panel-licensat" class="panel-section hidden">
         <div class="card license-pair-hint admin-only-card">
           <strong>Vetëm Super Admin.</strong> Kodi i licencës ↔ ID pajisjes — pronarët <em>nuk</em> i shohin këto.
+          <span class="mobile-only"> Në telefon: çelësi dhe ID e pajisjes shfaqen së bashku — mund t’i ndryshoni ose kopjoni direkt.</span>
         </div>
-        <div class="card">
+
+        <div class="card mobile-only license-quick-create">
+          <div class="card-title">Krijo liçencë</div>
+          <div id="msg-license-mobile" class="alert hidden"></div>
+          <form id="form-license-mobile">
+            <label>Klienti *</label>
+            <select id="lm-client" required></select>
+            <label>Çelësi i licencës</label>
+            <div class="link-actions">
+              <input type="text" id="lm-celesi" class="mono" placeholder="Auto-gjenerohet">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-key">Gjenero</button>
+            </div>
+            <label>ID e pajisjes <span class="label-muted">(nga ekrani POS — opsionale)</span></label>
+            <input type="text" id="lm-device-id" class="mono" placeholder="p.sh. A1B2C3D4E5F6" autocomplete="off" autocapitalize="characters">
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Krijo liçencën</button>
+          </form>
+        </div>
+
+        <div id="license-mobile-list" class="license-mobile-list" aria-live="polite"></div>
+
+        <div class="card licenses-desktop-table">
           <div class="card-title card-title-row">
             <span>Të gjitha liçensat</span>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-licenses" title="Rifresko listën">Rifresko</button>
@@ -207,13 +228,16 @@
                 <label>Muaj vlefshmërie</label>
                 <input type="number" id="l-muaj" value="12" min="1" max="120">
               </div>
+              <div>
+                <label>ID e pajisjes <span class="label-muted">(opsionale)</span></label>
+                <input type="text" id="l-device-id" class="mono" placeholder="Nga ekrani POS — ose lëreni bosh" autocomplete="off" autocapitalize="characters">
+              </div>
             </div>
             <button type="submit" class="btn btn-primary">Krijo liçencën</button>
           </form>
           <p style="margin-top:0.5rem;color:var(--muted);font-size:0.85rem">
-            <strong>ID e pajisjes</strong> nuk e shkruani ju — POS e lidh automatikisht kur klienti aktivizon çelësin.
-            Numri i ri shfaqet në listën «Liçensat», kolona <strong>ID Pajisjes</strong>, pas aktivizimit.
-            <strong>Reset ID</strong> e fshin lidhjen; pastaj klienti aktivizon përsëri nga POS dhe sistemi e regjistron ID-në e re vetë.
+            <strong>ID e pajisjes</strong> shfaqet në tab «Liçensat» pas aktivizimit nga POS, ose e vendosni ju manualisht (edhe nga telefoni).
+            <strong>Reset ID</strong> e fshin lidhjen; pastaj klienti aktivizon përsëri nga POS dhe sistemi e regjistron ID-në e re.
           </p>
         </div>
 
@@ -270,6 +294,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=22"></script>
+  <script src="/js/panel.js?v=23"></script>
 </body>
 </html>

@@ -242,19 +242,41 @@
   });
 
   function showReceipt(receipt) {
-    $("receipt-restaurant").textContent = receipt.restaurant_name || "Faturë";
-    $("receipt-meta").innerHTML = [
-      `Fatura: <strong>${escapeHtml(receipt.receipt_number)}</strong>`,
-      `Tavolina: T${receipt.table_number}`,
-      `Kamarieri: ${escapeHtml(receipt.waiter_name)}`,
-      new Date(receipt.closed_at).toLocaleString("sq-AL"),
-    ].join("<br>");
-    $("receipt-items").innerHTML = receipt.items.map(i => `
-      <tr>
-        <td>${i.quantity}× ${escapeHtml(i.name)}</td>
-        <td style="text-align:right">${formatEuro(i.price * i.quantity)}</td>
-      </tr>`).join("");
-    $("receipt-total").textContent = `Totali: ${formatEuro(receipt.total)}`;
+    const sheet = $("receipt-print");
+    if (receipt.html) {
+      sheet.innerHTML = receipt.html;
+      sheet.style.maxWidth = `${receipt.paper_width_mm || 80}mm`;
+    } else {
+      const biz = receipt.business || {};
+      sheet.innerHTML = `
+        <div class="receipt-thermal" data-width-mm="${receipt.paper_width_mm || 80}">
+          <div class="rc-header">
+            <div class="rc-business-name">${escapeHtml(biz.business_name || receipt.restaurant_name || "Faturë")}</div>
+            ${biz.address ? `<div>${escapeHtml(biz.address)}</div>` : ""}
+            ${biz.phone ? `<div>Tel: ${escapeHtml(biz.phone)}</div>` : ""}
+          </div>
+          <div class="rc-divider"></div>
+          <div class="rc-order-meta">
+            <div>Nr. Porosia: <strong>${escapeHtml(receipt.receipt_number || "")}</strong></div>
+            <div>Tavolina: T${receipt.table_number || ""}</div>
+            <div>Kamarieri: ${escapeHtml(receipt.waiter_name || "")}</div>
+          </div>
+          <div class="rc-divider"></div>
+          <table class="rc-items"><tbody>
+            ${(receipt.items || []).map(i => `
+              <tr>
+                <td class="rc-name">${escapeHtml(i.name)}</td>
+                <td class="rc-qty">${i.quantity}</td>
+                <td class="rc-price">x ${Number(i.price).toFixed(2)}</td>
+                <td class="rc-value">= ${(i.price * i.quantity).toFixed(2)}</td>
+              </tr>`).join("")}
+          </tbody></table>
+          <div class="rc-divider"></div>
+          <div class="rc-total"><span>GJITHSEJ:</span><span>${Number(receipt.total || 0).toFixed(2)}€</span></div>
+          <div class="rc-divider"></div>
+          <div class="rc-footer"><div class="rc-thanks">FALEMINDERIT!</div></div>
+        </div>`;
+    }
     $("receipt-modal").classList.remove("hidden");
   }
 

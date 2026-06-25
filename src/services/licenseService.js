@@ -6,6 +6,7 @@ const { normalizePackageTier } = require("../lib/packages");
 const { generateKitchenKey, generateKitchenSlug } = require("../lib/kitchenAccess");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
 const { isLicenseUsable } = require("../lib/licenseEnforcement");
+const { seedPosSettingsForClient, syncPosSettingsFromClient } = require("./receiptService");
 
 function normalizeKey(key) {
   const raw = String(key || "")
@@ -283,6 +284,11 @@ async function createClient(body) {
     logRouteError("createClient", error, { row });
     throw error;
   }
+  try {
+    await seedPosSettingsForClient(data);
+  } catch (seedErr) {
+    console.warn("[createClient] pos_settings seed failed:", seedErr.message);
+  }
   return data;
 }
 
@@ -306,6 +312,11 @@ async function updateClient(id, body) {
   const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
   if (error) throw error;
   if (!data) throw new Error("Klienti nuk u gjet.");
+  try {
+    await syncPosSettingsFromClient(id);
+  } catch (syncErr) {
+    console.warn("[updateClient] pos_settings sync failed:", syncErr.message);
+  }
   return data;
 }
 

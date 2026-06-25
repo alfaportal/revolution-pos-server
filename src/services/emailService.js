@@ -1,15 +1,21 @@
 /** Dërgim email transaksional (Resend). */
 
+const DEFAULT_EMAIL_FROM = "Revolution POS <noreply@ketujemi.com>";
+
+function resolveEmailFrom() {
+  const raw = process.env.EMAIL_FROM?.trim();
+  if (!raw) return DEFAULT_EMAIL_FROM;
+  return raw.replace(/@revolutioninvest\.com/gi, "@ketujemi.com");
+}
+
 function isEmailConfigured() {
-  return Boolean(
-    process.env.RESEND_API_KEY?.trim() && process.env.EMAIL_FROM?.trim(),
-  );
+  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
 async function deliverEmail({ to, subject, text, html }) {
   if (!isEmailConfigured()) {
     throw new Error(
-      "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY dhe EMAIL_FROM në Railway.",
+      "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY në Railway.",
     );
   }
 
@@ -20,7 +26,7 @@ async function deliverEmail({ to, subject, text, html }) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM.trim(),
+      from: resolveEmailFrom(),
       to: [String(to).trim().toLowerCase()],
       subject,
       text,

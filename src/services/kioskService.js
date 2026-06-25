@@ -62,7 +62,7 @@ async function submitKioskOrder(client, body) {
   const license = await getLicenseForClient(client.id);
   const localOrderId = `kiosk-${uuidv4()}`;
 
-  const sale = await syncSaleFromPos({
+  const { sale } = await syncSaleFromPos({
     celesi: license.celesi,
     device_id: KIOSK_DEVICE,
     local_order_id: localOrderId,

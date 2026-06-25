@@ -147,7 +147,7 @@ function openModal(title, fieldsHtml, onSave) {
     const first = document.getElementById("modal-form").querySelector(
       "input:not([readonly]):not([type=hidden]), select, textarea",
     );
-    if (first && first.id !== "license-edit-device-id") {
+    if (first) {
       first.focus({ preventScroll: false });
     }
   });
@@ -343,18 +343,19 @@ function openEditLicense(id) {
   openModal("Ndrysho liçencën", `
     <label>Kodi i licencës</label>
     <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
-    <label for="license-edit-device-id"><strong>ID Pajisjes</strong> <span style="font-weight:normal;color:var(--muted)">(automatik nga POS)</span></label>
+    <label for="license-edit-device-id"><strong>ID Pajisjes</strong></label>
     <input
       id="license-edit-device-id"
+      name="device_id"
       value="${esc(l.device_id || "")}"
-      readonly
       class="mono"
-      style="opacity:0.85"
-      placeholder="Pa aktivizuar — shfaqet pas aktivizimit nga POS"
+      placeholder="Pa aktivizuar — shkruani ID nga POS ose lëreni bosh"
+      autocomplete="off"
+      autocapitalize="characters"
     >
     <p class="field-hint license-device-hint">
-      <strong>Mos e shkruani manualisht.</strong> Numri vjen nga ekrani i aktivizimit të POS-it.
-      Pas <strong>Reset ID</strong>, klienti aktivizon përsëri — ID e re shfaqet këtu automatikisht.
+      Vendosni ID-në që shfaqet në ekranin e aktivizimit të POS-it.
+      <strong>Reset ID</strong> e fshin — pastaj klienti aktivizon përsëri.
     </p>
     <label>Tipi i aplikacionit</label>
     <select name="app_type">
@@ -384,6 +385,7 @@ function openEditLicense(id) {
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
         app_type: fd.get("app_type"),
+        device_id: fd.get("device_id") || "",
       }),
     });
   });
@@ -498,6 +500,7 @@ async function loadClients() {
   const { clients } = await api("/api/admin/clients");
   clientsCache = clients;
   const sel = document.getElementById("l-client");
+  const lmSel = document.getElementById("lm-client");
   const opts = clients.length
     ? clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
     : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
@@ -506,6 +509,12 @@ async function loadClients() {
     sel.disabled = !clients.length;
     sel.onchange = syncLicenseAppTypeFromClient;
     syncLicenseAppTypeFromClient();
+  }
+  if (lmSel) {
+    lmSel.innerHTML = clients.length
+      ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + opts
+      : '<option value="" disabled selected>— Shto klient së pari —</option>';
+    lmSel.disabled = !clients.length;
   }
   updateOwnerFormState(clients);
   const tbl = document.getElementById("tbl-clients");
@@ -550,6 +559,185 @@ async function copyText(text, btn) {
   } catch {
     prompt("Kopjoni:", text);
   }
+}
+
+async function saveLicenseDeviceId(licenseId, deviceId, btn) {
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Duke ruajtur…";
+    }
+    await api(`/api/admin/licenses/${licenseId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ device_id: deviceId }),
+    });
+    await loadLicenses();
+    if (btn) {
+      btn.textContent = "U ruajt!";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = "Ruaj ID";
+      }, 1200);
+    }
+  } catch (err) {
+    alert(err.message || "Ruajtja e ID-së dështoi.");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Ruaj ID";
+    }
+  }
+}
+
+async function resetLicenseDevice(licenseId) {
+  const lic = licensesCache.find(x => x.id === licenseId);
+  const celesi = lic?.celesi || "—";
+  if (!confirm(`Hiq ID-në e pajisjes për çelësin ${celesi}?\n\nKlienti duhet të aktivizojë përsëri nga POS.`)) return;
+  try {
+    await api(`/api/admin/licenses/${licenseId}/reset-device`, { method: "POST" });
+    await loadLicenses();
+    alert(
+      `✅ ID e pajisjes u fshi.\n\n` +
+      `Aktivizoni përsëri në POS me çelësin:\n${celesi}\n\n` +
+      `ID e re do të shfaqet këtu automatikisht ose vendoseni manualisht.`,
+    );
+  } catch (err) {
+    alert(err.message || "Reset ID dështoi.");
+  }
+}
+
+function bindMobileLicenseActions(scope) {
+  scope.querySelectorAll("[data-mobile-copy-key]").forEach(btn => {
+    btn.addEventListener("click", () => copyText(btn.dataset.mobileCopyKey, btn));
+  });
+  scope.querySelectorAll("[data-mobile-copy-device]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileCopyDevice}"]`);
+      const id = (input?.value || "").trim();
+      if (id) copyText(id, btn);
+      else alert("Nuk ka ID pajisje.");
+    });
+  });
+  scope.querySelectorAll("[data-mobile-save-device]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileSaveDevice}"]`);
+      if (!input) return;
+      saveLicenseDeviceId(btn.dataset.mobileSaveDevice, input.value.trim(), btn);
+    });
+  });
+  scope.querySelectorAll("[data-mobile-reset-device]").forEach(btn => {
+    btn.addEventListener("click", () => resetLicenseDevice(btn.dataset.mobileResetDevice));
+  });
+  scope.querySelectorAll("[data-mobile-edit-license]").forEach(btn => {
+    btn.addEventListener("click", () => openEditLicense(btn.dataset.mobileEditLicense));
+  });
+  scope.querySelectorAll("[data-mobile-block-license]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Blloko POS-in e këtij klienti?")) return;
+      try {
+        const res = await api(`/api/admin/licenses/${btn.dataset.mobileBlockLicense}/block`, { method: "POST" });
+        alert(res.message || "POS u bllokua.");
+        await loadLicenses();
+      } catch (err) {
+        alert(err.message || "Bllokimi dështoi.");
+      }
+    });
+  });
+  scope.querySelectorAll("[data-mobile-unblock-license]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        await api(`/api/admin/licenses/${btn.dataset.mobileUnblockLicense}/unblock`, { method: "POST" });
+        await loadLicenses();
+      } catch (err) {
+        alert(err.message || "Hapja dështoi.");
+      }
+    });
+  });
+  scope.querySelectorAll("[data-mobile-del-license]").forEach(btn => {
+    btn.addEventListener("click", () => confirmDelete(
+      "Fshi këtë liçencë? Ky veprim nuk kthehet mbrapsht.",
+      () => api(`/api/admin/licenses/${btn.dataset.mobileDelLicense}`, { method: "DELETE" }),
+    ));
+  });
+}
+
+function renderMobileLicenseCards(licenses) {
+  const list = document.getElementById("license-mobile-list");
+  if (!list) return;
+
+  const cardsHtml = licenses.length
+    ? licenses.map(l => {
+        const devId = (l.device_id || "").trim();
+        const isBound = l.statusi === "aktive" && devId;
+        return `<article class="license-mobile-card${isBound ? " is-bound" : ""}" data-license-id="${l.id}">
+          <div class="license-mobile-head">
+            <div>
+              <strong>${esc(l.clients?.emri) || "—"}</strong>
+              <div class="license-mobile-meta">${licenseAppTypeLabel(l)} · ${licenseStatusCell(l)}</div>
+            </div>
+          </div>
+          <div class="license-mobile-pair">
+            <div class="license-mobile-field">
+              <label>Çelësi i licencës</label>
+              <code class="mono-value license-key-value">${esc(l.celesi)}</code>
+              <div class="license-mobile-field-actions">
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${esc(l.celesi)}">Kopjo çelësin</button>
+              </div>
+            </div>
+            <div class="license-mobile-field">
+              <label>ID e pajisjes</label>
+              <input
+                type="text"
+                class="device-id-input mono"
+                data-mobile-device-input="${l.id}"
+                value="${esc(devId)}"
+                placeholder="Pa aktivizuar — shkruani ID nga POS"
+                autocomplete="off"
+                autocapitalize="characters"
+              >
+              <div class="license-mobile-field-actions">
+                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-device="${l.id}">Ruaj ID</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-device="${l.id}">Kopjo ID</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-reset-device="${l.id}">Reset ID</button>
+              </div>
+            </div>
+          </div>
+          <div class="license-mobile-meta">
+            ${l.device_hostname ? `Kompjuteri: ${esc(l.device_hostname)} · ` : ""}
+            Skadon: ${esc(l.data_skadimit)}
+          </div>
+          <div class="license-mobile-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-mobile-edit-license="${l.id}">Ndrysho liçencën</button>
+            ${l.statusi === "aktive"
+              ? `<button type="button" class="btn btn-danger btn-sm" data-mobile-block-license="${l.id}">Blloko POS</button>`
+              : `<button type="button" class="btn btn-primary btn-sm" data-mobile-unblock-license="${l.id}">Hape POS</button>`}
+            <button type="button" class="btn btn-danger btn-sm" data-mobile-del-license="${l.id}">Fshi</button>
+          </div>
+        </article>`;
+      }).join("")
+    : '<div class="license-mobile-empty">Nuk ka liçensa — krijoni një më sipër.</div>';
+
+  list.innerHTML = `
+    <div class="license-mobile-toolbar">
+      <div class="card-title">Liçensat (${licenses.length})</div>
+      <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-licenses-mobile">Rifresko</button>
+    </div>
+    ${cardsHtml}`;
+
+  bindMobileLicenseActions(list);
+  document.getElementById("btn-refresh-licenses-mobile")?.addEventListener("click", async function () {
+    const btn = this;
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "…";
+    try {
+      await loadLicenses();
+    } catch (err) {
+      alert(err.message || "Rifreskimi dështoi.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+  });
 }
 
 async function loadLicenses() {
@@ -640,28 +828,11 @@ async function loadLicenses() {
 
   tbl.querySelectorAll("[data-reset]").forEach(btn => {
     btn.onclick = async () => {
-      const licenseId = btn.dataset.reset;
-      if (!licenseId) return;
-      const lic = licensesCache.find(x => x.id === licenseId);
-      const celesi = lic?.celesi || "—";
-      if (!confirm(`Hiq ID-në e pajisjes për çelësin ${celesi}?\n\nPas kësaj, klienti aktivizon përsëri nga POS — numri i ri do të shfaqet automatikisht në listë.`)) return;
-      try {
-        await api(`/api/admin/licenses/${licenseId}/reset-device`, { method: "POST" });
-        await refreshAll();
-        alert(
-          `✅ ID e pajisjes u fshi.\n\n` +
-          `Hapat e radhës:\n` +
-          `1. Në PC të klientit, hapni POS dhe aktivizoni përsëri me çelësin:\n   ${celesi}\n\n` +
-          `2. Në ekranin e aktivizimit POS shfaqet «ID e pajisjes».\n\n` +
-          `3. Rifreskoni këtë listë — kolona «ID Pajisjes» plotësohet vetë me numrin e ri.\n\n` +
-          `Nuk keni nevojë ta shkruani manualisht.`,
-        );
-      } catch (err) {
-        alert(err.message || "Reset ID dështoi.");
-      }
+      await resetLicenseDevice(btn.dataset.reset);
     };
   });
   bindTableActions(tbl);
+  renderMobileLicenseCards(licenses);
 }
 
 async function loadOwners() {
@@ -912,23 +1083,73 @@ document.getElementById("btn-gen-key").addEventListener("click", async () => {
   document.getElementById("l-celesi").value = celesi;
 });
 
+document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () => {
+  const { celesi } = await api("/api/admin/licenses/generate-key");
+  document.getElementById("lm-celesi").value = celesi;
+});
+
+async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, msgId, resetFields }) {
+  const res = await api("/api/admin/licenses", {
+    method: "POST",
+    body: JSON.stringify({
+      client_id: clientId,
+      app_type: appType,
+      celesi,
+      muaj,
+      device_id: deviceId || "",
+    }),
+  });
+  showMsg(msgId, `Liçenca u krijua: ${res.license.celesi}`, true);
+  resetFields();
+  await refreshAll();
+}
+
 document.getElementById("form-license").addEventListener("submit", async e => {
   e.preventDefault();
   try {
-    const res = await api("/api/admin/licenses", {
-      method: "POST",
-      body: JSON.stringify({
-        client_id: document.getElementById("l-client").value,
-        app_type: document.getElementById("l-app-type").value,
-        celesi: document.getElementById("l-celesi").value,
-        muaj: document.getElementById("l-muaj").value,
-      }),
+    await submitLicenseForm({
+      clientId: document.getElementById("l-client").value,
+      appType: document.getElementById("l-app-type").value,
+      celesi: document.getElementById("l-celesi").value,
+      muaj: document.getElementById("l-muaj").value,
+      deviceId: document.getElementById("l-device-id")?.value || "",
+      msgId: "msg-license",
+      resetFields: () => {
+        document.getElementById("l-celesi").value = "";
+        const devEl = document.getElementById("l-device-id");
+        if (devEl) devEl.value = "";
+      },
     });
-    showMsg("msg-license", `Liçenca u krijua: ${res.license.celesi}`, true);
-    document.getElementById("l-celesi").value = "";
-    await refreshAll();
   } catch (err) {
     showMsg("msg-license", err.message, false);
+  }
+});
+
+document.getElementById("form-license-mobile")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  const clientSel = document.getElementById("lm-client");
+  if (!clientSel?.value) {
+    showMsg("msg-license-mobile", "Zgjidhni klientin.", false);
+    return;
+  }
+  const client = clientsCache.find(c => c.id === clientSel.value);
+  const appType = client?.tipi === "kafene" ? "kafene" : "restorant";
+  try {
+    await submitLicenseForm({
+      clientId: clientSel.value,
+      appType,
+      celesi: document.getElementById("lm-celesi").value,
+      muaj: 12,
+      deviceId: document.getElementById("lm-device-id")?.value || "",
+      msgId: "msg-license-mobile",
+      resetFields: () => {
+        document.getElementById("lm-celesi").value = "";
+        const devEl = document.getElementById("lm-device-id");
+        if (devEl) devEl.value = "";
+      },
+    });
+  } catch (err) {
+    showMsg("msg-license-mobile", err.message, false);
   }
 });
 
