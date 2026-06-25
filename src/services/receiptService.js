@@ -143,11 +143,11 @@ function buildReceiptLines(receipt) {
   const lines = [];
   const biz = receipt.business;
 
-  if (biz.business_name) lines.push(biz.business_name);
-  if (biz.address) lines.push(biz.address);
-  if (biz.phone) lines.push(`Tel: ${biz.phone}`);
-  if (biz.nui) lines.push(`NUI: ${biz.nui}`);
-  if (biz.tvsh_nr) lines.push(`TVSH Nr.: ${biz.tvsh_nr}`);
+  if (biz.business_name) lines.push(pad(biz.business_name, w, "center"));
+  if (biz.address) lines.push(pad(biz.address, w, "center"));
+  if (biz.phone) lines.push(pad(`Tel: ${biz.phone}`, w, "center"));
+  if (biz.nui) lines.push(pad(`NUI: ${biz.nui}`, w, "center"));
+  if (biz.tvsh_nr) lines.push(pad(`TVSH: ${biz.tvsh_nr}`, w, "center"));
 
   lines.push(divider(w));
   if (receipt.receipt_number) lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
@@ -171,9 +171,8 @@ function buildReceiptLines(receipt) {
   }
 
   lines.push(divider(w));
-  lines.push("FALEMINDERIT!");
-  if (biz.business_name) lines.push(biz.business_name);
-  lines.push(`${receipt.printed_date} ${receipt.printed_time}`);
+  lines.push(pad("Faleminderit!", w, "center"));
+  lines.push(pad(`${receipt.printed_date}  ${receipt.printed_time}`, w, "center"));
 
   return lines;
 }
@@ -211,9 +210,8 @@ function buildMarkedReceiptLines(receipt) {
   }
 
   lines.push(divider(w));
-  lines.push("^CFALEMINDERIT!");
-  if (biz.business_name) lines.push(`^C${biz.business_name}`);
-  lines.push(`^C${receipt.printed_date} ${receipt.printed_time}`);
+  lines.push("^CFaleminderit!");
+  lines.push(`^C${receipt.printed_date}  ${receipt.printed_time}`);
 
   return lines;
 }
@@ -236,63 +234,76 @@ function escapeHtml(s) {
 
 function formatReceiptHtml(receipt) {
   const w = receipt.paper_width_mm;
+  const narrow = Number(w) <= 58;
   const biz = receipt.business;
+
   const itemRows = receipt.items.map(i => {
     const unit = formatMoney(i.price);
     const lineTotal = formatMoney(i.price * i.quantity);
-    return `<tr>
+    if (narrow) {
+      return `<tr class="rc-item-row">
+        <td class="rc-name" colspan="4">
+          <div class="rc-item-name">${escapeHtml(i.name)}</div>
+          <div class="rc-item-sub"><span>${i.quantity} × ${unit}</span><span class="rc-item-line-total">${lineTotal} €</span></div>
+        </td>
+      </tr>`;
+    }
+    return `<tr class="rc-item-row">
       <td class="rc-name">${escapeHtml(i.name)}</td>
       <td class="rc-qty">${i.quantity}</td>
-      <td class="rc-price">x ${unit}</td>
-      <td class="rc-value">= ${lineTotal}</td>
+      <td class="rc-price">${unit}</td>
+      <td class="rc-value">${lineTotal}</td>
     </tr>`;
   }).join("");
 
   const headerMeta = [
-    biz.address ? `<div>${escapeHtml(biz.address)}</div>` : "",
-    biz.phone ? `<div>Tel: ${escapeHtml(biz.phone)}</div>` : "",
-    biz.nui ? `<div>NUI: ${escapeHtml(biz.nui)}</div>` : "",
-    biz.tvsh_nr ? `<div>TVSH Nr.: ${escapeHtml(biz.tvsh_nr)}</div>` : "",
+    biz.address ? `<div class="rc-meta-line">${escapeHtml(biz.address)}</div>` : "",
+    biz.phone ? `<div class="rc-meta-line">Tel: ${escapeHtml(biz.phone)}</div>` : "",
+    biz.nui ? `<div class="rc-meta-line">NUI: ${escapeHtml(biz.nui)}</div>` : "",
+    biz.tvsh_nr ? `<div class="rc-meta-line">TVSH: ${escapeHtml(biz.tvsh_nr)}</div>` : "",
   ].filter(Boolean).join("");
 
   const orderMeta = [
-    receipt.receipt_number ? `<div>Nr. Porosia: <strong>${escapeHtml(receipt.receipt_number)}</strong></div>` : "",
-    receipt.table_number ? `<div>Tavolina: T${receipt.table_number}</div>` : "",
-    receipt.waiter_name ? `<div>Kamarieri: ${escapeHtml(receipt.waiter_name)}</div>` : "",
-    receipt.register_name ? `<div>Arka: ${escapeHtml(receipt.register_name)}</div>` : "",
-    receipt.cashier_name ? `<div>Operatori: ${escapeHtml(receipt.cashier_name)}</div>` : "",
-    `<div>Data: ${receipt.date} &nbsp; Ora: ${receipt.time}</div>`,
+    receipt.receipt_number ? `<div><span class="rc-meta-label">Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>` : "",
+    receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : "",
+    receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
+    receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
+    receipt.cashier_name ? `<div><span class="rc-meta-label">Operatori</span> ${escapeHtml(receipt.cashier_name)}</div>` : "",
+    `<div><span class="rc-meta-label">Data</span> ${receipt.date} &nbsp; ${receipt.time}</div>`,
   ].filter(Boolean).join("");
+
+  const tableHead = narrow
+    ? ""
+    : `<thead>
+        <tr>
+          <th class="rc-name">Artikulli</th>
+          <th class="rc-qty">Sasi</th>
+          <th class="rc-price">Çmim</th>
+          <th class="rc-value">Total</th>
+        </tr>
+      </thead>`;
 
   return `<div class="receipt-thermal" data-width-mm="${w}">
     <div class="rc-header">
       <div class="rc-business-name">${escapeHtml(biz.business_name || "Faturë")}</div>
-      ${headerMeta}
+      ${headerMeta ? `<div class="rc-business-meta">${headerMeta}</div>` : ""}
     </div>
-    <div class="rc-divider"></div>
+    <div class="rc-divider rc-divider-strong"></div>
     <div class="rc-order-meta">${orderMeta}</div>
     <div class="rc-divider"></div>
-    <table class="rc-items">
-      <thead>
-        <tr>
-          <th>Emërtimi</th>
-          <th>Sasia</th>
-          <th>Çmimi</th>
-          <th>Vlera</th>
-        </tr>
-      </thead>
-      <tbody>${itemRows}</tbody>
+    <table class="rc-items${narrow ? " rc-items-narrow" : ""}">
+      ${tableHead}
+      <tbody>${itemRows || `<tr><td colspan="4" class="rc-empty">—</td></tr>`}</tbody>
     </table>
-    <div class="rc-divider"></div>
+    <div class="rc-divider rc-divider-strong"></div>
     <div class="rc-total">
-      <span>GJITHSEJ:</span>
-      <span>${formatMoney(receipt.total)}€</span>
+      <span class="rc-total-label">GJITHSEJ</span>
+      <span class="rc-total-value">${formatMoney(receipt.total)} €</span>
     </div>
     <div class="rc-divider"></div>
     <div class="rc-footer">
-      <div class="rc-thanks">FALEMINDERIT!</div>
-      ${biz.business_name ? `<div>${escapeHtml(biz.business_name)}</div>` : ""}
-      <div class="rc-printed">${receipt.printed_date} ${receipt.printed_time}</div>
+      <div class="rc-thanks">Faleminderit!</div>
+      <div class="rc-printed">${receipt.printed_date} &nbsp; ${receipt.printed_time}</div>
     </div>
   </div>`;
 }

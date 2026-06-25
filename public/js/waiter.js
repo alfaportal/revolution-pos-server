@@ -514,50 +514,101 @@
     refreshBootstrap();
   });
 
+  function renderReceiptFallback(receipt) {
+    const mm = receipt.paper_width_mm || 80;
+    const biz = receipt.business || {};
+    const items = receipt.items || [];
+    const narrow = Number(mm) <= 58;
+    const fmt = n => Number(n).toFixed(2);
+    const printed = receipt.printed_date && receipt.printed_time
+      ? `${receipt.printed_date} &nbsp; ${receipt.printed_time}`
+      : new Date().toLocaleString("sq-AL");
+
+    const itemRows = items.map(i => {
+      const lineTotal = fmt(Number(i.price) * Number(i.quantity));
+      if (narrow) {
+        return `<tr class="rc-item-row"><td class="rc-name" colspan="4">
+          <div class="rc-item-name">${escapeHtml(i.name)}</div>
+          <div class="rc-item-sub"><span>${i.quantity} × ${fmt(i.price)}</span><span class="rc-item-line-total">${lineTotal} €</span></div>
+        </td></tr>`;
+      }
+      return `<tr class="rc-item-row">
+        <td class="rc-name">${escapeHtml(i.name)}</td>
+        <td class="rc-qty">${i.quantity}</td>
+        <td class="rc-price">${fmt(i.price)}</td>
+        <td class="rc-value">${lineTotal}</td>
+      </tr>`;
+    }).join("");
+
+    const tableHead = narrow ? "" : `<thead><tr>
+      <th class="rc-name">Artikulli</th><th class="rc-qty">Sasi</th>
+      <th class="rc-price">Çmim</th><th class="rc-value">Total</th></tr></thead>`;
+
+    return `<div class="receipt-thermal" data-width-mm="${mm}">
+      <div class="rc-header">
+        <div class="rc-business-name">${escapeHtml(biz.business_name || receipt.restaurant_name || "Faturë")}</div>
+        ${biz.address ? `<div class="rc-meta-line">${escapeHtml(biz.address)}</div>` : ""}
+        ${biz.phone ? `<div class="rc-meta-line">Tel: ${escapeHtml(biz.phone)}</div>` : ""}
+      </div>
+      <div class="rc-divider rc-divider-strong"></div>
+      <div class="rc-order-meta">
+        ${receipt.receipt_number ? `<div><span class="rc-meta-label">Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>` : ""}
+        ${receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : ""}
+        ${receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : ""}
+      </div>
+      <div class="rc-divider"></div>
+      <table class="rc-items${narrow ? " rc-items-narrow" : ""}">${tableHead}<tbody>${itemRows}</tbody></table>
+      <div class="rc-divider rc-divider-strong"></div>
+      <div class="rc-total"><span class="rc-total-label">GJITHSEJ</span><span class="rc-total-value">${fmt(receipt.total || 0)} €</span></div>
+      <div class="rc-divider"></div>
+      <div class="rc-footer"><div class="rc-thanks">Faleminderit!</div><div class="rc-printed">${printed}</div></div>
+    </div>`;
+  }
+
   function showReceipt(receipt) {
     const sheet = $("receipt-print");
-    if (receipt.html) {
-      sheet.innerHTML = receipt.html;
-      sheet.style.maxWidth = `${receipt.paper_width_mm || 80}mm`;
-    } else {
-      const biz = receipt.business || {};
-      sheet.innerHTML = `
-        <div class="receipt-thermal" data-width-mm="${receipt.paper_width_mm || 80}">
-          <div class="rc-header">
-            <div class="rc-business-name">${escapeHtml(biz.business_name || receipt.restaurant_name || "Faturë")}</div>
-            ${biz.address ? `<div>${escapeHtml(biz.address)}</div>` : ""}
-            ${biz.phone ? `<div>Tel: ${escapeHtml(biz.phone)}</div>` : ""}
-          </div>
-          <div class="rc-divider"></div>
-          <div class="rc-order-meta">
-            <div>Nr. Porosia: <strong>${escapeHtml(receipt.receipt_number || "")}</strong></div>
-            <div>Tavolina: T${receipt.table_number || ""}</div>
-            <div>Kamarieri: ${escapeHtml(receipt.waiter_name || "")}</div>
-          </div>
-          <div class="rc-divider"></div>
-          <table class="rc-items"><tbody>
-            ${(receipt.items || []).map(i => `
-              <tr>
-                <td class="rc-name">${escapeHtml(i.name)}</td>
-                <td class="rc-qty">${i.quantity}</td>
-                <td class="rc-price">x ${Number(i.price).toFixed(2)}</td>
-                <td class="rc-value">= ${(i.price * i.quantity).toFixed(2)}</td>
-              </tr>`).join("")}
-          </tbody></table>
-          <div class="rc-divider"></div>
-          <div class="rc-total"><span>GJITHSEJ:</span><span>${Number(receipt.total || 0).toFixed(2)}€</span></div>
-          <div class="rc-divider"></div>
-          <div class="rc-footer"><div class="rc-thanks">FALEMINDERIT!</div></div>
-        </div>`;
-    }
+    sheet.innerHTML = receipt.html || renderReceiptFallback(receipt);
+    const mm = receipt.paper_width_mm || sheet.querySelector(".receipt-thermal")?.dataset?.widthMm || 80;
+    sheet.style.maxWidth = `${mm}mm`;
     $("receipt-modal").classList.remove("hidden");
+  }
+
+  function printReceipt() {
+    const sheet = $("receipt-print");
+    const thermal = sheet?.querySelector(".receipt-thermal");
+    const mm = Number(thermal?.dataset?.widthMm || sheet?.style?.maxWidth?.replace("mm", "") || 80);
+    const narrow = mm <= 58;
+    const prevTitle = document.title;
+    const bizName = thermal?.querySelector(".rc-business-name")?.textContent?.trim();
+
+    document.title = bizName || " ";
+    document.body.classList.add("print-receipt");
+    if (narrow) document.documentElement.classList.add("print-receipt-w58");
+
+    let pageStyle = document.getElementById("receipt-page-size");
+    if (!pageStyle) {
+      pageStyle = document.createElement("style");
+      pageStyle.id = "receipt-page-size";
+      document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = `@media print { @page { size: ${narrow ? 58 : 80}mm auto; margin: 0; } }`;
+
+    const cleanup = () => {
+      document.body.classList.remove("print-receipt");
+      document.documentElement.classList.remove("print-receipt-w58");
+      document.title = prevTitle;
+      if (pageStyle) pageStyle.textContent = "";
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    requestAnimationFrame(() => window.print());
   }
 
   function hideReceipt() {
     $("receipt-modal").classList.add("hidden");
   }
 
-  $("btn-print")?.addEventListener("click", () => window.print());
+  $("btn-print")?.addEventListener("click", printReceipt);
 
   $("btn-receipt-done")?.addEventListener("click", async () => {
     hideReceipt();
@@ -596,7 +647,7 @@
         }),
       });
       showReceipt(data.receipt);
-      setTimeout(() => window.print(), 400);
+      setTimeout(printReceipt, 400);
     } catch (e) {
       showErr(err, e.message);
     } finally {
