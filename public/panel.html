@@ -375,7 +375,11 @@
           <label>Tavolinë (Kiosk)</label>
           <div class="link-actions"><input type="text" id="hub-link-kiosk" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-kiosk">Kopjo</button></div>
         </div>
-        <p id="hub-links-empty" class="field-hint hidden">Kjo paketë nuk përfshin module web (KDS/Kiosk/Kamarier). Ndryshoni paketën në Ndrysho klientin.</p>
+        <div class="link-row-hub" id="hub-row-public">
+          <label>Faqja publike</label>
+          <div class="link-actions"><input type="text" id="hub-link-public" readonly><button type="button" class="btn btn-ghost btn-sm" data-hub-copy="hub-link-public">Kopjo</button></div>
+        </div>
+        <p id="hub-links-empty" class="field-hint hidden">Kjo paketë nuk përfshin asnjë link (KDS, Kiosk, Kamarier ose faqe publike). Ndryshoni paketën në Ndrysho klientin.</p>
         <button type="button" class="btn btn-ghost btn-sm" id="hub-regenerate-links">Rigjenero kodet e aksesit</button>
       </div>
     </div>
@@ -394,6 +398,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=28"></script>
+  <script src="/js/panel.js?v=29"></script>
 </body>
 </html>

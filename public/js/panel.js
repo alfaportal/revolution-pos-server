@@ -63,6 +63,7 @@ async function api(path, opts = {}) {
 async function safeRefresh() {
   try {
     await refreshAll();
+    if (hubClientId) fillHubLinks(hubClientId);
   } catch (e) {
     console.warn("refreshAll:", e.message);
   }
@@ -137,6 +138,19 @@ let licensesCache = [];
 let ownersCache = [];
 let packageTiersCache = [];
 let modalState = null;
+
+/** Fallback — same as src/lib/packages.js (used when tier cache is empty or stale). */
+const TIER_FEATURES = {
+  pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false },
+  pako_1_1: { pos: true, owner_panel: true, website: true, mobile: true, kds: false, kiosk: false, waiter: false },
+  pako_2: { pos: true, owner_panel: true, website: true, mobile: false, kds: true, kiosk: true, waiter: true },
+  pako_2_1: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true },
+};
+
+function normalizeTierId(tier) {
+  const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
+  return Object.prototype.hasOwnProperty.call(TIER_FEATURES, t) ? t : "pako_1";
+}
 
 async function loadPackageTiers() {
   const { tiers } = await api("/api/admin/package-tiers");
@@ -386,9 +400,10 @@ function clientAccessLink(client, kind, extraQuery = "") {
 
 function clientTierFeatures(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  const tierId = c?.package_tier || "pako_1";
-  const tier = packageTiersCache.find(t => t.id === tierId);
-  return tier?.features || { kds: false, kiosk: false, waiter: false };
+  const tierId = normalizeTierId(c?.package_tier);
+  const fromCache = packageTiersCache.find(t => t.id === tierId);
+  if (fromCache?.features) return fromCache.features;
+  return TIER_FEATURES[tierId] || TIER_FEATURES.pako_1;
 }
 
 function setHubLinkRow(rowId, visible, inputId, url) {
@@ -418,6 +433,14 @@ function kioskTableLink(clientId, table = 1) {
   return c
     ? clientAccessLink(c, "kiosk", `table=${table}`)
     : `${window.location.origin}/kiosk/${clientId}?table=${table}`;
+}
+
+function publicPageLink(clientId) {
+  const c = clientsCache.find(x => x.id === clientId);
+  if (!c) return "";
+  const slug = c.kitchen_slug || c.id || "";
+  if (!slug) return "";
+  return `${window.location.origin}/r/${encodeURIComponent(slug)}`;
 }
 
 async function copyLink(url, btn) {
@@ -524,9 +547,10 @@ function fillHubLinks(clientId) {
   setHubLinkRow("hub-row-bar", features.kds, "hub-link-bar", barLink(clientId));
   setHubLinkRow("hub-row-kitchen", features.kds, "hub-link-kitchen", kitchenLink(clientId));
   setHubLinkRow("hub-row-kiosk", features.kiosk, "hub-link-kiosk", kioskTableLink(clientId, 1));
+  setHubLinkRow("hub-row-public", features.website, "hub-link-public", publicPageLink(clientId));
   const empty = document.getElementById("hub-links-empty");
   if (empty) {
-    const any = features.waiter || features.kds || features.kiosk;
+    const any = features.waiter || features.kds || features.kiosk || features.website;
     empty.classList.toggle("hidden", any);
   }
 }
