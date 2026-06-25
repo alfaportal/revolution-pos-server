@@ -78,7 +78,13 @@ function buildKitchenUrl(baseUrl, client, kind) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
   const slug = client.kitchen_slug || client.id;
   const key = client.kitchen_key || "";
-  const path = kind === "waiter" ? "waiter" : kind === "kiosk" ? "kiosk" : "kitchen";
+  const path = kind === "waiter"
+    ? "waiter"
+    : kind === "kiosk"
+      ? "kiosk"
+      : kind === "bar"
+        ? "bar"
+        : "kitchen";
   return `${base}/${path}/${encodeURIComponent(slug)}?key=${encodeURIComponent(key)}`;
 }
 

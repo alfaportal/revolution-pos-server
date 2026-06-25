@@ -1,0 +1,78 @@
+@import url("/css/kitchen.css");
+
+:root {
+  --bg: #1a1208;
+  --card: #2a1f12;
+  --border: #4a3824;
+  --accent: #d97706;
+  --accent-hover: #f59e0b;
+}
+
+body { background: var(--bg); }
+
+.bar-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, #1a1208 85%, transparent);
+  padding: 1rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.bar-header h1 {
+  margin: 0;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.bar-header .sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.bar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.bar-main {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ticket-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(217, 119, 6, 0.15);
+  color: #fdba74;
+  margin-bottom: 0.15rem;
+}
+
+.ticket-kind {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.order-ticket.new {
+  border-color: #d97706;
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.25);
+}
+
+.ticket-table { color: #fdba74; }
+
+.ticket-items .qty { color: #fdba74; }

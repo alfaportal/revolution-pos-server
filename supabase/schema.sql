@@ -84,6 +84,10 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   items_json      JSONB NOT NULL DEFAULT '[]'::jsonb,
   total           NUMERIC(12, 2) NOT NULL DEFAULT 0,
   receipt_number  TEXT DEFAULT '',
+  payment_status  TEXT NOT NULL DEFAULT 'pending'
+                  CHECK (payment_status IN ('pending', 'paid', 'manual', 'failed', 'refunded')),
+  paid_at         TIMESTAMPTZ,
+  fiscal_receipt_id UUID,
   status          TEXT NOT NULL DEFAULT 'closed'
                   CHECK (status IN ('ordered', 'ready', 'closed', 'cancelled')),
   ordered_at      TIMESTAMPTZ,
@@ -99,6 +103,56 @@ CREATE INDEX IF NOT EXISTS idx_sales_client_closed ON sales_orders (client_id, c
 CREATE INDEX IF NOT EXISTS idx_sales_kitchen_queue
   ON sales_orders (client_id, status, ordered_at DESC NULLS LAST);
 
+CREATE TABLE IF NOT EXISTS fiscal_receipts (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id       UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  sale_order_id   UUID REFERENCES sales_orders(id) ON DELETE SET NULL,
+  local_order_id  TEXT DEFAULT '',
+  device_id       TEXT DEFAULT '',
+  fiscal_nr       TEXT DEFAULT '',
+  coupon_nr       TEXT DEFAULT '',
+  serial_nr       TEXT DEFAULT '',
+  total_gross     NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total_net       NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  total_vat       NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  cash_given      NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  payment_method  TEXT NOT NULL DEFAULT 'cash',
+  vat_breakdown   JSONB NOT NULL DEFAULT '{}'::jsonb,
+  items_json      JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status          TEXT NOT NULL DEFAULT 'printed'
+                  CHECK (status IN ('printed', 'manual', 'failed', 'pending')),
+  com_port        TEXT DEFAULT '',
+  register_connected BOOLEAN NOT NULL DEFAULT true,
+  raw_response    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  printed_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_receipts_client_date
+  ON fiscal_receipts (client_id, printed_at DESC);
+
+CREATE TABLE IF NOT EXISTS daily_z_reports (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id           UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  report_date         DATE NOT NULL,
+  coupon_count        INTEGER NOT NULL DEFAULT 0,
+  turnover_total      NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  turnover_net        NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  turnover_vat        NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  vat_breakdown       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  cash_register_balance NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  cumulative_turnover NUMERIC(14, 2) NOT NULL DEFAULT 0,
+  responsible_person  TEXT DEFAULT '',
+  fiscal_nr           TEXT DEFAULT '',
+  sales_json          JSONB NOT NULL DEFAULT '[]'::jsonb,
+  closed_at           TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (client_id, report_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_z_reports_client
+  ON daily_z_reports (client_id, report_date DESC);
+
 -- Katalog POS (menu, tavolina, stafi) — sync nga Electron
 CREATE TABLE IF NOT EXISTS pos_settings (
   client_id         UUID PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
@@ -109,6 +163,11 @@ CREATE TABLE IF NOT EXISTS pos_settings (
   tvsh_nr           TEXT DEFAULT '',
   receipt_width_mm  INTEGER NOT NULL DEFAULT 80 CHECK (receipt_width_mm IN (58, 80)),
   table_count       INTEGER NOT NULL DEFAULT 10,
+  fiscal_nr         TEXT DEFAULT '',
+  fiscal_com_port   TEXT DEFAULT '',
+  fiscal_enabled    BOOLEAN NOT NULL DEFAULT true,
+  fiscal_operator_name TEXT DEFAULT '',
+  fiscal_device_model  TEXT DEFAULT '',
   synced_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

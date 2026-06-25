@@ -23,6 +23,7 @@ const waiterRoutes = require("./routes/waiter");
 const kioskRoutes = require("./routes/kiosk");
 const posRoutes = require("./routes/pos");
 const receiptRoutes = require("./routes/receipt");
+const fiscalRoutes = require("./routes/fiscal");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { adminPanelPath } = require("./lib/admin-path");
@@ -61,6 +62,7 @@ app.use("/api/v1/license", licenseRoutes);
 app.use("/api/v1/sales", salesRoutes);
 app.use("/api/v1/pos", posRoutes);
 app.use("/api/v1/receipt", receiptRoutes);
+app.use("/api/v1/fiscal", fiscalRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
@@ -92,6 +94,14 @@ app.get("/owner/setup", (_req, res) => {
 
 app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
+});
+
+app.get("/bar/:slug", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/bar.html"));
+});
+
+app.get("/kiosk/:slug", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/kiosk.html"));
 });
 
 app.get("/kitchen/:slug", (_req, res) => {
@@ -141,11 +151,14 @@ async function start() {
     console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
     console.log(`  🏪 Pronarët:    /owner/login`);
     console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...`);
+    console.log(`  🍹 Banak:       /bar/:slug?key=...`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
-    console.log(`  🖥️  Kiosk API:   POST /api/kiosk/:slug/order?key=...`);
+    console.log(`  🪑 Tavolinë:    /kiosk/:slug?key=...&table=5`);
     console.log(`  📋 POS catalog:  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
+    console.log(`  🧾 Fiscal pay:  POST /api/v1/fiscal/pay`);
+    console.log(`  📋 Z-Report:    GET /api/owner/z-report`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }

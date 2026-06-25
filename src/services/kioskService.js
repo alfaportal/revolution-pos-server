@@ -1,28 +1,13 @@
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
-const { getLicenseForClient } = require("./waiterService");
-const { syncSaleFromPos, normalizeItems } = require("./salesService");
+const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");
+const { getActiveTableOrders, getLicenseForClient } = require("./waiterService");
+const { WEB_KIOSK, isKioskWaiterName } = require("../lib/orderSource");
 
-const KIOSK_DEVICE = "WEB-KIOSK";
-const KIOSK_WAITER = "Kiosk";
+const KIOSK_DEVICE = WEB_KIOSK;
 
-async function assertKioskAccess(identifier, req) {
-  let client = await getClientBySlugOrId(identifier);
-  if (!client) throw new Error("Lokali nuk u gjet.");
-  client = await ensureKitchenCredentials(client);
-
-  const key = extractKitchenKey(req);
-  if (!verifyKitchenKey(client, key)) {
-    const err = new Error("Kodi i aksesit (key) mungon ose është i gabuar.");
-    err.code = "KITCHEN_KEY_INVALID";
-    throw err;
-  }
-  if (!clientHasFeature(client, "kiosk")) {
-    const err = new Error("Kiosk nuk përfshihet në paketën tuaj.");
-    err.code = "PACKAGE_UPGRADE_REQUIRED";
-    throw err;
-  }
-  return client;
+function tableWaiterLabel(tableNumber) {
+  return `Tavolinë T${tableNumber}`;
 }
 
 async function getKioskMenu(clientId) {
@@ -41,6 +26,7 @@ async function getKioskMenu(clientId) {
 
   return {
     restaurant_name: settings?.restaurant_name || "",
+    table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
     synced_at: settings?.synced_at || null,
     categories: (categories || []).map(c => c.name),
     menu: (menu || []).map(m => ({
@@ -53,28 +39,46 @@ async function getKioskMenu(clientId) {
 }
 
 async function submitKioskOrder(client, body) {
-  const items = normalizeItems(body.items);
-  if (!items.length) throw new Error("Shtoni të paktën një artikull.");
+  const tableNumber = Number(body.table_number);
+  if (!tableNumber || tableNumber < 1) {
+    throw new Error("Mungon numri i tavolinës (?table=... në link).");
+  }
 
-  const tableNumber = Math.max(0, Number(body.table_number) || 0);
+  const newItems = normalizeItems(body.items);
+  if (!newItems.length) throw new Error("Shtoni të paktën një artikull.");
+
+  const active = await getActiveTableOrders(client.id);
+  const existing = active.get(tableNumber);
+  const items = existing
+    ? mergeOrderItems(existing.items_json, newItems)
+    : newItems;
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
   const license = await getLicenseForClient(client.id);
-  const localOrderId = `kiosk-${uuidv4()}`;
+  const localOrderId = existing?.local_order_id || `kiosk-${uuidv4()}`;
+  const waiterName = existing?.waiter_name && !isKioskWaiterName(existing.waiter_name)
+    ? existing.waiter_name
+    : tableWaiterLabel(tableNumber);
 
-  const { sale } = await syncSaleFromPos({
+  const sale = await updateActiveSaleFromPos({
     celesi: license.celesi,
-    device_id: KIOSK_DEVICE,
+    device_id: existing?.device_id || KIOSK_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
-    waiter_name: KIOSK_WAITER,
+    waiter_name: waiterName,
     items,
     total,
     status: "ordered",
-    ordered_at: now,
+    ordered_at: existing?.ordered_at || now,
   });
 
-  return { ok: true, order: sale, client_name: client.emri };
+  return {
+    ok: true,
+    order: sale,
+    client_name: client.emri,
+    sent_to: "bar",
+    table_number: tableNumber,
+  };
 }
 
 module.exports = {

@@ -269,6 +269,141 @@ async function loadLicense() {
   }
 }
 
+let currentZReport = null;
+
+const VAT_LABELS = {
+  A: "A — 18%",
+  B: "B — 8%",
+  C: "C — 0%",
+  D: "D — E përjashtuar",
+  E: "E — Tjeter",
+};
+
+function zReportDate() {
+  const el = document.getElementById("zreport-date");
+  return el?.value || new Date().toISOString().slice(0, 10);
+}
+
+function renderZReport(report) {
+  currentZReport = report;
+  const summary = document.getElementById("zreport-summary");
+  if (summary) {
+    summary.innerHTML = `
+      <div class="zreport-stat"><div class="lbl">Kuponë fiskalë</div><div class="val">${report.coupon_count ?? 0}</div></div>
+      <div class="zreport-stat"><div class="lbl">Qarkullimi ditor</div><div class="val">${euro(report.turnover_total)}</div></div>
+      <div class="zreport-stat"><div class="lbl">Totali pa TVSH</div><div class="val">${euro(report.turnover_net)}</div></div>
+      <div class="zreport-stat"><div class="lbl">TVSH total</div><div class="val">${euro(report.turnover_vat)}</div></div>
+      <div class="zreport-stat"><div class="lbl">Gjendja e arkës</div><div class="val">${euro(report.cash_register_balance)}</div></div>
+      <div class="zreport-stat"><div class="lbl">Qarkullimi kumulativ</div><div class="val">${euro(report.cumulative_turnover)}</div></div>`;
+  }
+
+  const vatEl = document.getElementById("zreport-vat");
+  if (vatEl) {
+    const rows = ["A", "B", "C", "D", "E"].map(k => {
+      const v = report.vat_breakdown?.[k] || { net: 0, vat: 0, gross: 0 };
+      return `<tr><td>${VAT_LABELS[k]}</td><td class="num">${euro(v.net)}</td><td class="num">${euro(v.vat)}</td><td class="num">${euro(v.gross)}</td></tr>`;
+    }).join("");
+    vatEl.innerHTML = `<strong>TVSH breakdown (A–E)</strong>
+      <table><thead><tr><th>Kategoria</th><th>Neto</th><th>TVSH</th><th>Bruto</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  const salesEl = document.getElementById("zreport-sales");
+  if (salesEl) {
+    const sales = report.sales || [];
+    salesEl.innerHTML = sales.length
+      ? sales.map(s => `<tr>
+          <td>${fmtTime(s.time)}</td>
+          <td>T${s.table_number || "—"}</td>
+          <td>${s.waiter_name || "—"}</td>
+          <td class="num">${euro(s.total)}</td>
+          <td>${s.coupon_nr || "—"}</td>
+          <td>${s.payment_status || "—"}</td>
+        </tr>`).join("")
+      : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka shitje për këtë ditë.</td></tr>';
+  }
+}
+
+async function loadZReportHistory() {
+  const el = document.getElementById("zreport-history");
+  if (!el) return;
+  try {
+    const { history } = await api("/api/owner/z-report/history?limit=30");
+    if (!history?.length) {
+      el.innerHTML = '<p style="color:var(--muted)">Nuk ka raporte të ruajtura.</p>';
+      return;
+    }
+    el.innerHTML = history.map(h => `
+      <div class="zreport-history-item">
+        <span><strong>${h.report_date}</strong> · ${h.coupon_count} kuponë · ${euro(h.turnover_total)}</span>
+        <span>${h.closed_at ? "Mbyllur" : "Hapur"}</span>
+      </div>`).join("");
+  } catch {
+    el.innerHTML = "";
+  }
+}
+
+async function loadZReport() {
+  const date = zReportDate();
+  const { report } = await api(`/api/owner/z-report?date=${encodeURIComponent(date)}`);
+  renderZReport(report);
+  await loadZReportHistory();
+}
+
+async function loadFiscalSettings() {
+  try {
+    const { settings } = await api("/api/owner/fiscal/settings");
+    const nr = document.getElementById("fiscal-nr");
+    const com = document.getElementById("fiscal-com");
+    const op = document.getElementById("fiscal-operator");
+    if (nr) nr.value = settings.fiscal_nr || "";
+    if (com) com.value = settings.fiscal_com_port || "";
+    if (op) op.value = settings.fiscal_operator_name || "";
+  } catch { /* */ }
+}
+
+async function exportZReport(format) {
+  const date = zReportDate();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(
+    `/api/owner/z-report/export?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`,
+    { headers, credentials: "include" },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.gabim || `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  if (format === "html" || format === "pdf") {
+    window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `z-report-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function printZReport() {
+  const date = zReportDate();
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(
+    `/api/owner/z-report/export?date=${encodeURIComponent(date)}&format=html`,
+    { headers, credentials: "include" },
+  );
+  if (!res.ok) throw new Error("Nuk u gjenerua raporti për printim.");
+  const html = await res.text();
+  const w = window.open("", "_blank", "noopener");
+  if (!w) throw new Error("Lejoni popup për printim.");
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => w.print();
+}
+
 document.getElementById("owner-license-key")?.addEventListener("input", e => {
   const el = e.target;
   el.value = formatLicenseKey(el.value);
@@ -308,6 +443,10 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
+    if (tab.dataset.tab === "zreport") {
+      loadZReport();
+      loadFiscalSettings();
+    }
     if (tab.dataset.tab === "licenca") loadLicense();
   });
 });
@@ -322,6 +461,58 @@ document.getElementById("btn-raport").addEventListener("click", loadReport);
 document.getElementById("btn-filter-orders").addEventListener("click", loadOrders);
 document.getElementById("filter-waiter").addEventListener("change", loadOrders);
 document.getElementById("filter-table").addEventListener("change", loadOrders);
+
+document.getElementById("btn-zreport-refresh")?.addEventListener("click", loadZReport);
+document.getElementById("zreport-date")?.addEventListener("change", loadZReport);
+document.getElementById("btn-zreport-close")?.addEventListener("click", async () => {
+  const date = zReportDate();
+  if (!confirm(`Mbyll ditën ${date} dhe ruaj raportin ditor?`)) return;
+  try {
+    await api("/api/owner/z-report/close", {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    });
+    await loadZReport();
+    alert("Raporti ditor u ruajt.");
+  } catch (err) {
+    alert(err.message);
+  }
+});
+document.getElementById("btn-zreport-print")?.addEventListener("click", () => {
+  printZReport().catch(err => alert(err.message));
+});
+document.getElementById("btn-zreport-csv")?.addEventListener("click", () => {
+  exportZReport("csv").catch(err => alert(err.message));
+});
+document.getElementById("btn-zreport-html")?.addEventListener("click", () => {
+  exportZReport("html").catch(err => alert(err.message));
+});
+document.getElementById("btn-fiscal-save")?.addEventListener("click", async () => {
+  const msg = document.getElementById("fiscal-msg");
+  if (msg) {
+    msg.textContent = "";
+    msg.className = "owner-license-msg";
+  }
+  try {
+    await api("/api/owner/fiscal/settings", {
+      method: "PATCH",
+      body: JSON.stringify({
+        fiscal_nr: document.getElementById("fiscal-nr")?.value?.trim() || "",
+        fiscal_com_port: document.getElementById("fiscal-com")?.value?.trim() || "",
+        fiscal_operator_name: document.getElementById("fiscal-operator")?.value?.trim() || "",
+      }),
+    });
+    if (msg) {
+      msg.textContent = "Settings fiskale u ruajtën.";
+      msg.className = "owner-license-msg ok";
+    }
+  } catch (err) {
+    if (msg) {
+      msg.textContent = err.message;
+      msg.className = "owner-license-msg err";
+    }
+  }
+});
 
 (async () => {
   registerServiceWorker();
@@ -338,6 +529,8 @@ document.getElementById("filter-table").addEventListener("change", loadOrders);
     weekAgo.setDate(weekAgo.getDate() - 6);
     document.getElementById("raport-nga").value = weekAgo.toISOString().slice(0, 10);
     document.getElementById("raport-deri").value = today;
+    const zDate = document.getElementById("zreport-date");
+    if (zDate) zDate.value = today;
     await loadClient();
     await loadStats();
     await loadLiveTables();

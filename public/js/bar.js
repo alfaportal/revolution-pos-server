@@ -1,10 +1,10 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "kitchen" ? parts[1] : "";
+  const slug = parts[0] === "bar" ? parts[1] : "";
   const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
 
-  const titleEl = document.getElementById("kitchen-title");
-  const subEl = document.getElementById("kitchen-sub");
+  const titleEl = document.getElementById("bar-title");
+  const subEl = document.getElementById("bar-sub");
   const gridEl = document.getElementById("orders-grid");
   const emptyEl = document.getElementById("empty-state");
   const errorEl = document.getElementById("error-box");
@@ -20,6 +20,13 @@
 
   function apiHeaders() {
     return kitchenKey ? { "x-kitchen-key": kitchenKey } : {};
+  }
+
+  function sourceMeta(order) {
+    const device = String(order.device_id || "").toUpperCase();
+    if (device === "WEB-KIOSK") return { icon: "🪑", label: "Tavolinë" };
+    if (device === "WEB-WAITER") return { icon: "📱", label: "Kamarier" };
+    return { icon: "🖥️", label: "POS" };
   }
 
   function showError(msg) {
@@ -49,6 +56,14 @@
     return `${min} min`;
   }
 
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function renderOrders(orders) {
     hideError();
     countEl.textContent = `${orders.length} porosi`;
@@ -62,48 +77,35 @@
     }
 
     emptyEl.classList.add("hidden");
-    const html = orders.map(o => {
+    gridEl.innerHTML = orders.map(o => {
       const isNew = !knownIds.has(o.id);
-      const device = String(o.device_id || "").toUpperCase();
-      const src = device === "WEB-KIOSK"
-        ? { icon: "🪑", label: "Tavolinë" }
-        : device === "WEB-WAITER"
-          ? { icon: "📱", label: "Kamarier" }
-          : null;
+      const src = sourceMeta(o);
       const items = (o.items_json || [])
         .map(it => `<li><span class="qty">${it.quantity}×</span><span>${escapeHtml(it.name)}</span></li>`)
         .join("");
       return `
         <article class="order-ticket${isNew ? " new" : ""}" data-id="${o.id}">
+          <div class="ticket-kind">Porosi — jo faturë</div>
+          <div class="ticket-source">${src.icon} ${src.label}</div>
           <div class="ticket-head">
             <div class="ticket-table">T${o.table_number || "?"}</div>
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
-          ${src ? `<div class="ticket-waiter">${src.icon} ${src.label} · 👤 ${escapeHtml(o.waiter_name || "—")}</div>` : `<div class="ticket-waiter">👤 ${escapeHtml(o.waiter_name || "—")}</div>`}
+          <div class="ticket-waiter">👤 ${escapeHtml(o.waiter_name || "—")}</div>
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
           <button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>
         </article>`;
     }).join("");
 
-    gridEl.innerHTML = html;
     knownIds = new Set(orders.map(o => o.id));
-
     gridEl.querySelectorAll("[data-ready]").forEach(btn => {
       btn.addEventListener("click", () => markReady(btn.dataset.ready, btn));
     });
   }
 
-  function escapeHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   async function fetchOrders() {
     if (!slug) {
-      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[slug]?key=...");
+      showError("Linku i banakut nuk është i saktë. Duhet /bar/[slug]?key=...");
       return;
     }
     if (!kitchenKey) {
@@ -111,7 +113,7 @@
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();
@@ -120,9 +122,9 @@
         return;
       }
       if (data.client_name) {
-        titleEl.textContent = data.client_name;
-        subEl.textContent = "Porositë e reja nga POS";
-        document.title = `Kuzhina — ${data.client_name}`;
+        titleEl.textContent = `Banak — ${data.client_name}`;
+        subEl.textContent = "Porosi nga kamarieri (telefon) dhe tavolina — jo faturë";
+        document.title = `Banak — ${data.client_name}`;
       }
       renderOrders(data.orders || []);
     } catch (e) {
@@ -145,8 +147,7 @@
         btn.textContent = "Gati ✅";
         return;
       }
-      const card = gridEl.querySelector(`[data-id="${orderId}"]`);
-      if (card) card.remove();
+      gridEl.querySelector(`[data-id="${orderId}"]`)?.remove();
       knownIds.delete(orderId);
       const remaining = gridEl.querySelectorAll(".order-ticket").length;
       countEl.textContent = `${remaining} porosi`;
@@ -171,5 +172,5 @@
 
   fetchOrders();
   connectSse();
-  setInterval(fetchOrders, 30000);
+  setInterval(fetchOrders, 15000);
 })();

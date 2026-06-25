@@ -54,6 +54,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
+      <button class="tab" data-tab="zreport">Raporti Ditor</button>
       <button class="tab" data-tab="raportet">Raportet</button>
       <button class="tab" data-tab="licenca">Licenca</button>
     </div>
@@ -88,6 +89,57 @@
           <button type="button" class="btn btn-primary btn-sm" id="btn-filter-orders">Filtro</button>
         </div>
         <div id="orders-list"></div>
+      </div>
+    </div>
+
+    <div id="panel-zreport" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Raporti Ditor (Z-Report)</span>
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <input type="date" id="zreport-date" style="max-width:10rem">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-refresh">Rifresko</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-zreport-close">Mbyll ditën</button>
+          </div>
+        </div>
+        <p class="links-hint">Kuponët fiskalë ATK — qarkullimi, TVSH (A–E), gjendja e arkës. E njëjta për çdo biznes të regjistruar.</p>
+        <div id="zreport-summary" class="zreport-summary"></div>
+        <div id="zreport-vat" class="zreport-vat"></div>
+        <div class="zreport-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-print">Printo Z-Report</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-csv">Export Excel (CSV)</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-html">Export PDF (HTML)</button>
+        </div>
+        <div class="overflow-x" style="margin-top:1rem">
+          <table>
+            <thead>
+              <tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Kupon fiskal</th><th>Statusi</th></tr>
+            </thead>
+            <tbody id="zreport-sales"></tbody>
+          </table>
+        </div>
+        <div class="card-title" style="margin-top:1.25rem">Historiku ditor</div>
+        <div id="zreport-history" class="zreport-history"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Arka fiskale — settings</div>
+        <p class="links-hint">Nr.Fisk dhe COM port konfigurohen këtu ose nga Super Admin. POS lidhet me COM port lokal.</p>
+        <div class="filter-row">
+          <div>
+            <label>Nr.Fisk</label>
+            <input type="text" id="fiscal-nr" placeholder="Nr. fiskal ATK">
+          </div>
+          <div>
+            <label>COM Port</label>
+            <input type="text" id="fiscal-com" placeholder="p.sh. COM3">
+          </div>
+          <div>
+            <label>Operatori / përgjegjësi</label>
+            <input type="text" id="fiscal-operator" placeholder="Emri">
+          </div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-fiscal-save">Ruaj settings fiskale</button>
+        <div id="fiscal-msg" class="owner-license-msg"></div>
       </div>
     </div>
 
@@ -155,6 +207,6 @@
     </div>
   </div>
 
-  <script src="/js/owner.js?v=6"></script>
+  <script src="/js/owner.js?v=8"></script>
 </body>
 </html>

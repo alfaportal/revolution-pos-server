@@ -27,6 +27,18 @@ function normalizeItems(raw) {
     .filter(it => it.name);
 }
 
+function mergeOrderItems(existingItems, newItems) {
+  const merged = normalizeItems(existingItems).map(it => ({ ...it }));
+  for (const item of normalizeItems(newItems)) {
+    const match = merged.find(
+      it => it.name === item.name && Number(it.price) === Number(item.price),
+    );
+    if (match) match.quantity += item.quantity;
+    else merged.push({ ...item });
+  }
+  return merged;
+}
+
 async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const celesi = normalizeKey(body.celesi || body.license_key);
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
@@ -310,6 +322,7 @@ async function getClientById(clientId) {
 
 module.exports = {
   normalizeItems,
+  mergeOrderItems,
   syncSaleFromPos,
   buildSaleReceipt,
   updateActiveSaleFromPos,

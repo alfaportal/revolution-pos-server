@@ -1,6 +1,7 @@
 const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
+const { isBarMobileOrder } = require("../lib/orderSource");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -17,7 +18,7 @@ async function listKitchenOrders(clientId) {
   const { data, error } = await db
     .from("sales_orders")
     .select(
-      "id, table_number, waiter_name, items_json, total, ordered_at, created_at, local_order_id",
+      "id, table_number, waiter_name, items_json, total, ordered_at, created_at, local_order_id, device_id",
     )
     .eq("client_id", clientId)
     .eq("status", "ordered")
@@ -29,6 +30,11 @@ async function listKitchenOrders(clientId) {
     ...o,
     items_json: normalizeItems(o.items_json),
   }));
+}
+
+async function listBarOrders(clientId) {
+  const orders = await listKitchenOrders(clientId);
+  return orders.filter(isBarMobileOrder);
 }
 
 async function markKitchenOrderReady(clientId, orderId) {
@@ -52,5 +58,6 @@ async function markKitchenOrderReady(clientId, orderId) {
 module.exports = {
   getClientForKitchen,
   listKitchenOrders,
+  listBarOrders,
   markKitchenOrderReady,
 };

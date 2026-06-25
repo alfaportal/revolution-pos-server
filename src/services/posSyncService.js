@@ -24,9 +24,13 @@ async function syncCatalogFromPosSupabase(license, body) {
   const receiptWidth = [58, 80].includes(Number(body.receipt_width_mm))
     ? Number(body.receipt_width_mm)
     : 80;
+  const fiscalNr = String(body.fiscal_nr || "").trim();
+  const fiscalCom = String(body.fiscal_com_port || body.fiscal_com || "").trim();
+  const fiscalOperator = String(body.fiscal_operator_name || "").trim();
+  const fiscalModel = String(body.fiscal_device_model || "").trim();
   const now = new Date().toISOString();
 
-  await db.from("pos_settings").upsert({
+  const settingsRow = {
     client_id: clientId,
     restaurant_name: restaurantName,
     address,
@@ -36,7 +40,14 @@ async function syncCatalogFromPosSupabase(license, body) {
     receipt_width_mm: receiptWidth,
     table_count: tableCount,
     synced_at: now,
-  });
+  };
+  if (fiscalNr) settingsRow.fiscal_nr = fiscalNr;
+  if (fiscalCom) settingsRow.fiscal_com_port = fiscalCom;
+  if (fiscalOperator) settingsRow.fiscal_operator_name = fiscalOperator;
+  if (fiscalModel) settingsRow.fiscal_device_model = fiscalModel;
+  if (body.fiscal_enabled != null) settingsRow.fiscal_enabled = Boolean(body.fiscal_enabled);
+
+  await db.from("pos_settings").upsert(settingsRow);
 
   const categories = Array.isArray(body.categories) ? body.categories : [];
   await db.from("pos_categories").delete().eq("client_id", clientId);
@@ -118,6 +129,10 @@ async function syncCatalogFromPosTransactional(license, body) {
   const receiptWidth = [58, 80].includes(Number(body.receipt_width_mm))
     ? Number(body.receipt_width_mm)
     : 80;
+  const fiscalNr = String(body.fiscal_nr || "").trim();
+  const fiscalCom = String(body.fiscal_com_port || body.fiscal_com || "").trim();
+  const fiscalOperator = String(body.fiscal_operator_name || "").trim();
+  const fiscalModel = String(body.fiscal_device_model || "").trim();
   const now = new Date().toISOString();
 
   const categories = Array.isArray(body.categories) ? body.categories : [];
@@ -163,6 +178,26 @@ async function syncCatalogFromPosTransactional(license, body) {
          synced_at = EXCLUDED.synced_at`,
       [clientId, restaurantName, address, phone, nui, tvshNr, receiptWidth, tableCount, now],
     );
+
+    if (fiscalNr || fiscalCom || fiscalOperator || fiscalModel || body.fiscal_enabled != null) {
+      await client.query(
+        `UPDATE pos_settings SET
+           fiscal_nr = COALESCE(NULLIF($2, ''), fiscal_nr),
+           fiscal_com_port = COALESCE(NULLIF($3, ''), fiscal_com_port),
+           fiscal_operator_name = COALESCE(NULLIF($4, ''), fiscal_operator_name),
+           fiscal_device_model = COALESCE(NULLIF($5, ''), fiscal_device_model),
+           fiscal_enabled = COALESCE($6, fiscal_enabled)
+         WHERE client_id = $1`,
+        [
+          clientId,
+          fiscalNr,
+          fiscalCom,
+          fiscalOperator,
+          fiscalModel,
+          body.fiscal_enabled != null ? Boolean(body.fiscal_enabled) : null,
+        ],
+      );
+    }
 
     await client.query(`DELETE FROM pos_categories WHERE client_id = $1`, [clientId]);
     for (const c of catRows) {

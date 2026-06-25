@@ -1,10 +1,11 @@
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
-const { getClientById, normalizeItems, syncSaleFromPos } = require("./salesService");
+const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos, syncSaleFromPos } = require("./salesService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
+const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WEB_DEVICE = "WEB-WAITER";
+const WEB_DEVICE = WEB_WAITER;
 
 async function assertClient(clientId) {
   const id = String(clientId || "").trim();
@@ -48,8 +49,9 @@ async function getLicenseForClient(clientId) {
 }
 
 function assertWaiterOnTable(existing, waiterName, tableNumber) {
-  if (existing && existing.waiter_name &&
-      existing.waiter_name.toLowerCase() !== waiterName.toLowerCase()) {
+  if (!existing?.waiter_name) return;
+  if (isKioskWaiterName(existing.waiter_name)) return;
+  if (existing.waiter_name.toLowerCase() !== waiterName.toLowerCase()) {
     throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
   }
 }
@@ -118,7 +120,7 @@ async function submitWaiterOrder(clientId, body) {
   const license = await getLicenseForClient(clientId);
   const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
 
-  const saleResult = await syncSaleFromPos({
+  const sale = await updateActiveSaleFromPos({
     celesi: license.celesi,
     device_id: existing?.device_id || WEB_DEVICE,
     local_order_id: localOrderId,
@@ -130,7 +132,7 @@ async function submitWaiterOrder(clientId, body) {
     ordered_at: existing?.ordered_at || now,
   });
 
-  return { ok: true, order: saleResult.sale };
+  return { ok: true, order: sale, sent_to: "bar" };
 }
 
 async function closeWaiterTable(clientId, body) {
@@ -201,4 +203,6 @@ module.exports = {
   getWaiterBootstrap,
   submitWaiterOrder,
   closeWaiterTable,
+  getActiveTableOrders,
+  getLicenseForClient,
 };

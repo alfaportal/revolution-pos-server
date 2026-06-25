@@ -355,14 +355,14 @@
       });
       cart = [];
       renderCart();
-      alert("Porosia u dërgua te kuzhina!");
+      alert("Porosia u dërgua te banaku!");
       await refreshTables();
       showScreen("screen-tables");
     } catch (e) {
       showErr(err, e.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = "Dërgo porosinë";
+      btn.textContent = "Dërgo te banaku";
     }
   });
 

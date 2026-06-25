@@ -12,6 +12,14 @@ const {
   getOwnerLicenseView,
   verifyOwnerLicenseKey,
 } = require("../services/licenseService");
+const {
+  buildDailyZReport,
+  saveDailyZReport,
+  listZReportHistory,
+  zReportToCsv,
+  zReportToHtml,
+} = require("../services/zReportService");
+const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
 
 const router = express.Router();
 
@@ -113,6 +121,75 @@ router.put("/license", async (req, res) => {
     });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/fiscal/settings", async (req, res) => {
+  try {
+    const settings = await getFiscalSettings(req.user.client_id);
+    res.json({ ok: true, settings });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.patch("/fiscal/settings", async (req, res) => {
+  try {
+    const settings = await updateFiscalSettings(req.user.client_id, req.body);
+    res.json({ ok: true, settings });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/z-report", async (req, res) => {
+  try {
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const report = await buildDailyZReport(req.user.client_id, date);
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/z-report/close", async (req, res) => {
+  try {
+    const date = req.body?.date || new Date().toISOString().slice(0, 10);
+    const report = await saveDailyZReport(req.user.client_id, date, { close: true });
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/z-report/history", async (req, res) => {
+  try {
+    const history = await listZReportHistory(req.user.client_id, Number(req.query.limit) || 60);
+    res.json({ ok: true, history });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/z-report/export", async (req, res) => {
+  try {
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const format = String(req.query.format || "csv").toLowerCase();
+    const report = await buildDailyZReport(req.user.client_id, date);
+
+    if (format === "html" || format === "pdf") {
+      const html = zReportToHtml(report);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="z-report-${date}.html"`);
+      return res.send(html);
+    }
+
+    const csv = zReportToCsv(report);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="z-report-${date}.csv"`);
+    res.send("\uFEFF" + csv);
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
   }
 });
 

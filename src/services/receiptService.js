@@ -320,6 +320,7 @@ async function seedPosSettingsForClient(client) {
     phone: client.telefoni || "",
     table_count: 10,
     receipt_width_mm: 80,
+    fiscal_enabled: true,
     synced_at: now,
   });
 }

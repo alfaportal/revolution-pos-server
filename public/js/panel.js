@@ -209,6 +209,7 @@ function openEditClient(id) {
   const ownerPwHint = owner
     ? "Lëreni bosh për të mos ndryshuar fjalëkalimin."
     : "Vendosni fjalëkalim — krijohet llogaria për /owner/login.";
+
   openModal("Ndrysho klientin", `
     <label>Emri *</label>
     <input name="emri" required value="${esc(c.emri)}">
@@ -224,6 +225,18 @@ function openEditClient(id) {
     <input type="email" name="email" value="${esc(c.email)}">
     <label>Adresa</label>
     <input name="adresa" value="${esc(c.adresa)}">
+    <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+    <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
+      <strong>Arka fiskale (ATK)</strong> — vlen për çdo biznes; POS lidhet me COM port lokal.
+    </p>
+    <label>Nr.Fisk</label>
+    <input name="fiscal_nr" id="modal-fiscal-nr" placeholder="Nr. fiskal ATK">
+    <label>COM Port</label>
+    <input name="fiscal_com_port" id="modal-fiscal-com" placeholder="p.sh. COM3">
+    <label>Operatori / përgjegjësi</label>
+    <input name="fiscal_operator_name" id="modal-fiscal-operator" placeholder="Emri">
+    <label>Modeli i arkës</label>
+    <input name="fiscal_device_model" id="modal-fiscal-model" placeholder="Opsionale">
     <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
     <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
       <strong>Hyrja e pronarit</strong> — pronari hyn në <code>/owner/login</code> me email dhe fjalëkalim (jo Super Admin).
@@ -257,6 +270,16 @@ function openEditClient(id) {
       }),
     });
 
+    await api(`/api/admin/clients/${id}/fiscal`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        fiscal_nr: String(fd.get("fiscal_nr") ?? "").trim(),
+        fiscal_com_port: String(fd.get("fiscal_com_port") ?? "").trim(),
+        fiscal_operator_name: String(fd.get("fiscal_operator_name") ?? "").trim(),
+        fiscal_device_model: String(fd.get("fiscal_device_model") ?? "").trim(),
+      }),
+    });
+
     const existingOwner = findOwnerForClient(id);
     if (!existingOwner) {
       if (!ownerPassword) {
@@ -281,14 +304,50 @@ function openEditClient(id) {
       body: JSON.stringify(ownerBody),
     });
   });
+
+  api(`/api/admin/clients/${id}/fiscal`)
+    .then(({ settings }) => {
+      const set = (elId, val) => {
+        const el = document.getElementById(elId);
+        if (el) el.value = val || "";
+      };
+      set("modal-fiscal-nr", settings.fiscal_nr);
+      set("modal-fiscal-com", settings.fiscal_com_port);
+      set("modal-fiscal-operator", settings.fiscal_operator_name);
+      set("modal-fiscal-model", settings.fiscal_device_model);
+    })
+    .catch(() => {});
+}
+
+function clientAccessLink(client, kind, extraQuery = "") {
+  const slug = client?.kitchen_slug || client?.id || "";
+  const key = client?.kitchen_key || "";
+  const base = `${window.location.origin}/${kind}/${encodeURIComponent(slug)}`;
+  if (!key) return base;
+  const q = `key=${encodeURIComponent(key)}${extraQuery ? `&${extraQuery}` : ""}`;
+  return `${base}?${q}`;
 }
 
 function waiterLink(clientId) {
-  return `${window.location.origin}/waiter/${clientId}`;
+  const c = clientsCache.find(x => x.id === clientId);
+  return c ? clientAccessLink(c, "waiter") : `${window.location.origin}/waiter/${clientId}`;
 }
 
 function kitchenLink(clientId) {
-  return `${window.location.origin}/kitchen/${clientId}`;
+  const c = clientsCache.find(x => x.id === clientId);
+  return c ? clientAccessLink(c, "kitchen") : `${window.location.origin}/kitchen/${clientId}`;
+}
+
+function barLink(clientId) {
+  const c = clientsCache.find(x => x.id === clientId);
+  return c ? clientAccessLink(c, "bar") : `${window.location.origin}/bar/${clientId}`;
+}
+
+function kioskTableLink(clientId, table = 1) {
+  const c = clientsCache.find(x => x.id === clientId);
+  return c
+    ? clientAccessLink(c, "kiosk", `table=${table}`)
+    : `${window.location.origin}/kiosk/${clientId}?table=${table}`;
 }
 
 async function copyLink(url, btn) {
@@ -335,6 +394,14 @@ async function copyWaiterLink(clientId, btn) {
 
 async function copyKitchenLink(clientId, btn) {
   await copyLink(kitchenLink(clientId), btn);
+}
+
+async function copyBarLink(clientId, btn) {
+  await copyLink(barLink(clientId), btn);
+}
+
+async function copyKioskLink(clientId, btn) {
+  await copyLink(kioskTableLink(clientId, 1), btn);
 }
 
 function openEditLicense(id) {
@@ -530,6 +597,8 @@ async function loadClients() {
         <td class="kds-link-cell" data-label="Linqet">
           <div class="link-btns">
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-bar="${esc(c.id)}">Banak</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-kiosk="${esc(c.id)}">Tavolinë</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
         </td>
@@ -542,6 +611,12 @@ async function loadClients() {
   bindTableActions(tbl);
   tbl.querySelectorAll("[data-copy-kitchen]").forEach(btn => {
     btn.addEventListener("click", () => copyKitchenLink(btn.dataset.copyKitchen, btn));
+  });
+  tbl.querySelectorAll("[data-copy-bar]").forEach(btn => {
+    btn.addEventListener("click", () => copyBarLink(btn.dataset.copyBar, btn));
+  });
+  tbl.querySelectorAll("[data-copy-kiosk]").forEach(btn => {
+    btn.addEventListener("click", () => copyKioskLink(btn.dataset.copyKiosk, btn));
   });
   tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
     btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));

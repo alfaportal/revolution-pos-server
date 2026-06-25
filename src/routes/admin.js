@@ -20,7 +20,7 @@ const {
   generateLicenseKey,
 } = require("../services/licenseService");
 const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
-const { buildKitchenUrl } = require("../lib/kitchenAccess");
+const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
 const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
@@ -105,6 +105,26 @@ router.patch("/clients/:id", asyncHandler(async (req, res) => {
   }
 }));
 
+router.get("/clients/:id/fiscal", asyncHandler(async (req, res) => {
+  try {
+    const settings = await getFiscalSettings(req.params.id);
+    res.json({ ok: true, settings });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/fiscal", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.patch("/clients/:id/fiscal", asyncHandler(async (req, res) => {
+  try {
+    const settings = await updateFiscalSettings(req.params.id, req.body);
+    res.json({ ok: true, settings });
+  } catch (e) {
+    const msg = logRouteError("admin:PATCH /clients/:id/fiscal", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
 router.delete("/clients/:id", asyncHandler(async (req, res) => {
   try {
     await deleteClient(req.params.id);
@@ -123,8 +143,9 @@ router.post("/clients/:id/regenerate-kitchen-access", asyncHandler(async (req, r
       ok: true,
       client,
       kitchen_url: buildKitchenUrl(base, client, "kitchen"),
+      bar_url: buildKitchenUrl(base, client, "bar"),
       waiter_url: buildKitchenUrl(base, client, "waiter"),
-      kiosk_url: buildKitchenUrl(base, client, "kiosk"),
+      kiosk_url: `${buildKitchenUrl(base, client, "kiosk")}&table=1`,
     });
   } catch (e) {
     const msg = logRouteError("admin:POST /clients/:id/regenerate-kitchen-access", e);
