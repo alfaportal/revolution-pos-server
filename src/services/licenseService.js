@@ -307,10 +307,23 @@ async function updateClient(id, body) {
   if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
   if (body.email != null) patch.email = String(body.email).trim();
   if (body.adresa != null) patch.adresa = String(body.adresa).trim();
-  if (body.package_tier != null) patch.package_tier = normalizePackageTier(body.package_tier);
+  if (Object.prototype.hasOwnProperty.call(body, "package_tier")) {
+    patch.package_tier = normalizePackageTier(body.package_tier);
+  }
+
+  if (!Object.keys(patch).length) {
+    throw new Error("Nuk ka fusha për përditësim.");
+  }
 
   const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
-  if (error) throw error;
+  if (error) {
+    if (String(error.message || "").includes("package_tier")) {
+      throw new Error(
+        "Kolona package_tier mungon në DB. Ekzekutoni migrimin supabase/migrations/009_saas_features.sql.",
+      );
+    }
+    throw error;
+  }
   if (!data) throw new Error("Klienti nuk u gjet.");
   try {
     await syncPosSettingsFromClient(id);

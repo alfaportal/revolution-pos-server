@@ -166,6 +166,20 @@ function populatePackageTierSelect(el, selected) {
   el.innerHTML = packageTierOptionsHtml(selected);
 }
 
+function readModalPackageTier(fd) {
+  const el = document.getElementById("modal-package-tier");
+  const value = (el?.value || fd.get("package_tier") || "").trim();
+  return value || "pako_1";
+}
+
+function mergeClientIntoCache(updatedClient) {
+  if (!updatedClient?.id) return;
+  const idx = clientsCache.findIndex(c => c.id === updatedClient.id);
+  if (idx >= 0) {
+    clientsCache[idx] = { ...clientsCache[idx], ...updatedClient };
+  }
+}
+
 function openModal(title, fieldsHtml, onSave) {
   modalState = { onSave };
   document.getElementById("modal-title").textContent = title;
@@ -249,9 +263,7 @@ function openEditClient(id) {
       <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
     </select>
     <label>Pakoja</label>
-    <select name="package_tier" id="modal-package-tier">
-      ${packageTierOptionsHtml(c.package_tier || "pako_1")}
-    </select>
+    <select name="package_tier" id="modal-package-tier"></select>
     <label>Telefoni</label>
     <input name="telefoni" value="${esc(c.telefoni)}">
     <label>Email (kontakt biznesi)</label>
@@ -291,28 +303,34 @@ function openEditClient(id) {
     const emri = String(fd.get("emri") ?? "").trim();
     const ownerEmailVal = String(fd.get("owner_email") ?? "").trim().toLowerCase();
     const ownerPassword = String(fd.get("owner_password") ?? "").trim();
+    const package_tier = readModalPackageTier(fd);
 
-    await api(`/api/admin/clients/${id}`, {
+    const { client: updatedClient } = await api(`/api/admin/clients/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
         emri: fd.get("emri"),
         tipi: fd.get("tipi"),
-        package_tier: fd.get("package_tier"),
+        package_tier,
         telefoni: fd.get("telefoni"),
         email: fd.get("email"),
         adresa: fd.get("adresa"),
       }),
     });
+    mergeClientIntoCache(updatedClient);
 
-    await api(`/api/admin/clients/${id}/fiscal`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        fiscal_nr: String(fd.get("fiscal_nr") ?? "").trim(),
-        fiscal_com_port: String(fd.get("fiscal_com_port") ?? "").trim(),
-        fiscal_operator_name: String(fd.get("fiscal_operator_name") ?? "").trim(),
-        fiscal_device_model: String(fd.get("fiscal_device_model") ?? "").trim(),
-      }),
-    });
+    const fiscalBody = {
+      fiscal_nr: String(fd.get("fiscal_nr") ?? "").trim(),
+      fiscal_com_port: String(fd.get("fiscal_com_port") ?? "").trim(),
+      fiscal_operator_name: String(fd.get("fiscal_operator_name") ?? "").trim(),
+      fiscal_device_model: String(fd.get("fiscal_device_model") ?? "").trim(),
+    };
+    const hasFiscal = Object.values(fiscalBody).some(Boolean);
+    if (hasFiscal) {
+      await api(`/api/admin/clients/${id}/fiscal`, {
+        method: "PATCH",
+        body: JSON.stringify(fiscalBody),
+      });
+    }
 
     const existingOwner = findOwnerForClient(id);
     if (!existingOwner) {
@@ -351,6 +369,11 @@ function openEditClient(id) {
       set("modal-fiscal-model", settings.fiscal_device_model);
     })
     .catch(() => {});
+
+  populatePackageTierSelect(
+    document.getElementById("modal-package-tier"),
+    c.package_tier || "pako_1",
+  );
 }
 
 function clientAccessLink(client, kind, extraQuery = "") {
