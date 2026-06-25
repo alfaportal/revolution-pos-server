@@ -99,6 +99,18 @@
     return String(s || "").replace(/</g, "&lt;");
   }
 
+  function getCategoryList() {
+    if (bootstrap.categories?.length) return bootstrap.categories;
+    return [...new Set((bootstrap.menu || []).map(m => m.category).filter(Boolean))];
+  }
+
+  function pickDefaultCategory() {
+    const cats = getCategoryList();
+    if (!cats.length) return "";
+    const withItems = cats.find(c => (bootstrap.menu || []).some(m => m.category === c));
+    return withItems || cats[0] || "";
+  }
+
   function openOrder(num) {
     tableNumber = num;
     const table = bootstrap.tables?.find(t => t.number === num);
@@ -112,7 +124,7 @@
     } else {
       cart = [];
     }
-    activeCategory = bootstrap.categories?.[0] || "";
+    activeCategory = pickDefaultCategory();
     $("order-title").textContent = `T${num}`;
     renderCategories();
     renderMenu();
@@ -121,16 +133,14 @@
   }
 
   function renderCategories() {
-    const cats = bootstrap.categories?.length
-      ? bootstrap.categories
-      : [...new Set((bootstrap.menu || []).map(m => m.category))];
+    const cats = getCategoryList();
     const tabs = $("cat-tabs");
     tabs.innerHTML = cats.map(c => `
       <button type="button" class="cat-tab${c === activeCategory ? " active" : ""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>
     `).join("");
     tabs.querySelectorAll(".cat-tab").forEach(btn => {
       btn.addEventListener("click", () => {
-        activeCategory = btn.dataset.cat;
+        activeCategory = btn.getAttribute("data-cat") || "";
         renderCategories();
         renderMenu();
       });
@@ -138,8 +148,17 @@
   }
 
   function renderMenu() {
-    const items = (bootstrap.menu || []).filter(m => !activeCategory || m.category === activeCategory);
+    const menu = bootstrap.menu || [];
+    let items = menu.filter(m => !activeCategory || m.category === activeCategory);
+    if (!items.length && menu.length) {
+      activeCategory = pickDefaultCategory();
+      items = menu.filter(m => !activeCategory || m.category === activeCategory);
+    }
     const grid = $("menu-grid");
+    if (!menu.length) {
+      grid.innerHTML = '<p class="hint">Menuja është bosh. Shtoni artikuj nga Super Admin (Menu) ose sinkronizoni nga POS-i lokal.</p>';
+      return;
+    }
     if (!items.length) {
       grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
       return;
@@ -200,23 +219,20 @@
   async function refreshBootstrap() {
     try {
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
-      const menuChanged = !bootstrap?.synced_at || data.synced_at !== bootstrap.synced_at;
       bootstrap.tables = data.tables;
-      if (menuChanged) {
-        bootstrap.synced_at = data.synced_at;
-        bootstrap.menu = data.menu;
-        bootstrap.categories = data.categories;
-        const hint = $("sync-hint");
-        if (bootstrap.synced_at) {
-          hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
+      bootstrap.synced_at = data.synced_at;
+      bootstrap.menu = data.menu;
+      bootstrap.categories = data.categories;
+      const hint = $("sync-hint");
+      if (bootstrap.synced_at) {
+        hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
+      }
+      if ($("screen-order").classList.contains("active")) {
+        if (activeCategory && !getCategoryList().includes(activeCategory)) {
+          activeCategory = pickDefaultCategory();
         }
-        if ($("screen-order").classList.contains("active")) {
-          if (activeCategory && !bootstrap.categories.includes(activeCategory)) {
-            activeCategory = bootstrap.categories?.[0] || "";
-          }
-          renderCategories();
-          renderMenu();
-        }
+        renderCategories();
+        renderMenu();
       }
       renderTables();
     } catch { /* ignore background refresh */ }
@@ -253,8 +269,9 @@
   });
 
   $("btn-back").addEventListener("click", () => {
-    refreshTables();
+    tableNumber = 0;
     showScreen("screen-tables");
+    refreshBootstrap();
   });
 
   function showReceipt(receipt) {
@@ -306,7 +323,7 @@
     hideReceipt();
     cart = [];
     renderCart();
-    await refreshTables();
+    await refreshBootstrap();
     showScreen("screen-tables");
   });
 
@@ -372,7 +389,7 @@
       cart = [];
       renderCart();
       alert("Porosia u dërgua te banaku!");
-      await refreshTables();
+      await refreshBootstrap();
       showScreen("screen-tables");
     } catch (e) {
       showErr(err, e.message);

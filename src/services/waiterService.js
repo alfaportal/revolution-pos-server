@@ -56,6 +56,23 @@ function assertWaiterOnTable(existing, waiterName, tableNumber) {
   }
 }
 
+function buildMenuCategories(dbCategories, menuItems) {
+  const fromDb = (dbCategories || []).map(c => String(c.name || "").trim()).filter(Boolean);
+  const fromMenu = [
+    ...new Set((menuItems || []).map(m => String(m.category || "").trim()).filter(Boolean)),
+  ];
+  if (!fromDb.length) return fromMenu;
+  const seen = new Set(fromDb);
+  const merged = [...fromDb];
+  for (const name of fromMenu) {
+    if (!seen.has(name)) {
+      seen.add(name);
+      merged.push(name);
+    }
+  }
+  return merged;
+}
+
 async function getWaiterBootstrap(clientId) {
   const client = await assertClient(clientId);
   const db = getSupabase();
@@ -88,11 +105,11 @@ async function getWaiterBootstrap(clientId) {
     restaurant_name: settings?.restaurant_name || client.emri,
     table_count: tableCount,
     synced_at: settings?.synced_at || null,
-    categories: (categories || []).map(c => c.name),
+    categories: buildMenuCategories(categories, menu),
     menu: (menu || []).map(m => ({
       id: m.local_id,
       name: m.name,
-      category: m.category,
+      category: String(m.category || "").trim(),
       price: Number(m.price),
     })),
     staff: (staff || []).map(s => s.name),
