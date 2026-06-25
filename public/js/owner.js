@@ -377,9 +377,13 @@ async function loadFiscalSettings() {
     const nr = document.getElementById("fiscal-nr");
     const com = document.getElementById("fiscal-com");
     const op = document.getElementById("fiscal-operator");
+    const model = document.getElementById("fiscal-model");
+    const enabled = document.getElementById("fiscal-enabled");
     if (nr) nr.value = settings.fiscal_nr || "";
     if (com) com.value = settings.fiscal_com_port || "";
     if (op) op.value = settings.fiscal_operator_name || "";
+    if (model) model.value = settings.fiscal_device_model || "";
+    if (enabled) enabled.checked = settings.fiscal_enabled !== false;
   } catch { /* */ }
 }
 
@@ -991,10 +995,8 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
-    if (tab.dataset.tab === "zreport") {
-      loadZReport();
-      loadFiscalSettings();
-    }
+    if (tab.dataset.tab === "zreport") loadZReport();
+    if (tab.dataset.tab === "fiskale") loadFiscalSettings();
     if (tab.dataset.tab === "licenca") loadLicense();
   });
 });
@@ -1048,6 +1050,8 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
         fiscal_nr: document.getElementById("fiscal-nr")?.value?.trim() || "",
         fiscal_com_port: document.getElementById("fiscal-com")?.value?.trim() || "",
         fiscal_operator_name: document.getElementById("fiscal-operator")?.value?.trim() || "",
+        fiscal_device_model: document.getElementById("fiscal-model")?.value?.trim() || "",
+        fiscal_enabled: document.getElementById("fiscal-enabled")?.checked !== false,
       }),
     });
     if (msg) {

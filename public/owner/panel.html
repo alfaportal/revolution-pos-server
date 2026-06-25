@@ -73,6 +73,7 @@
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
+      <button class="tab" data-tab="fiskale">Fiskale</button>
       <button class="tab" data-tab="raportet">Raportet</button>
       <button class="tab" data-tab="licenca">Licenca</button>
     </div>
@@ -261,24 +262,43 @@
         <div class="card-title" style="margin-top:1.25rem">Historiku ditor</div>
         <div id="zreport-history" class="zreport-history"></div>
       </div>
+    </div>
+
+    <div id="panel-fiskale" class="panel-section hidden">
       <div class="card">
-        <div class="card-title">Arka fiskale — settings</div>
-        <p class="links-hint">Nr.Fisk dhe COM port konfigurohen këtu ose nga Super Admin. POS lidhet me COM port lokal.</p>
-        <div class="filter-row">
-          <div>
-            <label>Nr.Fisk</label>
-            <input type="text" id="fiscal-nr" placeholder="Nr. fiskal ATK">
+        <div class="card-title">Arka fiskale ATK</div>
+        <p class="owner-fiscal-intro">
+          Këto të dhëna lidhen me arkën tuaj ATK. COM Port gjendet në Device Manager të Windows.
+        </p>
+        <div class="hub-fiscal-form">
+          <div class="hub-fiscal-field">
+            <label for="fiscal-nr">Numri fiskal (Nr.Fisk)</label>
+            <input type="text" id="fiscal-nr" placeholder="p.sh. 123456789" autocomplete="off">
+            <p class="hub-field-note">Numri i regjistrimit fiskal nga ATK — shfaqet në faturat e printuara dhe raportet Z.</p>
           </div>
-          <div>
-            <label>COM Port</label>
-            <input type="text" id="fiscal-com" placeholder="p.sh. COM3">
+          <div class="hub-fiscal-field">
+            <label for="fiscal-com">Porti COM</label>
+            <input type="text" id="fiscal-com" class="mono" placeholder="p.sh. COM3" autocomplete="off" autocapitalize="characters">
+            <p class="hub-field-note">Porti serial (USB) ku lidhet POS me arkën fiskale. Gjeni në Menaxherin e Pajisjeve të Windows (p.sh. COM3, COM4).</p>
           </div>
-          <div>
-            <label>Operatori / përgjegjësi</label>
-            <input type="text" id="fiscal-operator" placeholder="Emri">
+          <div class="hub-fiscal-field">
+            <label for="fiscal-operator">Operatori / përgjegjësi</label>
+            <input type="text" id="fiscal-operator" placeholder="p.sh. Agron Berisha" autocomplete="off">
+            <p class="hub-field-note">Emri i operatorit që regjistrohet në arkë dhe shfaqet në faturat fiskale.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="fiscal-model">Modeli i arkës fiskale</label>
+            <input type="text" id="fiscal-model" placeholder="p.sh. Fiscal Albania FA-500" autocomplete="off">
+            <p class="hub-field-note">Marka dhe modeli i arkës (opsionale) — për referencë teknike.</p>
           </div>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-fiscal-save">Ruaj settings fiskale</button>
+        <label class="hub-check hub-fiscal-check">
+          <input type="checkbox" id="fiscal-enabled" checked>
+          <span>Aktivizo arkën fiskale — çaktivizoni vetëm nëse nuk përdorni ATK për momentin</span>
+        </label>
+        <div class="hub-fiscal-actions">
+          <button type="button" class="btn btn-primary" id="btn-fiscal-save">Ruaj settings fiskale</button>
+        </div>
         <div id="fiscal-msg" class="owner-license-msg"></div>
       </div>
     </div>
