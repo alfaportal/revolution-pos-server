@@ -13,9 +13,12 @@ const {
   deleteLicense,
   updateLicenseStatus,
   resetLicenseDevice,
+  regenerateKitchenAccess,
   getDashboardStats,
   generateLicenseKey,
 } = require("../services/licenseService");
+const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
+const { buildKitchenUrl } = require("../lib/kitchenAccess");
 const {
   listOwners,
   createOwner,
@@ -38,6 +41,17 @@ router.use(authRequired, superAdminOnly);
 router.get("/stats", asyncHandler(async (_req, res) => {
   res.json({ ok: true, ...(await getDashboardStats()) });
 }));
+
+router.get("/package-tiers", (_req, res) => {
+  res.json({
+    ok: true,
+    tiers: PACKAGE_TIERS.map(id => ({
+      id,
+      label: TIER_LABELS[id] || id,
+      features: featuresForTier(id),
+    })),
+  });
+});
 
 router.get("/clients", asyncHandler(async (_req, res) => {
   res.json({ ok: true, clients: await listClients() });
@@ -71,6 +85,23 @@ router.delete("/clients/:id", asyncHandler(async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     const msg = logRouteError("admin:DELETE /clients", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.post("/clients/:id/regenerate-kitchen-access", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const client = await regenerateKitchenAccess(req.params.id);
+    res.json({
+      ok: true,
+      client,
+      kitchen_url: buildKitchenUrl(base, client, "kitchen"),
+      waiter_url: buildKitchenUrl(base, client, "waiter"),
+      kiosk_url: buildKitchenUrl(base, client, "kiosk"),
+    });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /clients/:id/regenerate-kitchen-access", e);
     res.status(400).json({ gabim: msg });
   }
 }));

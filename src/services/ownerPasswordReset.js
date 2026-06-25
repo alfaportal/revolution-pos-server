@@ -3,37 +3,17 @@ const bcrypt = require("bcryptjs");
 const { getSupabase } = require("../db");
 const { findUserByEmail } = require("./licenseService");
 const { isEmailConfigured, sendOwnerPasswordResetEmail } = require("./emailService");
-
-/** Pas kaq përpjekjeve të gabuara → kod rivendosjeje në email. */
-const FAIL_THRESHOLD = 2;
-const FAIL_WINDOW_MS = 15 * 60 * 1000;
-const CHALLENGE_TTL_MS = 15 * 60 * 1000;
-const MIN_PASSWORD = 6;
-
-const failCounts = new Map();
-
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
+const {
+  FAIL_THRESHOLD,
+  CHALLENGE_TTL_MS,
+  MIN_PASSWORD,
+  normalizeEmail,
+  incrementFailCount,
+  clearFailCount,
+} = require("./ownerLoginFailures");
 
 function sixDigitCode() {
   return String(randomInt(100_000, 1_000_000));
-}
-
-function incrementFailCount(email) {
-  const key = normalizeEmail(email);
-  const now = Date.now();
-  const row = failCounts.get(key);
-  if (!row || row.expiresAt < now) {
-    failCounts.set(key, { count: 1, expiresAt: now + FAIL_WINDOW_MS });
-    return 1;
-  }
-  row.count += 1;
-  return row.count;
-}
-
-function clearFailCount(email) {
-  failCounts.delete(normalizeEmail(email));
 }
 
 function isResettableOwner(user) {
@@ -77,7 +57,13 @@ async function sendOwnerResetChallenge(email) {
 }
 
 async function handleOwnerWrongPassword(user, email) {
-  const failCount = incrementFailCount(email);
+  let failCount = 1;
+  try {
+    failCount = await incrementFailCount(email);
+  } catch (err) {
+    console.error("[owner-login] fail count DB error:", err.message);
+  }
+
   const remaining = FAIL_THRESHOLD - failCount;
 
   if (failCount >= FAIL_THRESHOLD && isResettableOwner(user) && isEmailConfigured()) {
@@ -178,7 +164,7 @@ async function completeOwnerPasswordReset(email, code, newPassword) {
   if (updErr) throw updErr;
 
   await db.from("owner_password_resets").delete().eq("email", e);
-  clearFailCount(e);
+  await clearFailCount(e);
 
   return user;
 }

@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { getSupabase } = require("../db");
 const { findLicenseByKey, normalizeKey } = require("./licenseService");
+const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 
 function dateRanges() {
   const now = new Date();
@@ -31,9 +32,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
 
   const license = await findLicenseByKey(celesi);
-  if (!license || license.statusi !== "aktive") {
-    throw new Error("Liçenca nuk është aktive.");
-  }
+  assertLicenseUsable(license);
 
   const deviceId = String(body.device_id || license.device_id || "").trim().toUpperCase();
   const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
@@ -102,6 +101,15 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     .single();
 
   if (error) throw error;
+
+  if (finalStatus === "ordered") {
+    try {
+      require("./kdsEvents").notifyKitchenUpdate(license.client_id, { order_id: data?.id });
+    } catch {
+      /* optional */
+    }
+  }
+
   return data;
 }
 

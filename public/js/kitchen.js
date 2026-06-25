@@ -1,6 +1,7 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const clientId = parts[0] === "kitchen" ? parts[1] : "";
+  const slug = parts[0] === "kitchen" ? parts[1] : "";
+  const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
 
   const titleEl = document.getElementById("kitchen-title");
   const subEl = document.getElementById("kitchen-sub");
@@ -11,6 +12,15 @@
   const syncEl = document.getElementById("last-sync");
 
   let knownIds = new Set();
+  let eventSource = null;
+
+  function apiQuery() {
+    return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
+  }
+
+  function apiHeaders() {
+    return kitchenKey ? { "x-kitchen-key": kitchenKey } : {};
+  }
 
   function showError(msg) {
     errorEl.textContent = msg;
@@ -86,12 +96,18 @@
   }
 
   async function fetchOrders() {
-    if (!clientId) {
-      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[client_id]");
+    if (!slug) {
+      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[slug]?key=...");
+      return;
+    }
+    if (!kitchenKey) {
+      showError("Mungon kodi i aksesit (?key=...) në link.");
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(clientId)}/orders`);
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+        headers: apiHeaders(),
+      });
       const data = await res.json();
       if (!res.ok || !data.ok) {
         showError(data.gabim || "Nuk u ngarkuan porositë.");
@@ -113,8 +129,8 @@
     btn.textContent = "Duke u përpunuar...";
     try {
       const res = await fetch(
-        `/api/kds/${encodeURIComponent(clientId)}/orders/${encodeURIComponent(orderId)}/ready`,
-        { method: "POST" },
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/ready${apiQuery()}`,
+        { method: "POST", headers: apiHeaders() },
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -136,6 +152,18 @@
     }
   }
 
+  function connectSse() {
+    if (!slug || !kitchenKey || typeof EventSource === "undefined") return;
+    const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
+    eventSource = new EventSource(url);
+    eventSource.addEventListener("kitchen", () => fetchOrders());
+    eventSource.onerror = () => {
+      if (eventSource) eventSource.close();
+      setTimeout(connectSse, 5000);
+    };
+  }
+
   fetchOrders();
-  setInterval(fetchOrders, 5000);
+  connectSse();
+  setInterval(fetchOrders, 30000);
 })();

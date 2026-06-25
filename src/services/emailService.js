@@ -61,7 +61,31 @@ async function sendOwnerPasswordResetEmail({ to, code }) {
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendOwnerInviteEmail({ to, emri, clientName, inviteUrl }) {
+  const subject = "Ftesë — Paneli i pronarit Revolution POS";
+  const text = [
+    `Përshëndetje ${emri || ""},`.trim(),
+    "",
+    clientName ? `Jeni ftuar si pronar i ${clientName}.` : "Jeni ftuar si pronar në Revolution POS.",
+    "",
+    "Klikoni linkun për të vendosur fjalëkalimin dhe aktivizuar llogarinë:",
+    inviteUrl,
+    "",
+    "Linku skadon pas 48 orësh.",
+  ].join("\n");
+
+  const html = `
+    <p>Përshëndetje <strong>${emri || "pronar"}</strong>,</p>
+    ${clientName ? `<p>Jeni ftuar si pronar i <strong>${clientName}</strong>.</p>` : ""}
+    <p><a href="${inviteUrl}">Aktivizo llogarinë dhe vendos fjalëkalimin</a></p>
+    <p style="color:#666;font-size:13px">Linku skadon pas 48 orësh.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   sendOwnerPasswordResetEmail,
+  sendOwnerInviteEmail,
 };

@@ -1,19 +1,26 @@
 const express = require("express");
+const { resolveKitchenClient } = require("../middleware/kitchenAuth");
+const { requirePackageFeature } = require("../middleware/packageTier");
 const {
-  getClientForKitchen,
   listKitchenOrders,
   markKitchenOrderReady,
 } = require("../services/kdsService");
+const { subscribe } = require("../services/kdsEvents");
 
 const router = express.Router();
 
-router.get("/:clientId/orders", async (req, res) => {
+router.get("/:slug/events", resolveKitchenClient, requirePackageFeature("kds"), (req, res) => {
+  subscribe(req.kitchenClient.id, res);
+});
+
+router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
-    const client = await getClientForKitchen(req.params.clientId);
+    const client = req.kitchenClient;
     const orders = await listKitchenOrders(client.id);
     res.json({
       ok: true,
       client_name: client.emri,
+      kitchen_slug: client.kitchen_slug,
       orders,
     });
   } catch (e) {
@@ -21,9 +28,9 @@ router.get("/:clientId/orders", async (req, res) => {
   }
 });
 
-router.post("/:clientId/orders/:orderId/ready", async (req, res) => {
+router.post("/:slug/orders/:orderId/ready", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
-    const client = await getClientForKitchen(req.params.clientId);
+    const client = req.kitchenClient;
     const order = await markKitchenOrderReady(client.id, req.params.orderId);
     res.json({ ok: true, order });
   } catch (e) {

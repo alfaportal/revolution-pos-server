@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { getClientById, normalizeItems, syncSaleFromPos } = require("./salesService");
+const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = "WEB-WAITER";
@@ -35,13 +36,14 @@ async function getLicenseForClient(clientId) {
   const db = getSupabase();
   const { data: license } = await db
     .from("licenses")
-    .select("id, celesi, device_id")
+    .select("id, celesi, device_id, statusi, data_skadimit, trial_ends_at")
     .eq("client_id", clientId)
     .eq("statusi", "aktive")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!license?.celesi) throw new Error("Nuk ka licencë aktive për këtë klient.");
+  assertLicenseUsable(license);
   return license;
 }
 

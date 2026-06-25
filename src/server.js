@@ -20,8 +20,10 @@ const adminRoutes = require("./routes/admin");
 const ownerRoutes = require("./routes/owner");
 const kdsRoutes = require("./routes/kds");
 const waiterRoutes = require("./routes/waiter");
+const kioskRoutes = require("./routes/kiosk");
 const posRoutes = require("./routes/pos");
 const { ensureSuperAdmin } = require("./services/licenseService");
+const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { adminPanelPath } = require("./lib/admin-path");
 
 const pkg = require("../package.json");
@@ -61,6 +63,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
 app.use("/api/waiter", waiterRoutes);
+app.use("/api/kiosk", kioskRoutes);
 
 app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
@@ -89,11 +92,11 @@ app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
 });
 
-app.get("/kitchen/:clientId", (_req, res) => {
+app.get("/kitchen/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
-app.get("/waiter/:clientId", (_req, res) => {
+app.get("/waiter/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/waiter.html"));
 });
 
@@ -129,12 +132,15 @@ async function start() {
     console.warn("  ⚠️  Super Admin seed:", formatError(e));
   }
 
+  startLicenseExpiryCron();
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
     console.log(`  🏪 Pronarët:    /owner/login`);
-    console.log(`  🍳 Kuzhina KDS:  /kitchen/:client_id`);
-    console.log(`  🧑‍🍳 Kamarieri:   /waiter/:client_id`);
+    console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...`);
+    console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
+    console.log(`  🖥️  Kiosk API:   POST /api/kiosk/:slug/order?key=...`);
     console.log(`  📋 POS catalog:  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);

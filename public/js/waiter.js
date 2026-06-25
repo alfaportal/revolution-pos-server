@@ -1,8 +1,21 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const clientId = parts[0] === "waiter" ? parts[1] : "";
+  const slug = parts[0] === "waiter" ? parts[1] : "";
+  const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
 
-  const LS_WAITER = `waiter_name_${clientId}`;
+  const LS_WAITER = `waiter_name_${slug}`;
+
+  function apiQuery() {
+    return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
+  }
+
+  function apiHeaders(extra = {}) {
+    return {
+      "Content-Type": "application/json",
+      ...(kitchenKey ? { "x-kitchen-key": kitchenKey } : {}),
+      ...extra,
+    };
+  }
 
   let bootstrap = null;
   let waiterName = "";
@@ -33,7 +46,7 @@
 
   async function api(path, opts = {}) {
     const res = await fetch(path, {
-      headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+      headers: apiHeaders(opts.headers || {}),
       ...opts,
     });
     let data = {};
@@ -45,8 +58,9 @@
   }
 
   async function loadBootstrap() {
-    if (!clientId) throw new Error("URL i gabuar. Duhet /waiter/[client_id]");
-    bootstrap = await api(`/api/waiter/${encodeURIComponent(clientId)}/bootstrap`);
+    if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...");
+    if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
+    bootstrap = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
     $("login-title").textContent = bootstrap.restaurant_name || bootstrap.client_name || "Kamarieri";
     $("tables-title").textContent = bootstrap.restaurant_name || "Tavolinat";
     const hint = $("sync-hint");
@@ -185,7 +199,7 @@
 
   async function refreshTables() {
     try {
-      const data = await api(`/api/waiter/${encodeURIComponent(clientId)}/bootstrap`);
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
       bootstrap.tables = data.tables;
       bootstrap.synced_at = data.synced_at;
       renderTables();
@@ -272,7 +286,7 @@
     btn.disabled = true;
     btn.textContent = "Duke mbyllur...";
     try {
-      const data = await api(`/api/waiter/${encodeURIComponent(clientId)}/orders/close`, {
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           waiter_name: waiterName,
@@ -305,7 +319,7 @@
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     try {
-      await api(`/api/waiter/${encodeURIComponent(clientId)}/orders`, {
+      await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           waiter_name: waiterName,

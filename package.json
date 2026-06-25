@@ -1,11 +1,12 @@
 {
   "name": "revolution-pos-server",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "Revolution Invest POS — backend licensimi dhe panel Super Admin",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "sql:run": "node scripts/run-migration.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -19,6 +20,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "qrcode": "^1.5.4",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "pg": "^8.16.0"
   }
 }

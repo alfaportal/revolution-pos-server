@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { getSupabase } = require("../db");
+const { isEmailConfigured, sendOwnerInviteEmail } = require("./emailService");
 
 const INVITE_HOURS = 48;
 
@@ -112,7 +113,26 @@ async function createOwner({ client_id, emri, email, password }, baseUrl) {
     if (error.code === "23505") throw new Error("Ky email ekziston tashmë.");
     throw error;
   }
-  return sanitizeOwnerForAdmin(data, baseUrl);
+
+  const owner = sanitizeOwnerForAdmin(data, baseUrl);
+
+  if (!pw && owner.invite_url && isEmailConfigured()) {
+    try {
+      const clientName = data.clients?.emri || "";
+      await sendOwnerInviteEmail({
+        to: owner.email,
+        emri: owner.emri,
+        clientName,
+        inviteUrl: owner.invite_url,
+      });
+      owner.invite_email_sent = true;
+    } catch (err) {
+      console.error("[owner-invite] email failed:", err.message);
+      owner.invite_email_sent = false;
+    }
+  }
+
+  return owner;
 }
 
 async function regenerateOwnerInvite(id, baseUrl) {
@@ -142,7 +162,25 @@ async function regenerateOwnerInvite(id, baseUrl) {
     .select(OWNER_SELECT)
     .single();
   if (error) throw error;
-  return sanitizeOwnerForAdmin(data, baseUrl);
+  const owner = sanitizeOwnerForAdmin(data, baseUrl);
+
+  if (isEmailConfigured()) {
+    try {
+      const clientName = data.clients?.emri || "";
+      await sendOwnerInviteEmail({
+        to: owner.email,
+        emri: owner.emri,
+        clientName,
+        inviteUrl: owner.invite_url,
+      });
+      owner.invite_email_sent = true;
+    } catch (err) {
+      console.error("[owner-invite] email failed:", err.message);
+      owner.invite_email_sent = false;
+    }
+  }
+
+  return owner;
 }
 
 async function findOwnerByInviteToken(token) {

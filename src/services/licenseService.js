@@ -2,6 +2,10 @@ const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
+const { normalizePackageTier } = require("../lib/packages");
+const { generateKitchenKey, generateKitchenSlug } = require("../lib/kitchenAccess");
+const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
+const { isLicenseUsable } = require("../lib/licenseEnforcement");
 
 function normalizeKey(key) {
   const raw = String(key || "")
@@ -72,21 +76,12 @@ function generateLicenseKey() {
   return `${part()}-${part()}-${part()}-${part()}`;
 }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isExpired(dateStr) {
-  if (!dateStr) return true;
-  return dateStr < todayISO();
-}
-
 async function findLicenseByKey(celesi) {
   const db = getSupabase();
   const normalized = normalizeKey(celesi);
   if (!normalized) return null;
 
-  const select = "*, clients(id, emri, adresa, telefoni, email, tipi)";
+  const select = "*, clients(id, emri, adresa, telefoni, email, tipi, package_tier, kitchen_slug, kitchen_key)";
 
   const { data, error } = await db
     .from("licenses")
@@ -162,8 +157,10 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   if (license.statusi === "pezulluar") {
     return fail("SUSPENDED", "Liçenca është pezulluar.");
   }
-  if (license.statusi === "skaduar" || isExpired(license.data_skadimit)) {
-    return fail("EXPIRED", "Liçenca ka skaduar.");
+
+  const usable = isLicenseUsable(license);
+  if (!usable.ok) {
+    return fail(usable.code, usable.message);
   }
 
   if (app_type) {
@@ -177,12 +174,14 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   const host = sanitizeHostname(hostname);
   const ip = sanitizeClientIp(client_ip);
   const now = new Date().toISOString();
-  let deviceRebound = false;
 
   if (deviceId) {
     const stored = String(license.device_id || "").trim().toUpperCase();
     if (stored && stored !== deviceId) {
-      deviceRebound = true;
+      return fail(
+        "DEVICE_MISMATCH",
+        "Liçenca është e lidhur me një pajisje tjetër. Kontaktoni administratorin për reset pajisje.",
+      );
     }
   }
 
@@ -209,15 +208,14 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     client_type: licenseAppType(license),
     device_id: license.device_id,
     device_hostname: license.device_hostname || host,
-    device_rebound: deviceRebound,
     last_activated_at: now,
     last_ip: ip,
+    trial_active: Boolean(license.trial_ends_at && new Date(license.trial_ends_at) > new Date()),
+    trial_ends_at: license.trial_ends_at || null,
     status: license.statusi,
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
-    message: deviceRebound
-      ? "Liçenca u lidh me këtë pajisje (ID u përditësua automatikisht)."
-      : "Liçenca është aktive.",
+    message: "Liçenca është aktive.",
   };
 }
 
@@ -253,6 +251,9 @@ async function createClient(body) {
     telefoni: String(body.telefoni || "").trim(),
     email: String(body.email || "").trim(),
     tipi: body.tipi || "restorant",
+    package_tier: normalizePackageTier(body.package_tier),
+    kitchen_slug: generateKitchenSlug(body.emri || "lokal"),
+    kitchen_key: generateKitchenKey(),
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
 
@@ -284,6 +285,7 @@ async function updateClient(id, body) {
   if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
   if (body.email != null) patch.email = String(body.email).trim();
   if (body.adresa != null) patch.adresa = String(body.adresa).trim();
+  if (body.package_tier != null) patch.package_tier = normalizePackageTier(body.package_tier);
 
   const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
   if (error) throw error;
@@ -299,12 +301,26 @@ async function deleteClient(id) {
   return { ok: true };
 }
 
+async function regenerateKitchenAccess(id) {
+  const db = getSupabase();
+  const { data: client, error: findErr } = await db.from("clients").select("*").eq("id", id).maybeSingle();
+  if (findErr) throw findErr;
+  if (!client) throw new Error("Klienti nuk u gjet.");
+
+  const patch = {
+    kitchen_slug: generateKitchenSlug(client.emri),
+    kitchen_key: generateKitchenKey(),
+  };
+
+  const { data, error } = await db.from("clients").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
 async function createLicense(body) {
   const db = getSupabase();
   const months = Number(body.muaj) || 12;
   const start = body.data_fillimit || todayISO();
-  const endDate = new Date(start);
-  endDate.setMonth(endDate.getMonth() + months);
 
   if (!body.client_id) throw new Error("client_id mungon.");
 
@@ -326,7 +342,8 @@ async function createLicense(body) {
     device_id: String(body.device_id || "").trim().toUpperCase(),
     statusi: body.statusi || "aktive",
     data_fillimit: start,
-    data_skadimit: body.data_skadimit || endDate.toISOString().slice(0, 10),
+    data_skadimit: body.data_skadimit || addMonthsISO(start, months),
+    trial_ends_at: body.trial_ends_at || addMonthsTimestamp(start, 3),
   };
 
   const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
@@ -539,6 +556,7 @@ module.exports = {
   createClient,
   updateClient,
   deleteClient,
+  regenerateKitchenAccess,
   createLicense,
   updateLicense,
   deleteLicense,
@@ -546,6 +564,8 @@ module.exports = {
   resetLicenseDevice,
   findUserByEmail,
   verifyUserPassword,
+  todayISO,
+  isExpired,
   ensureSuperAdmin,
   getDashboardStats,
   listLicensesForClient,

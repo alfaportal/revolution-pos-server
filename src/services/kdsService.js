@@ -1,5 +1,6 @@
 const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
+const { notifyKitchenUpdate } = require("./kdsEvents");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -44,6 +45,7 @@ async function markKitchenOrderReady(clientId, orderId) {
 
   if (error) throw error;
   if (!data) throw new Error("Porosia nuk u gjet ose është përfunduar.");
+  notifyKitchenUpdate(clientId, { order_id: orderId, status: "ready" });
   return data;
 }
 

@@ -1,29 +1,31 @@
 const express = require("express");
+const { resolveKitchenClient } = require("../middleware/kitchenAuth");
+const { requirePackageFeature } = require("../middleware/packageTier");
 const { getWaiterBootstrap, submitWaiterOrder, closeWaiterTable } = require("../services/waiterService");
 
 const router = express.Router();
 
-router.get("/:clientId/bootstrap", async (req, res) => {
+router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
-    const data = await getWaiterBootstrap(req.params.clientId);
-    res.json({ ok: true, ...data });
+    const data = await getWaiterBootstrap(req.kitchenClient.id);
+    res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });
   }
 });
 
-router.post("/:clientId/orders", async (req, res) => {
+router.post("/:slug/orders", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
-    const result = await submitWaiterOrder(req.params.clientId, req.body);
+    const result = await submitWaiterOrder(req.kitchenClient.id, req.body);
     res.status(201).json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 
-router.post("/:clientId/orders/close", async (req, res) => {
+router.post("/:slug/orders/close", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
-    const result = await closeWaiterTable(req.params.clientId, req.body);
+    const result = await closeWaiterTable(req.kitchenClient.id, req.body);
     res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
