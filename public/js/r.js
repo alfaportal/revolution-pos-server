@@ -143,6 +143,89 @@
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   }
 
+  function openExternalUrl(url) {
+    if (!url) return;
+    if (isStandalone()) {
+      window.location.assign(url);
+      return;
+    }
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) window.location.assign(url);
+  }
+
+  /** Upgrade legacy cached markup (<div> address) to a real anchor. */
+  function ensureAddressLink(card, textEl) {
+    if (card?.tagName === "A") return card;
+    if (textEl?.tagName === "A") return textEl;
+
+    const anchor = document.createElement("a");
+    anchor.id = card?.id || "info-address";
+    anchor.className = "info-card info-card-link";
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+
+    if (card?.parentNode) {
+      anchor.innerHTML = card.innerHTML;
+      card.replaceWith(anchor);
+      return anchor;
+    }
+
+    if (textEl?.parentNode) {
+      anchor.className = "info-value info-link";
+      anchor.id = textEl.id || "val-address";
+      textEl.replaceWith(anchor);
+      return anchor;
+    }
+
+    return null;
+  }
+
+  function renderAddress(data) {
+    const address = String(data?.address || "").trim();
+    if (!address) return;
+
+    const mapsUrl = String(data?.maps_url || "").trim() || googleMapsUrl(address);
+    if (!mapsUrl) return;
+
+    let card = document.getElementById("info-address");
+    let textEl = document.getElementById("val-address");
+    const linkEl = ensureAddressLink(card, textEl) || card;
+    if (!linkEl) return;
+
+    card = linkEl.tagName === "A" && linkEl.classList.contains("info-card")
+      ? linkEl
+      : document.getElementById("info-address");
+    textEl = document.getElementById("val-address");
+
+    if (card) {
+      card.hidden = false;
+      card.href = mapsUrl;
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+      card.setAttribute("aria-label", `Hap ${address} në Google Maps`);
+    }
+
+    if (textEl) {
+      textEl.textContent = address;
+    } else if (linkEl.tagName === "A" && !linkEl.classList.contains("info-card")) {
+      linkEl.textContent = address;
+      linkEl.href = mapsUrl;
+    }
+
+    const clickTarget = card || linkEl;
+    clickTarget.onclick = (e) => {
+      if (clickTarget.tagName !== "A" || !clickTarget.href) {
+        e.preventDefault();
+        openExternalUrl(mapsUrl);
+        return;
+      }
+      if (isStandalone()) {
+        e.preventDefault();
+        openExternalUrl(mapsUrl);
+      }
+    };
+  }
+
   function renderPage(data) {
     pageData = data;
     document.title = data.name || "Restorant";
@@ -166,16 +249,7 @@
       logoWrap.hidden = false;
     }
 
-    if (data.address) {
-      document.getElementById("info-address").hidden = false;
-      const addrEl = document.getElementById("val-address");
-      const mapsUrl = googleMapsUrl(data.address);
-      addrEl.textContent = data.address;
-      addrEl.href = mapsUrl;
-      addrEl.target = "_blank";
-      addrEl.rel = "noopener noreferrer";
-      addrEl.setAttribute("aria-label", `Hap ${data.address} në Google Maps`);
-    }
+    renderAddress(data);
 
     if (data.phone) {
       document.getElementById("info-phone").hidden = false;

@@ -118,9 +118,11 @@ app.get("/waiter/:slug", (_req, res) => {
 app.get("/r/:slug/manifest.json", manifestHandler);
 app.get("/r/:slug/sw.js", resolvePublicClient, serviceWorkerHandler);
 app.get("/r/:slug/order", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/r-order.html"));
 });
 app.get("/r/:slug", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/r.html"));
 });
 

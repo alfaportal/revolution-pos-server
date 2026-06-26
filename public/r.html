@@ -54,13 +54,16 @@
 
     <section class="info-section">
       <div class="info-grid">
-        <div class="info-card" id="info-address" hidden>
-          <span class="info-icon">📍</span>
+        <a class="info-card info-card-link" id="info-address" hidden
+           href="https://www.google.com/maps/search/?api=1&query="
+           target="_blank" rel="noopener noreferrer"
+           aria-label="Hap adresën në Google Maps">
+          <span class="info-icon" aria-hidden="true">📍</span>
           <div>
             <div class="info-label">Adresa</div>
-            <a class="info-value info-link" id="val-address" href="#" target="_blank" rel="noopener noreferrer"></a>
+            <span class="info-value info-link-text" id="val-address"></span>
           </div>
-        </div>
+        </a>
         <div class="info-card" id="info-phone" hidden>
           <span class="info-icon">📞</span>
           <div>
@@ -92,6 +95,6 @@
     </div>
   </div>
 
-  <script src="/js/r.js?v=4"></script>
+  <script src="/js/r.js?v=5"></script>
 </body>
 </html>

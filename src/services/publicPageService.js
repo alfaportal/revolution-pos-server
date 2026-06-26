@@ -110,11 +110,17 @@ async function getPublicRestaurantPage(slug, baseUrl) {
   const name = String(settings?.restaurant_name || client.emri || "Restorant").trim();
   const hours = normalizeHours(settings?.public_hours);
 
+  const address = String(settings?.address || client.adresa || "").trim();
+  const mapsUrl = address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
+
   return {
     slug: pageSlug,
     name,
     description: String(settings?.public_description || "").trim(),
-    address: String(settings?.address || client.adresa || "").trim(),
+    address,
+    maps_url: mapsUrl,
     phone: String(settings?.phone || client.telefoni || "").trim(),
     hours,
     hours_display: formatHoursForDisplay(hours),
@@ -235,7 +241,7 @@ function buildServiceWorkerScript(slug) {
   const encSlug = encodeURIComponent(slug);
   const scope = `/r/${encSlug}/`;
   return `/* PWA — ${scope} */
-const CACHE = "ri-restaurant-${encSlug}-v4";
+const CACHE = "ri-restaurant-${encSlug}-v5";
 const PRECACHE = [
   "/r/${encSlug}",
   "/r/${encSlug}/order",
@@ -262,6 +268,16 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Always fetch restaurant HTML from network (avoid stale markup from old caches).
+  if (url.pathname.startsWith("/r/") && !url.pathname.endsWith(".js")
+      && !url.pathname.endsWith(".json") && url.pathname !== "/css/r.css") {
+    e.respondWith(
+      fetch(req).catch(() => caches.match(req)),
+    );
+    return;
+  }
+
   if (url.pathname.startsWith("/api/")) {
     e.respondWith(fetch(req).catch(() => caches.match(req)));
     return;
