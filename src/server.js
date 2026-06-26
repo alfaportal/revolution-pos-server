@@ -82,6 +82,13 @@ app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
 });
 
+app.use((req, res, next) => {
+  if (/^\/(js\/panel\.js|css\/panel\.css)/.test(req.path)) {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.get(ADMIN_PATH, (_req, res) => {

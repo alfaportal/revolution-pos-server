@@ -598,6 +598,24 @@ td.col-actions .btn {
   margin-top: 0.75rem;
 }
 
+.modal-pair-row {
+  margin-bottom: 0.65rem;
+}
+
+.modal-pair-row input {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.license-pair-modal-hint {
+  margin-bottom: 0.85rem;
+  line-height: 1.45;
+}
+
+.actions .btn-accent {
+  white-space: nowrap;
+}
+
 @media (max-width: 719px) {
   .licenses-desktop-create { display: none !important; }
 }

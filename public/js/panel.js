@@ -224,6 +224,73 @@ async function fillLicensePair(keyInputId, deviceInputId) {
   return { celesi, device_id: deviceId };
 }
 
+function bindLicenseModalPairActions({ keyId, deviceId, genKeyId, genDeviceId, genBothId }) {
+  const modal = document.getElementById("modal-form");
+  if (!modal) return;
+  modal.querySelector(`#${genKeyId}`)?.addEventListener("click", async e => {
+    e.preventDefault();
+    try {
+      document.getElementById(keyId).value = await apiGenerateLicenseKey();
+    } catch (err) {
+      alert(err.message || "Gjenerimi i kodit dështoi.");
+    }
+  });
+  modal.querySelector(`#${genDeviceId}`)?.addEventListener("click", async e => {
+    e.preventDefault();
+    try {
+      document.getElementById(deviceId).value = await apiGenerateDeviceId();
+    } catch (err) {
+      alert(err.message || "Gjenerimi i ID-së dështoi.");
+    }
+  });
+  modal.querySelector(`#${genBothId}`)?.addEventListener("click", async e => {
+    e.preventDefault();
+    try {
+      await fillLicensePair(keyId, deviceId);
+    } catch (err) {
+      alert(err.message || "Gjenerimi dështoi.");
+    }
+  });
+}
+
+function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id", prefix = "modal-edit" } = {}) {
+  const devId = licenseDeviceId(l);
+  return `
+    <p class="field-hint license-pair-modal-hint">
+      <strong>Ti vendos kodin dhe ID-në këtu</strong> — shkruaj manualisht ose kliko Gjenero. Ruaj → POS përdor këto vlera.
+    </p>
+    <label for="${prefix}-celesi">Kodi i licencës (KODI)</label>
+    <div class="link-actions modal-pair-row">
+      <input
+        name="${keyName}"
+        id="${prefix}-celesi"
+        class="mono"
+        value="${esc(l.celesi)}"
+        required
+        autocomplete="off"
+        autocapitalize="characters"
+      >
+      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-key">Gjenero kod</button>
+    </div>
+    <label for="${prefix}-device-id"><strong>ID Pajisjes</strong></label>
+    <div class="link-actions modal-pair-row">
+      <input
+        name="${deviceName}"
+        id="${prefix}-device-id"
+        class="mono"
+        value="${esc(l.device_id || devId)}"
+        placeholder="Shkruaj ose gjenero ID (12 karaktere)"
+        autocomplete="off"
+        autocapitalize="characters"
+        maxlength="12"
+      >
+      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-device">Gjenero ID</button>
+    </div>
+    <div class="license-create-actions" style="margin-bottom:0.75rem">
+      <button type="button" class="btn btn-accent btn-sm" id="${prefix}-gen-both">Gjenero kod + ID</button>
+    </div>`;
+}
+
 async function prepareLicenseCreateForm() {
   const keyEl = document.getElementById("ld-celesi");
   const devEl = document.getElementById("ld-device-id");
@@ -871,26 +938,34 @@ function fmtDateTime(iso) {
   });
 }
 
+function openFixLicenseCodes(id) {
+  const l = licensesCache.find(x => x.id === id);
+  if (!l) return;
+  openModal("Rregullo kod & ID pajisje", licensePairFieldsHtml(l, { prefix: "modal-fix" }), async fd => {
+    const celesi = String(fd.get("celesi") || "").trim();
+    const device_id = String(fd.get("device_id") || "").trim();
+    await api(`/api/admin/licenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ celesi, device_id }),
+    });
+    alert(`U ruajt!\n\nKODI: ${celesi}\nID: ${device_id || "— (bosh)"}`);
+  });
+  setTimeout(() => {
+    bindLicenseModalPairActions({
+      keyId: "modal-fix-celesi",
+      deviceId: "modal-fix-device-id",
+      genKeyId: "modal-fix-gen-key",
+      genDeviceId: "modal-fix-gen-device",
+      genBothId: "modal-fix-gen-both",
+    });
+  }, 0);
+}
+
 function openEditLicense(id) {
   const l = licensesCache.find(x => x.id === id);
   if (!l) return;
   openModal("Ndrysho liçencën", `
-    <label>Kodi i licencës</label>
-    <input value="${esc(l.celesi)}" readonly class="mono" style="opacity:0.85">
-    <label for="license-edit-device-id"><strong>ID Pajisjes</strong></label>
-    <input
-      id="license-edit-device-id"
-      name="device_id"
-      value="${esc(l.device_id || "")}"
-      class="mono"
-      placeholder="Pa aktivizuar — shkruani ID nga POS ose lëreni bosh"
-      autocomplete="off"
-      autocapitalize="characters"
-    >
-    <p class="field-hint license-device-hint">
-      Vendosni ID-në që shfaqet në ekranin e aktivizimit të POS-it.
-      <strong>Reset ID</strong> e fshin — pastaj klienti aktivizon përsëri.
-    </p>
+    ${licensePairFieldsHtml(l, { prefix: "modal-edit" })}
     <label>Tipi i aplikacionit</label>
     <select name="app_type">
       <option value="restorant" ${(l.app_type || l.clients?.tipi) === "restorant" ? "selected" : ""}>Restorant</option>
@@ -918,10 +993,11 @@ function openEditLicense(id) {
     await api(`/api/admin/licenses/${id}`, {
       method: "PATCH",
       body: JSON.stringify({
+        celesi: fd.get("celesi"),
+        device_id: fd.get("device_id") || "",
         data_skadimit: fd.get("data_skadimit"),
         statusi: fd.get("statusi"),
         app_type: fd.get("app_type"),
-        device_id: fd.get("device_id") || "",
         max_terminals: fd.get("max_terminals"),
         base_price: fd.get("base_price"),
         terminal_price: fd.get("terminal_price"),
@@ -931,6 +1007,13 @@ function openEditLicense(id) {
   setTimeout(() => {
     const modal = document.getElementById("modal-body");
     if (modal) bindLicensePriceCalc(modal);
+    bindLicenseModalPairActions({
+      keyId: "modal-edit-celesi",
+      deviceId: "modal-edit-device-id",
+      genKeyId: "modal-edit-gen-key",
+      genDeviceId: "modal-edit-gen-device",
+      genBothId: "modal-edit-gen-both",
+    });
   }, 0);
 }
 
@@ -970,6 +1053,9 @@ function bindTableActions(scope) {
   });
   scope.querySelectorAll("[data-edit-license]").forEach(btn => {
     btn.onclick = () => openEditLicense(btn.dataset.editLicense);
+  });
+  scope.querySelectorAll("[data-fix-license]").forEach(btn => {
+    btn.onclick = () => openFixLicenseCodes(btn.dataset.fixLicense);
   });
   scope.querySelectorAll("[data-edit-owner]").forEach(btn => {
     btn.onclick = () => openEditOwner(btn.dataset.editOwner);
@@ -1335,6 +1421,9 @@ function bindMobileLicenseActions(scope) {
   scope.querySelectorAll("[data-mobile-edit-license]").forEach(btn => {
     btn.addEventListener("click", () => openEditLicense(btn.dataset.mobileEditLicense));
   });
+  scope.querySelectorAll("[data-mobile-fix-license]").forEach(btn => {
+    btn.addEventListener("click", () => openFixLicenseCodes(btn.dataset.mobileFixLicense));
+  });
   scope.querySelectorAll("[data-mobile-block-license]").forEach(btn => {
     btn.addEventListener("click", async () => {
       if (!confirm("Blloko POS-in e këtij klienti?")) return;
@@ -1411,6 +1500,7 @@ function renderMobileLicenseCards(licenses) {
             Terminale: ${terminalCountLabel(l)} · Skadon: ${esc(l.data_skadimit)}
           </div>
           <div class="license-mobile-actions">
+            <button type="button" class="btn btn-accent btn-sm" data-mobile-fix-license="${l.id}">Rregullo kod/ID</button>
             <button type="button" class="btn btn-ghost btn-sm" data-mobile-edit-license="${l.id}">Ndrysho liçencën</button>
             ${l.statusi === "aktive"
               ? `<button type="button" class="btn btn-danger btn-sm" data-mobile-block-license="${l.id}">Blloko POS</button>`
@@ -1470,6 +1560,7 @@ async function loadLicenses() {
         <td data-label="Nga">${l.data_fillimit}</td>
         <td data-label="Deri">${l.data_skadimit}</td>
         <td class="actions col-actions" data-label="Veprime">
+          <button class="btn btn-accent btn-sm" data-fix-license="${l.id}">Rregullo kod/ID</button>
           <button class="btn btn-ghost btn-sm" data-edit-license="${l.id}">Ndrysho</button>
           ${l.statusi === "aktive"
             ? `<button class="btn btn-danger btn-sm" data-block-license="${l.id}" title="Blloko POS — shkyçet brenda ~60s">Blloko POS</button>`

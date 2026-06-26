@@ -593,6 +593,17 @@ async function updateLicense(id, body) {
       patch.last_activated_at = new Date().toISOString();
     }
   }
+  if (body.celesi != null) {
+    const celesi = normalizeKey(body.celesi);
+    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(celesi)) {
+      throw new Error("Kodi i licencës duhet XXXX-XXXX-XXXX-XXXX (16 shkronja/numra).");
+    }
+    const dup = await findLicenseByKey(celesi);
+    if (dup && dup.id !== id) {
+      throw new Error("Ky kod licencë përdoret tashmë nga një klient tjetër.");
+    }
+    patch.celesi = celesi;
+  }
   if (body.app_type != null) {
     const allowedApp = ["restorant", "kafene"];
     const appType = String(body.app_type).trim().toLowerCase();
