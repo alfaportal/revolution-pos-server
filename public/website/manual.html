@@ -479,6 +479,8 @@
         <a href="#raportet">6. Raportet</a>
         <a href="#faqja">7. Faqja Publike</a>
         <a href="#siguria">8. Fjalëkalimet &amp; Siguria</a>
+        <a href="#stoku">9. Stoku</a>
+        <a href="#terminalet">10. Terminalet</a>
         <a href="/">← Kthehu te Ballina</a>
       </nav>
     </div>
@@ -487,7 +489,7 @@
   <section class="manual-hero">
     <div class="container">
       <h1>Manual Përdorimi — Revolution Invest POS</h1>
-      <p>Udhëzues i plotë hap pas hapi për pronarët, menaxherët, kamarierët dhe stafin. Ky manual mbulon panelin e pronarit, modulin e kamarierit, kiosk QR, ekranin e kuzhinës, raportet dhe faqen publike.</p>
+      <p>Udhëzues i plotë hap pas hapi për pronarët, menaxherët, kamarierët dhe stafin. Ky manual mbulon panelin e pronarit, modulin e kamarierit, kiosk QR, ekranin e kuzhinës, raportet, stokun, terminalet dhe faqen publike.</p>
       <div class="manual-meta">
         <span class="meta-pill">Versioni 1.0</span>
         <span class="meta-pill">Gjuha: Shqip</span>
@@ -511,6 +513,13 @@
         <li><a href="#raportet">6. Raportet</a></li>
         <li><a href="#faqja">7. Faqja Publike</a></li>
         <li><a href="#siguria">8. Siguria</a></li>
+        <li><a href="#stoku">9. Stoku</a></li>
+        <li class="toc-sub"><a href="#stoku-aktivizo">Aktivizo ndjekjen</a></li>
+        <li class="toc-sub"><a href="#stoku-sasia">Sasia &amp; alarmi</a></li>
+        <li class="toc-sub"><a href="#stoku-rimbush">Rimbush stokun</a></li>
+        <li><a href="#terminalet">10. Terminalet</a></li>
+        <li class="toc-sub"><a href="#terminalet-shiko">Terminale aktive</a></li>
+        <li class="toc-sub"><a href="#terminalet-limit">Limiti &amp; kontakti</a></li>
       </ol>
     </aside>
 
@@ -909,6 +918,166 @@
         <div class="box box-tip">
           <div class="box-title">💡 Këshillë</div>
           <p>Çdo kamarier ka PIN të vet — rivendoseni menjëherë nëse një punonjës largohet. Linket me <code>?key=</code> (kuzhinë, kamarier, kiosk) duhet të mbeten brenda lokalit.</p>
+        </div>
+      </article>
+
+      <!-- 9. STOKU -->
+      <article class="manual-section" id="stoku">
+        <span class="section-num">Seksioni 9</span>
+        <h2>STOKU (Inventory Management)</h2>
+        <p>Moduli i stokut ju lejon të ndiqni sasinë e artikujve në menu. Kur stoku bie në zero, artikulli fshihet automatikisht nga menuja në POS, tablet dhe kiosk — pa nevojë ta fshihni manualisht.</p>
+
+        <h3 id="stoku-aktivizo">Si aktivizohet ndjekja e stokut për artikull</h3>
+        <ol class="steps">
+          <li>Hyni në panelin e pronarit → tabi <strong>Stoku</strong>.</li>
+          <li>Te tabela e artikujve, gjeni produktin që dëshironi të ndiqni (p.sh. «Cappuccino», «Pizza Margherita»).</li>
+          <li>Te kolona <strong>Ndiq stokun</strong>, aktivizoni checkbox-in (<strong>Po</strong>).</li>
+          <li>Fushat <strong>Sasia</strong> dhe <strong>Pragu i alarmit</strong> bëhen të editueshme.</li>
+          <li>Klikoni <strong>«Ruaj»</strong> në rreshtin e atij artikulli për të ruajtur ndryshimin.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Tabi Stoku me checkbox «Ndiq stokun» aktiv</small></div>
+
+        <div class="box box-tip">
+          <div class="box-title">💡 Këshillë</div>
+          <p>Aktivizoni stokun vetëm për artikuj me sasi të kufizuar (p.sh. produkte sezonale). Artikujt pa ndjekje stoku funksionojnë si më parë — gjithmonë të disponueshëm në menu.</p>
+        </div>
+
+        <h3 id="stoku-sasia">Si vendoset sasia dhe pragu i alarmit</h3>
+        <ol class="steps">
+          <li>Te tabi <strong>Stoku</strong>, për artikullin me ndjekje të aktivizuar:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li><strong>Sasia</strong> — numri aktual i njësi në stok (p.sh. 50)</li>
+              <li><strong>Pragu i alarmit</strong> — kur sasia bie në këtë vlerë ose më poshtë, artikulli shënohet «Stok i ulët» (p.sh. 10)</li>
+            </ul>
+          </li>
+          <li>Përmbledhja sipër tabelës tregon: artikuj me stok, stok i ulët dhe artikuj të mbaruar.</li>
+          <li>Klikoni <strong>«Ruaj»</strong> pas çdo ndryshimi.</li>
+          <li>Ndryshimet sinkronizohen me POS-in dhe tabletat brenda ~15 sekondave.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Fushat Sasia dhe Pragu i alarmit te lista e stokut</small></div>
+
+        <div class="box box-warning">
+          <div class="box-title">⚠️ Kujdes</div>
+          <p>Çdo shitje (POS, kamarier, kiosk) zbrit automatikisht stokun për artikujt me ndjekje të aktivizuar. Sigurohuni që sasia fillestare të jetë e saktë para fillimit të turnit.</p>
+        </div>
+
+        <h3 id="stoku-rimbush">Si bëhet rimbushimi i stokut</h3>
+        <ol class="steps">
+          <li>Te tabi <strong>Stoku</strong>, gjeni artikullin që dëshironi të rimbushni.</li>
+          <li>Klikoni butonin <strong>«Rimbush Stokun»</strong> në rreshtin e atij artikulli.</li>
+          <li>Shkruani sasinë e re totale (p.sh. 100 njësi) në dialogun që shfaqet.</li>
+          <li>Konfirmoni — sasia përditësohet dhe statusi ndryshon (p.sh. nga «Mbaruar» në «OK»).</li>
+          <li>Artikulli rikthehet automatikisht në menu në POS dhe tablet.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Butoni «Rimbush Stokun» dhe dialogu i sasisë së re</small></div>
+
+        <h3>Çfarë ndodh kur stoku arrin zero</h3>
+        <ol class="steps">
+          <li>Kur sasia bie në <strong>0</strong>, statusi bëhet <strong>«Mbaruar»</strong> (rreshti theksohet me ngjyrë të kuqe).</li>
+          <li>Artikulli <strong>fshihet automatikisht</strong> nga menuja në:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li>Aplikacionin POS (kasa)</li>
+              <li>Tabletin e kamarierit</li>
+              <li>Kiosk-un QR të tavolinës</li>
+            </ul>
+          </li>
+          <li>Klientët dhe stafi <strong>nuk e shohin</strong> artikullin derisa ta rimbushni stokun.</li>
+          <li>Pas rimbushjes, artikulli rikthehet pa nevojë ta aktivizoni manualisht te tabi Menuja.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Artikull me status «Mbaruar» dhe mungesa në menunë e POS</small></div>
+
+        <div class="box box-warning">
+          <div class="box-title">⚠️ Kujdes</div>
+          <p>Stoku zero ndryshon vetëm disponueshmërinë në menu — <strong>nuk</strong> fshin artikullin nga lista e menusë në panel. Historiku i porosive të mëparshme mbetet i paprekur.</p>
+        </div>
+
+        <h3>Njoftimet me email për stok të ulët</h3>
+        <ol class="steps">
+          <li>Kur sasia bie nën pragun e alarmit ose arrin zero, sistemi dërgon automatikisht <strong>email te pronari</strong>.</li>
+          <li>Emaili përmban emrin e artikullit, sasinë aktuale dhe statusin (stok i ulët ose mbaruar).</li>
+          <li>Emaili dërgohet te adresa e regjistruar e pronarit (<code>/owner/login</code>) ose emaili i biznesit.</li>
+          <li>Tabi <strong>Stoku</strong> tregon një badge nëse ka artikuj me alarm — kontrolloni panelin çdo ditë.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Email njoftimi për stok të ulët dhe badge te tabi Stoku</small></div>
+
+        <div class="box box-tip">
+          <div class="box-title">💡 Këshillë</div>
+          <p>Vendosni pragun e alarmit disa njësi mbi zero (p.sh. 5–10) që të merrni email para se produkti të mbarojë plotësisht dhe të keni kohë për rimbushim.</p>
+        </div>
+      </article>
+
+      <!-- 10. TERMINALET -->
+      <article class="manual-section" id="terminalet">
+        <span class="section-num">Seksioni 10</span>
+        <h2>TERMINALET (Multi-terminal)</h2>
+        <p>Çdo licencë Revolution Invest POS mbështet një ose më shumë <strong>terminale</strong> — domethënë kompjuterë ose pajisje ku është instaluar dhe aktivizuar aplikacioni POS.</p>
+
+        <h3>Çfarë është një terminal?</h3>
+        <p><strong>1 terminal = 1 kompjuter / pajisje POS</strong> ku keni instaluar programin dhe aktivizuar çelësin e licencës. Për shembull:</p>
+        <ul style="margin:0 0 1rem;padding-left:1.25rem;color:#cbd5e1">
+          <li>Kasa kryesore në sallë = <strong>1 terminal</strong></li>
+          <li>Kasa e dytë në bar = <strong>1 terminal</strong></li>
+          <li>Kompjuteri rezervë me POS të instaluar = <strong>1 terminal</strong></li>
+        </ul>
+        <p>Tabletet e kamarierit, ekrani i kuzhinës dhe kiosk-u <strong>nuk</strong> numërohen si terminale — vetëm aplikacioni POS desktop.</p>
+        <div class="photo-placeholder">[FOTO]<small>Dy kompjuterë POS me ID pajisje të ndryshme</small></div>
+
+        <h3 id="terminalet-shiko">Si shihen terminalet aktive</h3>
+        <ol class="steps">
+          <li>Hyni në panelin e pronarit → tabi <strong>Licenca</strong>.</li>
+          <li>Te seksioni i terminaleve shfaqet: <strong>«Terminalet aktive: X / Y të lejuara»</strong>.</li>
+          <li>Lista tregon çdo pajisje me:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li><strong>ID pajisje</strong> — kodi unik 12-shifror i instalimit</li>
+              <li><strong>Kompjuteri</strong> — emri i host-it (p.sh. KASA-1)</li>
+              <li><strong>Pamja e fundit</strong> — kur POS-i u lidh së fundi me serverin</li>
+            </ul>
+          </li>
+          <li>ID-ja e pajisjes shfaqet edhe te <strong>Admin → Licenca</strong> në kompjuterin POS pas aktivizimit.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Tabi Licenca me listën e terminaleve aktive</small></div>
+
+        <div class="box box-tip">
+          <div class="box-title">💡 Këshillë</div>
+          <p>Nëse blini një kompjuter të ri POS, aktivizoni licencën atje — terminali i ri shfaqet automatikisht në listë pas lidhjes së parë me internet.</p>
+        </div>
+
+        <h3 id="terminalet-limit">Çfarë ndodh kur arrihet limiti i terminaleve</h3>
+        <ol class="steps">
+          <li>Çdo licencë ka një numër maksimal terminalesh (zakonisht <strong>1</strong>, por mund të jetë 2, 3, 4, 5+).</li>
+          <li>Kur provoni të aktivizoni POS në një pajisje <strong>mbi limitin</strong>:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li><strong>24 orë grace:</strong> POS-i vazhdon të funksionojë me mesazh paralajmërues</li>
+              <li><strong>Pas 24 orëve:</strong> aktivizimi bllokohet — shfaqet: <em>«Kontaktoni Revolution Invest për të shtuar terminale»</em></li>
+            </ul>
+          </li>
+          <li>Te paneli i pronarit shfaqet paralajmërimi: <strong>«Keni arritur limitin e terminaleve»</strong>.</li>
+          <li>POS-et ekzistuese (brenda limitit) vazhdojnë të punojnë normalisht — bllokohet vetëm terminali shtesë.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Paralajmërimi i limitit te paneli dhe mesazhi në POS</small></div>
+
+        <div class="box box-warning">
+          <div class="box-title">⚠️ Kujdes</div>
+          <p>Perioda e provës 24-orëshe fillon kur për herë të parë tejkaloni limitin. Mos e shtyjni — kontaktoni Revolution Invest sa më shpejt për të shtuar terminale dhe shmangur bllokimin.</p>
+        </div>
+
+        <h3>Si të shtoni terminale shtesë</h3>
+        <ol class="steps">
+          <li>Kontaktoni <strong>Revolution Invest</strong> për të rritur numrin e terminaleve në licencën tuaj.</li>
+          <li>Mund të na shkruani në:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li><strong>WhatsApp</strong> — nga faqja <a href="/#kontakt" style="color:#7dd3fc;text-decoration:underline">revolution-pos.com/#kontakt</a></li>
+              <li><strong>Email:</strong> <a href="mailto:info@revolution-pos.com" style="color:#7dd3fc;text-decoration:underline">info@revolution-pos.com</a></li>
+            </ul>
+          </li>
+          <li>Tregoni emrin e lokalit dhe sa terminale shtesë ju nevojiten (p.sh. «Dua 2 terminale në vend të 1»).</li>
+          <li>Administratori përditëson licencën — pas rifreskimit, mund të aktivizoni POS në pajisjen e re pa bllokim.</li>
+        </ol>
+        <div class="photo-placeholder">[FOTO]<small>Formulari i kontaktit në faqen e Revolution Invest</small></div>
+
+        <div class="box box-tip">
+          <div class="box-title">💡 Këshillë</div>
+          <p>Çmimi i licencës = çmimi bazë + (terminale shtesë × çmimi për terminal). Detajet e pakos diskutohen me ekipin e Revolution Invest para aktivizimit.</p>
         </div>
       </article>
 
