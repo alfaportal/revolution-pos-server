@@ -7,11 +7,16 @@ function isKioskWaiterName(name) {
   return n === "kiosk" || n.startsWith("tavolin");
 }
 
-function publicOrderWaiterLabel(orderType, name, phone) {
+function publicOrderWaiterLabel(orderType, name, phone, deliveryAddress) {
   const kind = orderType === "delivery" ? "Delivery" : "Takeaway";
   const customer = String(name || "").trim();
   const tel = String(phone || "").trim();
-  return `${kind}: ${customer} (${tel})`;
+  let label = `${kind}: ${customer} (${tel})`;
+  if (orderType === "delivery") {
+    const addr = String(deliveryAddress || "").trim();
+    if (addr) label += ` · ${addr}`;
+  }
+  return label;
 }
 
 function publicOrderTypeFromWaiter(waiterName) {

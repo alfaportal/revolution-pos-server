@@ -153,31 +153,59 @@
     if (!opened) window.location.assign(url);
   }
 
-  /** Upgrade legacy cached markup (<div> address) to a real anchor. */
-  function ensureAddressLink(card, textEl) {
-    if (card?.tagName === "A") return card;
-    if (textEl?.tagName === "A") return textEl;
+  /** Upgrade legacy cached markup to the current address card layout. */
+  function ensureAddressCard() {
+    let card = document.getElementById("info-address");
+    if (!card) return null;
 
-    const anchor = document.createElement("a");
-    anchor.id = card?.id || "info-address";
-    anchor.className = "info-card info-card-link";
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-
-    if (card?.parentNode) {
-      anchor.innerHTML = card.innerHTML;
-      card.replaceWith(anchor);
-      return anchor;
+    if (card.tagName === "A") {
+      const address = card.querySelector("#val-address")?.textContent?.trim()
+        || card.textContent.replace(/Hap në Google Maps/gi, "").trim();
+      const div = document.createElement("div");
+      div.id = "info-address";
+      div.className = "info-card";
+      div.hidden = card.hidden;
+      div.innerHTML = `
+        <span class="info-icon" aria-hidden="true">📍</span>
+        <div class="info-address-body">
+          <div class="info-label">Adresa</div>
+          <div class="info-value" id="val-address"></div>
+          <a class="maps-btn" id="btn-maps-address" href="#" target="_blank" rel="noopener noreferrer">
+            <span class="maps-btn-icon" aria-hidden="true">🗺️</span>
+            Hap në Google Maps
+          </a>
+        </div>`;
+      card.replaceWith(div);
+      card = div;
+      const textEl = document.getElementById("val-address");
+      if (textEl && address) textEl.textContent = address;
     }
 
-    if (textEl?.parentNode) {
-      anchor.className = "info-value info-link";
-      anchor.id = textEl.id || "val-address";
-      textEl.replaceWith(anchor);
-      return anchor;
+    if (!document.getElementById("btn-maps-address")) {
+      const body = card.querySelector(".info-address-body") || card.querySelector("div");
+      if (body) {
+        const btn = document.createElement("a");
+        btn.id = "btn-maps-address";
+        btn.className = "maps-btn";
+        btn.href = "#";
+        btn.target = "_blank";
+        btn.rel = "noopener noreferrer";
+        btn.innerHTML = '<span class="maps-btn-icon" aria-hidden="true">🗺️</span> Hap në Google Maps';
+        body.appendChild(btn);
+      }
     }
 
-    return null;
+    return card;
+  }
+
+  function bindMapsButton(btn, mapsUrl, label) {
+    if (!btn || !mapsUrl) return;
+    btn.href = mapsUrl;
+    btn.setAttribute("aria-label", label || "Hap në Google Maps");
+    btn.onclick = (e) => {
+      e.preventDefault();
+      openExternalUrl(mapsUrl);
+    };
   }
 
   function renderAddress(data) {
@@ -187,43 +215,18 @@
     const mapsUrl = String(data?.maps_url || "").trim() || googleMapsUrl(address);
     if (!mapsUrl) return;
 
-    let card = document.getElementById("info-address");
-    let textEl = document.getElementById("val-address");
-    const linkEl = ensureAddressLink(card, textEl) || card;
-    if (!linkEl) return;
+    const card = ensureAddressCard();
+    if (!card) return;
 
-    card = linkEl.tagName === "A" && linkEl.classList.contains("info-card")
-      ? linkEl
-      : document.getElementById("info-address");
-    textEl = document.getElementById("val-address");
+    card.hidden = false;
+    const textEl = document.getElementById("val-address");
+    if (textEl) textEl.textContent = address;
 
-    if (card) {
-      card.hidden = false;
-      card.href = mapsUrl;
-      card.target = "_blank";
-      card.rel = "noopener noreferrer";
-      card.setAttribute("aria-label", `Hap ${address} në Google Maps`);
-    }
-
-    if (textEl) {
-      textEl.textContent = address;
-    } else if (linkEl.tagName === "A" && !linkEl.classList.contains("info-card")) {
-      linkEl.textContent = address;
-      linkEl.href = mapsUrl;
-    }
-
-    const clickTarget = card || linkEl;
-    clickTarget.onclick = (e) => {
-      if (clickTarget.tagName !== "A" || !clickTarget.href) {
-        e.preventDefault();
-        openExternalUrl(mapsUrl);
-        return;
-      }
-      if (isStandalone()) {
-        e.preventDefault();
-        openExternalUrl(mapsUrl);
-      }
-    };
+    bindMapsButton(
+      document.getElementById("btn-maps-address"),
+      mapsUrl,
+      `Hap ${address} në Google Maps`,
+    );
   }
 
   function renderPage(data) {

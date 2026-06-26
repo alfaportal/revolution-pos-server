@@ -197,6 +197,34 @@
     });
   }
 
+  function googleMapsUrl(query) {
+    const q = String(query || "").trim();
+    if (!q) return "https://www.google.com/maps";
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  }
+
+  function openExternalUrl(url) {
+    if (!url) return;
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) window.location.assign(url);
+  }
+
+  function updateDeliveryFieldVisibility() {
+    const field = document.getElementById("delivery-address-field");
+    const input = document.getElementById("delivery-address");
+    if (!field) return;
+    const isDelivery = orderType === "delivery";
+    field.classList.toggle("hidden", !isDelivery);
+    if (input) input.required = isDelivery;
+    if (!isDelivery && input) input.value = "";
+  }
+
+  function openDeliveryMaps() {
+    const customerAddr = String(document.getElementById("delivery-address")?.value || "").trim();
+    const hint = customerAddr || pageData?.address || pageData?.name || "";
+    openExternalUrl(googleMapsUrl(hint));
+  }
+
   function initOrderTypeToggle() {
     const subtitle = document.getElementById("order-subtitle");
     document.querySelectorAll(".order-type-btn").forEach(btn => {
@@ -210,8 +238,11 @@
             ? "Dërgesë në adresën tuaj"
             : "Marrje në restorant";
         }
+        updateDeliveryFieldVisibility();
       });
     });
+    document.getElementById("btn-delivery-maps")?.addEventListener("click", openDeliveryMaps);
+    updateDeliveryFieldVisibility();
   }
 
   function renderPage(data) {
@@ -250,6 +281,11 @@
       showFormError("Vendosni numrin e telefonit.");
       return;
     }
+    const deliveryAddress = String(document.getElementById("delivery-address")?.value || "").trim();
+    if (orderType === "delivery" && !deliveryAddress) {
+      showFormError("Vendosni adresën e dërgesës.");
+      return;
+    }
     if (!cart.length) {
       showFormError("Shtoni të paktën një artikull.");
       return;
@@ -266,6 +302,7 @@
           customer_name: name,
           customer_phone: phone,
           order_type: orderType,
+          delivery_address: orderType === "delivery" ? deliveryAddress : "",
           items: cart,
         }),
       });

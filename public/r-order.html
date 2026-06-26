@@ -43,6 +43,15 @@
           <span>Telefoni *</span>
           <input type="tel" id="customer-phone" autocomplete="tel" placeholder="+383 44 123 456" required>
         </label>
+        <div class="order-field order-delivery-field hidden" id="delivery-address-field">
+          <span>Adresa e dërgesës *</span>
+          <div class="delivery-address-row">
+            <input type="text" id="delivery-address" autocomplete="street-address" placeholder="Rruga, numri, qyteti">
+            <button type="button" class="maps-open-btn" id="btn-delivery-maps">
+              <span aria-hidden="true">🗺️</span> Hap Google Maps
+            </button>
+          </div>
+        </div>
       </section>
 
       <section class="order-panel">
@@ -80,6 +89,6 @@
   </div>
 
   <script src="/js/menuCatalog.js"></script>
-  <script src="/js/r-order.js?v=1"></script>
+  <script src="/js/r-order.js?v=2"></script>
 </body>
 </html>

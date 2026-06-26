@@ -19,20 +19,31 @@ async function submitPublicOrder(client, body) {
   const customerName = String(body.customer_name || body.name || "").trim();
   const customerPhone = String(body.customer_phone || body.phone || "").trim();
   const orderType = normalizeOrderType(body.order_type);
+  const deliveryAddress = String(body.delivery_address || "").trim();
 
   if (!customerName) throw new Error("Vendosni emrin tuaj.");
   if (!customerPhone || customerPhone.replace(/\D/g, "").length < 6) {
     throw new Error("Vendosni numrin e telefonit.");
   }
+  if (orderType === "delivery" && !deliveryAddress) {
+    throw new Error("Vendosni adresën e dërgesës.");
+  }
 
-  const items = normalizeItems(body.items);
+  let items = normalizeItems(body.items);
   if (!items.length) throw new Error("Shtoni të paktën një artikull.");
+
+  if (orderType === "delivery") {
+    items = [
+      { name: `📍 Adresa: ${deliveryAddress}`, quantity: 1, price: 0 },
+      ...items,
+    ];
+  }
 
   const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
   const license = await getLicenseForClient(client.id);
   const localOrderId = `public-${uuidv4()}`;
   const now = new Date().toISOString();
-  const waiterName = publicOrderWaiterLabel(orderType, customerName, customerPhone);
+  const waiterName = publicOrderWaiterLabel(orderType, customerName, customerPhone, deliveryAddress);
 
   const sale = await updateActiveSaleFromPos({
     celesi: license.celesi,
@@ -51,6 +62,7 @@ async function submitPublicOrder(client, body) {
     order: sale,
     order_type: orderType,
     customer_name: customerName,
+    delivery_address: orderType === "delivery" ? deliveryAddress : "",
     sent_to: "bar",
   };
 }
