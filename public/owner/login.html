@@ -32,6 +32,7 @@
         <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••">
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Hyr në panel</button>
         <button type="button" id="btn-forgot" class="btn btn-ghost owner-forgot-link">Harrove fjalëkalimin?</button>
+        <a href="/owner/register" id="link-owner-register" class="btn btn-ghost owner-forgot-link hidden" style="display:none">Regjistrohu me kod</a>
       </form>
 
       <form id="form-reset" class="owner-auth-form hidden">
@@ -131,6 +132,18 @@
       }
     })();
 
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/owner/register-config");
+        const data = await res.json();
+        if (data.registration_enabled) {
+          const link = document.getElementById("link-owner-register");
+          link.classList.remove("hidden");
+          link.style.display = "block";
+        }
+      } catch { /* ignore */ }
+    })();
+
     (function prefillEmailFromQr() {
       const params = new URLSearchParams(location.search);
       const email = params.get("email");
@@ -187,6 +200,10 @@
         });
         const data = await res.json();
         if (!res.ok) {
+          if (data.code === "WRONG_PORTAL") {
+            showError(data.gabim || "Ky email nuk është për këtë hyrje.");
+            return;
+          }
           if (data.code === "PENDING_SETUP") {
             showError(
               "Llogaria nuk është aktivizuar ende. Hapni linkun e ftesës nga emaili (Aktivizo llogarinë), pastaj hyni këtu.",

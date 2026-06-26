@@ -10,6 +10,10 @@ const {
   getOwnerLoginBranding,
 } = require("../services/userService");
 const {
+  isOwnerRegistrationEnabled,
+  registerOwnerWithCode,
+} = require("../services/ownerRegistrationService");
+const {
   clearFailCount,
   handleOwnerWrongPassword,
   requestOwnerPasswordReset,
@@ -122,7 +126,10 @@ router.post("/owner/login", async (req, res) => {
     }
 
     if (user.roli === "super_admin") {
-      return res.status(403).json({ gabim: "Këto kredenciale nuk kanë akses në këtë hyrje." });
+      return res.status(403).json({
+        gabim: "Ky email është i Super Admin-it. Pronarët hyjnë këtu; Super Admin hyn te /ri-super (ose rruga juaj ADMIN_PANEL_PATH).",
+        code: "WRONG_PORTAL",
+      });
     }
     if (user.roli !== "client_admin") {
       return res.status(401).json({ gabim: "Kredencialet janë të gabuara." });
@@ -209,6 +216,57 @@ router.post("/owner/setup", async (req, res) => {
   } catch (e) {
     const status = e.code === "NOT_FOUND" || e.code === "EXPIRED" || e.code === "ALREADY_ACTIVE" ? 400 : 500;
     res.status(status).json({ ok: false, gabim: e.message, code: e.code || null });
+  }
+});
+
+router.get("/owner/register-config", (_req, res) => {
+  res.json({ ok: true, registration_enabled: isOwnerRegistrationEnabled() });
+});
+
+router.post("/owner/register", async (req, res) => {
+  try {
+    const { getPublicAppOrigin } = require("../lib/publicOrigin");
+    const baseUrl = getPublicAppOrigin();
+    const { client, license, owner } = await registerOwnerWithCode(req.body, baseUrl);
+
+    const user = await findUserByEmail(owner.email);
+    if (!user?.passwordi) {
+      return res.status(500).json({ gabim: "Llogaria u krijua por hyrja dështoi. Provoni /owner/login." });
+    }
+
+    const token = signToken({
+      sub: user.id,
+      email: user.email,
+      emri: user.emri,
+      roli: user.roli,
+      client_id: user.client_id,
+    });
+
+    res.cookie("owner_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 12 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({
+      ok: true,
+      message: "Llogaria u krijua. Je i kyçur në panel.",
+      token,
+      license_key: license?.celesi || null,
+      user: {
+        id: user.id,
+        emri: user.emri,
+        email: user.email,
+        roli: user.roli,
+        client_id: user.client_id,
+        client_name: client?.emri || "",
+      },
+    });
+  } catch (e) {
+    const status =
+      e.code === "INVALID_CODE" || e.code === "REGISTRATION_DISABLED" ? 403 : 400;
+    res.status(status).json({ gabim: e.message, code: e.code || null });
   }
 });
 
