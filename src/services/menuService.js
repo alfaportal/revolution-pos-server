@@ -145,6 +145,26 @@ async function addMenuItem(clientId, body) {
   };
 }
 
+async function getKitchenMenuItemPhoto(clientId, localId) {
+  const db = getSupabase();
+  const idNum = Number(localId);
+  if (!idNum) return null;
+  const { data, error } = await db
+    .from("pos_menu_items")
+    .select("photo")
+    .eq("client_id", clientId)
+    .eq("local_id", idNum)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.photo) return null;
+  const { imageBufferFromDataUrl, imageMimeFromDataUrl } = require("../lib/imageDataUrl");
+  const buffer = imageBufferFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
+  const mime = imageMimeFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
+  if (!buffer || !mime) return null;
+  return { buffer, mime };
+}
+
 async function getOwnerMenuItemPhoto(clientId, itemId) {
   const db = getSupabase();
   const { data, error } = await db
@@ -231,5 +251,6 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   getOwnerMenuItemPhoto,
+  getKitchenMenuItemPhoto,
   touchMenuSync,
 };

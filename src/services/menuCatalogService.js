@@ -27,13 +27,25 @@ function mapMenuItemForWeb(row) {
   };
 }
 
+function mapMenuItemForKitchen(row, { slug, channel = "waiter" } = {}) {
+  const item = mapMenuItemForWeb(row);
+  if (!item.has_photo || !slug) return item;
+  return {
+    ...item,
+    photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
+  };
+}
+
 function mapMenuItemForPos(row) {
+  const photo = String(row.photo || "").trim();
   return {
     local_id: row.local_id,
     name: row.name,
     category: String(row.category || "").trim(),
     price: Number(row.price),
     active: row.active !== false,
+    has_photo: Boolean(photo),
+    photo: photo || null,
   };
 }
 
@@ -67,14 +79,18 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
   return { settings, categories, menu, staff, areas };
 }
 
-async function getClientMenuCatalog(clientId, { activeOnly = true } = {}) {
+async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug = "", channel = "kiosk" } = {}) {
   const { settings, categories, menu, staff } = await loadMenuCatalogRows(clientId, { activeOnly });
+  const mapItem = row =>
+    kitchenSlug
+      ? mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })
+      : mapMenuItemForWeb(row);
   return {
     restaurant_name: settings?.restaurant_name || "",
     table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
     synced_at: settings?.synced_at || null,
     categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).map(mapMenuItemForWeb),
+    menu: (menu || []).map(mapItem),
     staff: (staff || []).map(s => s.name),
   };
 }
@@ -114,6 +130,7 @@ async function getCatalogForPos(clientId) {
 module.exports = {
   buildMenuCategories,
   mapMenuItemForWeb,
+  mapMenuItemForKitchen,
   getClientMenuCatalog,
   getCatalogForPos,
 };

@@ -7,7 +7,8 @@
 
   let bootstrap = null;
   let cart = [];
-  let activeCategory = "";
+  let menuGroupFilter = "pije";
+  let groupBarBound = false;
 
   const $ = id => document.getElementById(id);
 
@@ -63,6 +64,41 @@
     }
   }
 
+  function kitchenPhotoUrl(item) {
+    if (!item?.photo_url) return "";
+    return item.photo_url + apiQuery();
+  }
+
+  function bindMenuGroupBar() {
+    if (groupBarBound) return;
+    groupBarBound = true;
+    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
+      menuGroupFilter = group;
+      renderMenu();
+    }, { defaultGroup: "pije" });
+  }
+
+  function renderMenu() {
+    const menu = bootstrap?.menu || [];
+    const grid = $("menu-grid");
+    if (!grid) return;
+    if (!menu.length) {
+      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
+      return;
+    }
+    MenuPosUI.renderMenuGrid({
+      container: grid,
+      menuItems: menu,
+      groupFilter: menuGroupFilter,
+      formatEuro,
+      getPhotoUrl: kitchenPhotoUrl,
+      onSelectItem: (item, btn) => addToCart({
+        name: item.name,
+        price: Number(item.price),
+      }, btn),
+    });
+  }
+
   async function loadBootstrap() {
     if (!slug) throw new Error("URL i gabuar. Duhet /kiosk/[slug]?key=...&table=5");
     if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
@@ -73,59 +109,18 @@
     $("kiosk-table-label").textContent = `T${tableNumber}`;
     document.title = `${bootstrap.restaurant_name || "Tavolinë"} — T${tableNumber}`;
 
-    activeCategory = MenuCatalog.pickDefaultCategory(bootstrap);
+    menuGroupFilter = "pije";
     updateSyncHint();
-    renderCategories();
+    bindMenuGroupBar();
     renderMenu();
     renderCart();
   }
 
-  function renderCategories() {
-    const cats = MenuCatalog.getCategoryList(bootstrap);
-    const tabs = $("cat-tabs");
-    tabs.innerHTML = cats.map(c => `
-      <button type="button" class="cat-tab${c === activeCategory ? " active" : ""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>
-    `).join("");
-    tabs.querySelectorAll(".cat-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        activeCategory = btn.getAttribute("data-cat") || "";
-        renderCategories();
-        renderMenu();
-      });
-    });
-  }
-
-  function renderMenu() {
-    const filtered = MenuCatalog.filterMenuItems(bootstrap, activeCategory);
-    activeCategory = filtered.category;
-    const items = filtered.items;
-    const menu = bootstrap.menu || [];
-    const grid = $("menu-grid");
-    if (!menu.length) {
-      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
-      return;
-    }
-    if (!items.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
-      return;
-    }
-    grid.innerHTML = items.map(m => `
-      <button type="button" class="menu-item" data-name="${escapeAttr(m.name)}" data-price="${m.price}">
-        <strong>${escapeHtml(m.name)}</strong>
-        <span>${formatEuro(m.price)}</span>
-      </button>`).join("");
-    grid.querySelectorAll(".menu-item").forEach(btn => {
-      btn.addEventListener("click", () => addToCart({
-        name: btn.getAttribute("data-name") || btn.dataset.name,
-        price: Number(btn.getAttribute("data-price") || btn.dataset.price),
-      }));
-    });
-  }
-
-  function addToCart(item) {
+  function addToCart(item, btnEl) {
     const existing = cart.find(c => c.name === item.name);
     if (existing) existing.quantity += 1;
     else cart.push({ ...item, quantity: 1 });
+    if (btnEl) MenuPosUI.flashButton(btnEl);
     renderCart();
   }
 
@@ -203,10 +198,6 @@
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;
       updateSyncHint();
-      if (activeCategory && !MenuCatalog.getCategoryList(bootstrap).includes(activeCategory)) {
-        activeCategory = MenuCatalog.pickDefaultCategory(bootstrap);
-      }
-      renderCategories();
       renderMenu();
     } catch { /* ignore */ }
   }

@@ -9,8 +9,12 @@ function tableWaiterLabel(tableNumber) {
   return `Tavolinë T${tableNumber}`;
 }
 
-async function getKioskMenu(clientId) {
-  return getClientMenuCatalog(clientId, { activeOnly: true });
+async function getKioskMenu(clientId, { kitchenSlug = "" } = {}) {
+  return getClientMenuCatalog(clientId, {
+    activeOnly: true,
+    kitchenSlug,
+    channel: "kiosk",
+  });
 }
 
 async function submitKioskOrder(client, body) {

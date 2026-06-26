@@ -3,7 +3,7 @@ const { getSupabase } = require("../db");
 const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos, syncSaleFromPos } = require("./salesService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
-const { buildMenuCategories, mapMenuItemForWeb } = require("./menuCatalogService");
+const { buildMenuCategories, mapMenuItemForKitchen } = require("./menuCatalogService");
 const {
   buildTablesFromAreas,
   loadAreasForClient,
@@ -70,7 +70,7 @@ function assertWaiterOnTable(existing, waiter, tableNumber) {
   }
 }
 
-async function getWaiterBootstrap(clientId) {
+async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter" } = {}) {
   const client = await assertClient(clientId);
   const db = getSupabase();
 
@@ -78,7 +78,7 @@ async function getWaiterBootstrap(clientId) {
     await Promise.all([
       db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
       db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
-      db.from("pos_menu_items").select("local_id, name, category, price, active").eq("client_id", clientId).eq("active", true).order("category").order("name"),
+      db.from("pos_menu_items").select("local_id, name, category, price, active, photo").eq("client_id", clientId).eq("active", true).order("category").order("name"),
     ]);
 
   const areas = await loadAreasForClient(clientId);
@@ -103,7 +103,7 @@ async function getWaiterBootstrap(clientId) {
     pin_auth: true,
     waiter_count: pinWaiters,
     categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).map(mapMenuItemForWeb),
+    menu: (menu || []).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
     areas: layout.areas,
     tables: layout.tables,
   };

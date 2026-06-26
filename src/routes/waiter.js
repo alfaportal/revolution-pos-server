@@ -8,11 +8,27 @@ const {
   closeWaiterTable,
 } = require("../services/waiterService");
 
+const { getKitchenMenuItemPhoto } = require("../services/menuService");
+
 const router = express.Router();
+
+router.get("/:slug/menu/:itemId/photo", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const photo = await getKitchenMenuItemPhoto(req.kitchenClient.id, req.params.itemId);
+    if (!photo) return res.status(404).end();
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.type(photo.mime).send(photo.buffer);
+  } catch (e) {
+    res.status(404).end();
+  }
+});
 
 router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
-    const data = await getWaiterBootstrap(req.kitchenClient.id);
+    const data = await getWaiterBootstrap(req.kitchenClient.id, {
+      kitchenSlug: req.kitchenClient.kitchen_slug,
+      channel: "waiter",
+    });
     res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });

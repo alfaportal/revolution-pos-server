@@ -39,9 +39,12 @@
     </div>
     <div class="waiter-main" style="padding-bottom:0">
       <div id="order-err" class="err hidden"></div>
-      <div class="order-layout">
-        <div id="cat-tabs" class="cat-tabs"></div>
-        <div id="menu-grid" class="menu-grid"></div>
+      <div class="order-layout menu-pos-wrap">
+        <div class="menu-group-bar" id="menu-group-bar">
+          <button type="button" class="menu-group-btn active" data-group="pije">Pije 🥤</button>
+          <button type="button" class="menu-group-btn" data-group="ushqim">Ushqim 🍽️</button>
+        </div>
+        <div id="menu-grid" class="menu-photo-grid"></div>
       </div>
     </div>
     <div class="cart-bar">
@@ -57,6 +60,7 @@
   </div>
 
   <script src="/js/menuCatalog.js?v=1"></script>
-  <script src="/js/kiosk.js?v=3"></script>
+  <script src="/js/menu-pos.js?v=1"></script>
+  <script src="/js/kiosk.js?v=4"></script>
 </body>
 </html>

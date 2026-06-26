@@ -20,13 +20,12 @@
   let activeWaiter = null;
   let tableNumber = 0;
   let cart = [];
-  let activeCategory = "";
+  let menuGroupFilter = "pije";
   let pinDigits = [];
   let lockTimer = null;
-  let currentMenuItems = [];
   let successToastTimer = null;
-  let menuGridBound = false;
   let cartLinesBound = false;
+  let groupBarBound = false;
 
   const $ = id => document.getElementById(id);
 
@@ -215,23 +214,18 @@
     });
   }
 
-  function bindMenuGrid() {
-    const grid = $("menu-grid");
-    if (!grid || menuGridBound) return;
-    menuGridBound = true;
-    bindTap(grid, (_e, target) => {
-      const btn = target?.closest?.(".menu-item");
-      if (!btn || !grid.contains(btn)) return false;
-      const idx = Number(btn.getAttribute("data-idx"));
-      const item = currentMenuItems[idx];
-      if (!item) return false;
-      addToCart({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price),
-      }, btn);
-      return true;
-    }, { preventTouchScroll: true });
+  function kitchenPhotoUrl(item) {
+    if (!item?.photo_url) return "";
+    return item.photo_url + apiQuery();
+  }
+
+  function bindMenuGroupBar() {
+    if (groupBarBound) return;
+    groupBarBound = true;
+    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
+      menuGroupFilter = group;
+      renderMenu();
+    }, { defaultGroup: "pije" });
   }
 
   function bindCartLines() {
@@ -258,18 +252,6 @@
     });
   }
 
-  function bindCategoryTabs() {
-    const tabs = $("cat-tabs");
-    if (!tabs || tabs.dataset.tapBound) return;
-    bindTap(tabs, (_e, target) => {
-      const btn = target?.closest?.(".cat-tab");
-      if (!btn || !tabs.contains(btn)) return;
-      activeCategory = btn.getAttribute("data-cat") || "";
-      renderCategories();
-      renderMenu();
-    });
-  }
-
   function renderTables() {
     const grid = $("tables-grid");
     if (!bootstrap?.tables?.length) {
@@ -289,12 +271,26 @@
     bindTableCards(grid);
   }
 
-  function getCategoryList() {
-    return MenuCatalog.getCategoryList(bootstrap);
-  }
-
-  function pickDefaultCategory() {
-    return MenuCatalog.pickDefaultCategory(bootstrap);
+  function renderMenu() {
+    const menu = bootstrap?.menu || [];
+    const grid = $("menu-grid");
+    if (!grid) return;
+    if (!menu.length) {
+      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
+      return;
+    }
+    MenuPosUI.renderMenuGrid({
+      container: grid,
+      menuItems: menu,
+      groupFilter: menuGroupFilter,
+      formatEuro,
+      getPhotoUrl: kitchenPhotoUrl,
+      onSelectItem: (item, btn) => addToCart({
+        id: item.id,
+        name: item.name,
+        price: Number(item.price),
+      }, btn),
+    });
   }
 
   function enterWaiterSession(waiter) {
@@ -390,53 +386,22 @@
     } else {
       cart = [];
     }
-    activeCategory = pickDefaultCategory();
+    menuGroupFilter = "pije";
+    document.querySelectorAll("#menu-group-bar .menu-group-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.group === "pije");
+    });
     $("order-title").textContent = `T${num}`;
     showOrderMsg("", false);
-    renderCategories();
     renderMenu();
     renderCart();
     showScreen("screen-order");
-  }
-
-  function renderCategories() {
-    const cats = getCategoryList();
-    const tabs = $("cat-tabs");
-    tabs.innerHTML = cats.map(c => `
-      <button type="button" class="cat-tab${c === activeCategory ? " active" : ""}" data-cat="${escapeAttr(c)}">${escapeHtml(c)}</button>
-    `).join("");
-  }
-
-  function renderMenu() {
-    const filtered = MenuCatalog.filterMenuItems(bootstrap, activeCategory);
-    activeCategory = filtered.category;
-    const items = filtered.items;
-    currentMenuItems = items;
-    const menu = bootstrap.menu || [];
-    const grid = $("menu-grid");
-    if (!menu.length) {
-      grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
-      return;
-    }
-    if (!items.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
-      return;
-    }
-    grid.innerHTML = items.map((m, idx) => `
-      <button type="button" class="menu-item" data-idx="${idx}">
-        <strong>${escapeHtml(m.name)}</strong>
-        <span>${formatEuro(m.price)}</span>
-      </button>`).join("");
   }
 
   function addToCart(item, btnEl) {
     const existing = cart.find(c => c.name === item.name && Number(c.price) === Number(item.price));
     if (existing) existing.quantity += 1;
     else cart.push({ ...item, quantity: 1 });
-    if (btnEl) {
-      btnEl.classList.add("menu-item-flash");
-      setTimeout(() => btnEl.classList.remove("menu-item-flash"), 350);
-    }
+    if (btnEl) MenuPosUI.flashButton(btnEl);
     renderCart();
   }
 
@@ -488,10 +453,6 @@
         hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
       }
       if ($("screen-order").classList.contains("active")) {
-        if (activeCategory && !getCategoryList().includes(activeCategory)) {
-          activeCategory = pickDefaultCategory();
-        }
-        renderCategories();
         renderMenu();
       }
       renderTables();
@@ -731,9 +692,8 @@
     }
   }
 
-  bindMenuGrid();
+  bindMenuGroupBar();
   bindCartLines();
-  bindCategoryTabs();
   bindTap($("btn-send"), submitOrder);
 
   (async () => {
