@@ -127,7 +127,7 @@ app.get("/r/:slug", (_req, res) => {
 });
 
 app.get("/", (_req, res) => {
-  res.redirect("/owner/login");
+  res.sendFile(path.join(__dirname, "../public/website/index.html"));
 });
 
 app.use((err, req, res, _next) => {
@@ -163,6 +163,7 @@ async function start() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
+    console.log(`  🏠 Website:     /  (revolution-pos.com)`);
     console.log(`  🏪 Pronarët:    /owner/login`);
     console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...`);
     console.log(`  🍹 Banak:       /bar/:slug?key=...`);

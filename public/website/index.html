@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Revolution Invest POS — sistemi i plotë për restorante dhe kafene. POS, KDS, kamarier, kiosk, raporte dhe faqe publike.">
+  <meta name="theme-color" content="#0b1324">
+  <title>Revolution Invest POS — Sistemi POS për Restorantet dhe Kafenetë</title>
+  <style>
+    :root {
+      --navy: #0b1324;
+      --navy-2: #111d33;
+      --navy-3: #162544;
+      --card: #141f36;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #e63946;
+      --accent-dark: #c1121f;
+      --border: rgba(148, 163, 184, 0.18);
+      --radius: 16px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      --max: 1120px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    img { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(100% - 2rem, var(--max));
+      margin-inline: auto;
+    }
+
+    /* Header */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 19, 36, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      min-height: 4rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-mark {
+      width: 2.2rem;
+      height: 2.2rem;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #ff6b6b);
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(230, 57, 70, 0.35);
+    }
+
+    .brand-text { font-size: 0.98rem; }
+    .brand-text small {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .nav-desktop {
+      display: none;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .nav-desktop a {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: color 0.15s;
+    }
+
+    .nav-desktop a:hover { color: #fff; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      border: none;
+      border-radius: 999px;
+      padding: 0.72rem 1.15rem;
+      font: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(230, 57, 70, 0.28);
+    }
+
+    .btn-primary:hover { background: var(--accent-dark); }
+
+    .btn-ghost {
+      background: transparent;
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.35); }
+
+    .menu-toggle {
+      display: inline-flex;
+      width: 2.5rem;
+      height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .nav-mobile {
+      display: none;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0 0 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .nav-mobile.open { display: flex; }
+
+    .nav-mobile a {
+      padding: 0.75rem 0.25rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .nav-mobile a:hover { color: #fff; }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 4.5rem 0 5rem;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(230, 57, 70, 0.18), transparent 60%),
+        linear-gradient(180deg, var(--navy-2) 0%, var(--navy) 100%);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.5), transparent);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(230, 57, 70, 0.12);
+      border: 1px solid rgba(230, 57, 70, 0.25);
+      color: #ffb4b4;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      margin: 1rem 0 0.85rem;
+      font-size: clamp(2rem, 6vw, 3.35rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      max-width: 12ch;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2.5vw, 1.15rem);
+      max-width: 36rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+
+    .hero-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .status-dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.15);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .hero-stat {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.85rem;
+    }
+
+    .hero-stat strong {
+      display: block;
+      font-size: 1.15rem;
+      line-height: 1.1;
+    }
+
+    .hero-stat span {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .hero-preview {
+      margin-top: 1rem;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--navy-3);
+      padding: 0.85rem;
+    }
+
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .preview-row:last-child { border-bottom: none; }
+    .preview-price { color: #ffb4b4; font-weight: 800; }
+
+    /* Sections */
+    section { padding: 4.5rem 0; }
+    section:nth-child(even) { background: var(--navy-2); }
+
+    .section-head {
+      text-align: center;
+      max-width: 42rem;
+      margin: 0 auto 2.5rem;
+    }
+
+    .section-head h2 {
+      margin: 0 0 0.65rem;
+      font-size: clamp(1.65rem, 4vw, 2.25rem);
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .features-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(230, 57, 70, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(230, 57, 70, 0.12);
+      font-size: 1.25rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.05rem;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .packages-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+
+    .package-card {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .package-card.featured {
+      border-color: rgba(230, 57, 70, 0.45);
+      box-shadow: 0 0 0 1px rgba(230, 57, 70, 0.15), var(--shadow);
+    }
+
+    .package-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 0.28rem 0.55rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .package-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .package-price {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .package-price small {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .package-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+      flex: 1;
+    }
+
+    .package-list li {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      color: #dbe4f0;
+    }
+
+    .package-list li::before {
+      content: "✓";
+      color: var(--accent);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .contact-grid {
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .contact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .contact-card h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1.05rem;
+    }
+
+    .contact-links {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      font-weight: 600;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .contact-link:hover {
+      border-color: rgba(230, 57, 70, 0.35);
+      background: rgba(230, 57, 70, 0.08);
+    }
+
+    .contact-link.whatsapp {
+      background: rgba(37, 211, 102, 0.1);
+      border-color: rgba(37, 211, 102, 0.25);
+    }
+
+    .contact-form {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.18);
+      color: #fff;
+      padding: 0.75rem 0.85rem;
+      font: inherit;
+    }
+
+    .field textarea { min-height: 120px; resize: vertical; }
+
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: rgba(230, 57, 70, 0.55);
+      box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.15);
+    }
+
+    .form-msg {
+      min-height: 1.25rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .form-msg.ok { color: #86efac; }
+    .form-msg.err { color: #fca5a5; }
+
+    .site-footer {
+      padding: 2rem 0 2.5rem;
+      border-top: 1px solid var(--border);
+      background: var(--navy);
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    @media (min-width: 720px) {
+      .nav-desktop { display: flex; }
+      .menu-toggle { display: none; }
+      .header-cta-desktop { display: inline-flex; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .packages-grid { grid-template-columns: repeat(2, 1fr); }
+      .contact-grid { grid-template-columns: 0.95fr 1.05fr; align-items: start; }
+      .hero-grid { grid-template-columns: 1.05fr 0.95fr; }
+    }
+
+    @media (min-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(3, 1fr); }
+      .packages-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (max-width: 719px) {
+      .header-cta-desktop { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-inner">
+        <a class="brand" href="#ballina" aria-label="Revolution Invest POS">
+          <span class="brand-mark" aria-hidden="true">R</span>
+          <span class="brand-text">
+            Revolution Invest POS
+            <small>Restorant &amp; Kafene</small>
+          </span>
+        </a>
+
+        <nav class="nav-desktop" aria-label="Kryesore">
+          <a href="#ballina">Ballina</a>
+          <a href="#pakot">Pakot</a>
+          <a href="#kontakt">Kontakti</a>
+        </nav>
+
+        <div class="header-actions">
+          <a class="btn btn-primary header-cta-desktop" href="#kontakt">Fillo Falas</a>
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-mobile" aria-label="Hap menunë">☰</button>
+        </div>
+      </div>
+
+      <nav class="nav-mobile" id="nav-mobile" aria-label="Mobile">
+        <a href="#ballina">Ballina</a>
+        <a href="#pakot">Pakot</a>
+        <a href="#kontakt">Kontakti</a>
+        <a class="btn btn-primary" href="#kontakt" style="margin-top:0.35rem;width:fit-content">Fillo Falas</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="ballina">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">Cloud POS për biznesin tuaj</span>
+          <h1>Sistemi POS për Restorantet dhe Kafenetë</h1>
+          <p>Menaxho porositë, stafin dhe raportet nga çdo pajisje — kasë, kuzhinë, kamarier, kiosk dhe faqe publike në një platformë.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#kontakt">Fillo 3 Muaj Falas</a>
+            <a class="btn btn-ghost" href="#pakot">Shiko Demo</a>
+          </div>
+        </div>
+
+        <div class="hero-card" aria-hidden="true">
+          <div class="hero-card-head">
+            <span>Paneli live</span>
+            <span class="status-dot"></span>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat"><strong>24</strong><span>Porosi sot</span></div>
+            <div class="hero-stat"><strong>€1.8k</strong><span>Qarkullim</span></div>
+            <div class="hero-stat"><strong>6</strong><span>Module aktive</span></div>
+          </div>
+          <div class="hero-preview">
+            <div class="preview-row"><span>Kafe espresso</span><span class="preview-price">€1.00</span></div>
+            <div class="preview-row"><span>Burger classic</span><span class="preview-price">€5.50</span></div>
+            <div class="preview-row"><span>Tavolina T4 · KDS</span><span class="preview-price">Gati</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="container">
+        <div class="section-head">
+          <h2>Gjithçka që ju duhet për operimin ditor</h2>
+          <p>Module të integruara që punojnë së bashku — nga porosia deri te raporti i ditës.</p>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card">
+            <div class="feature-icon">🖥️</div>
+            <h3>POS Kasa</h3>
+            <p>Shitje të shpejta, tavolina, fatura dhe sinkronizim cloud në kohë reale.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🍳</div>
+            <h3>KDS Kuzhina</h3>
+            <p>Porositë shkojnë direkt në ekranin e kuzhinës — më pak gabime, shërbim më i shpejtë.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h3>Kamarieri</h3>
+            <p>Tablet për kamarierët me PIN, menu dhe porosi nga tavolina pa pritje.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📲</div>
+            <h3>Kiosk QR</h3>
+            <p>Klientët skanojnë QR nga tavolina dhe porositin vetë — porosia shkon te banaku.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Raportet</h3>
+            <p>Shitje ditore, Z-Report, TVSH dhe statistika për vendime më të mira.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <h3>Faqja Publike</h3>
+            <p>Menu online, logo, porosi delivery/takeaway dhe prezencë profesionale në web.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="pakot">
+      <div class="container">
+        <div class="section-head">
+          <h2>Pakot fleksibile për çdo madhësi biznesi</h2>
+          <p>Zgjidhni modulin që ju nevojitet — upgrade kur rriteni. Të gjitha pakot fillojnë me provë falas.</p>
+        </div>
+        <div class="packages-grid">
+          <article class="package-card">
+            <span class="package-badge">3 muaj falas</span>
+            <h3 class="package-name">Pako 1</h3>
+            <div class="package-price">10€<small>/javë</small></div>
+            <ul class="package-list">
+              <li>POS Kasa</li>
+              <li>Panel pronari</li>
+              <li>Faqja publike</li>
+              <li>Raportet &amp; Z-Report</li>
+            </ul>
+            <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
+          </article>
+
+          <article class="package-card">
+            <span class="package-badge">3 muaj falas</span>
+            <h3 class="package-name">Pako 1.1</h3>
+            <div class="package-price">20€<small>/javë</small></div>
+            <ul class="package-list">
+              <li>Gjithçka nga Pako 1</li>
+              <li>Aplikacion mobile</li>
+              <li>Menaxhim nga telefoni</li>
+              <li>Sinkronizim cloud</li>
+            </ul>
+            <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
+          </article>
+
+          <article class="package-card featured">
+            <span class="package-badge">3 muaj falas</span>
+            <h3 class="package-name">Pako 2</h3>
+            <div class="package-price">15€<small>/javë</small></div>
+            <ul class="package-list">
+              <li>POS + Faqja publike</li>
+              <li>KDS Kuzhina</li>
+              <li>Kiosk QR tavolinë</li>
+              <li>Kamarier tablet</li>
+            </ul>
+            <a class="btn btn-primary" href="#kontakt">Zgjidh Pakon</a>
+          </article>
+
+          <article class="package-card">
+            <span class="package-badge">3 muaj falas</span>
+            <h3 class="package-name">Pako 2.1</h3>
+            <div class="package-price">25€<small>/javë</small></div>
+            <ul class="package-list">
+              <li>Gjithçka nga Pako 2</li>
+              <li>Aplikacion mobile</li>
+              <li>Porosi online delivery</li>
+              <li>Module të plota</li>
+            </ul>
+            <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="kontakt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Filloni sot — provë 3 muaj falas</h2>
+          <p>Na kontaktoni për instalim, demo live dhe zgjedhjen e pakos së duhur për restorantin ose kafenen tuaj.</p>
+        </div>
+
+        <div class="contact-grid">
+          <div class="contact-card">
+            <h3>Kontakt i drejtpërdrejtë</h3>
+            <div class="contact-links">
+              <a class="contact-link whatsapp" href="https://wa.me/38344123456?text=P%C3%ABrsh%C3«ndetje%2C%20d%C3«shiroj%20t%C3«%20provoj%20Revolution%20Invest%20POS." target="_blank" rel="noopener noreferrer">
+                <span aria-hidden="true">💬</span>
+                <span>WhatsApp — +383 44 123 456</span>
+              </a>
+              <a class="contact-link" href="tel:+38344123456">
+                <span aria-hidden="true">📞</span>
+                <span>+383 44 123 456</span>
+              </a>
+              <a class="contact-link" href="mailto:info@revolution-pos.com">
+                <span aria-hidden="true">✉️</span>
+                <span>info@revolution-pos.com</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="contact-card">
+            <h3>Dërgo mesazh</h3>
+            <form class="contact-form" id="contact-form">
+              <div class="field">
+                <label for="contact-name">Emri</label>
+                <input type="text" id="contact-name" name="name" required placeholder="Emri i biznesit">
+              </div>
+              <div class="field">
+                <label for="contact-phone">Telefoni</label>
+                <input type="tel" id="contact-phone" name="phone" required placeholder="+383 44 123 456">
+              </div>
+              <div class="field">
+                <label for="contact-message">Mesazhi</label>
+                <textarea id="contact-message" name="message" required placeholder="P.sh. Restorant me 15 tavolina në Prishtinë…"></textarea>
+              </div>
+              <button class="btn btn-primary" type="submit">Dërgo kërkesën</button>
+              <p class="form-msg" id="form-msg" role="status"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© <span id="year"></span> Revolution Invest. Të gjitha të drejtat e rezervuara.</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const toggle = document.getElementById("menu-toggle");
+      const nav = document.getElementById("nav-mobile");
+      const form = document.getElementById("contact-form");
+      const formMsg = document.getElementById("form-msg");
+
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      toggle?.addEventListener("click", () => {
+        const open = nav.classList.toggle("open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+
+      nav?.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", () => nav.classList.remove("open"));
+      });
+
+      form?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const name = document.getElementById("contact-name").value.trim();
+        const phone = document.getElementById("contact-phone").value.trim();
+        const message = document.getElementById("contact-message").value.trim();
+        if (!name || !phone || !message) {
+          formMsg.textContent = "Plotësoni të gjitha fushat.";
+          formMsg.className = "form-msg err";
+          return;
+        }
+        const text = encodeURIComponent(
+          `Përshëndetje, jam ${name} (${phone}).\n\n${message}\n\nDëshiroj Revolution Invest POS — 3 muaj falas.`,
+        );
+        window.open(`https://wa.me/38344123456?text=${text}`, "_blank", "noopener,noreferrer");
+        formMsg.textContent = "Faleminderit! Po ju hapim WhatsApp për të dërguar kërkesën.";
+        formMsg.className = "form-msg ok";
+        form.reset();
+      });
+    })();
+  </script>
+</body>
+</html>
