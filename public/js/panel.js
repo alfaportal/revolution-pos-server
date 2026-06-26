@@ -156,6 +156,7 @@ let licensesCache = [];
 let ownersCache = [];
 let packageTiersCache = [];
 let trialAlertsCache = [];
+let stockAlertsCache = [];
 let modalState = null;
 
 /** Fallback — same as src/lib/packages.js (used when tier cache is empty or stale). */
@@ -859,11 +860,13 @@ function bindTableActions(scope) {
 async function loadStats() {
   const s = await api("/api/admin/stats");
   const expiring = Number(s.trials_expiring_soon) || 0;
+  const stockClients = Number(s.stock_alert_clients) || 0;
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="val">${s.clients_total}</div><div class="lbl">Klientë</div></div>
     <div class="stat"><div class="val">${s.licenses_total}</div><div class="lbl">Liçensa</div></div>
     <div class="stat"><div class="val">${s.licenses_active}</div><div class="lbl">Aktive</div></div>
     <div class="stat${expiring ? " stat-warn" : ""}"><div class="val">${expiring}</div><div class="lbl">Trial skadon (7 ditë)</div></div>
+    <div class="stat${stockClients ? " stat-warn" : ""}"><div class="val">${stockClients}</div><div class="lbl">Stok i ulët</div></div>
     <div class="stat"><div class="val">${s.licenses_expired}</div><div class="lbl">Skaduar</div></div>
     <div class="stat"><div class="val">${s.licenses_revoked}</div><div class="lbl">Revokuar</div></div>`;
 }
@@ -884,19 +887,44 @@ function trialBadgeHtml(clientId) {
   return ` <span class="badge badge-trial-warning">${label}</span>`;
 }
 
+function stockAlertForClient(clientId) {
+  return stockAlertsCache.find(a => a.client_id === clientId);
+}
+
+function stockBadgeHtml(clientId) {
+  const alert = stockAlertForClient(clientId);
+  if (!alert) return "";
+  const total = (Number(alert.out_count) || 0) + (Number(alert.low_count) || 0);
+  if (alert.out_count > 0) {
+    return ` <span class="badge badge-stock-out">Stok: ${total}</span>`;
+  }
+  return ` <span class="badge badge-stock-warning">Stok i ulët: ${total}</span>`;
+}
+
+function syncClientsTabBadge() {
+  const tabBadge = document.getElementById("tab-klientet-badge");
+  if (!tabBadge) return;
+  const trialCount = trialAlertsCache.filter(a => a.days_remaining >= 0 && a.days_remaining <= 7).length;
+  const stockCount = stockAlertsCache.length;
+  const total = trialCount + stockCount;
+  if (total > 0) {
+    tabBadge.textContent = String(total);
+    tabBadge.classList.remove("hidden");
+  } else {
+    tabBadge.classList.add("hidden");
+    tabBadge.textContent = "";
+  }
+}
+
 function renderTrialExpiryBanner() {
   const el = document.getElementById("trial-expiry-banner");
-  const tabBadge = document.getElementById("tab-klientet-badge");
   if (!el) return;
 
   const alerts = trialAlertsCache.filter(a => a.days_remaining >= 0 && a.days_remaining <= 7);
   if (!alerts.length) {
     el.classList.add("hidden");
     el.innerHTML = "";
-    if (tabBadge) {
-      tabBadge.classList.add("hidden");
-      tabBadge.textContent = "";
-    }
+    syncClientsTabBadge();
     return;
   }
 
@@ -916,11 +944,7 @@ function renderTrialExpiryBanner() {
     <ul>${items}</ul>
     ${more}`;
   el.classList.remove("hidden");
-
-  if (tabBadge) {
-    tabBadge.textContent = String(alerts.length);
-    tabBadge.classList.remove("hidden");
-  }
+  syncClientsTabBadge();
 }
 
 async function loadTrialAlerts() {
@@ -931,6 +955,46 @@ async function loadTrialAlerts() {
     trialAlertsCache = [];
   }
   renderTrialExpiryBanner();
+}
+
+async function loadStockAlerts() {
+  try {
+    const { alerts } = await api("/api/admin/stock-alerts");
+    stockAlertsCache = alerts || [];
+  } catch {
+    stockAlertsCache = [];
+  }
+  renderStockAlertBanner();
+}
+
+function renderStockAlertBanner() {
+  const el = document.getElementById("stock-alert-banner");
+  if (!el) return;
+
+  const alerts = stockAlertsCache || [];
+  if (!alerts.length) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    syncClientsTabBadge();
+    return;
+  }
+
+  const items = alerts.slice(0, 8).map(a => {
+    const parts = [];
+    if (a.out_count) parts.push(`${a.out_count} mbaruar`);
+    if (a.low_count) parts.push(`${a.low_count} i ulët`);
+    const sample = (a.items || []).slice(0, 3).map(it => esc(it.name)).join(", ");
+    return `<li><strong>${esc(a.client_name)}</strong> — ${parts.join(", ")}${sample ? ` · ${sample}` : ""}</li>`;
+  }).join("");
+
+  const more = alerts.length > 8 ? `<p style="margin:0.5rem 0 0;font-size:0.85rem">+ ${alerts.length - 8} klientë të tjerë…</p>` : "";
+
+  el.innerHTML = `
+    <strong>📦 Stok i ulët / mbaruar (${alerts.length} lokale)</strong>
+    <ul>${items}</ul>
+    ${more}`;
+  el.classList.remove("hidden");
+  syncClientsTabBadge();
 }
 
 function showAdminError(text) {
@@ -964,7 +1028,7 @@ async function loadClients() {
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clientsCache.length
     ? clientsCache.map(c => `<tr>
-        <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}</td>
+        <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}${stockBadgeHtml(c.id)}</td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
         <td data-label="Pakoja">${esc(packageTierLabel(c.package_tier))}</td>
         <td data-label="Telefoni">${esc(c.telefoni) || "—"}</td>
@@ -1380,6 +1444,7 @@ async function refreshAll() {
     await loadPublicConfig();
     await loadPackageTiers();
     await loadTrialAlerts();
+    await loadStockAlerts();
     await loadStats();
     await loadClients();
     await loadLicenses();

@@ -71,12 +71,22 @@ async function syncCatalogFromPosSupabase(license, body) {
   const menuItems = Array.isArray(body.menu_items) ? body.menu_items : [];
   const { data: existingMenu } = await db
     .from("pos_menu_items")
-    .select("local_id, photo")
+    .select("local_id, photo, track_stock, stock_quantity, stock_alert_threshold")
     .eq("client_id", clientId);
   const photoByLocalId = new Map(
     (existingMenu || [])
       .filter(row => String(row.photo || "").trim())
       .map(row => [Number(row.local_id), row.photo]),
+  );
+  const stockByLocalId = new Map(
+    (existingMenu || []).map(row => [
+      Number(row.local_id),
+      {
+        track_stock: Boolean(row.track_stock),
+        stock_quantity: row.stock_quantity != null ? Number(row.stock_quantity) : null,
+        stock_alert_threshold: Number(row.stock_alert_threshold) || 5,
+      },
+    ]),
   );
   await db.from("pos_menu_items").delete().eq("client_id", clientId);
   let menuCount = 0;
@@ -84,6 +94,17 @@ async function syncCatalogFromPosSupabase(license, body) {
     const menuRows = menuItems
       .map((m, i) => {
         const localId = Number(m.local_id ?? m.id ?? i + 1) || i + 1;
+        const prevStock = stockByLocalId.get(localId) || {};
+        const trackStock =
+          m.track_stock != null ? Boolean(m.track_stock) : Boolean(prevStock.track_stock);
+        const stockQty =
+          m.stock_quantity != null
+            ? Math.max(0, Math.floor(Number(m.stock_quantity) || 0))
+            : prevStock.stock_quantity;
+        const stockThreshold =
+          m.stock_alert_threshold != null
+            ? Math.max(0, Math.floor(Number(m.stock_alert_threshold) || 0))
+            : prevStock.stock_alert_threshold ?? 5;
         return {
           client_id: clientId,
           local_id: localId,
@@ -92,6 +113,9 @@ async function syncCatalogFromPosSupabase(license, body) {
           price: Number(m.price ?? m.cmimi ?? 0) || 0,
           active: m.active !== false && m.active !== 0,
           photo: photoByLocalId.get(localId) || "",
+          track_stock: trackStock,
+          stock_quantity: trackStock ? (stockQty ?? 0) : null,
+          stock_alert_threshold: stockThreshold,
         };
       })
       .filter(m => m.name);
@@ -169,6 +193,10 @@ async function syncCatalogFromPosTransactional(license, body) {
       category: String(m.category || m.kategoria || "").trim(),
       price: Number(m.price ?? m.cmimi ?? 0) || 0,
       active: m.active !== false && m.active !== 0,
+      track_stock: m.track_stock != null ? Boolean(m.track_stock) : undefined,
+      stock_quantity: m.stock_quantity != null ? Number(m.stock_quantity) : undefined,
+      stock_alert_threshold:
+        m.stock_alert_threshold != null ? Number(m.stock_alert_threshold) : undefined,
     }))
     .filter(m => m.name);
 
@@ -181,13 +209,23 @@ async function syncCatalogFromPosTransactional(license, body) {
 
   return withPgTransaction(async client => {
     const { rows: existingMenuRows } = await client.query(
-      `SELECT local_id, photo FROM pos_menu_items WHERE client_id = $1`,
+      `SELECT local_id, photo, track_stock, stock_quantity, stock_alert_threshold FROM pos_menu_items WHERE client_id = $1`,
       [clientId],
     );
     const photoByLocalId = new Map(
       (existingMenuRows || [])
         .filter(row => String(row.photo || "").trim())
         .map(row => [Number(row.local_id), row.photo]),
+    );
+    const stockByLocalId = new Map(
+      (existingMenuRows || []).map(row => [
+        Number(row.local_id),
+        {
+          track_stock: Boolean(row.track_stock),
+          stock_quantity: row.stock_quantity != null ? Number(row.stock_quantity) : null,
+          stock_alert_threshold: Number(row.stock_alert_threshold) || 5,
+        },
+      ]),
     );
 
     await client.query(
@@ -236,10 +274,32 @@ async function syncCatalogFromPosTransactional(license, body) {
     await client.query(`DELETE FROM pos_menu_items WHERE client_id = $1`, [clientId]);
     for (const m of menuRows) {
       const photo = photoByLocalId.get(m.local_id) || "";
+      const prevStock = stockByLocalId.get(m.local_id) || {};
+      const trackStock =
+        m.track_stock != null ? Boolean(m.track_stock) : Boolean(prevStock.track_stock);
+      const stockQty =
+        m.stock_quantity != null
+          ? Math.max(0, Math.floor(Number(m.stock_quantity) || 0))
+          : prevStock.stock_quantity;
+      const stockThreshold =
+        m.stock_alert_threshold != null
+          ? Math.max(0, Math.floor(Number(m.stock_alert_threshold) || 0))
+          : prevStock.stock_alert_threshold ?? 5;
       await client.query(
-        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active, photo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [clientId, m.local_id, m.name, m.category, m.price, m.active, photo],
+        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          clientId,
+          m.local_id,
+          m.name,
+          m.category,
+          m.price,
+          m.active,
+          photo,
+          trackStock,
+          trackStock ? (stockQty ?? 0) : null,
+          stockThreshold,
+        ],
       );
     }
 

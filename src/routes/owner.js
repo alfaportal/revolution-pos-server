@@ -32,6 +32,12 @@ const {
   addItemsFromCatalog,
 } = require("../services/menuCatalogTemplateService");
 const {
+  listStockForOwner,
+  getStockSummary,
+  updateStockSettings,
+  restockItem,
+} = require("../services/stockService");
+const {
   listVenue,
   addArea,
   updateArea,
@@ -317,6 +323,43 @@ router.patch("/menu/:id", async (req, res) => {
 router.delete("/menu/:id", async (req, res) => {
   try {
     const result = await deleteMenuItem(req.user.client_id, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/stock", async (req, res) => {
+  try {
+    const stock = await listStockForOwner(req.user.client_id);
+    res.json({ ok: true, ...stock });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/stock/summary", async (req, res) => {
+  try {
+    const summary = await getStockSummary(req.user.client_id);
+    res.json({ ok: true, summary });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.patch("/stock/:id", async (req, res) => {
+  try {
+    const result = await updateStockSettings(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.post("/stock/:id/restock", async (req, res) => {
+  try {
+    const add = req.body.add ?? req.body.quantity ?? req.body.qty;
+    const result = await restockItem(req.user.client_id, req.params.id, add);
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

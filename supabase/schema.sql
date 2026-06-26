@@ -194,7 +194,18 @@ CREATE TABLE IF NOT EXISTS pos_menu_items (
   price       NUMERIC(12, 2) NOT NULL DEFAULT 0,
   active      BOOLEAN NOT NULL DEFAULT true,
   photo       TEXT NOT NULL DEFAULT '',
+  stock_quantity INTEGER,
+  stock_alert_threshold INTEGER NOT NULL DEFAULT 5,
+  track_stock BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (client_id, local_id)
+);
+
+CREATE TABLE IF NOT EXISTS stock_alert_notifications (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id     UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  menu_item_id  UUID NOT NULL REFERENCES pos_menu_items(id) ON DELETE CASCADE,
+  notified_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (client_id, menu_item_id)
 );
 
 CREATE TABLE IF NOT EXISTS pos_staff (

@@ -39,10 +39,11 @@
 
   function createMenuItemButton(item, { onSelect, disabled, formatEuro, getPhotoUrl }) {
     const resolvePhoto = getPhotoUrl || defaultPhotoUrl;
+    const soldOut = Boolean(item.out_of_stock || item.sold_out);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "menu-item-btn";
-    btn.disabled = !!disabled;
+    btn.className = "menu-item-btn" + (soldOut ? " menu-item-sold-out-btn" : "");
+    btn.disabled = !!disabled || soldOut;
 
     const photoWrap = document.createElement("div");
     photoWrap.className = "menu-item-photo-wrap";
@@ -80,10 +81,16 @@
 
     const cmimi = document.createElement("span");
     cmimi.className = "cmimi";
-    cmimi.textContent = formatEuro(item.price);
+    cmimi.textContent = soldOut ? (item.sold_out_label || "Mbaroi") : formatEuro(item.price);
     btn.appendChild(cmimi);
 
-    btn.addEventListener("click", () => onSelect(item, btn));
+    if (soldOut) {
+      btn.classList.add("is-sold-out");
+    }
+
+    if (!soldOut) {
+      btn.addEventListener("click", () => onSelect(item, btn));
+    }
     return btn;
   }
 

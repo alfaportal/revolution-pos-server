@@ -1419,6 +1419,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
+    if (tab.dataset.tab === "stoku" && typeof loadOwnerStock === "function") loadOwnerStock();
     if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();

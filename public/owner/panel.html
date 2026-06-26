@@ -77,6 +77,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="menuja">Menuja</button>
+      <button class="tab" data-tab="stoku">Stoku <span id="tab-stoku-badge" class="tab-badge hidden"></span></button>
       <button class="tab" data-tab="katalogu">Katalogu</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
@@ -153,6 +154,36 @@
               </tr>
             </thead>
             <tbody id="menu-items-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-stoku" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Menaxhimi i stokut</div>
+        <p class="links-hint">
+          Aktivizoni ndjekjen e stokut për artikujt që dëshironi të kontrolloni.
+          Artikujt me stok 0 fshihen automatikisht nga menuja e kamarierit/kioskut.
+          POS-i shfaq etiketën <strong>Mbaroi</strong>.
+        </p>
+        <p id="stock-sync-hint" class="links-hint" style="margin-top:0"></p>
+        <div id="stock-summary" class="stock-summary"></div>
+        <div id="stock-msg" class="owner-license-msg"></div>
+        <div class="overflow-x">
+          <table class="menu-owner-table stock-owner-table">
+            <thead>
+              <tr>
+                <th>Artikulli</th>
+                <th>Kategoria</th>
+                <th>Ndjek stokun</th>
+                <th>Sasia</th>
+                <th>Pragu</th>
+                <th>Statusi</th>
+                <th class="col-actions">Veprime</th>
+              </tr>
+            </thead>
+            <tbody id="stock-items-body"></tbody>
           </table>
         </div>
       </div>
@@ -474,5 +505,6 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/owner.js?v=13"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
+  <script src="/js/owner-stock.js?v=1"></script>
 </body>
 </html>

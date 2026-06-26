@@ -39,6 +39,10 @@ const {
   countTrialExpiryAlerts,
 } = require("../services/trialNotificationService");
 const {
+  listStockAlertsForAdmin,
+  countStockAlertClients,
+} = require("../services/stockService");
+const {
   listOwners,
   createOwner,
   updateOwner,
@@ -60,12 +64,23 @@ router.use(authRequired, superAdminOnly);
 router.get("/stats", asyncHandler(async (_req, res) => {
   const stats = await getDashboardStats();
   let trials_expiring_soon = 0;
+  let stock_alert_clients = 0;
   try {
     trials_expiring_soon = await countTrialExpiryAlerts(7);
   } catch (e) {
     console.warn("[admin] trial expiry count:", e.message);
   }
-  res.json({ ok: true, ...stats, trials_expiring_soon });
+  try {
+    stock_alert_clients = await countStockAlertClients();
+  } catch (e) {
+    console.warn("[admin] stock alert count:", e.message);
+  }
+  res.json({ ok: true, ...stats, trials_expiring_soon, stock_alert_clients });
+}));
+
+router.get("/stock-alerts", asyncHandler(async (_req, res) => {
+  const alerts = await listStockAlertsForAdmin();
+  res.json({ ok: true, alerts, count: alerts.length });
 }));
 
 router.get("/trial-alerts", asyncHandler(async (req, res) => {

@@ -418,6 +418,16 @@ html, body {
   padding-bottom: 0.15rem;
 }
 
+.menu-item-btn.is-sold-out,
+.menu-item-btn.menu-item-sold-out-btn {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.menu-item-btn.is-sold-out .cmimi {
+  color: #f87171;
+}
+
 @media (max-width: 520px) {
   .menu-photo-grid-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));

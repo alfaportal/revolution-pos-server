@@ -208,6 +208,34 @@ async function sendOwnerInviteEmail({ to, emri, clientName, inviteUrl }) {
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendStockLowAlertEmail({ to, clientName, itemName, quantity, threshold }) {
+  const q = Number(quantity);
+  const subject =
+    q <= 0
+      ? `Stoku mbaroi: ${itemName} — Revolution POS`
+      : `Stoku i ulët: ${itemName} — Revolution POS`;
+  const statusLine =
+    q <= 0
+      ? `Artikulli "${itemName}" ka arritur në 0 copë dhe u fsheh nga menuja.`
+      : `Artikulli "${itemName}" ka vetëm ${q} copë (prag: ${threshold}).`;
+
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    statusLine,
+    "",
+    "Hyni te paneli i pronarit → Stoku për të rimbushur ose rregulluar stokun.",
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${clientName}</strong>,` : "Përshëndetje,"}</p>
+    <p>${statusLine}</p>
+    <p style="margin-top:16px">Hyni te paneli i pronarit → <strong>Stoku</strong> për të rimbushur stokun.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   resolveSupportPhone,
@@ -218,4 +246,5 @@ module.exports = {
   sendTrialExpiry1DayEmail,
   sendTrialExpiredEmail,
   sendAdminTrialExpiryAlertEmail,
+  sendStockLowAlertEmail,
 };

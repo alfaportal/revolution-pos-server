@@ -1,4 +1,5 @@
 const { getSupabase } = require("../db");
+const { isVisibleOnWebMenu, isOutOfStock } = require("../lib/stockHelpers");
 
 function buildMenuCategories(dbCategories, menuItems) {
   const fromDb = (dbCategories || []).map(c => String(c.name || "").trim()).filter(Boolean);
@@ -38,6 +39,7 @@ function mapMenuItemForKitchen(row, { slug, channel = "waiter" } = {}) {
 
 function mapMenuItemForPos(row) {
   const photo = String(row.photo || "").trim();
+  const outOfStock = isOutOfStock(row);
   return {
     local_id: row.local_id,
     name: row.name,
@@ -46,6 +48,11 @@ function mapMenuItemForPos(row) {
     active: row.active !== false,
     has_photo: Boolean(photo),
     photo: photo || null,
+    track_stock: Boolean(row.track_stock),
+    stock_quantity: row.stock_quantity != null ? Number(row.stock_quantity) : null,
+    stock_alert_threshold: Number(row.stock_alert_threshold) || 5,
+    out_of_stock: outOfStock,
+    sold_out_label: outOfStock ? "Mbaroi" : null,
   };
 }
 
@@ -53,7 +60,7 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
   const db = getSupabase();
   let menuQuery = db
     .from("pos_menu_items")
-    .select("local_id, name, category, price, active, photo")
+    .select("local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold")
     .eq("client_id", clientId)
     .order("category")
     .order("name");
@@ -90,7 +97,7 @@ async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug =
     table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
     synced_at: settings?.synced_at || null,
     categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).map(mapItem),
+    menu: (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem),
     staff: (staff || []).map(s => s.name),
   };
 }

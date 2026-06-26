@@ -57,6 +57,14 @@ async function submitPublicOrder(client, body) {
     ordered_at: now,
   });
 
+  try {
+    const { deductStockForOrder } = require("./stockService");
+    const menuItems = items.filter(it => !String(it.name || "").startsWith("📍") && Number(it.price) > 0);
+    await deductStockForOrder(client.id, menuItems);
+  } catch (err) {
+    console.warn("[stock] public order deduct failed:", err.message);
+  }
+
   return {
     ok: true,
     order: sale,

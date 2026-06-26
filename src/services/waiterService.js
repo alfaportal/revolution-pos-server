@@ -4,6 +4,7 @@ const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos,
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
 const { buildMenuCategories, mapMenuItemForKitchen } = require("./menuCatalogService");
+const { isVisibleOnWebMenu } = require("../lib/stockHelpers");
 const {
   buildTablesFromAreas,
   loadAreasForClient,
@@ -110,7 +111,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     await Promise.all([
       db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
       db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
-      db.from("pos_menu_items").select("local_id, name, category, price, active, photo").eq("client_id", clientId).eq("active", true).order("category").order("name"),
+      db.from("pos_menu_items").select("local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold").eq("client_id", clientId).eq("active", true).order("category").order("name"),
     ]);
 
   const areas = await loadAreasForClient(clientId);
@@ -135,7 +136,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     pin_auth: true,
     waiter_count: pinWaiters,
     categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
+    menu: (menu || []).filter(isVisibleOnWebMenu).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
     areas: layout.areas,
     tables: layout.tables,
   };
@@ -194,6 +195,13 @@ async function submitWaiterOrder(clientId, body) {
     status: "ordered",
     ordered_at: now,
   });
+
+  try {
+    const { deductStockForOrder } = require("./stockService");
+    await deductStockForOrder(clientId, newItems);
+  } catch (err) {
+    console.warn("[stock] waiter deduct failed:", err.message);
+  }
 
   return { ok: true, order: sale, sent_to: "bar", waiter };
 }

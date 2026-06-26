@@ -23,6 +23,7 @@ function normalizeItems(raw) {
       name: String(it.name || it.emri || "").trim(),
       quantity: Number(it.quantity ?? it.sasia ?? 1) || 1,
       price: Number(it.price ?? it.cmimi ?? 0) || 0,
+      menu_id: it.menu_id ?? it.id ?? it.local_id ?? null,
     }))
     .filter(it => it.name);
 }
@@ -173,6 +174,17 @@ async function buildSaleReceipt(sale, body = {}) {
 
 async function syncSaleFromPos(body) {
   const sale = await upsertSaleFromPos(body, { defaultStatus: "closed" });
+  const device = String(body.device_id || sale?.device_id || "").trim().toUpperCase();
+  const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
+  const isWeb = [WEB_WAITER, WEB_KIOSK, WEB_PUBLIC].includes(device);
+  if (!isWeb && sale?.status === "closed") {
+    try {
+      const { deductStockForOrder } = require("./stockService");
+      await deductStockForOrder(sale.client_id, sale.items_json || body.items);
+    } catch (err) {
+      console.warn("[stock] POS deduct failed:", err.message);
+    }
+  }
   const receipt = await buildSaleReceipt(sale, body);
   return { sale, receipt };
 }
