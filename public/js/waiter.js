@@ -22,7 +22,6 @@
   let cart = [];
   let menuGroupFilter = "pije";
   let pinDigits = [];
-  let lockTimer = null;
   let successToastTimer = null;
   let pendingCancel = null;
   let cancelCountdownTimer = null;
@@ -367,16 +366,7 @@
     showScreen("screen-tables");
   }
 
-  function clearLockTimer() {
-    if (lockTimer) {
-      clearInterval(lockTimer);
-      lockTimer = null;
-    }
-    $("lock-overlay")?.classList.add("hidden");
-  }
-
   function lockSession() {
-    clearLockTimer();
     activeWaiter = null;
     tableNumber = 0;
     cart = [];
@@ -386,27 +376,6 @@
     $("cart-bar")?.classList.add("hidden");
     $("screen-order")?.classList.remove("has-cart");
     showScreen("screen-pin");
-  }
-
-  function startAutoLock() {
-    clearLockTimer();
-    const overlay = $("lock-overlay");
-    const label = $("lock-countdown");
-    if (!overlay || !label) {
-      lockSession();
-      return;
-    }
-    overlay.classList.remove("hidden");
-    let sec = 5;
-    label.textContent = `Duke u kyçur në ${sec}...`;
-    lockTimer = setInterval(() => {
-      sec -= 1;
-      if (sec <= 0) {
-        lockSession();
-      } else {
-        label.textContent = `Duke u kyçur në ${sec}...`;
-      }
-    }, 1000);
   }
 
   async function submitPinLogin() {
@@ -645,7 +614,6 @@
     tableNumber = 0;
     await refreshBootstrap();
     showScreen("screen-tables");
-    startAutoLock();
   });
 
   $("btn-close")?.addEventListener("click", async () => {
@@ -748,7 +716,6 @@
       showScreen("screen-tables");
       showOrderMsg("", false);
       showSuccessToast(sentMsg, { tableNumber: sentTable, allowCancel: true });
-      startAutoLock();
     } catch (e) {
       const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
       showErr(err, msg);
