@@ -538,6 +538,11 @@
     .form-msg.ok { color: #86efac; }
     .form-msg.err { color: #fca5a5; }
 
+    .custom-cta {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
     .site-footer {
       padding: 2rem 0 2.5rem;
       border-top: 1px solid var(--border);
@@ -737,6 +742,35 @@
       </div>
     </section>
 
+    <section id="personalizuar">
+      <div class="container">
+        <div class="section-head">
+          <h2>Keni nevoja specifike?</h2>
+          <p>Ndërtojmë zgjidhje të personalizuara për biznesin tuaj</p>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card">
+            <div class="feature-icon">🔗</div>
+            <h3>Integrime të veçanta</h3>
+            <p>Lidhje me sisteme ekzistuese, API custom, raporte të personalizuara</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🖥️</div>
+            <h3>Hardware &amp; Instalim</h3>
+            <p>Instalim profesional, konfigurim i plotë, trajnim i stafit</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h3>Mbështetje 24/7</h3>
+            <p>Support teknik, update automatike, mirëmbajtje e vazhdueshme</p>
+          </article>
+        </div>
+        <div class="custom-cta">
+          <a class="btn btn-primary" id="custom-whatsapp" href="https://wa.me/38344123456?text=P%C3%ABrsh%C3«ndetje%2C%20d%C3«shiroj%20t%C3%AB%20diskutoj%20p%C3%ABr%20zgjidhje%20t%C3%AB%20personalizuara." target="_blank" rel="noopener noreferrer">Na Kontaktoni</a>
+        </div>
+      </div>
+    </section>
+
     <section id="kontakt">
       <div class="container">
         <div class="section-head">
@@ -824,6 +858,11 @@
           if (waLink) {
             const intro = encodeURIComponent("Përshëndetje, dëshiroj të provoj Revolution Invest POS.");
             waLink.href = `https://wa.me/${waDigits}?text=${intro}`;
+          }
+          const customWa = document.getElementById("custom-whatsapp");
+          if (customWa) {
+            const customIntro = encodeURIComponent("Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.");
+            customWa.href = `https://wa.me/${waDigits}?text=${customIntro}`;
           }
         } catch { /* defaults */ }
       }
