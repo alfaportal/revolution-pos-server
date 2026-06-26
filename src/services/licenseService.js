@@ -4,7 +4,9 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
-const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials } = require("../lib/kitchenAccess");
+const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl } = require("../lib/kitchenAccess");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const { featuresForTier } = require("../lib/packages");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
 const { isLicenseUsable } = require("../lib/licenseEnforcement");
 const { seedPosSettingsForClient, syncPosSettingsFromClient } = require("./receiptService");
@@ -338,6 +340,56 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     terminals_active: terminalSummary.active_terminal_count,
     terminals_max: terminalSummary.max_terminals,
     grace_until: terminalAccess.grace_until || terminalSummary.grace_until || null,
+  };
+}
+
+async function getLicenseAccessLinks({ celesi, device_id, app_type, hostname, client_ip }) {
+  const result = await validateLicense({
+    celesi,
+    device_id,
+    app_type,
+    hostname,
+    client_ip,
+  });
+  if (!result.valid) {
+    return {
+      ok: false,
+      valid: false,
+      code: result.code,
+      message: result.message,
+    };
+  }
+
+  const slug = result.kitchen_slug || result.client_id || "";
+  const key = result.kitchen_key || "";
+  const base = getPublicAppOrigin();
+  const features = featuresForTier(result.package_tier);
+  const client = { id: result.client_id, kitchen_slug: slug, kitchen_key: key };
+  const links = {};
+
+  if (client.id && features.waiter) {
+    links.waiter_url = buildKitchenUrl(base, client, "waiter");
+  }
+  if (client.id && features.kds) {
+    links.kitchen_url = buildKitchenUrl(base, client, "kitchen");
+    links.bar_url = buildKitchenUrl(base, client, "bar");
+  }
+  if (client.id && features.kiosk) {
+    links.kiosk_url = `${buildKitchenUrl(base, client, "kiosk")}&table=1`;
+  }
+  if (slug && features.website) {
+    links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;
+  }
+
+  return {
+    ok: true,
+    valid: true,
+    client_id: result.client_id,
+    client_name: result.client_name,
+    kitchen_slug: slug,
+    kitchen_key: key,
+    package_tier: result.package_tier,
+    ...links,
   };
 }
 
@@ -892,6 +944,7 @@ module.exports = {
   generateDeviceId,
   provisionLicenseDevice,
   validateLicense,
+  getLicenseAccessLinks,
   listClients,
   listLicenses,
   createClient,

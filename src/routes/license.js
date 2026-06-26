@@ -1,6 +1,6 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
-const { validateLicense } = require("../services/licenseService");
+const { validateLicense, getLicenseAccessLinks } = require("../services/licenseService");
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
 
@@ -35,6 +35,32 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
     res.status(status).json(result);
   } catch (e) {
     res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/access-links — linket e plota për POS (kamarier, KDS, kiosk, website)
+ */
+router.post("/access-links", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, valid: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const result = await getLicenseAccessLinks({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+
+    const status = result.valid ? 200 : 403;
+    res.status(status).json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, valid: false, gabim: e.message });
   }
 });
 
