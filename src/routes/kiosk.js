@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { getKioskMenu, submitKioskOrder } = require("../services/kioskService");
+const { getKioskMenu, submitKioskOrder, cancelKioskOrder } = require("../services/kioskService");
 const { getKitchenMenuItemPhoto } = require("../services/menuService");
 
 const router = express.Router();
@@ -14,6 +14,15 @@ router.get("/:slug/menu/:itemId/photo", resolveKitchenClient, requirePackageFeat
     res.type(photo.mime).send(photo.buffer);
   } catch (e) {
     res.status(404).end();
+  }
+});
+
+router.post("/:slug/order/cancel", resolveKitchenClient, requirePackageFeature("kiosk"), async (req, res) => {
+  try {
+    const result = await cancelKioskOrder(req.kitchenClient, req.body);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 

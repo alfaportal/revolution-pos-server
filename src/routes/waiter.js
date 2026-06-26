@@ -5,6 +5,7 @@ const {
   getWaiterBootstrap,
   loginWaiterWithPin,
   submitWaiterOrder,
+  cancelWaiterOrder,
   closeWaiterTable,
 } = require("../services/waiterService");
 
@@ -20,6 +21,15 @@ router.get("/:slug/menu/:itemId/photo", resolveKitchenClient, requirePackageFeat
     res.type(photo.mime).send(photo.buffer);
   } catch (e) {
     res.status(404).end();
+  }
+});
+
+router.post("/:slug/orders/cancel", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const result = await cancelWaiterOrder(req.kitchenClient.id, req.body);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 

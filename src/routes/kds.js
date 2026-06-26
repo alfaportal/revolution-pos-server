@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, markKitchenOrderReady } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady } = require("../services/kdsService");
 const { subscribe } = require("../services/kdsEvents");
 
 const router = express.Router();
@@ -14,11 +14,13 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
   try {
     const client = req.kitchenClient;
     const orders = await listBarOrders(client.id);
+    const cancelled = await listBarCancelledOrders(client.id);
     res.json({
       ok: true,
       client_name: client.emri,
       kitchen_slug: client.kitchen_slug,
       orders,
+      cancelled,
     });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });
@@ -29,11 +31,13 @@ router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), 
   try {
     const client = req.kitchenClient;
     const orders = await listKitchenOrders(client.id);
+    const cancelled = await listRecentlyCancelledOrders(client.id);
     res.json({
       ok: true,
       client_name: client.emri,
       kitchen_slug: client.kitchen_slug,
       orders,
+      cancelled,
     });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });

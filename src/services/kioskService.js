@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
-const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");const { getActiveTableOrders, getLicenseForClient } = require("./waiterService");
+const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");
+const { getActiveTableOrders, getLicenseForClient, cancelTableOrder } = require("./waiterService");
 const { WEB_KIOSK, isKioskWaiterName } = require("../lib/orderSource");
 const { getClientMenuCatalog } = require("./menuCatalogService");
 
@@ -48,7 +49,7 @@ async function submitKioskOrder(client, body) {
     items,
     total,
     status: "ordered",
-    ordered_at: existing?.ordered_at || now,
+    ordered_at: now,
   });
 
   return {
@@ -60,7 +61,24 @@ async function submitKioskOrder(client, body) {
   };
 }
 
+async function cancelKioskOrder(client, body) {
+  const tableNumber = Number(body.table_number);
+  if (!tableNumber || tableNumber < 1) {
+    throw new Error("Mungon numri i tavolinës.");
+  }
+  const active = await getActiveTableOrders(client.id);
+  const existing = active.get(tableNumber);
+  const sale = await cancelTableOrder(client.id, { tableNumber, existing });
+  return {
+    ok: true,
+    message: "Porosia u anullua",
+    order: sale,
+    table_number: tableNumber,
+  };
+}
+
 module.exports = {
   getKioskMenu,
   submitKioskOrder,
+  cancelKioskOrder,
 };

@@ -60,7 +60,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   const { data: existing } = await db
     .from("sales_orders")
-    .select("status, closed_at, ordered_at")
+    .select("status, closed_at, ordered_at, items_json")
     .eq("client_id", license.client_id)
     .eq("local_order_id", localOrderId)
     .eq("device_id", deviceId)
@@ -93,14 +93,17 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   row.payment_method = ["karte", "kartë", "card", "kart"].includes(pmRaw) ? "karte" : "cash";
 
   if (finalStatus === "ordered") {
-    row.ordered_at = body.ordered_at || existing?.ordered_at || now;
+    row.ordered_at = body.ordered_at || now;
     row.closed_at = row.ordered_at;
     row.ready_at = null;
   } else if (finalStatus === "cancelled") {
     row.ordered_at = body.ordered_at || existing?.ordered_at || now;
     row.closed_at = now;
     row.ready_at = null;
-    row.items_json = [];
+    const preserveItems = items.length
+      ? items
+      : normalizeItems(existing?.items_json || []);
+    row.items_json = preserveItems;
     row.total = 0;
   } else if (finalStatus === "ready") {
     row.ready_at = body.ready_at || now;
@@ -138,9 +141,12 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     throw new Error(msg);
   }
 
-  if (finalStatus === "ordered") {
+  if (finalStatus === "ordered" || finalStatus === "cancelled") {
     try {
-      require("./kdsEvents").notifyKitchenUpdate(license.client_id, { order_id: data?.id });
+      require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
+        order_id: data?.id,
+        status: finalStatus,
+      });
     } catch {
       /* optional */
     }

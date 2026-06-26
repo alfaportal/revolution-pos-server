@@ -64,12 +64,14 @@
     </li>`;
   }
 
-  function renderOrders(orders) {
+  function renderOrders(orders, cancelledOrders) {
     hideError();
-    countEl.textContent = `${orders.length} porosi`;
+    const active = orders || [];
+    const cancelled = cancelledOrders || [];
+    countEl.textContent = `${active.length} porosi`;
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
-    if (!orders.length) {
+    if (!active.length && !cancelled.length) {
       gridEl.innerHTML = "";
       emptyEl.classList.remove("hidden");
       knownIds = new Set();
@@ -77,7 +79,35 @@
     }
 
     emptyEl.classList.add("hidden");
-    const html = orders.map(o => {
+    const cancelledHtml = cancelled.map(o => {
+      const device = String(o.device_id || "").toUpperCase();
+      let src = null;
+      let tableText = `T${o.table_number || "?"}`;
+      if (device === "WEB-PUBLIC") {
+        const w = String(o.waiter_name || "").toLowerCase();
+        src = w.startsWith("delivery")
+          ? { icon: "🛵", label: "Delivery" }
+          : { icon: "🥡", label: "Takeaway" };
+        tableText = src.label;
+      } else if (device === "WEB-KIOSK") {
+        src = { icon: "🪑", label: "Tavolinë" };
+      } else if (device === "WEB-WAITER") {
+        src = { icon: "📱", label: "Kamarier" };
+      }
+      const items = (o.items_json || []).map(renderOrderItem).join("");
+      return `
+        <article class="order-ticket cancelled" data-id="${o.id}">
+          <div class="ticket-cancelled-banner">E ANULLUAR ❌</div>
+          <div class="ticket-head">
+            <div class="ticket-table">${escapeHtml(tableText)}</div>
+            <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}</div>
+          </div>
+          ${src ? `<div class="ticket-waiter">${src.icon} ${src.label} · 👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>` : `<div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>`}
+          <ul class="ticket-items">${items || "<li>—</li>"}</ul>
+        </article>`;
+    }).join("");
+
+    const activeHtml = active.map(o => {
       const isNew = !knownIds.has(o.id);
       const device = String(o.device_id || "").toUpperCase();
       let src = null;
@@ -106,8 +136,8 @@
         </article>`;
     }).join("");
 
-    gridEl.innerHTML = html;
-    knownIds = new Set(orders.map(o => o.id));
+    gridEl.innerHTML = cancelledHtml + activeHtml;
+    knownIds = new Set(active.map(o => o.id));
 
     gridEl.querySelectorAll("[data-ready]").forEach(btn => {
       btn.addEventListener("click", () => markReady(btn.dataset.ready, btn));
@@ -145,7 +175,7 @@
         subEl.textContent = "Porositë e reja nga POS";
         document.title = `Kuzhina — ${data.client_name}`;
       }
-      renderOrders(data.orders || []);
+      renderOrders(data.orders || [], data.cancelled || []);
     } catch (e) {
       showError(e.message || "Gabim rrjeti.");
     }

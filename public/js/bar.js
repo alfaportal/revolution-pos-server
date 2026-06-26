@@ -95,12 +95,14 @@
     </li>`;
   }
 
-  function renderOrders(orders) {
+  function renderOrders(orders, cancelledOrders) {
     hideError();
-    countEl.textContent = `${orders.length} porosi`;
+    const active = orders || [];
+    const cancelled = cancelledOrders || [];
+    countEl.textContent = `${active.length} porosi`;
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
-    if (!orders.length) {
+    if (!active.length && !cancelled.length) {
       gridEl.innerHTML = "";
       emptyEl.classList.remove("hidden");
       knownIds = new Set();
@@ -108,7 +110,24 @@
     }
 
     emptyEl.classList.add("hidden");
-    gridEl.innerHTML = orders.map(o => {
+    const cancelledHtml = cancelled.map(o => {
+      const src = sourceMeta(o);
+      const items = (o.items_json || []).map(renderOrderItem).join("");
+      return `
+        <article class="order-ticket cancelled" data-id="${o.id}">
+          <div class="ticket-cancelled-banner">E ANULLUAR ❌</div>
+          <div class="ticket-kind">Porosi — jo faturë</div>
+          <div class="ticket-source">${src.icon} ${src.label}</div>
+          <div class="ticket-head">
+            <div class="ticket-table">${escapeHtml(tableLabel(o))}</div>
+            <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}</div>
+          </div>
+          <div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>
+          <ul class="ticket-items">${items || "<li>—</li>"}</ul>
+        </article>`;
+    }).join("");
+
+    gridEl.innerHTML = cancelledHtml + active.map(o => {
       const isNew = !knownIds.has(o.id);
       const src = sourceMeta(o);
       const items = (o.items_json || []).map(renderOrderItem).join("");
@@ -126,7 +145,7 @@
         </article>`;
     }).join("");
 
-    knownIds = new Set(orders.map(o => o.id));
+    knownIds = new Set(active.map(o => o.id));
     gridEl.querySelectorAll("[data-ready]").forEach(btn => {
       btn.addEventListener("click", () => markReady(btn.dataset.ready, btn));
     });
@@ -155,7 +174,7 @@
         subEl.textContent = "Porosi nga kamarieri (telefon) dhe tavolina — jo faturë";
         document.title = `Banak — ${data.client_name}`;
       }
-      renderOrders(data.orders || []);
+      renderOrders(data.orders || [], data.cancelled || []);
     } catch (e) {
       showError(e.message || "Gabim rrjeti.");
     }

@@ -24,6 +24,8 @@
   let pinDigits = [];
   let lockTimer = null;
   let successToastTimer = null;
+  let pendingCancel = null;
+  let cancelCountdownTimer = null;
   let cartLinesBound = false;
   let groupBarBound = false;
 
@@ -144,16 +146,81 @@
     el.className = "cart-msg " + (ok ? "ok" : "err");
   }
 
-  function showSuccessToast(msg) {
+  function clearPendingCancel() {
+    pendingCancel = null;
+    if (cancelCountdownTimer) {
+      clearInterval(cancelCountdownTimer);
+      cancelCountdownTimer = null;
+    }
+    $("btn-cancel-order")?.classList.add("hidden");
+    $("cancel-countdown")?.classList.add("hidden");
+  }
+
+  function showSuccessToast(msg, { tableNumber = 0, allowCancel = false } = {}) {
     const el = $("success-toast");
-    if (!el) return;
+    const msgEl = $("success-toast-msg");
+    const cancelBtn = $("btn-cancel-order");
+    const countdownEl = $("cancel-countdown");
+    if (!el || !msgEl) return;
     if (successToastTimer) clearTimeout(successToastTimer);
-    el.textContent = msg;
+    clearPendingCancel();
+    msgEl.textContent = msg;
     el.classList.remove("hidden");
-    successToastTimer = setTimeout(() => {
-      el.classList.add("hidden");
-      el.textContent = "";
-    }, 4500);
+
+    if (allowCancel && tableNumber > 0) {
+      const cancelUntil = Date.now() + 3 * 60 * 1000;
+      pendingCancel = { tableNumber, cancelUntil };
+      cancelBtn?.classList.remove("hidden");
+      countdownEl?.classList.remove("hidden");
+      const tick = () => {
+        const left = Math.max(0, pendingCancel.cancelUntil - Date.now());
+        const sec = Math.ceil(left / 1000);
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        if (countdownEl) {
+          countdownEl.textContent = `Mund të anulloni edhe ${m}:${String(s).padStart(2, "0")}`;
+        }
+        if (left <= 0) {
+          clearPendingCancel();
+          el.classList.add("hidden");
+        }
+      };
+      tick();
+      cancelCountdownTimer = setInterval(tick, 1000);
+      successToastTimer = setTimeout(() => {
+        clearPendingCancel();
+        el.classList.add("hidden");
+      }, 3 * 60 * 1000);
+    } else {
+      successToastTimer = setTimeout(() => {
+        el.classList.add("hidden");
+        msgEl.textContent = "";
+      }, 4500);
+    }
+  }
+
+  async function cancelPendingOrder() {
+    if (!pendingCancel || !activeWaiter) return;
+    if (!confirm(`Anulloni porosinë për T${pendingCancel.tableNumber}?`)) return;
+    const btn = $("btn-cancel-order");
+    if (btn) btn.disabled = true;
+    try {
+      await api(`/api/waiter/${encodeURIComponent(slug)}/orders/cancel${apiQuery()}`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...waiterPayload(),
+          table_number: pendingCancel.tableNumber,
+        }),
+      });
+      clearPendingCancel();
+      $("success-toast")?.classList.add("hidden");
+      showSuccessToast("Porosia u anullua");
+      await refreshBootstrap();
+    } catch (e) {
+      alert(e.message || "Anullimi dështoi.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   /** Reliable tap/click for mobile — one action per gesture, works with touch. */
@@ -680,7 +747,7 @@
       await refreshBootstrap();
       showScreen("screen-tables");
       showOrderMsg("", false);
-      showSuccessToast(sentMsg);
+      showSuccessToast(sentMsg, { tableNumber: sentTable, allowCancel: true });
       startAutoLock();
     } catch (e) {
       const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
@@ -695,6 +762,7 @@
   bindMenuGroupBar();
   bindCartLines();
   bindTap($("btn-send"), submitOrder);
+  $("btn-cancel-order")?.addEventListener("click", cancelPendingOrder);
 
   (async () => {
     try {

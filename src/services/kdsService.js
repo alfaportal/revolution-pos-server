@@ -55,9 +55,38 @@ async function markKitchenOrderReady(clientId, orderId) {
   return data;
 }
 
+async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
+  const db = getSupabase();
+  const since = new Date(Date.now() - windowSec * 1000).toISOString();
+  const { data, error } = await db
+    .from("sales_orders")
+    .select(
+      "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, closed_at, local_order_id, device_id",
+    )
+    .eq("client_id", clientId)
+    .eq("status", "cancelled")
+    .gte("closed_at", since)
+    .order("closed_at", { ascending: false })
+    .limit(40);
+
+  if (error) throw error;
+  return (data || []).map(o => ({
+    ...o,
+    items_json: normalizeItems(o.items_json),
+    cancelled: true,
+  }));
+}
+
+async function listBarCancelledOrders(clientId, windowSec = 30) {
+  const orders = await listRecentlyCancelledOrders(clientId, windowSec);
+  return orders.filter(isBarMobileOrder);
+}
+
 module.exports = {
   getClientForKitchen,
   listKitchenOrders,
   listBarOrders,
+  listRecentlyCancelledOrders,
+  listBarCancelledOrders,
   markKitchenOrderReady,
 };

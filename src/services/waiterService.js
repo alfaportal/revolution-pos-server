@@ -39,6 +39,38 @@ async function getActiveTableOrders(clientId) {
   return byTable;
 }
 
+const CANCEL_WINDOW_MS = 3 * 60 * 1000;
+
+function assertWithinCancelWindow(orderedAt) {
+  const t = new Date(orderedAt || 0).getTime();
+  if (!t || Date.now() - t > CANCEL_WINDOW_MS) {
+    throw new Error("Koha për anullim ka skaduar (3 minuta).");
+  }
+}
+
+async function cancelTableOrder(clientId, { tableNumber, waiter, license, existing }) {
+  if (!existing) {
+    throw new Error(`Nuk ka porosi aktive për T${tableNumber}.`);
+  }
+  assertWithinCancelWindow(existing.ordered_at);
+
+  const licenseRow = license || await getLicenseForClient(clientId);
+  const items = normalizeItems(existing.items_json);
+
+  return updateActiveSaleFromPos({
+    celesi: licenseRow.celesi,
+    device_id: existing.device_id || WEB_DEVICE,
+    local_order_id: existing.local_order_id,
+    table_number: tableNumber,
+    waiter_name: existing.waiter_name,
+    waiter_id: existing.waiter_id || waiter?.id,
+    items,
+    total: 0,
+    status: "cancelled",
+    ordered_at: existing.ordered_at,
+  });
+}
+
 async function getLicenseForClient(clientId) {
   const db = getSupabase();
   const { data: license } = await db
@@ -160,10 +192,25 @@ async function submitWaiterOrder(clientId, body) {
     items,
     total,
     status: "ordered",
-    ordered_at: existing?.ordered_at || now,
+    ordered_at: now,
   });
 
   return { ok: true, order: sale, sent_to: "bar", waiter };
+}
+
+async function cancelWaiterOrder(clientId, body) {
+  await assertClient(clientId);
+  const waiter = await resolveWaiterForOrder(clientId, body.waiter_id, body.waiter_name);
+
+  const tableNumber = Number(body.table_number);
+  if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
+
+  const active = await getActiveTableOrders(clientId);
+  const existing = active.get(tableNumber);
+  assertWaiterOnTable(existing, waiter, tableNumber);
+
+  const sale = await cancelTableOrder(clientId, { tableNumber, waiter, existing });
+  return { ok: true, message: "Porosia u anullua", order: sale };
 }
 
 async function closeWaiterTable(clientId, body) {
@@ -235,7 +282,9 @@ module.exports = {
   getWaiterBootstrap,
   loginWaiterWithPin,
   submitWaiterOrder,
+  cancelWaiterOrder,
   closeWaiterTable,
   getActiveTableOrders,
   getLicenseForClient,
+  cancelTableOrder,
 };

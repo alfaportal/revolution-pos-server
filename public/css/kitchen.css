@@ -99,6 +99,28 @@ body {
   box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.25);
 }
 
+.order-ticket.cancelled {
+  border-color: #ef4444;
+  background: rgba(127, 29, 29, 0.35);
+  opacity: 0.92;
+}
+
+.ticket-cancelled-banner {
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fecaca;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.order-ticket.cancelled .ticket-items,
+.order-ticket.cancelled .item-name {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
