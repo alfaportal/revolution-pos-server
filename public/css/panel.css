@@ -106,6 +106,8 @@ a { color: var(--primary); }
 
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-hover); }
+.btn-accent { background: #0ea5e9; color: #fff; border: 1px solid #0284c7; }
+.btn-accent:hover { background: #0284c7; }
 .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
 .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
 .btn-danger { background: var(--danger); color: #fff; }
@@ -576,6 +578,24 @@ td.col-actions .btn {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
+}
+
+.license-admin-hero {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.license-admin-hero-hint {
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.license-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
 }
 
 @media (max-width: 719px) {

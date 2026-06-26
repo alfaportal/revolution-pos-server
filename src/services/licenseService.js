@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
@@ -131,6 +132,30 @@ function licenseAppType(license) {
 function generateLicenseKey() {
   const part = () => Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "X");
   return `${part()}-${part()}-${part()}-${part()}`;
+}
+
+function generateDeviceId() {
+  return crypto.randomBytes(6).toString("hex").toUpperCase();
+}
+
+async function provisionLicenseDevice(id) {
+  const db = getSupabase();
+  const { data: lic, error } = await db
+    .from("licenses")
+    .select("id, celesi, device_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lic) throw new Error("Liçenca nuk u gjet.");
+
+  const existing = normalizeDeviceId(lic.device_id);
+  if (existing) {
+    return { celesi: lic.celesi, device_id: existing, created: false };
+  }
+
+  const deviceId = generateDeviceId();
+  await updateLicense(id, { device_id: deviceId });
+  return { celesi: lic.celesi, device_id: deviceId, created: true };
 }
 
 async function findLicenseByKey(celesi) {
@@ -836,6 +861,8 @@ module.exports = {
   normalizeKey,
   findLicenseByKey,
   generateLicenseKey,
+  generateDeviceId,
+  provisionLicenseDevice,
   validateLicense,
   listClients,
   listLicenses,

@@ -19,6 +19,8 @@ const {
   regenerateKitchenAccess,
   getDashboardStats,
   generateLicenseKey,
+  generateDeviceId,
+  provisionLicenseDevice,
 } = require("../services/licenseService");
 const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
 const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
@@ -326,6 +328,20 @@ router.post("/licenses", asyncHandler(async (req, res) => {
 router.get("/licenses/generate-key", (_req, res) => {
   res.json({ ok: true, celesi: generateLicenseKey() });
 });
+
+router.get("/licenses/generate-device-id", (_req, res) => {
+  res.json({ ok: true, device_id: generateDeviceId() });
+});
+
+router.post("/licenses/:id/provision-device", asyncHandler(async (req, res) => {
+  try {
+    const result = await provisionLicenseDevice(req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /licenses/:id/provision-device", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
 
 router.patch("/licenses/:id", asyncHandler(async (req, res) => {
   try {

@@ -190,16 +190,50 @@ function licenseDeviceCellHtml(l) {
       class="device-id-input mono"
       data-device-input="${l.id}"
       value="${esc(devId)}"
-      placeholder="Shkruani ID nga POS (Admin → Licenca)"
+      placeholder="Gjenero ID ose ngjite nga POS"
       autocomplete="off"
       autocapitalize="characters"
+      maxlength="12"
     >
     <div class="device-id-editor-actions">
+      <button type="button" class="btn btn-ghost btn-sm" data-gen-device-row="${l.id}">Gjenero ID</button>
       <button type="button" class="btn btn-primary btn-sm" data-save-device="${l.id}">Ruaj ID</button>
+      <button type="button" class="btn btn-accent btn-sm" data-provision-device="${l.id}">Gjenero &amp; ruaj</button>
       ${devId ? `<button type="button" class="btn btn-ghost btn-sm" data-copy-device-id="${l.id}">Kopjo</button>` : ""}
     </div>
     ${extra}
   </div>`;
+}
+
+async function apiGenerateLicenseKey() {
+  const { celesi } = await api("/api/admin/licenses/generate-key");
+  return celesi;
+}
+
+async function apiGenerateDeviceId() {
+  const { device_id } = await api("/api/admin/licenses/generate-device-id");
+  return device_id;
+}
+
+async function fillLicensePair(keyInputId, deviceInputId) {
+  const [celesi, deviceId] = await Promise.all([apiGenerateLicenseKey(), apiGenerateDeviceId()]);
+  const keyEl = document.getElementById(keyInputId);
+  const devEl = document.getElementById(deviceInputId);
+  if (keyEl) keyEl.value = celesi;
+  if (devEl) devEl.value = deviceId;
+  return { celesi, device_id: deviceId };
+}
+
+async function prepareLicenseCreateForm() {
+  const keyEl = document.getElementById("ld-celesi");
+  const devEl = document.getElementById("ld-device-id");
+  if (!keyEl || !devEl) return;
+  if (keyEl.value.trim() && devEl.value.trim()) return;
+  try {
+    await fillLicensePair("ld-celesi", "ld-device-id");
+  } catch {
+    /* ignore */
+  }
 }
 
 function licenseTerminalFieldsHtml(l, { prefix = "license-edit" } = {}) {
@@ -1239,6 +1273,41 @@ function bindLicenseDeviceActions(scope) {
       saveLicenseDeviceId(btn.dataset.saveDevice, input.value.trim(), btn);
     });
   });
+  scope.querySelectorAll("[data-gen-device-row]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        const input = scope.querySelector(`[data-device-input="${btn.dataset.genDeviceRow}"]`);
+        const device_id = await apiGenerateDeviceId();
+        if (input) input.value = device_id;
+      } catch (err) {
+        alert(err.message || "Gjenerimi dështoi.");
+      }
+    });
+  });
+  scope.querySelectorAll("[data-provision-device]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "…";
+      try {
+        const res = await api(`/api/admin/licenses/${btn.dataset.provisionDevice}/provision-device`, {
+          method: "POST",
+        });
+        await loadLicenses();
+        const lic = licensesCache.find(x => x.id === btn.dataset.provisionDevice);
+        const code = res.celesi || lic?.celesi || "—";
+        alert(
+          (res.created ? "ID u gjenerua dhe u ruajt.\n\n" : "ID ekzistonte:\n\n") +
+          `KODI: ${code}\nID: ${res.device_id}`,
+        );
+      } catch (err) {
+        alert(err.message || "Ruajtja dështoi.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
+  });
 }
 
 function bindMobileLicenseActions(scope) {
@@ -1683,6 +1752,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "licensat") {
       loadLicenses().catch(() => {});
+      prepareLicenseCreateForm().catch(() => {});
       startLicensesPoll();
     } else {
       stopLicensesPoll();
@@ -1749,8 +1819,43 @@ document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () =>
 });
 
 document.getElementById("btn-ld-gen-key")?.addEventListener("click", async () => {
-  const { celesi } = await api("/api/admin/licenses/generate-key");
-  document.getElementById("ld-celesi").value = celesi;
+  try {
+    document.getElementById("ld-celesi").value = await apiGenerateLicenseKey();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById("btn-ld-gen-device")?.addEventListener("click", async () => {
+  try {
+    document.getElementById("ld-device-id").value = await apiGenerateDeviceId();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById("btn-ld-gen-both")?.addEventListener("click", async () => {
+  try {
+    await fillLicensePair("ld-celesi", "ld-device-id");
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById("btn-lm-gen-device")?.addEventListener("click", async () => {
+  try {
+    document.getElementById("lm-device-id").value = await apiGenerateDeviceId();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById("btn-lm-gen-both")?.addEventListener("click", async () => {
+  try {
+    await fillLicensePair("lm-celesi", "lm-device-id");
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
 async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, maxTerminals, basePrice, terminalPrice, msgId, resetFields }) {
@@ -1767,7 +1872,11 @@ async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, ma
       terminal_price: terminalPrice || "0",
     }),
   });
-  showMsg(msgId, `Liçenca u krijua: ${res.license.celesi}`, true);
+  showMsg(
+    msgId,
+    `Liçenca u krijua.\nKODI: ${res.license.celesi}${deviceId ? `\nID: ${String(deviceId).trim().toUpperCase()}` : ""}`,
+    true,
+  );
   resetFields();
   await refreshAll();
 }
@@ -1814,13 +1923,24 @@ document.getElementById("form-license-desktop")?.addEventListener("submit", asyn
     showMsg("msg-license-desktop", "Gjeneroni ose shkruani çelësin e licencës.", false);
     return;
   }
+  let deviceId = document.getElementById("ld-device-id")?.value?.trim() || "";
+  if (!deviceId) {
+    try {
+      deviceId = await apiGenerateDeviceId();
+      const devEl = document.getElementById("ld-device-id");
+      if (devEl) devEl.value = deviceId;
+    } catch (err) {
+      showMsg("msg-license-desktop", err.message, false);
+      return;
+    }
+  }
   try {
     await submitLicenseForm({
       clientId: clientSel.value,
       appType,
       celesi,
       muaj: Number(document.getElementById("ld-muaj")?.value) || 12,
-      deviceId: document.getElementById("ld-device-id")?.value || "",
+      deviceId,
       msgId: "msg-license-desktop",
       resetFields: () => {
         document.getElementById("ld-celesi").value = "";

@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=23">
+  <link rel="stylesheet" href="/css/panel.css?v=24">
 </head>
 <body>
   <script>
@@ -86,9 +86,43 @@
       </div>
 
       <div id="panel-licensat" class="panel-section hidden">
+        <div class="card license-admin-hero admin-only-card">
+          <div class="card-title">Liçenca — Kod + ID pajisje (Super Admin)</div>
+          <p class="field-hint license-admin-hero-hint">
+            <strong>Ti gjeneron të dyja këtu</strong> — nuk pritet POS. Kliko «Gjenero çiftin», pastaj «Krijo liçencën» ose «Ruaj ID» te lista.
+            Jep klientit: <em>çelësin</em> (POS → Admin → Licenca) dhe <em>ID-në</em> (referencë / manual).
+          </p>
+          <div id="msg-license-desktop" class="alert hidden"></div>
+          <form id="form-license-desktop" class="license-create-form">
+            <div class="form-row">
+              <div>
+                <label>Klienti *</label>
+                <select id="ld-client" required></select>
+              </div>
+              <div>
+                <label>Muaj vlefshmërie</label>
+                <input type="number" id="ld-muaj" value="12" min="1" max="120">
+              </div>
+            </div>
+            <label>Çelësi i licencës (KODI)</label>
+            <div class="link-actions">
+              <input type="text" id="ld-celesi" class="mono" placeholder="Kliko Gjenero çiftin" required>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ld-gen-key">Gjenero kod</button>
+            </div>
+            <label>ID e pajisjes (12 karaktere)</label>
+            <div class="link-actions">
+              <input type="text" id="ld-device-id" class="mono" placeholder="Kliko Gjenero çiftin" autocomplete="off" autocapitalize="characters" maxlength="12">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ld-gen-device">Gjenero ID</button>
+            </div>
+            <div class="license-create-actions">
+              <button type="button" class="btn btn-ghost" id="btn-ld-gen-both">Gjenero çiftin (Kod + ID)</button>
+              <button type="submit" class="btn btn-primary">Krijo liçencën</button>
+            </div>
+          </form>
+        </div>
+
         <div class="card license-pair-hint admin-only-card">
-          <strong>Vetëm Super Admin.</strong> Kodi i licencës ↔ ID pajisjes — pronarët <em>nuk</em> i shohin këto.
-          <span class="mobile-only"> Në telefon: çelësi dhe ID e pajisjes shfaqen së bashku — mund t’i ndryshoni ose kopjoni direkt.</span>
+          <strong>Vetëm Super Admin.</strong> Pronarët <em>nuk</em> shohin kodin e licencës as ID e pajisjes.
         </div>
 
         <div class="card mobile-only license-quick-create">
@@ -102,46 +136,24 @@
               <input type="text" id="lm-celesi" class="mono" placeholder="Auto-gjenerohet">
               <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-key">Gjenero</button>
             </div>
-            <label>ID e pajisjes <span class="label-muted">(nga ekrani POS — opsionale)</span></label>
-            <input type="text" id="lm-device-id" class="mono" placeholder="p.sh. A1B2C3D4E5F6" autocomplete="off" autocapitalize="characters">
+            <label>ID e pajisjes</label>
+            <div class="link-actions">
+              <input type="text" id="lm-device-id" class="mono" placeholder="Gjenero ID" autocomplete="off" autocapitalize="characters" maxlength="12">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-device">Gjenero ID</button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-both" style="margin-bottom:0.5rem">Gjenero çiftin</button>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Krijo liçencën</button>
           </form>
         </div>
 
         <div id="license-mobile-list" class="license-mobile-list" aria-live="polite"></div>
 
-        <div class="card licenses-desktop-create admin-only-card">
-          <div class="card-title">Krijo liçencë (desktop)</div>
-          <p class="field-hint" style="margin-bottom:0.75rem">Gjeneroni çelësin, zgjidhni klientin — ID e pajisjes vendoset automatikisht kur POS aktivizon, ose shkruajeni manualisht.</p>
-          <div id="msg-license-desktop" class="alert hidden"></div>
-          <form id="form-license-desktop" class="license-create-form">
-            <div class="form-row">
-              <div>
-                <label>Klienti *</label>
-                <select id="ld-client" required></select>
-              </div>
-              <div>
-                <label>Muaj vlefshmërie</label>
-                <input type="number" id="ld-muaj" value="12" min="1" max="120">
-              </div>
-            </div>
-            <label>Çelësi i licencës</label>
-            <div class="link-actions">
-              <input type="text" id="ld-celesi" class="mono" placeholder="Kliko Gjenero">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-ld-gen-key">Gjenero</button>
-            </div>
-            <label>ID e pajisjes <span class="label-muted">(opsionale — nga POS Admin → Licenca)</span></label>
-            <input type="text" id="ld-device-id" class="mono" placeholder="p.sh. A1B2C3D4E5F6" autocomplete="off" autocapitalize="characters">
-            <button type="submit" class="btn btn-primary" style="margin-top:0.75rem">Krijo liçencën</button>
-          </form>
-        </div>
-
         <div class="card licenses-desktop-table">
           <div class="card-title card-title-row">
             <span>Të gjitha liçensat</span>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-licenses" title="Rifresko listën">Rifresko</button>
           </div>
-          <p class="field-hint licenses-live-hint">ID Pajisjes shfaqet kur POS aktivizon çelësin (çdo 8 sekonda) — ose shkruajeni manualisht te kolona «Ruaj ID».</p>
+          <p class="field-hint licenses-live-hint">Te çdo rresht: «Gjenero ID» ose shkruaj manualisht → «Ruaj ID». POS-i mund të dërgojë ID tjetër kur aktivizon (multi-terminal).</p>
           <div class="overflow-x">
             <table class="admin-table">
               <thead>
@@ -448,6 +460,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=32"></script>
+  <script src="/js/panel.js?v=34"></script>
 </body>
 </html>
