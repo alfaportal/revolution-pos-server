@@ -28,6 +28,10 @@ const {
   getOwnerMenuItemPhoto,
 } = require("../services/menuService");
 const {
+  listCatalogForOwner,
+  addItemsFromCatalog,
+} = require("../services/menuCatalogTemplateService");
+const {
   listVenue,
   addArea,
   updateArea,
@@ -264,6 +268,24 @@ router.get("/menu", async (req, res) => {
 router.post("/menu", async (req, res) => {
   try {
     const result = await addMenuItem(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/menu/catalog", async (req, res) => {
+  try {
+    const catalog = await listCatalogForOwner(req.user.client_id);
+    res.json({ ok: true, ...catalog });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/menu/from-catalog", async (req, res) => {
+  try {
+    const result = await addItemsFromCatalog(req.user.client_id, req.body.items);
     res.status(201).json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

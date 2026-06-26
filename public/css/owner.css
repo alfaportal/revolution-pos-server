@@ -834,3 +834,152 @@
   .stats { grid-template-columns: repeat(2, 1fr); }
   .header h1 { font-size: 1rem; }
 }
+
+/* ─── Katalogu i menusë ─── */
+.catalog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.catalog-selected-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-right: auto;
+}
+
+.catalog-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.catalog-category {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.catalog-category-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.catalog-category-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  flex: 1 1 auto;
+}
+
+.catalog-category-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.catalog-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+.catalog-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  padding: 0.55rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.catalog-item:hover:not(.in-menu) {
+  border-color: rgba(99, 102, 241, 0.45);
+}
+
+.catalog-item.selected {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.catalog-item.in-menu {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.catalog-item .catalog-check {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+}
+
+.catalog-item-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.catalog-item-photo.photo-fail {
+  display: none;
+}
+
+.catalog-item-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  padding-top: 0.15rem;
+}
+
+.catalog-in-menu-badge {
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.catalog-item-price-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.catalog-item-price-wrap .catalog-price {
+  width: 4.5rem;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.85rem;
+  text-align: right;
+  margin: 0;
+}
+
+.catalog-item-price-wrap .catalog-price:disabled {
+  opacity: 0.5;
+}
+
+.catalog-price-unit {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .catalog-items-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-toolbar .btn-primary {
+    width: 100%;
+  }
+}

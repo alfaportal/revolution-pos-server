@@ -124,16 +124,21 @@ async function addMenuItem(clientId, body) {
   const localId = await nextLocalId(clientId);
   const db = getSupabase();
 
+  const row = {
+    client_id: clientId,
+    local_id: localId,
+    name,
+    category,
+    price,
+    active: true,
+  };
+  if (Object.prototype.hasOwnProperty.call(body, "photo") && body.photo) {
+    row.photo = validateMenuPhotoInput(body.photo);
+  }
+
   const { data, error } = await db
     .from("pos_menu_items")
-    .insert({
-      client_id: clientId,
-      local_id: localId,
-      name,
-      category,
-      price,
-      active: true,
-    })
+    .insert(row)
     .select("id, local_id, name, category, price, active, photo")
     .single();
   if (error) throw error;

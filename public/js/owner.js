@@ -47,6 +47,8 @@ async function api(path, opts = {}) {
   return data;
 }
 
+window.ownerApi = api;
+
 function euro(n) {
   return Number(n || 0).toFixed(2) + " €";
 }
@@ -726,6 +728,8 @@ async function loadOwnerMenu() {
   renderMenuTable();
   updateOwnerMenuSyncHint(data.synced_at);
 }
+
+window.loadOwnerMenu = loadOwnerMenu;
 
 async function saveMenuRow(row) {
   if (!row) return;
@@ -1415,6 +1419,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "menuja") loadOwnerMenu();
+    if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "faqja") loadPublicPage();

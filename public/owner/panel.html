@@ -77,6 +77,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="menuja">Menuja</button>
+      <button class="tab" data-tab="katalogu">Katalogu</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="faqja">Faqja publike</button>
@@ -142,7 +143,7 @@
       </div>
       <div class="card">
         <div class="card-title">Lista e menusë</div>
-        <p class="links-hint">Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>. Ngarkoni foto (PNG/JPG, max 500 KB) për çdo artikull — shfaqen në faqen publike.</p>
+        <p class="links-hint">Shtoni artikuj manualisht këtu, ose përdorni skedën <strong>Katalogu</strong> për artikuj të gatshëm me foto. Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>.</p>
         <p id="menu-sync-hint" class="links-hint" style="margin-top:0"></p>
         <div class="overflow-x">
           <table class="menu-owner-table">
@@ -153,6 +154,26 @@
             </thead>
             <tbody id="menu-items-body"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-katalogu" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title">Katalogu i artikujve</div>
+        <p class="links-hint">
+          Zgjidhni artikujt me checkbox, vendosni çmimin dhe klikoni <strong>Shto në Meny</strong>.
+          Çdo artikull vjen me foto të gatshme. Për artikuj të personalizuar, përdorni skedën <strong>Menuja</strong>.
+        </p>
+        <div id="catalog-msg" class="owner-license-msg"></div>
+        <div class="catalog-toolbar">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-catalog-select-all">Zgjidh të gjitha</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-catalog-clear">Pastro zgjedhjen</button>
+          <span id="catalog-selected-count" class="catalog-selected-label">0 të zgjedhura</span>
+          <button type="button" class="btn btn-primary" id="btn-catalog-add">Shto në Meny</button>
+        </div>
+        <div id="catalog-categories" class="catalog-categories">
+          <p class="links-hint">Duke ngarkuar katalogun…</p>
         </div>
       </div>
     </div>
@@ -451,6 +472,7 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=12"></script>
+  <script src="/js/owner.js?v=13"></script>
+  <script src="/js/owner-catalog.js?v=1"></script>
 </body>
 </html>
