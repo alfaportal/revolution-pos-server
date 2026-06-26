@@ -535,6 +535,53 @@ td.col-actions .btn {
   font-size: 0.8rem;
 }
 
+.device-id-cell {
+  min-width: 12rem;
+  white-space: normal;
+}
+
+.device-id-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.device-id-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.device-id-editor .device-id-input {
+  width: 100%;
+  min-width: 9rem;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+}
+
+.device-id-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.license-create-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 719px) {
+  .licenses-desktop-create { display: none !important; }
+}
+
 .license-key-cell code,
 .device-id-cell code {
   display: inline-block;

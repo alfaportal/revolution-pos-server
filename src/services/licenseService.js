@@ -13,7 +13,56 @@ const {
   clearAllTerminals,
   countLicensesOverTerminalLimit,
   calcLicenseTotalPrice,
+  insertTerminal,
+  normalizeDeviceId,
 } = require("./licenseTerminalService");
+
+function pickLatestTerminal(terminals) {
+  if (!Array.isArray(terminals) || !terminals.length) return null;
+  return [...terminals].sort(
+    (a, b) => new Date(b.last_seen_at || 0).getTime() - new Date(a.last_seen_at || 0).getTime(),
+  )[0];
+}
+
+function enrichLicenseRowWithTerminals(lic, summary) {
+  const latest = pickLatestTerminal(summary.terminals);
+  const displayDeviceId =
+    normalizeDeviceId(lic.device_id) || (latest?.device_id ? normalizeDeviceId(latest.device_id) : "");
+  return {
+    ...lic,
+    active_terminal_count: summary.active_terminal_count,
+    max_terminals: summary.max_terminals,
+    terminal_limit_reached: summary.limit_reached,
+    terminal_over_limit: summary.over_limit,
+    terminal_in_grace: summary.in_grace,
+    terminal_grace_until: summary.grace_until,
+    total_price: summary.total_price,
+    terminals: summary.terminals,
+    display_device_id: displayDeviceId,
+    display_device_ids: (summary.terminals || []).map(t => t.device_id).filter(Boolean),
+    device_hostname: lic.device_hostname || latest?.device_hostname || "",
+    last_ip: lic.last_ip || latest?.last_ip || "",
+    last_activated_at: lic.last_activated_at || latest?.last_seen_at || null,
+  };
+}
+
+async function syncLicenseDeviceFromTerminals(licenseId, lic, summary) {
+  const latest = pickLatestTerminal(summary.terminals);
+  const deviceId = normalizeDeviceId(lic.device_id) || (latest ? normalizeDeviceId(latest.device_id) : "");
+  if (!deviceId || normalizeDeviceId(lic.device_id) === deviceId) return;
+  const patch = {
+    device_id: deviceId,
+    last_validation_error: "",
+    ...(latest?.device_hostname ? { device_hostname: latest.device_hostname } : {}),
+    ...(latest?.last_ip ? { last_ip: latest.last_ip } : {}),
+    ...(latest?.last_seen_at ? { last_activated_at: latest.last_seen_at } : {}),
+  };
+  try {
+    await patchLicenseMeta(licenseId, patch);
+  } catch {
+    /* best effort */
+  }
+}
 
 function normalizeKey(key) {
   const raw = String(key || "")
@@ -282,17 +331,12 @@ async function listLicenses() {
     rows.map(async lic => {
       try {
         const summary = await getTerminalSummaryForLicense(lic);
-        return {
+        await syncLicenseDeviceFromTerminals(lic.id, lic, summary);
+        const merged = {
           ...lic,
-          active_terminal_count: summary.active_terminal_count,
-          max_terminals: summary.max_terminals,
-          terminal_limit_reached: summary.limit_reached,
-          terminal_over_limit: summary.over_limit,
-          terminal_in_grace: summary.in_grace,
-          terminal_grace_until: summary.grace_until,
-          total_price: summary.total_price,
-          terminals: summary.terminals,
+          device_id: normalizeDeviceId(lic.device_id) || pickLatestTerminal(summary.terminals)?.device_id || lic.device_id,
         };
+        return enrichLicenseRowWithTerminals(merged, summary);
       } catch {
         return {
           ...lic,
@@ -300,6 +344,8 @@ async function listLicenses() {
           max_terminals: Number(lic.max_terminals) || 1,
           terminal_limit_reached: false,
           terminals: [],
+          display_device_id: normalizeDeviceId(lic.device_id) || "",
+          display_device_ids: lic.device_id ? [normalizeDeviceId(lic.device_id)] : [],
         };
       }
     }),
@@ -518,6 +564,9 @@ async function updateLicense(id, body) {
   if (body.device_id != null) {
     patch.device_id = String(body.device_id).trim().toUpperCase().replace(/\s+/g, "");
     patch.last_validation_error = "";
+    if (patch.device_id) {
+      patch.last_activated_at = new Date().toISOString();
+    }
   }
   if (body.app_type != null) {
     const allowedApp = ["restorant", "kafene"];
@@ -539,6 +588,15 @@ async function updateLicense(id, body) {
   const { data, error } = await db.from("licenses").update(patch).eq("id", id).select("*, clients(emri, tipi)").single();
   if (error) throw error;
   if (!data) throw new Error("Liçenca nuk u gjet.");
+
+  if (patch.device_id) {
+    try {
+      await insertTerminal(id, patch.device_id, { now: patch.last_activated_at });
+    } catch (termErr) {
+      console.warn("[updateLicense] terminal sync:", termErr.message);
+    }
+  }
+
   return data;
 }
 

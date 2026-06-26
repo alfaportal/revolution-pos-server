@@ -285,4 +285,5 @@ module.exports = {
     const extra = Math.max(0, max - 1);
     return base + extra * (Number(terminalPrice) || 0);
   },
+  insertTerminal,
 };

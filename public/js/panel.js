@@ -166,6 +166,42 @@ function terminalCountLabel(l) {
   return `${active} / ${max}`;
 }
 
+function licenseDeviceId(l) {
+  return String(l.display_device_id || l.device_id || "").trim().toUpperCase();
+}
+
+function licenseDeviceIds(l) {
+  const ids = Array.isArray(l.display_device_ids) ? l.display_device_ids.filter(Boolean) : [];
+  const primary = licenseDeviceId(l);
+  if (primary && !ids.includes(primary)) return [primary, ...ids];
+  return ids.length ? ids : primary ? [primary] : [];
+}
+
+function licenseDeviceCellHtml(l) {
+  const devId = licenseDeviceId(l);
+  const allIds = licenseDeviceIds(l);
+  const extra =
+    allIds.length > 1
+      ? `<div class="device-id-extra">${allIds.map(id => `<code class="mono">${esc(id)}</code>`).join(" ")}</div>`
+      : "";
+  return `<div class="device-id-editor">
+    <input
+      type="text"
+      class="device-id-input mono"
+      data-device-input="${l.id}"
+      value="${esc(devId)}"
+      placeholder="Shkruani ID nga POS (Admin → Licenca)"
+      autocomplete="off"
+      autocapitalize="characters"
+    >
+    <div class="device-id-editor-actions">
+      <button type="button" class="btn btn-primary btn-sm" data-save-device="${l.id}">Ruaj ID</button>
+      ${devId ? `<button type="button" class="btn btn-ghost btn-sm" data-copy-device-id="${l.id}">Kopjo</button>` : ""}
+    </div>
+    ${extra}
+  </div>`;
+}
+
 function licenseTerminalFieldsHtml(l, { prefix = "license-edit" } = {}) {
   const maxVal = Number(l?.max_terminals) || 1;
   const baseVal = Number(l?.base_price) || 0;
@@ -1085,14 +1121,17 @@ async function loadClients() {
     package_tier: normalizeTierId(c.package_tier),
   }));
   const lmSel = document.getElementById("lm-client");
-  const opts = clientsCache.length
+  const ldSel = document.getElementById("ld-client");
+  const clientOpts = clientsCache.length
     ? clientsCache.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
+    : "";
+  const clientSelectHtml = clientsCache.length
+    ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + clientOpts
     : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
-  if (lmSel) {
-    lmSel.innerHTML = clientsCache.length
-      ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + opts
-      : '<option value="" disabled selected>— Shto klient së pari —</option>';
-    lmSel.disabled = !clientsCache.length;
+  for (const sel of [lmSel, ldSel]) {
+    if (!sel) continue;
+    sel.innerHTML = clientSelectHtml;
+    sel.disabled = !clientsCache.length;
   }
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clientsCache.length
@@ -1192,6 +1231,16 @@ async function resetLicenseDevice(licenseId) {
   }
 }
 
+function bindLicenseDeviceActions(scope) {
+  scope.querySelectorAll("[data-save-device]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const input = scope.querySelector(`[data-device-input="${btn.dataset.saveDevice}"]`);
+      if (!input) return;
+      saveLicenseDeviceId(btn.dataset.saveDevice, input.value.trim(), btn);
+    });
+  });
+}
+
 function bindMobileLicenseActions(scope) {
   scope.querySelectorAll("[data-mobile-copy-key]").forEach(btn => {
     btn.addEventListener("click", () => copyText(btn.dataset.mobileCopyKey, btn));
@@ -1253,7 +1302,7 @@ function renderMobileLicenseCards(licenses) {
 
   const cardsHtml = licenses.length
     ? licenses.map(l => {
-        const devId = (l.device_id || "").trim();
+        const devId = licenseDeviceId(l);
         const isBound = l.statusi === "aktive" && devId;
         return `<article class="license-mobile-card${isBound ? " is-bound" : ""}" data-license-id="${l.id}">
           <div class="license-mobile-head">
@@ -1333,7 +1382,7 @@ async function loadLicenses() {
   const tbl = document.getElementById("tbl-licenses");
   tbl.innerHTML = licenses.length
     ? licenses.map(l => {
-        const devId = (l.device_id || "").trim();
+        const devId = licenseDeviceId(l);
         const isActive = l.statusi === "aktive";
         const rowClass = isActive && devId ? "license-row-bound" : "";
         return `<tr class="${rowClass}">
@@ -1343,12 +1392,7 @@ async function loadLicenses() {
           <code class="mono">${esc(l.celesi)}</code>
           <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(l.celesi)}">Kopjo</button>
         </td>
-        <td class="device-id-cell" data-label="ID Pajisjes">
-          ${devId
-            ? `<code class="mono device-id-badge">${esc(devId)}</code>
-               <button type="button" class="btn btn-ghost btn-sm" data-copy-device-id="${l.id}">Kopjo ID</button>`
-            : '<span class="device-pending">Pa aktivizuar</span>'}
-        </td>
+        <td class="device-id-cell" data-label="ID Pajisjes">${licenseDeviceCellHtml(l)}</td>
         <td data-label="Kompjuteri">${esc(l.device_hostname) || "—"}</td>
         <td data-label="Aktivizuar">${fmtDateTime(l.last_activated_at)}</td>
         <td data-label="IP" class="mono">${esc(l.last_ip) || "—"}</td>
@@ -1374,11 +1418,14 @@ async function loadLicenses() {
   tbl.querySelectorAll("[data-copy-device-id]").forEach(btn => {
     btn.addEventListener("click", () => {
       const lic = licensesCache.find(x => x.id === btn.dataset.copyDeviceId);
-      const id = (lic?.device_id || "").trim();
+      const input = tbl.querySelector(`[data-device-input="${btn.dataset.copyDeviceId}"]`);
+      const id = (input?.value || licenseDeviceId(lic)).trim();
       if (id) copyText(id, btn);
-      else alert("Nuk ka ID pajisje.");
+      else alert("Nuk ka ID pajisje — shkruani ID nga ekrani POS (Admin → Licenca).");
     });
   });
+
+  bindLicenseDeviceActions(tbl);
 
   tbl.querySelectorAll("[data-act]").forEach(btn => {
     btn.onclick = async () => {
@@ -1538,7 +1585,7 @@ function startLicensesPoll() {
     const panel = document.getElementById("panel-licensat");
     if (!panel || panel.classList.contains("hidden")) return;
     loadLicenses().catch(() => {});
-  }, 20000);
+  }, 8000);
 }
 
 function showApp(user) {
@@ -1701,6 +1748,11 @@ document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () =>
   document.getElementById("lm-celesi").value = celesi;
 });
 
+document.getElementById("btn-ld-gen-key")?.addEventListener("click", async () => {
+  const { celesi } = await api("/api/admin/licenses/generate-key");
+  document.getElementById("ld-celesi").value = celesi;
+});
+
 async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, maxTerminals, basePrice, terminalPrice, msgId, resetFields }) {
   const res = await api("/api/admin/licenses", {
     method: "POST",
@@ -1745,6 +1797,39 @@ document.getElementById("form-license-mobile")?.addEventListener("submit", async
     });
   } catch (err) {
     showMsg("msg-license-mobile", err.message, false);
+  }
+});
+
+document.getElementById("form-license-desktop")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  const clientSel = document.getElementById("ld-client");
+  if (!clientSel?.value) {
+    showMsg("msg-license-desktop", "Zgjidhni klientin.", false);
+    return;
+  }
+  const client = clientsCache.find(c => c.id === clientSel.value);
+  const appType = client?.tipi === "kafene" ? "kafene" : "restorant";
+  const celesi = document.getElementById("ld-celesi")?.value?.trim();
+  if (!celesi) {
+    showMsg("msg-license-desktop", "Gjeneroni ose shkruani çelësin e licencës.", false);
+    return;
+  }
+  try {
+    await submitLicenseForm({
+      clientId: clientSel.value,
+      appType,
+      celesi,
+      muaj: Number(document.getElementById("ld-muaj")?.value) || 12,
+      deviceId: document.getElementById("ld-device-id")?.value || "",
+      msgId: "msg-license-desktop",
+      resetFields: () => {
+        document.getElementById("ld-celesi").value = "";
+        const devEl = document.getElementById("ld-device-id");
+        if (devEl) devEl.value = "";
+      },
+    });
+  } catch (err) {
+    showMsg("msg-license-desktop", err.message, false);
   }
 });
 

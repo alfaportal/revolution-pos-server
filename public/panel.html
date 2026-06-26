@@ -110,12 +110,38 @@
 
         <div id="license-mobile-list" class="license-mobile-list" aria-live="polite"></div>
 
+        <div class="card licenses-desktop-create admin-only-card">
+          <div class="card-title">Krijo liçencë (desktop)</div>
+          <p class="field-hint" style="margin-bottom:0.75rem">Gjeneroni çelësin, zgjidhni klientin — ID e pajisjes vendoset automatikisht kur POS aktivizon, ose shkruajeni manualisht.</p>
+          <div id="msg-license-desktop" class="alert hidden"></div>
+          <form id="form-license-desktop" class="license-create-form">
+            <div class="form-row">
+              <div>
+                <label>Klienti *</label>
+                <select id="ld-client" required></select>
+              </div>
+              <div>
+                <label>Muaj vlefshmërie</label>
+                <input type="number" id="ld-muaj" value="12" min="1" max="120">
+              </div>
+            </div>
+            <label>Çelësi i licencës</label>
+            <div class="link-actions">
+              <input type="text" id="ld-celesi" class="mono" placeholder="Kliko Gjenero">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ld-gen-key">Gjenero</button>
+            </div>
+            <label>ID e pajisjes <span class="label-muted">(opsionale — nga POS Admin → Licenca)</span></label>
+            <input type="text" id="ld-device-id" class="mono" placeholder="p.sh. A1B2C3D4E5F6" autocomplete="off" autocapitalize="characters">
+            <button type="submit" class="btn btn-primary" style="margin-top:0.75rem">Krijo liçencën</button>
+          </form>
+        </div>
+
         <div class="card licenses-desktop-table">
           <div class="card-title card-title-row">
             <span>Të gjitha liçensat</span>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-licenses" title="Rifresko listën">Rifresko</button>
           </div>
-          <p class="field-hint licenses-live-hint">ID Pajisjes shfaqet automatikisht kur POS aktivizon çelësin — lista rifreskohet çdo 20 sekonda.</p>
+          <p class="field-hint licenses-live-hint">ID Pajisjes shfaqet kur POS aktivizon çelësin (çdo 8 sekonda) — ose shkruajeni manualisht te kolona «Ruaj ID».</p>
           <div class="overflow-x">
             <table class="admin-table">
               <thead>
