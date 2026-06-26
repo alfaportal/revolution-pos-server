@@ -138,10 +138,68 @@ function licenseProblems(l) {
 
 function licenseStatusCell(l) {
   const problems = licenseProblems(l);
+  if (l.terminal_limit_reached) {
+    problems.push(`Terminale: ${terminalCountLabel(l)}`);
+  }
   const warn = problems.length
     ? `<span class="license-warn" title="${esc(problems.join(" — "))}" aria-label="Problem">⚠️</span> `
     : "";
-  return `${warn}${badge(l.statusi)}`;
+  let extra = "";
+  if (l.terminal_over_limit && l.terminal_in_grace) {
+    extra = ` <span class="badge badge-stock-warning">Grace</span>`;
+  } else if (l.terminal_limit_reached) {
+    extra = ` <span class="badge badge-stock-out">Limit</span>`;
+  }
+  return `${warn}${badge(l.statusi)}${extra}`;
+}
+
+function calcTerminalTotalPrice(basePrice, maxTerminals, terminalPrice) {
+  const base = Number(basePrice) || 0;
+  const max = Math.max(1, Number(maxTerminals) || 1);
+  const extra = Math.max(0, max - 1);
+  return base + extra * (Number(terminalPrice) || 0);
+}
+
+function terminalCountLabel(l) {
+  const active = Number(l.active_terminal_count) || 0;
+  const max = Number(l.max_terminals) || 1;
+  return `${active} / ${max}`;
+}
+
+function licenseTerminalFieldsHtml(l, { prefix = "license-edit" } = {}) {
+  const maxVal = Number(l?.max_terminals) || 1;
+  const baseVal = Number(l?.base_price) || 0;
+  const termPrice = Number(l?.terminal_price) || 0;
+  const total = calcTerminalTotalPrice(baseVal, maxVal, termPrice);
+  const selected99 = maxVal > 5 ? " selected" : "";
+  return `
+    <label for="${prefix}-max-terminals">Nr. terminaleve</label>
+    <select id="${prefix}-max-terminals" name="max_terminals">
+      ${[1, 2, 3, 4, 5].map(n => `<option value="${n}"${maxVal === n ? " selected" : ""}>${n}</option>`).join("")}
+      <option value="99"${selected99}>5+</option>
+    </select>
+    <label for="${prefix}-base-price">Çmimi bazë (€)</label>
+    <input type="number" id="${prefix}-base-price" name="base_price" min="0" step="0.01" value="${baseVal.toFixed(2)}">
+    <label for="${prefix}-terminal-price">Çmimi shtesë/terminal (€)</label>
+    <input type="number" id="${prefix}-terminal-price" name="terminal_price" min="0" step="0.01" value="${termPrice.toFixed(2)}">
+    <p class="field-hint license-price-total" id="${prefix}-price-total">Totali: ${total.toFixed(2)}€ (bazë + ${Math.max(0, maxVal - 1)} × terminal)</p>`;
+}
+
+function bindLicensePriceCalc(modalRoot, prefix = "license-edit") {
+  const maxEl = modalRoot.querySelector(`#${prefix}-max-terminals`);
+  const baseEl = modalRoot.querySelector(`#${prefix}-base-price`);
+  const termEl = modalRoot.querySelector(`#${prefix}-terminal-price`);
+  const totalEl = modalRoot.querySelector(`#${prefix}-price-total`);
+  if (!maxEl || !baseEl || !termEl || !totalEl) return;
+  const refresh = () => {
+    const max = Number(maxEl.value) || 1;
+    const total = calcTerminalTotalPrice(baseEl.value, max, termEl.value);
+    totalEl.textContent = `Totali: ${total.toFixed(2)}€ (bazë + ${Math.max(0, max - 1)} × terminal)`;
+  };
+  [maxEl, baseEl, termEl].forEach(el => {
+    el.addEventListener("input", refresh);
+    el.addEventListener("change", refresh);
+  });
 }
 
 function esc(s) {
@@ -784,6 +842,8 @@ function openEditLicense(id) {
       <option value="revokuar" ${l.statusi === "revokuar" ? "selected" : ""}>revokuar</option>
       <option value="pezulluar" ${l.statusi === "pezulluar" ? "selected" : ""}>pezulluar</option>
     </select>
+    ${licenseTerminalFieldsHtml(l)}
+    <p class="field-hint">Terminale aktive: <strong>${terminalCountLabel(l)}</strong></p>
   `, async fd => {
     await api(`/api/admin/licenses/${id}`, {
       method: "PATCH",
@@ -792,9 +852,16 @@ function openEditLicense(id) {
         statusi: fd.get("statusi"),
         app_type: fd.get("app_type"),
         device_id: fd.get("device_id") || "",
+        max_terminals: fd.get("max_terminals"),
+        base_price: fd.get("base_price"),
+        terminal_price: fd.get("terminal_price"),
       }),
     });
   });
+  setTimeout(() => {
+    const modal = document.getElementById("modal-body");
+    if (modal) bindLicensePriceCalc(modal);
+  }, 0);
 }
 
 function openEditOwner(id) {
@@ -861,12 +928,14 @@ async function loadStats() {
   const s = await api("/api/admin/stats");
   const expiring = Number(s.trials_expiring_soon) || 0;
   const stockClients = Number(s.stock_alert_clients) || 0;
+  const terminalClients = Number(s.terminal_limit_clients) || 0;
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="val">${s.clients_total}</div><div class="lbl">Klientë</div></div>
     <div class="stat"><div class="val">${s.licenses_total}</div><div class="lbl">Liçensa</div></div>
     <div class="stat"><div class="val">${s.licenses_active}</div><div class="lbl">Aktive</div></div>
     <div class="stat${expiring ? " stat-warn" : ""}"><div class="val">${expiring}</div><div class="lbl">Trial skadon (7 ditë)</div></div>
     <div class="stat${stockClients ? " stat-warn" : ""}"><div class="val">${stockClients}</div><div class="lbl">Stok i ulët</div></div>
+    <div class="stat${terminalClients ? " stat-warn" : ""}"><div class="val">${terminalClients}</div><div class="lbl">Limit terminale</div></div>
     <div class="stat"><div class="val">${s.licenses_expired}</div><div class="lbl">Skaduar</div></div>
     <div class="stat"><div class="val">${s.licenses_revoked}</div><div class="lbl">Revokuar</div></div>`;
 }
@@ -1221,7 +1290,7 @@ function renderMobileLicenseCards(licenses) {
           </div>
           <div class="license-mobile-meta">
             ${l.device_hostname ? `Kompjuteri: ${esc(l.device_hostname)} · ` : ""}
-            Skadon: ${esc(l.data_skadimit)}
+            Terminale: ${terminalCountLabel(l)} · Skadon: ${esc(l.data_skadimit)}
           </div>
           <div class="license-mobile-actions">
             <button type="button" class="btn btn-ghost btn-sm" data-mobile-edit-license="${l.id}">Ndrysho liçencën</button>
@@ -1283,6 +1352,7 @@ async function loadLicenses() {
         <td data-label="Kompjuteri">${esc(l.device_hostname) || "—"}</td>
         <td data-label="Aktivizuar">${fmtDateTime(l.last_activated_at)}</td>
         <td data-label="IP" class="mono">${esc(l.last_ip) || "—"}</td>
+        <td data-label="Terminale" class="mono${l.terminal_limit_reached ? " terminal-limit-warn" : ""}">${terminalCountLabel(l)}</td>
         <td data-label="Statusi">${licenseStatusCell(l)}</td>
         <td data-label="Nga">${l.data_fillimit}</td>
         <td data-label="Deri">${l.data_skadimit}</td>
@@ -1296,7 +1366,7 @@ async function loadLicenses() {
         </td>
       </tr>`;
       }).join("")
-    : '<tr><td colspan="11" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
+    : '<tr><td colspan="12" style="color:var(--muted)">Nuk ka liçensa</td></tr>';
 
   tbl.querySelectorAll("[data-copy-text]").forEach(btn => {
     btn.addEventListener("click", () => copyText(btn.dataset.copyText, btn));
@@ -1476,11 +1546,17 @@ function showApp(user) {
   show("view-app", true);
   document.getElementById("user-label").textContent = user.emri || user.email;
   setupOwnerLoginUrl();
+  setupClientLicensePricing();
 }
 
 function setupOwnerLoginUrl() {
   const input = document.getElementById("owner-login-url");
   if (input) input.value = `${publicOrigin()}/owner/login`;
+}
+
+function setupClientLicensePricing() {
+  const form = document.getElementById("form-client");
+  if (form) bindLicensePriceCalc(form, "c");
 }
 
 function showLogin() {
@@ -1594,6 +1670,9 @@ document.getElementById("form-client").addEventListener("submit", async e => {
         app_type: licenseAppTypeFromClientTipi(tipi),
         muaj: document.getElementById("c-muaj").value,
         device_id: document.getElementById("c-device-id")?.value || "",
+        max_terminals: document.getElementById("c-max-terminals")?.value || "1",
+        base_price: document.getElementById("c-base-price")?.value || "0",
+        terminal_price: document.getElementById("c-terminal-price")?.value || "0",
         owner_emri: document.getElementById("c-owner-emri").value,
         owner_email: document.getElementById("c-owner-email").value,
         owner_password: document.getElementById("c-owner-password").value,
@@ -1622,7 +1701,7 @@ document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () =>
   document.getElementById("lm-celesi").value = celesi;
 });
 
-async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, msgId, resetFields }) {
+async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, maxTerminals, basePrice, terminalPrice, msgId, resetFields }) {
   const res = await api("/api/admin/licenses", {
     method: "POST",
     body: JSON.stringify({
@@ -1631,6 +1710,9 @@ async function submitLicenseForm({ clientId, appType, celesi, muaj, deviceId, ms
       celesi,
       muaj,
       device_id: deviceId || "",
+      max_terminals: maxTerminals || "1",
+      base_price: basePrice || "0",
+      terminal_price: terminalPrice || "0",
     }),
   });
   showMsg(msgId, `Liçenca u krijua: ${res.license.celesi}`, true);

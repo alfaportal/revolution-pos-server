@@ -281,6 +281,43 @@ function setOwnerLicenseStatus(activated, text) {
   label.textContent = text || (activated ? "Licenca është aktive." : "Licenca nuk është aktive.");
 }
 
+function renderOwnerTerminals(s) {
+  const wrap = document.getElementById("owner-terminal-summary");
+  const countEl = document.getElementById("owner-terminals-count");
+  const warnEl = document.getElementById("owner-terminal-warning");
+  const listEl = document.getElementById("owner-terminals-list");
+  if (!wrap || !countEl || !warnEl || !listEl) return;
+
+  const active = Number(s.active_terminal_count) || 0;
+  const max = Number(s.max_terminals) || 1;
+  const terminals = Array.isArray(s.terminals) ? s.terminals : [];
+
+  if (!s.has_license) {
+    wrap.classList.add("hidden");
+    return;
+  }
+
+  wrap.classList.remove("hidden");
+  countEl.textContent = `${active} / ${max} të lejuara`;
+
+  const showLimitWarning = Boolean(s.terminal_limit_reached || s.terminal_over_limit);
+  warnEl.classList.toggle("hidden", !showLimitWarning);
+
+  if (!terminals.length) {
+    listEl.innerHTML = '<p class="owner-terminals-empty">Asnjë terminal aktiv — aktivizoni licencën në POS.</p>';
+    return;
+  }
+
+  listEl.innerHTML = `<table class="owner-terminals-table">
+    <thead><tr><th>ID pajisje</th><th>Kompjuteri</th><th>Pamja e fundit</th></tr></thead>
+    <tbody>${terminals.map(t => `<tr>
+      <td class="mono">${escHtml(t.device_id || "—")}</td>
+      <td>${escHtml(t.device_hostname || "—")}</td>
+      <td>${t.last_seen_at ? fmtTime(t.last_seen_at) : "—"}</td>
+    </tr>`).join("")}</tbody>
+  </table>`;
+}
+
 async function loadLicense() {
   const msg = document.getElementById("owner-license-msg");
   if (msg) msg.textContent = "";
@@ -292,8 +329,10 @@ async function loadLicense() {
       keyEl.value = s.license_key;
     }
     setOwnerLicenseStatus(!!s.activated, s.message || "");
+    renderOwnerTerminals(s);
   } catch (err) {
     setOwnerLicenseStatus(false, err.message || "Nuk u lexua licenca.");
+    renderOwnerTerminals({ has_license: false });
   }
 }
 

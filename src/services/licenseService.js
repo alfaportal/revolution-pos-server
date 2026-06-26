@@ -7,6 +7,13 @@ const { generateKitchenKey, generateKitchenSlug } = require("../lib/kitchenAcces
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
 const { isLicenseUsable } = require("../lib/licenseEnforcement");
 const { seedPosSettingsForClient, syncPosSettingsFromClient } = require("./receiptService");
+const {
+  resolveTerminalAccess,
+  getTerminalSummaryForLicense,
+  clearAllTerminals,
+  countLicensesOverTerminalLimit,
+  calcLicenseTotalPrice,
+} = require("./licenseTerminalService");
 
 function normalizeKey(key) {
   const raw = String(key || "")
@@ -164,7 +171,7 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
 
   const fail = async (code, message) => {
     await recordValidationFailure(license, code, message, client_ip);
-    const forceLogout = ["REVOKED", "SUSPENDED", "EXPIRED", "DEVICE_MISMATCH"].includes(code);
+    const forceLogout = ["REVOKED", "SUSPENDED", "EXPIRED", "DEVICE_MISMATCH", "TERMINAL_LIMIT_EXCEEDED"].includes(code);
     return { valid: false, code, message, force_logout: forceLogout };
   };
 
@@ -192,14 +199,12 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   const ip = sanitizeClientIp(client_ip);
   const now = new Date().toISOString();
 
-  if (deviceId) {
-    const stored = String(license.device_id || "").trim().toUpperCase();
-    if (stored && stored !== deviceId) {
-      return fail(
-        "DEVICE_MISMATCH",
-        "Liçenca është e lidhur me një pajisje tjetër. Kontaktoni administratorin për reset pajisje.",
-      );
-    }
+  const terminalAccess = await resolveTerminalAccess(license, deviceId, host, ip);
+  if (!terminalAccess.allowed) {
+    return fail(
+      terminalAccess.code || "TERMINAL_LIMIT_EXCEEDED",
+      terminalAccess.message || "Kontaktoni Revolution Invest për të shtuar terminale.",
+    );
   }
 
   const successPatch = {
@@ -217,6 +222,10 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   if (deviceId) license.device_id = deviceId;
   if (host) license.device_hostname = host;
 
+  const terminalSummary = await getTerminalSummaryForLicense(license);
+  const warning = Boolean(terminalAccess.warning);
+  const message = warning ? terminalAccess.message : "Liçenca është aktive.";
+
   return {
     valid: true,
     license_id: license.id,
@@ -232,7 +241,12 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     status: license.statusi,
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
-    message: "Liçenca është aktive.",
+    message,
+    terminal_warning: warning,
+    terminal_code: terminalAccess.code || null,
+    terminals_active: terminalSummary.active_terminal_count,
+    terminals_max: terminalSummary.max_terminals,
+    grace_until: terminalAccess.grace_until || terminalSummary.grace_until || null,
   };
 }
 
@@ -262,7 +276,35 @@ async function listLicenses() {
     .select("*, clients(id, emri, tipi, email)")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data;
+
+  const rows = data || [];
+  const enriched = await Promise.all(
+    rows.map(async lic => {
+      try {
+        const summary = await getTerminalSummaryForLicense(lic);
+        return {
+          ...lic,
+          active_terminal_count: summary.active_terminal_count,
+          max_terminals: summary.max_terminals,
+          terminal_limit_reached: summary.limit_reached,
+          terminal_over_limit: summary.over_limit,
+          terminal_in_grace: summary.in_grace,
+          terminal_grace_until: summary.grace_until,
+          total_price: summary.total_price,
+          terminals: summary.terminals,
+        };
+      } catch {
+        return {
+          ...lic,
+          active_terminal_count: lic.device_id ? 1 : 0,
+          max_terminals: Number(lic.max_terminals) || 1,
+          terminal_limit_reached: false,
+          terminals: [],
+        };
+      }
+    }),
+  );
+  return enriched;
 }
 
 async function createClient(body) {
@@ -392,6 +434,9 @@ async function createClientOnboard(body, baseUrl) {
       app_type: body.app_type,
       muaj: body.muaj ?? 12,
       device_id: body.device_id || "",
+      max_terminals: body.max_terminals,
+      base_price: body.base_price,
+      terminal_price: body.terminal_price,
     });
 
     const owner = await createOwner(
@@ -451,6 +496,9 @@ async function createLicense(body) {
     data_fillimit: start,
     data_skadimit: body.data_skadimit || addMonthsISO(start, months),
     trial_ends_at: body.trial_ends_at || addMonthsTimestamp(start, 3),
+    max_terminals: Math.max(1, Number(body.max_terminals) || 1),
+    terminal_price: Math.max(0, Number(body.terminal_price) || 0),
+    base_price: Math.max(0, Number(body.base_price) || 0),
   };
 
   const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
@@ -476,6 +524,15 @@ async function updateLicense(id, body) {
     const appType = String(body.app_type).trim().toLowerCase();
     if (!allowedApp.includes(appType)) throw new Error(`Tipi i aplikacionit i pavlefshëm: ${body.app_type}`);
     patch.app_type = appType;
+  }
+  if (body.max_terminals != null) {
+    patch.max_terminals = Math.max(1, Math.min(99, Number(body.max_terminals) || 1));
+  }
+  if (body.terminal_price != null) {
+    patch.terminal_price = Math.max(0, Number(body.terminal_price) || 0);
+  }
+  if (body.base_price != null) {
+    patch.base_price = Math.max(0, Number(body.base_price) || 0);
   }
   if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
 
@@ -526,6 +583,8 @@ async function resetLicenseDevice(id) {
   const licenseId = String(id || "").trim();
   if (!licenseId) throw new Error("ID e liçencës mungon.");
 
+  await clearAllTerminals(licenseId);
+
   const db = getSupabase();
   const patch = {
     device_id: "",
@@ -533,6 +592,7 @@ async function resetLicenseDevice(id) {
     last_ip: "",
     last_validation_error: "",
     last_activated_at: null,
+    terminal_limit_grace_at: null,
   };
   const { data, error } = await db
     .from("licenses")
@@ -620,19 +680,44 @@ async function getOwnerLicenseView(clientId) {
       has_license: false,
       license_key: "",
       message: "Nuk ka licencë për lokalin tuaj. Kontaktoni administratorin.",
+      terminals: [],
+      active_terminal_count: 0,
+      max_terminals: 1,
     };
   }
+
+  const fullLicense = await findLicenseByKey(primary.celesi);
+  const terminalSummary = fullLicense
+    ? await getTerminalSummaryForLicense(fullLicense)
+    : {
+        terminals: [],
+        active_terminal_count: primary.device_id ? 1 : 0,
+        max_terminals: 1,
+        limit_reached: false,
+        over_limit: false,
+        in_grace: false,
+        grace_until: null,
+        total_price: 0,
+      };
 
   const expired = isExpired(primary.data_skadimit);
   const revoked = primary.statusi === "revokuar" || primary.statusi === "pezulluar";
   const deviceId = String(primary.device_id || "").trim().toUpperCase();
-  const activated = primary.statusi === "aktive" && !expired && !revoked && !!deviceId;
+  const hasActiveTerminal = terminalSummary.active_terminal_count > 0;
+  const activated = primary.statusi === "aktive" && !expired && !revoked && hasActiveTerminal;
 
   let message = "Licenca nuk është aktive.";
   if (revoked) message = primary.statusi === "revokuar" ? "Licenca është revokuar." : "Licenca është pezulluar.";
   else if (expired) message = "Licenca ka skaduar.";
-  else if (!deviceId) message = "Vendosni çelësin në kompjuterin POS (Admin → Licenca). ID-ja shfaqet këtu pas aktivizimit.";
-  else if (activated) message = "Licenca është aktive për pajisjen POS.";
+  else if (!hasActiveTerminal) {
+    message = "Vendosni çelësin në kompjuterin POS (Admin → Licenca). Terminalet shfaqen këtu pas aktivizimit.";
+  } else if (terminalSummary.over_limit && terminalSummary.in_grace) {
+    message = "Keni arritur limitin e terminaleve — periodë prove 24 orë. Kontaktoni Revolution Invest.";
+  } else if (terminalSummary.limit_reached) {
+    message = "Keni arritur limitin e terminaleve. Kontaktoni Revolution Invest për terminale shtesë.";
+  } else if (activated) {
+    message = "Licenca është aktive për pajisjet POS.";
+  }
 
   return {
     activated,
@@ -644,6 +729,16 @@ async function getOwnerLicenseView(clientId) {
     valid_until: primary.data_skadimit,
     last_activated_at: primary.last_activated_at,
     message,
+    terminals: terminalSummary.terminals,
+    active_terminal_count: terminalSummary.active_terminal_count,
+    max_terminals: terminalSummary.max_terminals,
+    terminal_limit_reached: terminalSummary.limit_reached,
+    terminal_over_limit: terminalSummary.over_limit,
+    terminal_in_grace: terminalSummary.in_grace,
+    terminal_grace_until: terminalSummary.grace_until,
+    base_price: terminalSummary.base_price,
+    terminal_price: terminalSummary.terminal_price,
+    total_price: terminalSummary.total_price,
   };
 }
 
@@ -663,12 +758,19 @@ async function getDashboardStats() {
     db.from("licenses").select("id, statusi"),
   ]);
   const lic = licenses.data || [];
+  let terminal_limit_clients = 0;
+  try {
+    terminal_limit_clients = await countLicensesOverTerminalLimit();
+  } catch {
+    terminal_limit_clients = 0;
+  }
   return {
     clients_total: clients.count || 0,
     licenses_total: lic.length,
     licenses_active: lic.filter(l => l.statusi === "aktive").length,
     licenses_expired: lic.filter(l => l.statusi === "skaduar").length,
     licenses_revoked: lic.filter(l => l.statusi === "revokuar").length,
+    terminal_limit_clients,
   };
 }
 
@@ -700,4 +802,5 @@ module.exports = {
   listLicensesForClient,
   getOwnerLicenseView,
   verifyOwnerLicenseKey,
+  calcLicenseTotalPrice,
 };

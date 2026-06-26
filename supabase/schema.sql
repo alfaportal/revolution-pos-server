@@ -39,8 +39,23 @@ CREATE TABLE IF NOT EXISTS licenses (
                   CHECK (statusi IN ('aktive', 'skaduar', 'revokuar', 'pezulluar')),
   data_fillimit   DATE NOT NULL DEFAULT CURRENT_DATE,
   data_skadimit   DATE NOT NULL,
+  max_terminals   INTEGER NOT NULL DEFAULT 1,
+  terminal_price  NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  base_price      NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  terminal_limit_grace_at TIMESTAMPTZ,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS license_terminals (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  license_id         UUID NOT NULL REFERENCES licenses(id) ON DELETE CASCADE,
+  device_id          TEXT NOT NULL,
+  device_hostname    TEXT NOT NULL DEFAULT '',
+  last_ip            TEXT NOT NULL DEFAULT '',
+  first_activated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (license_id, device_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_licenses_client ON licenses (client_id);

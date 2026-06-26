@@ -120,7 +120,7 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Klienti</th><th>App</th><th>Kodi</th><th>ID Pajisjes</th><th>Kompjuteri</th><th>Aktivizuar</th><th>IP</th><th>Statusi</th><th>Nga</th><th>Deri</th><th class="col-actions">Veprime</th>
+                  <th>Klienti</th><th>App</th><th>Kodi</th><th>ID Pajisjes</th><th>Kompjuteri</th><th>Aktivizuar</th><th>IP</th><th>Terminale</th><th>Statusi</th><th>Nga</th><th>Deri</th><th class="col-actions">Veprime</th>
                 </tr>
               </thead>
               <tbody id="tbl-licenses"></tbody>
@@ -222,6 +222,28 @@
                 <input type="text" id="c-device-id" class="mono" placeholder="Nga ekrani POS — ose lëreni bosh" autocomplete="off" autocapitalize="characters">
               </div>
             </div>
+            <div class="form-row">
+              <div>
+                <label for="c-max-terminals">Nr. terminaleve</label>
+                <select id="c-max-terminals" name="max_terminals">
+                  <option value="1" selected>1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="99">5+</option>
+                </select>
+              </div>
+              <div>
+                <label for="c-base-price">Çmimi bazë (€)</label>
+                <input type="number" id="c-base-price" name="base_price" min="0" step="0.01" value="0">
+              </div>
+              <div>
+                <label for="c-terminal-price">Çmimi shtesë/terminal (€)</label>
+                <input type="number" id="c-terminal-price" name="terminal_price" min="0" step="0.01" value="0">
+              </div>
+            </div>
+            <p class="field-hint license-price-total" id="c-price-total">Totali: 0.00€ (bazë + 0 × terminal)</p>
 
             <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
             <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
