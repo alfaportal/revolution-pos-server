@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   receipt_number  TEXT DEFAULT '',
   payment_status  TEXT NOT NULL DEFAULT 'pending'
                   CHECK (payment_status IN ('pending', 'paid', 'manual', 'failed', 'refunded')),
+  payment_method  TEXT NOT NULL DEFAULT 'cash',
   paid_at         TIMESTAMPTZ,
   fiscal_receipt_id UUID,
   status          TEXT NOT NULL DEFAULT 'closed'

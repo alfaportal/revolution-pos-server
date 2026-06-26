@@ -136,8 +136,11 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   if (error) {
     const msg = String(error.message || error.details || error.hint || "Gabim në ruajtjen e porosisë.");
-    if (/waiter_id|schema cache/i.test(msg)) {
+    if (/waiter_id/i.test(msg) && /column|schema cache/i.test(msg)) {
       throw new Error("Mungon migrimi i bazës së të dhënave (014_waiter_pin.sql). Ekzekutojeni në Supabase.");
+    }
+    if (/payment_method/i.test(msg) && /column|schema cache/i.test(msg)) {
+      throw new Error("Mungon kolona payment_method te sales_orders. Ekzekutoni supabase/migrations/020_sales_payment_method.sql në Supabase.");
     }
     throw new Error(msg);
   }
