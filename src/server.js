@@ -28,6 +28,7 @@ const { apiRouter: publicApiRouter, manifestHandler, serviceWorkerHandler } = re
 const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
+const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { adminPanelPath } = require("./lib/admin-path");
 
 const pkg = require("../package.json");
@@ -159,6 +160,7 @@ async function start() {
   }
 
   startLicenseExpiryCron();
+  startTrialNotificationCron();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);

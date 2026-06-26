@@ -137,6 +137,7 @@ let clientsCache = [];
 let licensesCache = [];
 let ownersCache = [];
 let packageTiersCache = [];
+let trialAlertsCache = [];
 let modalState = null;
 
 /** Fallback — same as src/lib/packages.js (used when tier cache is empty or stale). */
@@ -839,12 +840,79 @@ function bindTableActions(scope) {
 
 async function loadStats() {
   const s = await api("/api/admin/stats");
+  const expiring = Number(s.trials_expiring_soon) || 0;
   document.getElementById("stats").innerHTML = `
     <div class="stat"><div class="val">${s.clients_total}</div><div class="lbl">Klientë</div></div>
     <div class="stat"><div class="val">${s.licenses_total}</div><div class="lbl">Liçensa</div></div>
     <div class="stat"><div class="val">${s.licenses_active}</div><div class="lbl">Aktive</div></div>
+    <div class="stat${expiring ? " stat-warn" : ""}"><div class="val">${expiring}</div><div class="lbl">Trial skadon (7 ditë)</div></div>
     <div class="stat"><div class="val">${s.licenses_expired}</div><div class="lbl">Skaduar</div></div>
     <div class="stat"><div class="val">${s.licenses_revoked}</div><div class="lbl">Revokuar</div></div>`;
+}
+
+function trialAlertForClient(clientId) {
+  return trialAlertsCache.find(a => a.client_id === clientId);
+}
+
+function trialBadgeHtml(clientId) {
+  const alert = trialAlertForClient(clientId);
+  if (!alert) return "";
+  if (alert.days_remaining <= 0) {
+    return ` <span class="badge badge-trial-expired">Trial skaduar</span>`;
+  }
+  const label = alert.days_remaining === 1
+    ? "Trial nesër"
+    : `Trial ${alert.days_remaining} ditë`;
+  return ` <span class="badge badge-trial-warning">${label}</span>`;
+}
+
+function renderTrialExpiryBanner() {
+  const el = document.getElementById("trial-expiry-banner");
+  const tabBadge = document.getElementById("tab-klientet-badge");
+  if (!el) return;
+
+  const alerts = trialAlertsCache.filter(a => a.days_remaining >= 0 && a.days_remaining <= 7);
+  if (!alerts.length) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    if (tabBadge) {
+      tabBadge.classList.add("hidden");
+      tabBadge.textContent = "";
+    }
+    return;
+  }
+
+  const items = alerts.slice(0, 8).map(a => {
+    const when = a.days_remaining === 0
+      ? "sot"
+      : a.days_remaining === 1
+        ? "nesër"
+        : `për ${a.days_remaining} ditë`;
+    return `<li><strong>${esc(a.client_name)}</strong> — ${esc(a.phone) || "—"} · ${esc(a.package_label)} · skadon ${esc(a.expiry_date)} (${when})</li>`;
+  }).join("");
+
+  const more = alerts.length > 8 ? `<p style="margin:0.5rem 0 0;font-size:0.85rem">+ ${alerts.length - 8} të tjerë…</p>` : "";
+
+  el.innerHTML = `
+    <strong>⚠️ Trial skadon së shpejti (${alerts.length} klientë)</strong>
+    <ul>${items}</ul>
+    ${more}`;
+  el.classList.remove("hidden");
+
+  if (tabBadge) {
+    tabBadge.textContent = String(alerts.length);
+    tabBadge.classList.remove("hidden");
+  }
+}
+
+async function loadTrialAlerts() {
+  try {
+    const { alerts } = await api("/api/admin/trial-alerts?days=7");
+    trialAlertsCache = alerts || [];
+  } catch {
+    trialAlertsCache = [];
+  }
+  renderTrialExpiryBanner();
 }
 
 function showAdminError(text) {
@@ -878,7 +946,7 @@ async function loadClients() {
   const tbl = document.getElementById("tbl-clients");
   tbl.innerHTML = clientsCache.length
     ? clientsCache.map(c => `<tr>
-        <td data-label="Emri"><strong>${esc(c.emri)}</strong></td>
+        <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}</td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
         <td data-label="Pakoja">${esc(packageTierLabel(c.package_tier))}</td>
         <td data-label="Telefoni">${esc(c.telefoni) || "—"}</td>
@@ -1292,6 +1360,7 @@ async function refreshAll() {
   showAdminError(null);
   try {
     await loadPackageTiers();
+    await loadTrialAlerts();
     await loadStats();
     await loadClients();
     await loadLicenses();

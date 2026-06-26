@@ -35,6 +35,10 @@ const {
 const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
+  listTrialExpiryAlerts,
+  countTrialExpiryAlerts,
+} = require("../services/trialNotificationService");
+const {
   listOwners,
   createOwner,
   updateOwner,
@@ -55,7 +59,20 @@ const router = express.Router();
 router.use(authRequired, superAdminOnly);
 
 router.get("/stats", asyncHandler(async (_req, res) => {
-  res.json({ ok: true, ...(await getDashboardStats()) });
+  const stats = await getDashboardStats();
+  let trials_expiring_soon = 0;
+  try {
+    trials_expiring_soon = await countTrialExpiryAlerts(7);
+  } catch (e) {
+    console.warn("[admin] trial expiry count:", e.message);
+  }
+  res.json({ ok: true, ...stats, trials_expiring_soon });
+}));
+
+router.get("/trial-alerts", asyncHandler(async (req, res) => {
+  const withinDays = Number(req.query.days) || 7;
+  const alerts = await listTrialExpiryAlerts({ withinDays });
+  res.json({ ok: true, alerts, count: alerts.length });
 }));
 
 router.get("/package-tiers", (_req, res) => {

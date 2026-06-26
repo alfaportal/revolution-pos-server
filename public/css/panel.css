@@ -210,6 +210,46 @@ th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: 
 .badge-revokuar { background: #44403c; color: #d6d3d1; }
 .badge-pezulluar { background: #78350f; color: #fcd34d; }
 .badge-pending { background: #1e3a5f; color: #93c5fd; }
+.badge-trial-warning { background: #78350f; color: #fcd34d; }
+.badge-trial-expired { background: #7f1d1d; color: #fca5a5; }
+
+.trial-expiry-banner {
+  margin: 0 1.5rem 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.trial-expiry-banner strong { color: #fde68a; }
+
+.trial-expiry-banner ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.trial-expiry-banner li { margin-bottom: 0.25rem; }
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: #b45309;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.stat.stat-warn .val { color: #fcd34d; }
 
 .qr-modal-card {
   position: relative;

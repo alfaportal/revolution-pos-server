@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=22">
+  <link rel="stylesheet" href="/css/panel.css?v=23">
 </head>
 <body>
   <script>
@@ -57,10 +57,11 @@
 
     <div class="container">
       <div id="admin-load-error" class="alert alert-error hidden" style="margin:0 1.5rem 1rem"></div>
+      <div id="trial-expiry-banner" class="trial-expiry-banner hidden" role="alert"></div>
       <div class="stats" id="stats"></div>
 
       <div class="tabs">
-        <button class="tab active" data-tab="klientet">Klientët</button>
+        <button class="tab active" data-tab="klientet" id="tab-klientet">Klientët <span id="tab-klientet-badge" class="tab-badge hidden"></span></button>
         <button class="tab" data-tab="licensat">Liçensat</button>
         <button class="tab" data-tab="pronaret">Pronarët</button>
         <button class="tab" data-tab="logu">Log aktiviteti</button>
@@ -398,6 +399,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=30"></script>
+  <script src="/js/panel.js?v=31"></script>
 </body>
 </html>

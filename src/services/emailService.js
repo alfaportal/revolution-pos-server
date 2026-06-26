@@ -67,6 +67,127 @@ async function sendOwnerPasswordResetEmail({ to, code }) {
   return deliverEmail({ to, subject, text, html });
 }
 
+function resolveSupportPhone() {
+  return (
+    process.env.TRIAL_SUPPORT_PHONE?.trim() ||
+    process.env.SUPPORT_PHONE?.trim() ||
+    "+383 44 123 456"
+  );
+}
+
+function resolveAdminNotifyEmail() {
+  return (
+    process.env.ADMIN_NOTIFY_EMAIL?.trim() ||
+    process.env.SUPER_ADMIN_NOTIFY_EMAIL?.trim() ||
+    "novelto22@gmail.com"
+  ).toLowerCase();
+}
+
+async function sendTrialExpiry7DayEmail({ to, clientName, expiryDate }) {
+  const subject = "Pakoja juaj skadon së shpejti — Revolution Invest POS";
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Pakoja juaj skadon më ${expiryDate}. Kontaktoni Revolution Invest POS për të vazhduar.`,
+    "",
+    `Telefon: ${resolveSupportPhone()}`,
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${clientName}</strong>,` : "Përshëndetje,"}</p>
+    <p>Pakoja juaj skadon më <strong>${expiryDate}</strong>.</p>
+    <p>Kontaktoni <strong>Revolution Invest POS</strong> për të vazhduar shërbimin.</p>
+    <p style="margin-top:16px">Telefon: <strong>${resolveSupportPhone()}</strong></p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendTrialExpiry1DayEmail({ to, clientName, expiryDate }) {
+  const subject = "Kujtesë: pakoja skadon nesër — Revolution Invest POS";
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Pakoja juaj skadon më ${expiryDate} (nesër). Kontaktoni Revolution Invest POS për të vazhduar.`,
+    "",
+    `Telefon: ${resolveSupportPhone()}`,
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${clientName}</strong>,` : "Përshëndetje,"}</p>
+    <p><strong>Kujtesë:</strong> pakoja juaj skadon më <strong>${expiryDate}</strong> (nesër).</p>
+    <p>Kontaktoni <strong>Revolution Invest POS</strong> për të vazhduar.</p>
+    <p style="margin-top:16px">Telefon: <strong>${resolveSupportPhone()}</strong></p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendTrialExpiredEmail({ to, clientName }) {
+  const phone = resolveSupportPhone();
+  const subject = "Pakoja juaj ka skaduar — Revolution Invest POS";
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Pakoja juaj ka skaduar. Kontaktoni ${phone}`,
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${clientName}</strong>,` : "Përshëndetje,"}</p>
+    <p>Pakoja juaj <strong>ka skaduar</strong>.</p>
+    <p>Kontaktoni <strong>${phone}</strong> për të riaktivizuar shërbimin.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+function escapeHtmlEmail(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendAdminTrialExpiryAlertEmail({ clients }) {
+  const to = resolveAdminNotifyEmail();
+  const rows = (clients || []).map(c => `
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #334155">${escapeHtmlEmail(c.client_name) || "—"}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #334155">${escapeHtmlEmail(c.phone) || "—"}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #334155">${escapeHtmlEmail(c.package_label) || "—"}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #334155">${escapeHtmlEmail(c.expiry_date) || "—"}</td>
+    </tr>`).join("");
+
+  const textLines = (clients || []).map(c =>
+    `- ${c.client_name} | ${c.phone || "—"} | ${c.package_label} | skadon ${c.expiry_date}`,
+  );
+
+  const subject = `Trial skadon së shpejti — ${clients.length} klient(ë)`;
+  const text = [
+    "Klientët me trial që skadon për 7 ditë:",
+    "",
+    ...textLines,
+  ].join("\n");
+
+  const html = `
+    <p>Klientët me <strong>trial që skadon për 7 ditë</strong>:</p>
+    <table style="border-collapse:collapse;width:100%;max-width:640px;font-size:14px">
+      <thead>
+        <tr style="background:#1e293b;color:#e2e8f0">
+          <th style="padding:8px;text-align:left">Klienti</th>
+          <th style="padding:8px;text-align:left">Telefoni</th>
+          <th style="padding:8px;text-align:left">Pakoja</th>
+          <th style="padding:8px;text-align:left">Skadimi</th>
+        </tr>
+      </thead>
+      <tbody>${rows || "<tr><td colspan=\"4\">—</td></tr>"}</tbody>
+    </table>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 async function sendOwnerInviteEmail({ to, emri, clientName, inviteUrl }) {
   const subject = "Ftesë — Paneli i pronarit Revolution POS";
   const text = [
@@ -92,6 +213,12 @@ async function sendOwnerInviteEmail({ to, emri, clientName, inviteUrl }) {
 
 module.exports = {
   isEmailConfigured,
+  resolveSupportPhone,
+  resolveAdminNotifyEmail,
   sendOwnerPasswordResetEmail,
   sendOwnerInviteEmail,
+  sendTrialExpiry7DayEmail,
+  sendTrialExpiry1DayEmail,
+  sendTrialExpiredEmail,
+  sendAdminTrialExpiryAlertEmail,
 };
