@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
-const { generateKitchenKey, generateKitchenSlug } = require("../lib/kitchenAccess");
+const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
 const { isLicenseUsable } = require("../lib/licenseEnforcement");
 const { seedPosSettingsForClient, syncPosSettingsFromClient } = require("./receiptService");
@@ -300,11 +300,28 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   const warning = Boolean(terminalAccess.warning);
   const message = warning ? terminalAccess.message : "Liçenca është aktive.";
 
+  let kitchenSlug = license.clients?.kitchen_slug || "";
+  let kitchenKey = license.clients?.kitchen_key || "";
+  if (license.client_id) {
+    try {
+      const client = await ensureKitchenCredentials(
+        license.clients || { id: license.client_id, emri: license.clients?.emri || "" },
+      );
+      kitchenSlug = client?.kitchen_slug || kitchenSlug;
+      kitchenKey = client?.kitchen_key || kitchenKey;
+    } catch (e) {
+      logRouteError("validateLicense.ensureKitchenCredentials", e);
+    }
+  }
+
   return {
     valid: true,
     license_id: license.id,
     client_id: license.client_id,
     client_name: license.clients?.emri || "",
+    kitchen_slug: kitchenSlug,
+    kitchen_key: kitchenKey,
+    package_tier: normalizePackageTier(license.clients?.package_tier),
     client_type: licenseAppType(license),
     device_id: license.device_id,
     device_hostname: license.device_hostname || host,
