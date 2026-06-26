@@ -137,8 +137,8 @@
       .replace(/"/g, "&quot;");
   }
 
-  function googleMapsUrl(address, name) {
-    const query = [name, address].filter(Boolean).join(", ").trim();
+  function googleMapsUrl(address) {
+    const query = String(address || "").trim();
     if (!query) return "";
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
   }
@@ -169,9 +169,11 @@
     if (data.address) {
       document.getElementById("info-address").hidden = false;
       const addrEl = document.getElementById("val-address");
-      const mapsUrl = googleMapsUrl(data.address, data.name);
+      const mapsUrl = googleMapsUrl(data.address);
       addrEl.textContent = data.address;
-      addrEl.href = mapsUrl || "#";
+      addrEl.href = mapsUrl;
+      addrEl.target = "_blank";
+      addrEl.rel = "noopener noreferrer";
       addrEl.setAttribute("aria-label", `Hap ${data.address} në Google Maps`);
     }
 
@@ -189,8 +191,8 @@
     const orderBar = document.getElementById("order-bar");
     const orderBtn = document.getElementById("btn-order");
     if (orderBar && orderBtn) {
-      if (data.kiosk_url) {
-        orderBtn.href = data.kiosk_url;
+      if (data.order_url) {
+        orderBtn.href = data.order_url;
         orderBar.hidden = false;
       } else {
         orderBtn.removeAttribute("href");

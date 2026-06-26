@@ -80,16 +80,24 @@
     const html = orders.map(o => {
       const isNew = !knownIds.has(o.id);
       const device = String(o.device_id || "").toUpperCase();
-      const src = device === "WEB-KIOSK"
-        ? { icon: "🪑", label: "Tavolinë" }
-        : device === "WEB-WAITER"
-          ? { icon: "📱", label: "Kamarier" }
-          : null;
+      let src = null;
+      let tableText = `T${o.table_number || "?"}`;
+      if (device === "WEB-PUBLIC") {
+        const w = String(o.waiter_name || "").toLowerCase();
+        src = w.startsWith("delivery")
+          ? { icon: "🛵", label: "Delivery" }
+          : { icon: "🥡", label: "Takeaway" };
+        tableText = src.label;
+      } else if (device === "WEB-KIOSK") {
+        src = { icon: "🪑", label: "Tavolinë" };
+      } else if (device === "WEB-WAITER") {
+        src = { icon: "📱", label: "Kamarier" };
+      }
       const items = (o.items_json || []).map(renderOrderItem).join("");
       return `
         <article class="order-ticket${isNew ? " new" : ""}" data-id="${o.id}">
           <div class="ticket-head">
-            <div class="ticket-table">T${o.table_number || "?"}</div>
+            <div class="ticket-table">${escapeHtml(tableText)}</div>
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
           ${src ? `<div class="ticket-waiter">${src.icon} ${src.label} · 👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>` : `<div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>`}

@@ -24,9 +24,25 @@
 
   function sourceMeta(order) {
     const device = String(order.device_id || "").toUpperCase();
+    if (device === "WEB-PUBLIC") {
+      const w = String(order.waiter_name || "").toLowerCase();
+      if (w.startsWith("delivery")) return { icon: "🛵", label: "Delivery" };
+      return { icon: "🥡", label: "Takeaway" };
+    }
     if (device === "WEB-KIOSK") return { icon: "🪑", label: "Tavolinë" };
     if (device === "WEB-WAITER") return { icon: "📱", label: "Kamarier" };
     return { icon: "🖥️", label: "POS" };
+  }
+
+  function tableLabel(order) {
+    const device = String(order.device_id || "").toUpperCase();
+    if (device === "WEB-PUBLIC") {
+      const w = String(order.waiter_name || "").toLowerCase();
+      if (w.startsWith("delivery")) return "Delivery";
+      if (w.startsWith("takeaway")) return "Takeaway";
+      return "Online";
+    }
+    return `T${order.table_number || "?"}`;
   }
 
   function showError(msg) {
@@ -101,7 +117,7 @@
           <div class="ticket-kind">Porosi — jo faturë</div>
           <div class="ticket-source">${src.icon} ${src.label}</div>
           <div class="ticket-head">
-            <div class="ticket-table">T${o.table_number || "?"}</div>
+            <div class="ticket-table">${escapeHtml(tableLabel(o))}</div>
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
           <div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getSupabase } = require("../db");
-const { getClientBySlugOrId, ensureKitchenCredentials, buildKitchenUrl } = require("../lib/kitchenAccess");
+const { getClientBySlugOrId, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { getClientMenuCatalog } = require("./menuCatalogService");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
 
@@ -101,9 +101,10 @@ async function getPublicRestaurantPage(slug, baseUrl) {
   const creds = await ensureKitchenCredentials(client);
   const pageSlug = creds.kitchen_slug || client.id;
 
-  let kiosk_url = null;
-  if (clientHasFeature(client, "kiosk")) {
-    kiosk_url = `${buildKitchenUrl(baseUrl, creds, "kiosk")}&table=1`;
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  let order_url = null;
+  if (clientHasFeature(client, "kiosk") || clientHasFeature(client, "kds")) {
+    order_url = `${base}/r/${encodeURIComponent(pageSlug)}/order`;
   }
 
   const name = String(settings?.restaurant_name || client.emri || "Restorant").trim();
@@ -121,8 +122,8 @@ async function getPublicRestaurantPage(slug, baseUrl) {
     theme_color: String(settings?.public_theme_color || "#c2410c").trim(),
     categories: menuData.categories,
     menu: menuData.menu,
-    kiosk_url,
-    public_url: `${String(baseUrl || "").replace(/\/+$/, "")}/r/${encodeURIComponent(pageSlug)}`,
+    order_url,
+    public_url: `${base}/r/${encodeURIComponent(pageSlug)}`,
   };
 }
 
@@ -234,11 +235,13 @@ function buildServiceWorkerScript(slug) {
   const encSlug = encodeURIComponent(slug);
   const scope = `/r/${encSlug}/`;
   return `/* PWA — ${scope} */
-const CACHE = "ri-restaurant-${encSlug}-v3";
+const CACHE = "ri-restaurant-${encSlug}-v4";
 const PRECACHE = [
   "/r/${encSlug}",
+  "/r/${encSlug}/order",
   "/css/r.css",
   "/js/r.js",
+  "/js/r-order.js",
   "/icons/icon-192.png",
 ];
 
@@ -264,7 +267,8 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   if (!url.pathname.startsWith("/r/") && !url.pathname.startsWith("/css/r.css")
-      && !url.pathname.startsWith("/js/r.js") && !url.pathname.startsWith("/icons/")) {
+      && !url.pathname.startsWith("/js/r.js") && !url.pathname.startsWith("/js/r-order.js")
+      && !url.pathname.startsWith("/icons/")) {
     return;
   }
   e.respondWith(

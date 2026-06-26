@@ -7,6 +7,7 @@ const {
   buildServiceWorkerScript,
   getLogoResponse,
 } = require("../services/publicPageService");
+const { submitPublicOrder } = require("../services/publicOrderService");
 
 const router = express.Router();
 
@@ -26,6 +27,18 @@ router.get("/:slug", resolvePublicClient, asyncHandler(async (req, res) => {
       return res.status(403).json({ ok: false, gabim: e.message, code: "PACKAGE" });
     }
     throw e;
+  }
+}));
+
+router.post("/:slug/order", resolvePublicClient, asyncHandler(async (req, res) => {
+  try {
+    const result = await submitPublicOrder(req.publicClient, req.body);
+    res.json(result);
+  } catch (e) {
+    if (e.code === "PACKAGE") {
+      return res.status(403).json({ ok: false, gabim: e.message, code: "PACKAGE" });
+    }
+    res.status(400).json({ ok: false, gabim: e.message || "Porosia nuk u dërgua." });
   }
 }));
 

@@ -117,6 +117,9 @@ app.get("/waiter/:slug", (_req, res) => {
 
 app.get("/r/:slug/manifest.json", manifestHandler);
 app.get("/r/:slug/sw.js", resolvePublicClient, serviceWorkerHandler);
+app.get("/r/:slug/order", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/r-order.html"));
+});
 app.get("/r/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/r.html"));
 });
@@ -164,6 +167,7 @@ async function start() {
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
     console.log(`  🪑 Tavolinë:    /kiosk/:slug?key=...&table=5`);
     console.log(`  🍽️  Restorant:   /r/:slug`);
+    console.log(`  🛵 Porosi web:  /r/:slug/order`);
     console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
