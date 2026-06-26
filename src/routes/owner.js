@@ -25,6 +25,7 @@ const {
   addMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  getOwnerMenuItemPhoto,
 } = require("../services/menuService");
 const {
   listVenue,
@@ -265,6 +266,19 @@ router.post("/menu", async (req, res) => {
     res.status(201).json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/menu/:id/photo", async (req, res) => {
+  try {
+    const photo = await getOwnerMenuItemPhoto(req.user.client_id, req.params.id);
+    if (!photo) {
+      return res.status(404).type("text/plain").send("Not found");
+    }
+    res.setHeader("Cache-Control", "private, max-age=300");
+    res.type(photo.mime).send(photo.buffer);
+  } catch (e) {
+    res.status(400).type("text/plain").send(e.message);
   }
 });
 

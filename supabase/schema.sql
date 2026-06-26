@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS pos_menu_items (
   category    TEXT NOT NULL DEFAULT '',
   price       NUMERIC(12, 2) NOT NULL DEFAULT 0,
   active      BOOLEAN NOT NULL DEFAULT true,
+  photo       TEXT NOT NULL DEFAULT '',
   UNIQUE (client_id, local_id)
 );
 

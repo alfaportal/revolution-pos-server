@@ -108,11 +108,21 @@
 
     wrap.innerHTML = cats.map(cat => {
       const items = (menu || []).filter(i => i.category === cat);
-      const rows = items.map(it => `
-        <div class="menu-item">
-          <div class="menu-item-name">${escapeHtml(it.name)}</div>
-          <div class="menu-item-price">${euro(it.price)}</div>
-        </div>`).join("");
+      const rows = items.map(it => {
+        const thumb = it.photo_url
+          ? `<button type="button" class="menu-item-photo-btn" data-photo="${escapeAttr(it.photo_url)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
+              <img class="menu-item-photo" src="${escapeAttr(it.photo_url)}" alt="" loading="lazy" width="80" height="80">
+            </button>`
+          : "";
+        return `
+        <div class="menu-item${it.photo_url ? " has-photo" : ""}">
+          ${thumb}
+          <div class="menu-item-body">
+            <div class="menu-item-name">${escapeHtml(it.name)}</div>
+            <div class="menu-item-price">${euro(it.price)}</div>
+          </div>
+        </div>`;
+      }).join("");
       return `
         <div class="menu-cat-block" id="cat-${encodeURIComponent(cat)}">
           <h3 class="menu-cat-title">${escapeHtml(cat)}</h3>
@@ -127,6 +137,48 @@
         const id = `cat-${btn.dataset.cat}`;
         document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
+    });
+
+    bindMenuPhotoLightbox();
+  }
+
+  function escapeAttr(s) {
+    return String(s ?? "").replace(/"/g, "&quot;");
+  }
+
+  function bindMenuPhotoLightbox() {
+    const box = document.getElementById("menu-photo-lightbox");
+    const img = document.getElementById("menu-photo-lightbox-img");
+    const caption = document.getElementById("menu-photo-lightbox-caption");
+    const closeBtn = document.getElementById("menu-photo-close");
+    if (!box || !img) return;
+
+    const close = () => {
+      box.classList.add("hidden");
+      img.removeAttribute("src");
+      if (caption) caption.textContent = "";
+      document.body.classList.remove("menu-lightbox-open");
+    };
+
+    document.querySelectorAll(".menu-item-photo-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const url = btn.getAttribute("data-photo") || "";
+        const name = btn.getAttribute("data-name") || "";
+        if (!url) return;
+        img.src = url;
+        img.alt = name;
+        if (caption) caption.textContent = name;
+        box.classList.remove("hidden");
+        document.body.classList.add("menu-lightbox-open");
+      });
+    });
+
+    closeBtn?.addEventListener("click", close);
+    box.addEventListener("click", (e) => {
+      if (e.target === box) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !box.classList.contains("hidden")) close();
     });
   }
 

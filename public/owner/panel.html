@@ -142,13 +142,13 @@
       </div>
       <div class="card">
         <div class="card-title">Lista e menusë</div>
-        <p class="links-hint">Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>. Artikujt joaktivë nuk shfaqen te kamarieri / tavolina.</p>
+        <p class="links-hint">Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>. Ngarkoni foto (PNG/JPG, max 500 KB) për çdo artikull — shfaqen në faqen publike.</p>
         <p id="menu-sync-hint" class="links-hint" style="margin-top:0"></p>
         <div class="overflow-x">
           <table class="menu-owner-table">
             <thead>
               <tr>
-                <th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>Statusi</th><th class="col-actions">Veprime</th>
+                <th>Foto</th><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>Statusi</th><th class="col-actions">Veprime</th>
               </tr>
             </thead>
             <tbody id="menu-items-body"></tbody>
@@ -273,9 +273,10 @@
               <div id="public-logo-placeholder" class="public-logo-placeholder">Logo</div>
             </div>
             <div class="public-logo-actions">
-              <label class="btn btn-ghost btn-sm" for="public-logo-input">Ngarko logo</label>
-              <input type="file" id="public-logo-input" accept="image/png,image/jpeg,image/webp" hidden>
+              <label class="btn btn-primary btn-sm" for="public-logo-input">Ngarko logo</label>
+              <input type="file" id="public-logo-input" accept="image/png,image/jpeg,image/jpg" hidden>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-public-logo-remove">Hiq logon</button>
+              <p class="public-logo-hint">PNG ose JPG, max 500 KB. Shfaqet në faqen publike dhe si ikonë PWA.</p>
             </div>
           </div>
           <div class="hub-fiscal-field">

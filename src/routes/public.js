@@ -6,6 +6,7 @@ const {
   buildManifest,
   buildServiceWorkerScript,
   getLogoResponse,
+  getMenuItemPhotoResponse,
 } = require("../services/publicPageService");
 const { submitPublicOrder } = require("../services/publicOrderService");
 
@@ -40,6 +41,15 @@ router.post("/:slug/order", resolvePublicClient, asyncHandler(async (req, res) =
     }
     res.status(400).json({ ok: false, gabim: e.message || "Porosia nuk u dërgua." });
   }
+}));
+
+router.get("/:slug/menu/:itemId/photo", resolvePublicClient, asyncHandler(async (req, res) => {
+  const photo = await getMenuItemPhotoResponse(req.params.slug, req.params.itemId);
+  if (!photo) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.type(photo.mime).send(photo.buffer);
 }));
 
 router.get("/:slug/logo", resolvePublicClient, asyncHandler(async (req, res) => {

@@ -69,18 +69,31 @@ async function syncCatalogFromPosSupabase(license, body) {
   }
 
   const menuItems = Array.isArray(body.menu_items) ? body.menu_items : [];
+  const { data: existingMenu } = await db
+    .from("pos_menu_items")
+    .select("local_id, photo")
+    .eq("client_id", clientId);
+  const photoByLocalId = new Map(
+    (existingMenu || [])
+      .filter(row => String(row.photo || "").trim())
+      .map(row => [Number(row.local_id), row.photo]),
+  );
   await db.from("pos_menu_items").delete().eq("client_id", clientId);
   let menuCount = 0;
   if (menuItems.length) {
     const menuRows = menuItems
-      .map((m, i) => ({
-        client_id: clientId,
-        local_id: Number(m.local_id ?? m.id ?? i + 1) || i + 1,
-        name: String(m.name || m.emri || "").trim(),
-        category: String(m.category || m.kategoria || "").trim(),
-        price: Number(m.price ?? m.cmimi ?? 0) || 0,
-        active: m.active !== false && m.active !== 0,
-      }))
+      .map((m, i) => {
+        const localId = Number(m.local_id ?? m.id ?? i + 1) || i + 1;
+        return {
+          client_id: clientId,
+          local_id: localId,
+          name: String(m.name || m.emri || "").trim(),
+          category: String(m.category || m.kategoria || "").trim(),
+          price: Number(m.price ?? m.cmimi ?? 0) || 0,
+          active: m.active !== false && m.active !== 0,
+          photo: photoByLocalId.get(localId) || "",
+        };
+      })
       .filter(m => m.name);
     menuCount = menuRows.length;
     if (menuRows.length) {
@@ -167,6 +180,16 @@ async function syncCatalogFromPosTransactional(license, body) {
     .filter(s => s.name);
 
   return withPgTransaction(async client => {
+    const { rows: existingMenuRows } = await client.query(
+      `SELECT local_id, photo FROM pos_menu_items WHERE client_id = $1`,
+      [clientId],
+    );
+    const photoByLocalId = new Map(
+      (existingMenuRows || [])
+        .filter(row => String(row.photo || "").trim())
+        .map(row => [Number(row.local_id), row.photo]),
+    );
+
     await client.query(
       `INSERT INTO pos_settings (client_id, restaurant_name, address, phone, nui, tvsh_nr, receipt_width_mm, table_count, synced_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -212,10 +235,11 @@ async function syncCatalogFromPosTransactional(license, body) {
 
     await client.query(`DELETE FROM pos_menu_items WHERE client_id = $1`, [clientId]);
     for (const m of menuRows) {
+      const photo = photoByLocalId.get(m.local_id) || "";
       await client.query(
-        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [clientId, m.local_id, m.name, m.category, m.price, m.active],
+        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active, photo)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [clientId, m.local_id, m.name, m.category, m.price, m.active, photo],
       );
     }
 

@@ -23,6 +23,7 @@ function mapMenuItemForWeb(row) {
     name: row.name,
     category: String(row.category || "").trim(),
     price: Number(row.price),
+    has_photo: Boolean(String(row.photo || "").trim()),
   };
 }
 
@@ -40,7 +41,7 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
   const db = getSupabase();
   let menuQuery = db
     .from("pos_menu_items")
-    .select("local_id, name, category, price, active")
+    .select("local_id, name, category, price, active, photo")
     .eq("client_id", clientId)
     .order("category")
     .order("name");

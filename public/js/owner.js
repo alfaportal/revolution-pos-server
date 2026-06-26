@@ -605,12 +605,23 @@ function renderMenuTable() {
   if (!body) return;
   const items = ownerMenuCache.items || [];
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
     return;
   }
 
   body.innerHTML = items.map(item => {
+    const photoCell = item.has_photo
+      ? `<img class="menu-photo-thumb" src="/api/owner/menu/${item.id}/photo" alt="">`
+      : `<div class="menu-photo-placeholder">📷</div>`;
     return `<tr class="${item.active ? "" : "inactive-row"}" data-id="${item.id}">
+      <td class="menu-photo-cell">
+        ${photoCell}
+        <div class="menu-photo-actions">
+          <label class="btn btn-ghost btn-sm menu-photo-upload" for="menu-photo-${item.id}">Foto</label>
+          <input type="file" id="menu-photo-${item.id}" class="menu-photo-input" accept="image/png,image/jpeg,image/jpg" hidden data-id="${item.id}">
+          ${item.has_photo ? `<button type="button" class="btn btn-ghost btn-sm btn-menu-photo-remove" data-id="${item.id}">Hiq</button>` : ""}
+        </div>
+      </td>
       <td><input type="text" class="menu-edit-name" value="${escAttr(item.name)}"></td>
       <td>
         <input type="text" class="menu-edit-category" list="menu-category-list" value="${escAttr(item.category)}">
@@ -636,6 +647,65 @@ function renderMenuTable() {
   body.querySelectorAll(".btn-menu-delete").forEach(btn => {
     btn.addEventListener("click", () => deleteMenuRow(btn.closest("tr")));
   });
+  body.querySelectorAll(".menu-photo-input").forEach(input => {
+    input.addEventListener("change", () => uploadMenuPhoto(input));
+  });
+  body.querySelectorAll(".btn-menu-photo-remove").forEach(btn => {
+    btn.addEventListener("click", () => removeMenuPhoto(btn.dataset.id));
+  });
+}
+
+async function readImageFile(file, maxBytes, label) {
+  if (!file) return null;
+  if (file.size > maxBytes) {
+    throw new Error(`${label} max ${Math.round(maxBytes / 1024)} KB.`);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Nuk u lexua skedari."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadMenuPhoto(input) {
+  const id = input.dataset.id;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!id || !file) return;
+  try {
+    setMenuMsg("");
+    const photo = await readImageFile(file, 512_000, "Fotoja");
+    const { item, synced_at } = await api(`/api/owner/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ photo }),
+    });
+    const idx = ownerMenuCache.items.findIndex(i => i.id === id);
+    if (idx >= 0) ownerMenuCache.items[idx] = item;
+    renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
+    setMenuMsg("Fotoja u ruajt — shfaqet në faqen publike.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
+  }
+}
+
+async function removeMenuPhoto(id) {
+  if (!id) return;
+  try {
+    setMenuMsg("");
+    const { item, synced_at } = await api(`/api/owner/menu/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ photo: "" }),
+    });
+    const idx = ownerMenuCache.items.findIndex(i => i.id === id);
+    if (idx >= 0) ownerMenuCache.items[idx] = item;
+    renderMenuTable();
+    updateOwnerMenuSyncHint(synced_at);
+    setMenuMsg("Fotoja u hoq.", true);
+  } catch (err) {
+    setMenuMsg(err.message, false);
+  }
 }
 
 function escAttr(s) {
@@ -1300,8 +1370,8 @@ async function savePublicPage() {
 document.getElementById("public-logo-input")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  if (file.size > 280_000) {
-    setPublicPageMsg("Logo max ~250 KB.", false);
+  if (file.size > 512_000) {
+    setPublicPageMsg("Logo max 500 KB.", false);
     e.target.value = "";
     return;
   }

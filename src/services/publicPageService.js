@@ -16,7 +16,17 @@ const DAY_LABELS_SQ = {
   sun: "E diel",
 };
 
-const MAX_LOGO_CHARS = 450_000;
+const {
+  parseImageDataUrl,
+  validateImageDataUrl,
+  imageBufferFromDataUrl,
+  imageMimeFromDataUrl,
+} = require("../lib/imageDataUrl");
+
+const MAX_LOGO_BYTES = 512_000;
+const MAX_LOGO_CHARS = 700_000;
+const MAX_MENU_PHOTO_BYTES = 512_000;
+const MAX_MENU_PHOTO_CHARS = 700_000;
 
 function defaultHours() {
   const hours = {};
@@ -53,24 +63,15 @@ function formatHoursForDisplay(hours) {
 }
 
 function parseLogoDataUrl(raw) {
-  const s = String(raw || "").trim();
-  if (!s) return null;
-  const match = s.match(/^data:(image\/(?:png|jpeg|jpg|webp|gif));base64,(.+)$/i);
-  if (!match) return null;
-  try {
-    const buf = Buffer.from(match[2], "base64");
-    if (buf.length > 350_000) return null;
-    return { mime: match[1].toLowerCase(), buffer: buf };
-  } catch {
-    return null;
-  }
+  return parseImageDataUrl(raw, MAX_LOGO_BYTES);
 }
 
 function validateLogoInput(logo) {
-  if (logo == null || logo === "") return "";
-  const parsed = parseLogoDataUrl(logo);
-  if (!parsed) throw new Error("Logo duhet të jetë PNG/JPG/WebP (max ~250 KB).");
-  return String(logo).trim();
+  return validateImageDataUrl(logo, {
+    maxBytes: MAX_LOGO_BYTES,
+    maxChars: MAX_LOGO_CHARS,
+    label: "Logo",
+  });
 }
 
 async function loadSettings(clientId) {
@@ -127,7 +128,12 @@ async function getPublicRestaurantPage(slug, baseUrl) {
     logo_url: settings?.public_logo ? `/api/r/${encodeURIComponent(pageSlug)}/logo` : null,
     theme_color: String(settings?.public_theme_color || "#c2410c").trim(),
     categories: menuData.categories,
-    menu: menuData.menu,
+    menu: (menuData.menu || []).map(item => ({
+      ...item,
+      photo_url: item.has_photo
+        ? `/api/r/${encodeURIComponent(pageSlug)}/menu/${item.id}/photo`
+        : null,
+    })),
     order_url,
     public_url: `${base}/r/${encodeURIComponent(pageSlug)}`,
   };
@@ -309,6 +315,26 @@ function getDefaultIconBuffer(size) {
   return fs.readFileSync(iconPath);
 }
 
+async function getMenuItemPhotoResponse(slug, localId) {
+  const client = await getClientBySlugOrId(slug);
+  if (!client) return null;
+  const db = getSupabase();
+  const idNum = Number(localId);
+  if (!idNum) return null;
+  const { data, error } = await db
+    .from("pos_menu_items")
+    .select("photo")
+    .eq("client_id", client.id)
+    .eq("local_id", idNum)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw error;
+  const buffer = imageBufferFromDataUrl(data?.photo, MAX_MENU_PHOTO_BYTES);
+  const mime = imageMimeFromDataUrl(data?.photo, MAX_MENU_PHOTO_BYTES);
+  if (!buffer || !mime) return null;
+  return { buffer, mime };
+}
+
 async function getLogoResponse(slug, _size) {
   const client = await getClientBySlugOrId(slug);
   if (!client) return null;
@@ -332,4 +358,5 @@ module.exports = {
   buildManifest,
   buildServiceWorkerScript,
   getLogoResponse,
+  getMenuItemPhotoResponse,
 };

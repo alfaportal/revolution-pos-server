@@ -732,6 +732,52 @@
   gap: 0.35rem;
 }
 
+.public-logo-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.menu-photo-cell {
+  min-width: 7.5rem;
+  vertical-align: top;
+}
+
+.menu-photo-thumb {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+  background: #0b1220;
+  border: 1px solid var(--border);
+}
+
+.menu-photo-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-size: 1.35rem;
+}
+
+.menu-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.menu-photo-upload {
+  cursor: pointer;
+}
+
 .public-hours-grid {
   display: flex;
   flex-direction: column;
