@@ -159,12 +159,13 @@ async function loadPackageTiers() {
 }
 
 function packageTierLabel(id) {
-  const tier = packageTiersCache.find(t => t.id === id);
-  return tier?.label || id || "pako_1";
+  const tierId = normalizeTierId(id);
+  const tier = packageTiersCache.find(t => t.id === tierId);
+  return tier?.label || tierId || "pako_1";
 }
 
 function packageTierOptionsHtml(selected) {
-  const sel = selected || "pako_1";
+  const sel = normalizeTierId(selected || "pako_1");
   if (!packageTiersCache.length) {
     return ["pako_1", "pako_1_1", "pako_2", "pako_2_1"]
       .map(id => `<option value="${id}"${id === sel ? " selected" : ""}>${id}</option>`)
@@ -183,14 +184,18 @@ function populatePackageTierSelect(el, selected) {
 function readModalPackageTier(fd) {
   const el = document.getElementById("modal-package-tier");
   const value = (el?.value || fd.get("package_tier") || "").trim();
-  return value || "pako_1";
+  return normalizeTierId(value || "pako_1");
 }
 
 function mergeClientIntoCache(updatedClient) {
   if (!updatedClient?.id) return;
   const idx = clientsCache.findIndex(c => c.id === updatedClient.id);
+  const merged = {
+    ...updatedClient,
+    package_tier: normalizeTierId(updatedClient.package_tier),
+  };
   if (idx >= 0) {
-    clientsCache[idx] = { ...clientsCache[idx], ...updatedClient };
+    clientsCache[idx] = { ...clientsCache[idx], ...merged };
   }
 }
 
@@ -331,6 +336,7 @@ function openEditClient(id) {
       }),
     });
     mergeClientIntoCache(updatedClient);
+    if (hubClientId === id) fillHubLinks(id);
 
     const fiscalBody = {
       fiscal_nr: String(fd.get("fiscal_nr") ?? "").trim(),
@@ -386,7 +392,7 @@ function openEditClient(id) {
 
   populatePackageTierSelect(
     document.getElementById("modal-package-tier"),
-    c.package_tier || "pako_1",
+    normalizeTierId(c.package_tier || "pako_1"),
   );
 }
 
@@ -401,8 +407,6 @@ function clientAccessLink(client, kind, extraQuery = "") {
 function clientTierFeatures(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
   const tierId = normalizeTierId(c?.package_tier);
-  const fromCache = packageTiersCache.find(t => t.id === tierId);
-  if (fromCache?.features) return fromCache.features;
   return TIER_FEATURES[tierId] || TIER_FEATURES.pako_1;
 }
 
@@ -857,20 +861,23 @@ function showAdminError(text) {
 
 async function loadClients() {
   const { clients } = await api("/api/admin/clients");
-  clientsCache = clients;
+  clientsCache = (clients || []).map(c => ({
+    ...c,
+    package_tier: normalizeTierId(c.package_tier),
+  }));
   const lmSel = document.getElementById("lm-client");
-  const opts = clients.length
-    ? clients.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
+  const opts = clientsCache.length
+    ? clientsCache.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
     : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
   if (lmSel) {
-    lmSel.innerHTML = clients.length
+    lmSel.innerHTML = clientsCache.length
       ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + opts
       : '<option value="" disabled selected>— Shto klient së pari —</option>';
-    lmSel.disabled = !clients.length;
+    lmSel.disabled = !clientsCache.length;
   }
   const tbl = document.getElementById("tbl-clients");
-  tbl.innerHTML = clients.length
-    ? clients.map(c => `<tr>
+  tbl.innerHTML = clientsCache.length
+    ? clientsCache.map(c => `<tr>
         <td data-label="Emri"><strong>${esc(c.emri)}</strong></td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
         <td data-label="Pakoja">${esc(packageTierLabel(c.package_tier))}</td>
@@ -907,7 +914,7 @@ async function loadClients() {
   tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
     btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));
   });
-  return clients;
+  return clientsCache;
 }
 
 async function copyText(text, btn) {
@@ -1427,7 +1434,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
       body: JSON.stringify({
         emri: document.getElementById("c-emri").value,
         tipi,
-        package_tier: document.getElementById("c-package-tier").value,
+        package_tier: normalizeTierId(document.getElementById("c-package-tier").value),
         telefoni: document.getElementById("c-telefoni").value,
         email: document.getElementById("c-email").value,
         adresa: document.getElementById("c-adresa").value,

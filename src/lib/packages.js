@@ -49,7 +49,7 @@ const TIER_LABELS = {
 };
 
 function normalizePackageTier(tier) {
-  const t = String(tier || "pako_1").trim().toLowerCase();
+  const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
   return PACKAGE_TIERS.includes(t) ? t : "pako_1";
 }
 

@@ -236,6 +236,11 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   };
 }
 
+function normalizeClientRow(row) {
+  if (!row) return row;
+  return { ...row, package_tier: normalizePackageTier(row.package_tier) };
+}
+
 async function listClients() {
   const db = getSupabase();
   let { data, error } = await db
@@ -247,7 +252,7 @@ async function listClients() {
     if (fallback.error) throw fallback.error;
     data = fallback.data;
   }
-  return data || [];
+  return (data || []).map(normalizeClientRow);
 }
 
 async function listLicenses() {
@@ -330,7 +335,7 @@ async function updateClient(id, body) {
   } catch (syncErr) {
     console.warn("[updateClient] pos_settings sync failed:", syncErr.message);
   }
-  return data;
+  return normalizeClientRow(data);
 }
 
 async function deleteClient(id) {
