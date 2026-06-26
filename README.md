@@ -13,8 +13,10 @@ Backend i **Revolution Invest POS** — validim licence online, menaxhim klient�
 
 | Shërbim | URL |
 |---------|-----|
+| Produksion | `https://revolution-pos.com` |
 | Supabase | `https://tdkpcgxcudxbvrtmpobi.supabase.co` |
-| Railway | `https://earnest-success-production-9383.up.railway.app` |
+
+Vendosni `PUBLIC_APP_ORIGIN=https://revolution-pos.com` në Railway (Variables).
 
 ## Setup lokal
 

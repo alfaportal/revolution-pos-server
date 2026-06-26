@@ -29,7 +29,7 @@ const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
-const { adminPanelPath } = require("./lib/admin-path");
+const { getPublicAppConfig, getPublicAppOrigin } = require("../lib/publicOrigin");
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
@@ -52,7 +52,12 @@ app.get("/health", (_req, res) => {
     service: "revolution-pos-server",
     version: pkg.version || "1.0.0",
     time: new Date().toISOString(),
+    public_origin: getPublicAppOrigin(),
   });
+});
+
+app.get("/api/public/config", (_req, res) => {
+  res.json({ ok: true, ...getPublicAppConfig() });
 });
 
 app.get("/health/db", async (_req, res) => {
@@ -161,6 +166,9 @@ async function start() {
 
   startLicenseExpiryCron();
   startTrialNotificationCron();
+
+  const publicOrigin = getPublicAppOrigin();
+  console.log(`  🌐 Public URL:  ${publicOrigin}`);
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);

@@ -1,5 +1,6 @@
 let token = localStorage.getItem("rip_token") || "";
 let licensesPollTimer = null;
+let publicAppOrigin = "https://revolution-pos.com";
 
 const ADMIN_PWA_BANNER_KEY = "ri_admin_pwa_banner_dismissed";
 
@@ -39,6 +40,23 @@ initAdminPwaBanner();
 function apiUrl(path) {
   if (path.startsWith("http")) return path;
   return `${window.location.origin}${path}`;
+}
+
+function publicOrigin() {
+  return String(publicAppOrigin || "https://revolution-pos.com").replace(/\/+$/, "");
+}
+
+async function loadPublicConfig() {
+  try {
+    const res = await fetch(apiUrl("/api/public/config"));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.public_origin) {
+      publicAppOrigin = String(data.public_origin).replace(/\/+$/, "");
+    }
+  } catch {
+    /* keep default */
+  }
+  setupOwnerLoginUrl();
 }
 
 async function api(path, opts = {}) {
@@ -400,7 +418,7 @@ function openEditClient(id) {
 function clientAccessLink(client, kind, extraQuery = "") {
   const slug = client?.kitchen_slug || client?.id || "";
   const key = client?.kitchen_key || "";
-  const base = `${window.location.origin}/${kind}/${encodeURIComponent(slug)}`;
+  const base = `${publicOrigin()}/${kind}/${encodeURIComponent(slug)}`;
   const q = `key=${encodeURIComponent(key)}${extraQuery ? `&${extraQuery}` : ""}`;
   return `${base}?${q}`;
 }
@@ -420,24 +438,24 @@ function setHubLinkRow(rowId, visible, inputId, url) {
 
 function waiterLink(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c ? clientAccessLink(c, "waiter") : `${window.location.origin}/waiter/${clientId}`;
+  return c ? clientAccessLink(c, "waiter") : `${publicOrigin()}/waiter/${clientId}`;
 }
 
 function kitchenLink(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c ? clientAccessLink(c, "kitchen") : `${window.location.origin}/kitchen/${clientId}`;
+  return c ? clientAccessLink(c, "kitchen") : `${publicOrigin()}/kitchen/${clientId}`;
 }
 
 function barLink(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c ? clientAccessLink(c, "bar") : `${window.location.origin}/bar/${clientId}`;
+  return c ? clientAccessLink(c, "bar") : `${publicOrigin()}/bar/${clientId}`;
 }
 
 function kioskTableLink(clientId, table = 1) {
   const c = clientsCache.find(x => x.id === clientId);
   return c
     ? clientAccessLink(c, "kiosk", `table=${table}`)
-    : `${window.location.origin}/kiosk/${clientId}?table=${table}`;
+    : `${publicOrigin()}/kiosk/${clientId}?table=${table}`;
 }
 
 function publicPageLink(clientId) {
@@ -445,7 +463,7 @@ function publicPageLink(clientId) {
   if (!c) return "";
   const slug = c.kitchen_slug || c.id || "";
   if (!slug) return "";
-  return `${window.location.origin}/r/${encodeURIComponent(slug)}`;
+  return `${publicOrigin()}/r/${encodeURIComponent(slug)}`;
 }
 
 async function copyLink(url, btn) {
@@ -1359,6 +1377,7 @@ async function loadActivityLog() {
 async function refreshAll() {
   showAdminError(null);
   try {
+    await loadPublicConfig();
     await loadPackageTiers();
     await loadTrialAlerts();
     await loadStats();
@@ -1396,7 +1415,7 @@ function showApp(user) {
 
 function setupOwnerLoginUrl() {
   const input = document.getElementById("owner-login-url");
-  if (input) input.value = `${window.location.origin}/owner/login`;
+  if (input) input.value = `${publicOrigin()}/owner/login`;
 }
 
 function showLogin() {
@@ -1495,7 +1514,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
-  const loginUrl = `${window.location.origin}/owner/login`;
+  const loginUrl = `${publicOrigin()}/owner/login`;
   const tipi = document.getElementById("c-tipi").value;
   try {
     const res = await api("/api/admin/clients/onboard", {

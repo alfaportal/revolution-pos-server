@@ -47,11 +47,10 @@ const {
   regenerateOwnerInvite,
   adminResetOwnerPassword,
 } = require("../services/userService");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
 
-function requestBaseUrl(req) {
-  const proto = req.get("x-forwarded-proto") || req.protocol || "https";
-  const host = req.get("x-forwarded-host") || req.get("host");
-  return `${proto}://${host}`;
+function requestBaseUrl(_req) {
+  return getPublicAppOrigin();
 }
 
 const router = express.Router();

@@ -16,6 +16,9 @@ function corsOrigin(origin, callback) {
   if (/^https:\/\/[\w-]+\.up\.railway\.app$/.test(origin)) {
     return callback(null, true);
   }
+  if (/^https:\/\/(www\.)?revolution-pos\.com$/.test(origin)) {
+    return callback(null, true);
+  }
 
   if (process.env.NODE_ENV !== "production") return callback(null, true);
 

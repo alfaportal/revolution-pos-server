@@ -1,6 +1,7 @@
 /** Dërgim email transaksional (Resend). */
 
 const DEFAULT_EMAIL_FROM = "Revolution POS <noreply@ketujemi.com>";
+const { getPublicAppOrigin, getSupportPhone } = require("../lib/publicOrigin");
 
 function resolveEmailFrom() {
   const raw = process.env.EMAIL_FROM?.trim();
@@ -43,7 +44,7 @@ async function deliverEmail({ to, subject, text, html }) {
 }
 
 async function sendOwnerPasswordResetEmail({ to, code }) {
-  const origin = (process.env.PUBLIC_APP_ORIGIN || "https://earnest-success-production-9383.up.railway.app").replace(/\/$/, "");
+  const origin = getPublicAppOrigin();
   const loginUrl = `${origin}/owner/login`;
   const subject = "Rivendos fjalëkalimin — Revolution POS";
   const text = [
@@ -68,11 +69,7 @@ async function sendOwnerPasswordResetEmail({ to, code }) {
 }
 
 function resolveSupportPhone() {
-  return (
-    process.env.TRIAL_SUPPORT_PHONE?.trim() ||
-    process.env.SUPPORT_PHONE?.trim() ||
-    "+383 44 123 456"
-  );
+  return getSupportPhone();
 }
 
 function resolveAdminNotifyEmail() {

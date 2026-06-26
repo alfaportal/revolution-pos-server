@@ -9,11 +9,12 @@ const {
   getMenuItemPhotoResponse,
 } = require("../services/publicPageService");
 const { submitPublicOrder } = require("../services/publicOrderService");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
 
 const router = express.Router();
 
-function pageBaseUrl(req) {
-  return `${req.protocol}://${req.get("host")}`.replace(/\/+$/, "");
+function pageBaseUrl(_req) {
+  return getPublicAppOrigin();
 }
 
 router.get("/:slug", resolvePublicClient, asyncHandler(async (req, res) => {

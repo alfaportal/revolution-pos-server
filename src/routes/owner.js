@@ -49,6 +49,7 @@ const {
   getOwnerPublicPageSettings,
   updateOwnerPublicPageSettings,
 } = require("../services/publicPageService");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
 
 const router = express.Router();
 
@@ -60,7 +61,7 @@ router.get("/client", async (req, res) => {
     if (client) {
       client = await ensureKitchenCredentials(client);
     }
-    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const base = getPublicAppOrigin();
     const features = featuresForTier(client?.package_tier);
     const links = {};
     if (client?.id && features.waiter) {
@@ -401,7 +402,7 @@ router.delete("/waiters/:id", async (req, res) => {
 
 router.get("/kiosk/qrs", async (req, res) => {
   try {
-    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const base = getPublicAppOrigin();
     const data = await listKioskQrCodes(req.user.client_id, base);
     res.json({ ok: true, ...data });
   } catch (e) {
@@ -411,7 +412,7 @@ router.get("/kiosk/qrs", async (req, res) => {
 
 router.get("/kiosk/qrs/print", async (req, res) => {
   try {
-    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const base = getPublicAppOrigin();
     const client = await getClientById(req.user.client_id);
     const data = await listKioskQrCodes(req.user.client_id, base);
     const html = qrPrintHtml(data.tables, client?.emri || "");
@@ -424,7 +425,7 @@ router.get("/kiosk/qrs/print", async (req, res) => {
 
 router.get("/public-page", async (req, res) => {
   try {
-    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const base = getPublicAppOrigin();
     const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
     res.json({ ok: true, ...settings });
   } catch (e) {
@@ -435,7 +436,7 @@ router.get("/public-page", async (req, res) => {
 router.patch("/public-page", async (req, res) => {
   try {
     await updateOwnerPublicPageSettings(req.user.client_id, req.body);
-    const base = `${req.protocol}://${req.get("host")}`.replace(/\/$/, "");
+    const base = getPublicAppOrigin();
     const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
     res.json({ ok: true, ...settings });
   } catch (e) {
