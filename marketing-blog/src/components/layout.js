@@ -7,7 +7,7 @@ export function renderHeader({ activeNav = "blog" } = {}) {
   const lang = getLang();
   const items = [
     { id: "features", label: t("features"), href: `${siteRoot()}#features` },
-    { id: "how-it-works", label: t("howItWorks"), href: `${siteRoot()}#how-it-works` },
+    { id: "how-it-works", label: t("howItWorks"), href: `${siteRoot()}#si-funksionon` },
     { id: "packages", label: t("packages"), href: `${siteRoot()}#pakot` },
     { id: "faq", label: t("faq"), href: `${siteRoot()}#faq` },
     { id: "blog", label: t("blog"), href: blogRoot() },

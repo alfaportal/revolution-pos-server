@@ -373,6 +373,58 @@
       font-size: 0.92rem;
     }
 
+    .how-grid {
+      display: grid;
+      gap: 1.15rem;
+      grid-template-columns: 1fr;
+    }
+
+    .how-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+
+    .how-card:hover {
+      border-color: rgba(230, 57, 70, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .how-card-icon {
+      width: 3.25rem;
+      height: 3.25rem;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(230, 57, 70, 0.12);
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .how-card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.15rem;
+    }
+
+    .how-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .how-card-link {
+      display: inline-flex;
+      margin-top: 1rem;
+      color: #ffb4b4;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .how-card-link:hover { color: #fff; }
+
     .packages-grid {
       display: grid;
       gap: 1rem;
@@ -557,6 +609,7 @@
       .menu-toggle { display: none; }
       .header-cta-desktop { display: inline-flex; }
       .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .how-grid { grid-template-columns: repeat(2, 1fr); }
       .packages-grid { grid-template-columns: repeat(2, 1fr); }
       .contact-grid { grid-template-columns: 0.95fr 1.05fr; align-items: start; }
       .hero-grid { grid-template-columns: 1.05fr 0.95fr; }
@@ -564,6 +617,7 @@
 
     @media (min-width: 1024px) {
       .features-grid { grid-template-columns: repeat(3, 1fr); }
+      .how-grid { grid-template-columns: repeat(4, 1fr); }
       .packages-grid { grid-template-columns: repeat(4, 1fr); }
     }
 
@@ -586,6 +640,7 @@
 
         <nav class="nav-desktop" aria-label="Kryesore">
           <a href="#ballina">Ballina</a>
+          <a href="#si-funksionon">Si funksionon</a>
           <a href="#pakot">Pakot</a>
           <a href="/blog">Blog</a>
           <a href="/website/manual.html">Manuali</a>
@@ -600,6 +655,7 @@
 
       <nav class="nav-mobile" id="nav-mobile" aria-label="Mobile">
         <a href="#ballina">Ballina</a>
+        <a href="#si-funksionon">Si funksionon</a>
         <a href="#pakot">Pakot</a>
         <a href="/blog">Blog</a>
         <a href="/website/manual.html">Manuali</a>
@@ -682,6 +738,41 @@
       </div>
     </section>
 
+    <section id="si-funksionon">
+      <div class="container">
+        <div class="section-head">
+          <h2>Si funksionon sistemi</h2>
+          <p>Çdo modul ka rolin e vet — së bashku mbulojnë operimin e plotë të restorantit, nga porosia deri te raporti.</p>
+        </div>
+        <div class="how-grid">
+          <article class="how-card">
+            <div class="how-card-icon" aria-hidden="true">🖥️</div>
+            <h3>POS Kasa</h3>
+            <p>Merr porosi, bëj fatura fiskale dhe menaxho tavolinat — qendra e operimit të restorantit tuaj.</p>
+            <a class="how-card-link" href="/website/manual.html#menuja">Lexo në manual →</a>
+          </article>
+          <article class="how-card">
+            <div class="how-card-icon" aria-hidden="true">📱</div>
+            <h3>Kamarieri</h3>
+            <p>Tablet ose telefon — merr porosi direkt nga tavolina dhe i dërgon automatikisht në kuzhinë.</p>
+            <a class="how-card-link" href="/website/manual.html#kamarieri">Lexo në manual →</a>
+          </article>
+          <article class="how-card">
+            <div class="how-card-icon" aria-hidden="true">🍳</div>
+            <h3>KDS Kuzhina</h3>
+            <p>Ekran dixhital — sheh porositë në kohë reale dhe konfirmon kur pjata është gati për servim.</p>
+            <a class="how-card-link" href="/website/manual.html#kuzhina">Lexo në manual →</a>
+          </article>
+          <article class="how-card">
+            <div class="how-card-icon" aria-hidden="true">👤</div>
+            <h3>Pronari</h3>
+            <p>Panel online — sheh raportet, menaxhon menunë dhe stafin nga kudo, edhe nga telefoni.</p>
+            <a class="how-card-link" href="/website/manual.html#hyrja">Lexo në manual →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <section id="pakot">
       <div class="container">
         <div class="section-head">
@@ -702,19 +793,6 @@
             <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
           </article>
 
-          <article class="package-card">
-            <span class="package-badge">3 muaj falas</span>
-            <h3 class="package-name">Pako 1.1</h3>
-            <div class="package-price">20€<small>/javë</small></div>
-            <ul class="package-list">
-              <li>Gjithçka nga Pako 1</li>
-              <li>Aplikacion mobile</li>
-              <li>Menaxhim nga telefoni</li>
-              <li>Sinkronizim cloud</li>
-            </ul>
-            <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
-          </article>
-
           <article class="package-card featured">
             <span class="package-badge">3 muaj falas</span>
             <h3 class="package-name">Pako 2</h3>
@@ -730,7 +808,20 @@
 
           <article class="package-card">
             <span class="package-badge">3 muaj falas</span>
-            <h3 class="package-name">Pako 2.1</h3>
+            <h3 class="package-name">Pako 3</h3>
+            <div class="package-price">20€<small>/javë</small></div>
+            <ul class="package-list">
+              <li>Gjithçka nga Pako 1</li>
+              <li>Aplikacion mobile</li>
+              <li>Menaxhim nga telefoni</li>
+              <li>Sinkronizim cloud</li>
+            </ul>
+            <a class="btn btn-ghost" href="#kontakt">Zgjidh Pakon</a>
+          </article>
+
+          <article class="package-card">
+            <span class="package-badge">3 muaj falas</span>
+            <h3 class="package-name">Pako 4</h3>
             <div class="package-price">25€<small>/javë</small></div>
             <ul class="package-list">
               <li>Gjithçka nga Pako 2</li>
