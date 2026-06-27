@@ -147,6 +147,15 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/website/index.html"));
 });
 
+app.get(["/blog", "/blog/"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/blog/index.html"));
+});
+
+app.get("/blog/:slug", (req, res, next) => {
+  if (req.params.slug.includes(".")) return next();
+  res.sendFile(path.join(__dirname, "../public/blog/index.html"));
+});
+
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
   if (!res.headersSent) {

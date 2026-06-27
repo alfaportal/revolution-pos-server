@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "sql:run": "node scripts/run-migration.mjs"
+    "sql:run": "node scripts/run-migration.mjs",
+    "build:blog": "npm --prefix marketing-blog install && npm --prefix marketing-blog run build:integrated",
+    "build:blog:vercel": "npm --prefix marketing-blog install && npm --prefix marketing-blog run build"
   },
   "engines": {
     "node": ">=20"

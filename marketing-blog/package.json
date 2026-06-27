@@ -1,0 +1,16 @@
+{
+  "name": "revolution-pos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "cross-env VITE_INTEGRATED=false vite build",
+    "build:integrated": "cross-env VITE_INTEGRATED=true vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "vite": "^6.3.5"
+  }
+}
