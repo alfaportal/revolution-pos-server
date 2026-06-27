@@ -29,7 +29,8 @@ const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
-const { getPublicAppConfig, getPublicAppOrigin } = require("../lib/publicOrigin");
+const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
+const { adminPanelPath } = require("./lib/admin-path");
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
