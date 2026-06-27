@@ -51,6 +51,9 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "revolution-pos-server",
     version: pkg.version || "1.0.0",
+    site_version: "2026-06-27-marketing-v2",
+    git_commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || null,
+    git_branch: process.env.RAILWAY_GIT_BRANCH || null,
     time: new Date().toISOString(),
     public_origin: getPublicAppOrigin(),
   });
@@ -89,7 +92,25 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, "../public")));
+const PUBLIC_DIR = path.join(__dirname, "../public");
+const WEBSITE_INDEX = path.join(PUBLIC_DIR, "website/index.html");
+const BLOG_INDEX = path.join(PUBLIC_DIR, "blog/index.html");
+
+function sendMarketingPage(res, filePath) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.sendFile(filePath);
+}
+
+app.get("/", (_req, res) => sendMarketingPage(res, WEBSITE_INDEX));
+
+app.get(["/blog", "/blog/"], (_req, res) => sendMarketingPage(res, BLOG_INDEX));
+
+app.get("/blog/:slug", (req, res, next) => {
+  if (req.params.slug.includes(".")) return next();
+  sendMarketingPage(res, BLOG_INDEX);
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 app.get(ADMIN_PATH, (_req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
@@ -141,19 +162,6 @@ app.get("/r/:slug/order", (_req, res) => {
 app.get("/r/:slug", (_req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/r.html"));
-});
-
-app.get("/", (_req, res) => {
-  res.sendFile(path.join(__dirname, "../public/website/index.html"));
-});
-
-app.get(["/blog", "/blog/"], (_req, res) => {
-  res.sendFile(path.join(__dirname, "../public/blog/index.html"));
-});
-
-app.get("/blog/:slug", (req, res, next) => {
-  if (req.params.slug.includes(".")) return next();
-  res.sendFile(path.join(__dirname, "../public/blog/index.html"));
 });
 
 app.use((err, req, res, _next) => {
