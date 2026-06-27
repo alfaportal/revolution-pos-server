@@ -1,15 +1,15 @@
 import { renderHeader, renderBackToTop, bindBackToTop, bindLangSwitch } from "../components/layout.js";
 import { getArticleBySlug } from "../data/articles.js";
-import { renderBlogList } from "./blogList.js";
+import { renderHome } from "./home.js";
 import { renderArticleImage } from "../lib/images.js";
 import { t } from "../lib/i18n.js";
-import { blogRoot } from "../lib/base.js";
+import { siteRoot } from "../lib/base.js";
 
 export function renderBlogArticle(slug) {
   const article = getArticleBySlug(slug);
 
   if (!article) {
-    renderBlogList();
+    renderHome();
     return;
   }
 
@@ -18,7 +18,7 @@ export function renderBlogArticle(slug) {
     ${renderHeader({ activeNav: "blog" })}
     <main class="article-page">
       <div class="container">
-        <a class="article-back" href="${blogRoot()}" data-navigate>${t("backToBlog")}</a>
+        <a class="article-back" href="${siteRoot()}" data-navigate>${t("backToBlog")}</a>
 
         <article class="article-full">
           <header class="article-full-header">

@@ -1,4 +1,5 @@
 import { ui } from "../data/i18n.js";
+import { siteStrings } from "../data/siteStrings.js";
 
 const STORAGE_KEY = "revolution-pos-lang";
 
@@ -22,7 +23,7 @@ export function onLangChange(callback) {
 }
 
 export function t(key) {
-  return ui[lang]?.[key] ?? ui.sq[key] ?? key;
+  return ui[lang]?.[key] ?? siteStrings[lang]?.[key] ?? ui.sq[key] ?? siteStrings.sq[key] ?? key;
 }
 
 document.documentElement.lang = lang === "en" ? "en" : "sq";

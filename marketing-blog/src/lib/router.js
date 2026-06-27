@@ -14,8 +14,16 @@ export function onRoute(pattern, handler) {
 }
 
 export function navigate(path) {
-  window.history.pushState({}, "", path);
+  const hashIndex = path.indexOf("#");
+  const hash = hashIndex >= 0 ? path.slice(hashIndex + 1) : "";
+  const pathname = hashIndex >= 0 ? path.slice(0, hashIndex) || "/" : path;
+  window.history.pushState({}, "", hash ? `${pathname}#${hash}` : pathname);
   resolveRoute();
+  if (hash) {
+    requestAnimationFrame(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: "smooth" });
+    });
+  }
 }
 
 export function getCurrentPath() {

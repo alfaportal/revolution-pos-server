@@ -14,8 +14,8 @@ export const ui = {
     heroSubtitle:
       "Artikuj praktikë për menaxhimin e restorantit, teknologjinë POS dhe eficiencën operacionale.",
     readMore: "Lexo →",
-    backToBlog: "← Kthehu te blogu",
-    pageTitle: "Revolution POS — Blog",
+    backToBlog: "← Kthehu në ballina",
+    pageTitle: "Revolution Invest POS — Restorante & Kafene",
     metaDescription:
       "Këshilla dhe njohuri për restorante moderne — menaxhim, POS, teknologji dhe eficiencë operacionale.",
   },
@@ -34,8 +34,8 @@ export const ui = {
     heroSubtitle:
       "Practical articles on restaurant management, POS technology, and operational efficiency.",
     readMore: "Read →",
-    backToBlog: "← Back to blog",
-    pageTitle: "Revolution POS — Blog",
+    backToBlog: "← Back to home",
+    pageTitle: "Revolution Invest POS — Restaurants & Cafés",
     metaDescription:
       "Tips and insights for modern restaurants — management, POS, technology, and operational efficiency.",
   },

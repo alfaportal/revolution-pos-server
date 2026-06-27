@@ -6,9 +6,9 @@ export default defineConfig({
   root: ".",
   publicDir: "public",
   appType: "spa",
-  base: integrated ? "/blog/" : "/",
+  base: integrated ? "/" : "/",
   build: {
-    outDir: integrated ? "../public/blog" : "dist",
+    outDir: integrated ? "../public/site" : "dist",
     emptyOutDir: true,
   },
 });

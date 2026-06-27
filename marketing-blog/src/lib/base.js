@@ -5,7 +5,7 @@ export function siteRoot() {
 }
 
 export function blogRoot() {
-  return integrated ? "/blog" : "/";
+  return "/";
 }
 
 export function blogArticlePath(slug) {
