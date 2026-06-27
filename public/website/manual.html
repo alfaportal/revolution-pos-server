@@ -110,6 +110,33 @@
       justify-content: flex-end;
     }
 
+    .lang-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .lang-switch button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.45rem 0.65rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .lang-switch button.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .lang-switch button:hover:not(.active) { color: #fff; }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -453,7 +480,7 @@
     }
   </style>
 </head>
-<body>
+<body data-i18n-title="meta.title" data-i18n-meta-description="meta.description">
   <header class="site-header">
     <div class="container">
       <div class="header-inner">
@@ -465,68 +492,72 @@
           </span>
         </a>
         <div class="header-actions">
-          <a class="btn btn-ghost hide-mobile" href="/">Ballina</a>
-          <a class="btn btn-primary" href="/owner/login">Hyr në Panel</a>
+          <div class="lang-switch" aria-label="Gjuha" data-i18n-attr="aria-label:nav.langLabel">
+            <button type="button" data-lang="sq" class="active">SQ</button>
+            <button type="button" data-lang="en">EN</button>
+          </div>
+          <a class="btn btn-ghost hide-mobile" href="/" data-i18n="nav.home">Ballina</a>
+          <a class="btn btn-primary" href="/owner/login" data-i18n="nav.login">Hyr në Panel</a>
           <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="nav-mobile">☰</button>
         </div>
       </div>
-      <nav class="nav-mobile" id="nav-mobile" aria-label="Manuali">
-        <a href="#hyrja">1. Hyrja</a>
-        <a href="#menuja">2. Menuja</a>
-        <a href="#kamarieri">3. Kamarieri</a>
-        <a href="#kiosk">4. Kiosk / Tavolina</a>
-        <a href="#kuzhina">5. Kuzhina KDS</a>
-        <a href="#raportet">6. Raportet</a>
-        <a href="#faqja">7. Faqja Publike</a>
-        <a href="#siguria">8. Fjalëkalimet &amp; Siguria</a>
-        <a href="#stoku">9. Stoku</a>
-        <a href="#terminalet">10. Terminalet</a>
-        <a href="/">← Kthehu te Ballina</a>
+      <nav class="nav-mobile" id="nav-mobile" aria-label="Manuali" data-i18n-attr="aria-label:nav.manual">
+        <a href="#hyrja" data-i18n="toc.1">1. Hyrja</a>
+        <a href="#menuja" data-i18n="toc.2">2. Menuja</a>
+        <a href="#kamarieri" data-i18n="toc.3">3. Kamarieri</a>
+        <a href="#kiosk" data-i18n="toc.4">4. Kiosk / Tavolina</a>
+        <a href="#kuzhina" data-i18n="toc.5">5. Kuzhina KDS</a>
+        <a href="#raportet" data-i18n="toc.6">6. Raportet</a>
+        <a href="#faqja" data-i18n="toc.7">7. Faqja Publike</a>
+        <a href="#siguria" data-i18n="toc.8">8. Fjalëkalimet &amp; Siguria</a>
+        <a href="#stoku" data-i18n="toc.9">9. Stoku</a>
+        <a href="#terminalet" data-i18n="toc.10">10. Terminalet</a>
+        <a href="/" data-i18n="nav.backHome">← Kthehu te Ballina</a>
       </nav>
     </div>
   </header>
 
   <section class="manual-hero">
     <div class="container">
-      <h1>Manual Përdorimi — Revolution Invest POS</h1>
-      <p>Udhëzues i plotë hap pas hapi për pronarët, menaxherët, kamarierët dhe stafin. Ky manual mbulon panelin e pronarit, modulin e kamarierit, kiosk QR, ekranin e kuzhinës, raportet, stokun, terminalet dhe faqen publike.</p>
+      <h1 data-i18n="hero.title">Manual Përdorimi — Revolution Invest POS</h1>
+      <p data-i18n="hero.subtitle">Udhëzues i plotë hap pas hapi për pronarët, menaxherët, kamarierët dhe stafin. Ky manual mbulon panelin e pronarit, modulin e kamarierit, kiosk QR, ekranin e kuzhinës, raportet, stokun, terminalet dhe faqen publike.</p>
       <div class="manual-meta">
-        <span class="meta-pill">Versioni 1.0</span>
-        <span class="meta-pill">Gjuha: Shqip</span>
-        <span class="meta-pill">Përditësuar: Qershor 2026</span>
+        <span class="meta-pill" data-i18n="hero.version">Versioni 1.0</span>
+        <span class="meta-pill" data-i18n="hero.language">Gjuha: Shqip</span>
+        <span class="meta-pill" data-i18n="hero.updated">Përditësuar: Qershor 2026</span>
       </div>
     </div>
   </section>
 
   <div class="container manual-layout">
-    <aside class="toc-card" aria-label="Përmbajtja">
-      <p class="toc-title">Përmbajtja</p>
+    <aside class="toc-card" aria-label="Përmbajtja" data-i18n-attr="aria-label:toc.title">
+      <p class="toc-title" data-i18n="toc.title">Përmbajtja</p>
       <ol class="toc-list">
-        <li><a href="#hyrja">1. Hyrja</a></li>
-        <li class="toc-sub"><a href="#hyrja-telefon">Nga telefoni</a></li>
-        <li class="toc-sub"><a href="#hyrja-pc">Nga kompjuteri</a></li>
-        <li class="toc-sub"><a href="#hyrja-harruar">Fjalëkalimi i humbur</a></li>
-        <li><a href="#menuja">2. Menuja</a></li>
-        <li><a href="#kamarieri">3. Kamarieri</a></li>
-        <li><a href="#kiosk">4. Kiosk / Tavolina</a></li>
-        <li><a href="#kuzhina">5. Kuzhina KDS</a></li>
-        <li><a href="#raportet">6. Raportet</a></li>
-        <li><a href="#faqja">7. Faqja Publike</a></li>
-        <li><a href="#siguria">8. Siguria</a></li>
-        <li><a href="#stoku">9. Stoku</a></li>
-        <li class="toc-sub"><a href="#stoku-aktivizo">Aktivizo ndjekjen</a></li>
-        <li class="toc-sub"><a href="#stoku-sasia">Sasia &amp; alarmi</a></li>
-        <li class="toc-sub"><a href="#stoku-rimbush">Rimbush stokun</a></li>
-        <li><a href="#terminalet">10. Terminalet</a></li>
-        <li class="toc-sub"><a href="#terminalet-shiko">Terminale aktive</a></li>
-        <li class="toc-sub"><a href="#terminalet-limit">Limiti &amp; kontakti</a></li>
+        <li><a href="#hyrja" data-i18n="toc.1">1. Hyrja</a></li>
+        <li class="toc-sub"><a href="#hyrja-telefon" data-i18n="toc.1.phone">Nga telefoni</a></li>
+        <li class="toc-sub"><a href="#hyrja-pc" data-i18n="toc.1.pc">Nga kompjuteri</a></li>
+        <li class="toc-sub"><a href="#hyrja-harruar" data-i18n="toc.1.forgot">Fjalëkalimi i humbur</a></li>
+        <li><a href="#menuja" data-i18n="toc.2">2. Menuja</a></li>
+        <li><a href="#kamarieri" data-i18n="toc.3">3. Kamarieri</a></li>
+        <li><a href="#kiosk" data-i18n="toc.4">4. Kiosk / Tavolina</a></li>
+        <li><a href="#kuzhina" data-i18n="toc.5">5. Kuzhina KDS</a></li>
+        <li><a href="#raportet" data-i18n="toc.6">6. Raportet</a></li>
+        <li><a href="#faqja" data-i18n="toc.7">7. Faqja Publike</a></li>
+        <li><a href="#siguria" data-i18n="toc.8">8. Siguria</a></li>
+        <li><a href="#stoku" data-i18n="toc.9">9. Stoku</a></li>
+        <li class="toc-sub"><a href="#stoku-aktivizo" data-i18n="toc.9.track">Aktivizo ndjekjen</a></li>
+        <li class="toc-sub"><a href="#stoku-sasia" data-i18n="toc.9.qty">Sasia &amp; alarmi</a></li>
+        <li class="toc-sub"><a href="#stoku-rimbush" data-i18n="toc.9.refill">Rimbush stokun</a></li>
+        <li><a href="#terminalet" data-i18n="toc.10">10. Terminalet</a></li>
+        <li class="toc-sub"><a href="#terminalet-shiko" data-i18n="toc.10.view">Terminale aktive</a></li>
+        <li class="toc-sub"><a href="#terminalet-limit" data-i18n="toc.10.limit">Limiti &amp; kontakti</a></li>
       </ol>
     </aside>
 
     <main class="manual-content">
 
       <!-- 1. HYRJA -->
-      <article class="manual-section" id="hyrja">
+      <article class="manual-section" id="hyrja" data-i18n-section="hyrja">
         <span class="section-num">Seksioni 1</span>
         <h2>HYRJA (Getting Started)</h2>
         <p>Revolution Invest POS përbëhet nga disa module: <strong>aplikacioni POS</strong> në kompjuter (kasa fiskale), <strong>paneli i pronarit</strong> në web (<code>/owner/login</code>), <strong>moduli i kamarierit</strong> në tablet, <strong>ekran i kuzhinës (KDS)</strong>, <strong>kiosk QR</strong> për tavolinat dhe <strong>faqja publike</strong> e restorantit.</p>
@@ -583,7 +614,7 @@
       </article>
 
       <!-- 2. MENUJA -->
-      <article class="manual-section" id="menuja">
+      <article class="manual-section" id="menuja" data-i18n-section="menuja">
         <span class="section-num">Seksioni 2</span>
         <h2>MENUJA (Menu Management)</h2>
         <p>Menaxhimi i menusë bëhet nga paneli i pronarit, tabi <strong>«Menuja»</strong>. Ndryshimet sinkronizohen me tabletat e kamarierit, kiosk-un dhe faqen publike brenda ~15 sekondave.</p>
@@ -644,10 +675,10 @@
       </article>
 
       <!-- 3. KAMARIERI -->
-      <article class="manual-section" id="kamarieri">
+      <article class="manual-section" id="kamarieri" data-i18n-section="kamarieri">
         <span class="section-num">Seksioni 3</span>
         <h2>KAMARIERI (Waiter Module)</h2>
-        <p>Moduli i kamarierit lejon stafin të marrë porosi nga tavolinat me tablet, pa pritje në kasë. Çdo kamarier identifikohet me <strong>PIN 4-shifror</strong>. Kërkon pakën që përfshin modulin Kamarier (Pako 2 ose 2.1).</p>
+        <p>Moduli i kamarierit lejon stafin të marrë porosi nga tavolinat me tablet, pa pritje në kasë. Çdo kamarier identifikohet me <strong>PIN 4-shifror</strong>. Kërkon pakën që përfshin modulin Kamarier (Pako 2 ose 4).</p>
 
         <h3>Si të shtoni kamarierë me PIN</h3>
         <ol class="steps">
@@ -707,7 +738,7 @@
       </article>
 
       <!-- 4. KIOSK -->
-      <article class="manual-section" id="kiosk">
+      <article class="manual-section" id="kiosk" data-i18n-section="kiosk">
         <span class="section-num">Seksioni 4</span>
         <h2>KIOSK / TAVOLINA (Self-order)</h2>
         <p>Me modulin Kiosk, klientët skanojnë një <strong>QR kod</strong> në tavolinë dhe porositin vetë nga telefoni. Porosia shkon te <strong>banaku</strong> për përgatitje — nuk gjenerohet faturë automatikisht nga kiosk-u.</p>
@@ -745,7 +776,7 @@
       </article>
 
       <!-- 5. KUZHINA -->
-      <article class="manual-section" id="kuzhina">
+      <article class="manual-section" id="kuzhina" data-i18n-section="kuzhina">
         <span class="section-num">Seksioni 5</span>
         <h2>KUZHINA KDS (Kitchen Display)</h2>
         <p>Ekrani i kuzhinës (Kitchen Display System) tregon porositë e reja në kohë reale. Ideal për tablet ose monitor në mur të kuzhinës.</p>
@@ -781,7 +812,7 @@
       </article>
 
       <!-- 6. RAPORTET -->
-      <article class="manual-section" id="raportet">
+      <article class="manual-section" id="raportet" data-i18n-section="raportet">
         <span class="section-num">Seksioni 6</span>
         <h2>RAPORTET (Reports)</h2>
         <p>Raportet ndihmojnë të monitoroni shitjet, TVSH-në dhe performancën e lokalit. Të gjitha gjenden në panelin e pronarit.</p>
@@ -832,7 +863,7 @@
       </article>
 
       <!-- 7. FAQJA PUBLIKE -->
-      <article class="manual-section" id="faqja">
+      <article class="manual-section" id="faqja" data-i18n-section="faqja">
         <span class="section-num">Seksioni 7</span>
         <h2>FAQJA PUBLIKE (Public Page)</h2>
         <p>Çdo klient me pakën që përfshin faqen publike ka një faqe interneti në <code>/r/[slug]</code> — me menu, logo, orar dhe (sipas paketës) porosi online delivery/takeaway.</p>
@@ -864,7 +895,7 @@
 
         <h3>Si aktivizohet delivery online</h3>
         <ol class="steps">
-          <li>Sigurohuni që paketa juaj përfshin <strong>porosi online</strong> (Pako 2.1 ose ekuivalente me modul KDS/Kiosk).</li>
+          <li>Sigurohuni që paketa juaj përfshin <strong>porosi online</strong> (Pako 4 ose ekuivalente me modul KDS/Kiosk).</li>
           <li>Te tabi <strong>Faqja publike</strong>, aktivizoni checkbox-in <strong>«Faqja publike është aktive»</strong>.</li>
           <li>Plotësoni <strong>adresën</strong> dhe <strong>telefonin</strong> e biznesit (merren nga cilësimet e lokalit ose Super Admin).</li>
           <li>Shtoni artikuj aktivë te tabi <strong>Menuja</strong> — menuja publike lexohet nga e njëjta listë.</li>
@@ -881,7 +912,7 @@
       </article>
 
       <!-- 8. SIGURIA -->
-      <article class="manual-section" id="siguria">
+      <article class="manual-section" id="siguria" data-i18n-section="siguria">
         <span class="section-num">Seksioni 8</span>
         <h2>FJALËKALIMET &amp; SIGURIA</h2>
         <p>Siguria e llogarive dhe aksesit emergjent është thelbësore për operimin e qetë të lokalit.</p>
@@ -922,7 +953,7 @@
       </article>
 
       <!-- 9. STOKU -->
-      <article class="manual-section" id="stoku">
+      <article class="manual-section" id="stoku" data-i18n-section="stoku">
         <span class="section-num">Seksioni 9</span>
         <h2>STOKU (Inventory Management)</h2>
         <p>Moduli i stokut ju lejon të ndiqni sasinë e artikujve në menu. Kur stoku bie në zero, artikulli fshihet automatikisht nga menuja në POS, tablet dhe kiosk — pa nevojë ta fshihni manualisht.</p>
@@ -1007,7 +1038,7 @@
       </article>
 
       <!-- 10. TERMINALET -->
-      <article class="manual-section" id="terminalet">
+      <article class="manual-section" id="terminalet" data-i18n-section="terminalet">
         <span class="section-num">Seksioni 10</span>
         <h2>TERMINALET (Multi-terminal)</h2>
         <p>Çdo licencë Revolution Invest POS mbështet një ose më shumë <strong>terminale</strong> — domethënë kompjuterë ose pajisje ku është instaluar dhe aktivizuar aplikacioni POS.</p>
@@ -1086,18 +1117,45 @@
 
   <footer class="site-footer">
     <div class="container">
-      <p>© <span id="year"></span> Revolution Invest POS — Manual përdorimi</p>
+      <p>© <span id="year"></span> <span data-i18n="footer.text">Revolution Invest POS — Manual përdorimi</span></p>
       <p style="margin-top:0.5rem">
-        <a href="/">Ballina</a> ·
-        <a href="/owner/login">Paneli i pronarit</a> ·
-        <a href="/#kontakt">Kontakt &amp; mbështetje</a>
+        <a href="/" data-i18n="footer.home">Ballina</a> ·
+        <a href="/owner/login" data-i18n="footer.owner">Paneli i pronarit</a> ·
+        <a href="/#kontakt" data-i18n="footer.contact">Kontakt &amp; mbështetje</a>
       </p>
     </div>
   </footer>
 
+  <script src="/website/lang.js"></script>
+  <script src="/website/strings-manual-ui.js"></script>
+  <script src="/website/manual-en-sections.js"></script>
   <script>
     (function () {
       document.getElementById("year").textContent = new Date().getFullYear();
+
+      document.querySelectorAll("[data-i18n-section]").forEach((el) => {
+        el.dataset.i18nSq = el.innerHTML;
+      });
+
+      function applyManualSections(lang) {
+        document.querySelectorAll("[data-i18n-section]").forEach((el) => {
+          const id = el.dataset.i18nSection;
+          if (lang === "en" && window.MANUAL_EN_SECTIONS?.[id]) {
+            el.innerHTML = window.MANUAL_EN_SECTIONS[id];
+          } else if (el.dataset.i18nSq) {
+            el.innerHTML = el.dataset.i18nSq;
+          }
+        });
+      }
+
+      const originalSetLang = SiteLang.setLang.bind(SiteLang);
+      SiteLang.setLang = function (nextLang) {
+        originalSetLang(nextLang);
+        applyManualSections(nextLang);
+      };
+
+      SiteLang.initSiteI18n(window.MANUAL_UI);
+      applyManualSections(SiteLang.getLang());
 
       const toggle = document.getElementById("menu-toggle");
       const nav = document.getElementById("nav-mobile");
