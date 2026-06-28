@@ -1931,6 +1931,243 @@ document.getElementById("btn-waiter-add")?.addEventListener("click", async () =>
   }
 });
 
+const aiChatHistory = [];
+let menuScanItems = [];
+let menuScanPreviewUrl = null;
+
+function appendAiChatBubble(text, role) {
+  const box = document.getElementById("ai-chat-messages");
+  if (!box) return;
+  const bubble = document.createElement("div");
+  bubble.className = `ai-chat-bubble ai-chat-bubble-${role === "user" ? "user" : "assistant"}`;
+  bubble.textContent = text;
+  box.appendChild(bubble);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setAiChatOpen(open) {
+  const panel = document.getElementById("ai-chat-panel");
+  const fab = document.getElementById("ai-chat-fab");
+  if (!panel || !fab) return;
+  panel.classList.toggle("hidden", !open);
+  fab.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) document.getElementById("ai-chat-input")?.focus();
+}
+
+function setAiChatLoading(loading) {
+  document.getElementById("ai-chat-loading")?.classList.toggle("hidden", !loading);
+  const sendBtn = document.getElementById("ai-chat-send");
+  const input = document.getElementById("ai-chat-input");
+  if (sendBtn) sendBtn.disabled = loading;
+  if (input) input.disabled = loading;
+}
+
+async function sendAiChatMessage(message) {
+  const text = String(message || "").trim();
+  if (!text) return;
+
+  appendAiChatBubble(text, "user");
+  aiChatHistory.push({ role: "user", content: text });
+  setAiChatLoading(true);
+
+  try {
+    const data = await api("/api/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        message: text,
+        history: aiChatHistory.slice(0, -1).slice(-12),
+      }),
+    });
+    const reply = String(data.reply || "").trim() || "Nuk u mor përgjigje.";
+    appendAiChatBubble(reply, "assistant");
+    aiChatHistory.push({ role: "assistant", content: reply });
+  } catch (err) {
+    appendAiChatBubble(err.message || "Gabim gjatë komunikimit me AI.", "assistant");
+  } finally {
+    setAiChatLoading(false);
+  }
+}
+
+function setMenuScanStatus(text, ok) {
+  const el = document.getElementById("menu-scan-status");
+  if (!el) return;
+  if (!text) {
+    el.textContent = "";
+    el.className = "owner-license-msg";
+    return;
+  }
+  el.textContent = text;
+  el.className = `owner-license-msg ${ok ? "ok" : "err"}`;
+}
+
+function renderMenuScanItems() {
+  const body = document.getElementById("menu-scan-items-body");
+  const results = document.getElementById("menu-scan-results");
+  if (!body || !results) return;
+
+  if (!menuScanItems.length) {
+    body.innerHTML = "";
+    results.classList.add("hidden");
+    return;
+  }
+
+  body.innerHTML = menuScanItems
+    .map(
+      (item, idx) => `<tr>
+        <td><input type="text" class="menu-scan-name" data-idx="${idx}" value="${escAttr(item.name)}"></td>
+        <td><input type="number" class="menu-scan-price" data-idx="${idx}" min="0" step="0.01" value="${Number(item.price || 0).toFixed(2)}"></td>
+      </tr>`,
+    )
+    .join("");
+  results.classList.remove("hidden");
+}
+
+function readMenuScanItemsFromDom() {
+  return menuScanItems.map((item, idx) => {
+    const name = document.querySelector(`.menu-scan-name[data-idx="${idx}"]`)?.value?.trim();
+    const price = Number(document.querySelector(`.menu-scan-price[data-idx="${idx}"]`)?.value);
+    return {
+      name: name || item.name,
+      price: Number.isFinite(price) ? price : item.price,
+    };
+  }).filter(item => item.name && Number.isFinite(item.price) && item.price >= 0);
+}
+
+function openMenuScanModal() {
+  menuScanItems = [];
+  setMenuScanStatus("", true);
+  document.getElementById("menu-scan-results")?.classList.add("hidden");
+  document.getElementById("menu-scan-loading")?.classList.add("hidden");
+  document.getElementById("menu-scan-file").value = "";
+  document.getElementById("btn-menu-scan-run").disabled = true;
+  if (menuScanPreviewUrl) {
+    URL.revokeObjectURL(menuScanPreviewUrl);
+    menuScanPreviewUrl = null;
+  }
+  document.getElementById("menu-scan-preview-wrap")?.classList.add("hidden");
+  document.getElementById("menu-scan-modal")?.classList.remove("hidden");
+}
+
+function closeMenuScanModal() {
+  document.getElementById("menu-scan-modal")?.classList.add("hidden");
+}
+
+async function runMenuScan() {
+  const file = document.getElementById("menu-scan-file")?.files?.[0];
+  if (!file) {
+    setMenuScanStatus("Zgjidhni një foto fillimisht.", false);
+    return;
+  }
+
+  const runBtn = document.getElementById("btn-menu-scan-run");
+  const loading = document.getElementById("menu-scan-loading");
+  if (runBtn) runBtn.disabled = true;
+  loading?.classList.remove("hidden");
+  setMenuScanStatus("", true);
+  document.getElementById("menu-scan-results")?.classList.add("hidden");
+
+  try {
+    const photo = await readImageFile(file, 4_000_000, "Foto e menusë");
+    const data = await api("/api/ai/scan-menu", {
+      method: "POST",
+      body: JSON.stringify({ photo }),
+    });
+    menuScanItems = Array.isArray(data.items) ? data.items : [];
+    renderMenuScanItems();
+    setMenuScanStatus(
+      `${menuScanItems.length} artikuj u gjetën (${Number(data.usage?.tokens_used || 0).toLocaleString("sq-AL")} tokenë).`,
+      true,
+    );
+  } catch (err) {
+    setMenuScanStatus(err.message, false);
+  } finally {
+    loading?.classList.add("hidden");
+    if (runBtn) runBtn.disabled = false;
+  }
+}
+
+async function importScannedMenuItems() {
+  const items = readMenuScanItemsFromDom();
+  const category = document.getElementById("menu-scan-category")?.value?.trim() || "Menu";
+  if (!items.length) {
+    setMenuScanStatus("Nuk ka artikuj për import.", false);
+    return;
+  }
+  if (!category) {
+    setMenuScanStatus("Shkruani kategorinë për import.", false);
+    return;
+  }
+
+  const importBtn = document.getElementById("btn-menu-scan-import");
+  if (importBtn) importBtn.disabled = true;
+  setMenuScanStatus("Duke importuar artikujt…", true);
+
+  try {
+    let lastSynced = null;
+    for (const item of items) {
+      const { synced_at } = await api("/api/owner/menu", {
+        method: "POST",
+        body: JSON.stringify({ name: item.name, category, price: item.price }),
+      });
+      lastSynced = synced_at || lastSynced;
+    }
+    await loadOwnerMenu();
+    if (lastSynced) updateOwnerMenuSyncHint(lastSynced);
+    closeMenuScanModal();
+    setMenuMsg(`${items.length} artikuj u importuan në menynë.`, true);
+  } catch (err) {
+    setMenuScanStatus(err.message, false);
+  } finally {
+    if (importBtn) importBtn.disabled = false;
+  }
+}
+
+document.getElementById("ai-chat-fab")?.addEventListener("click", () => {
+  const panel = document.getElementById("ai-chat-panel");
+  setAiChatOpen(panel?.classList.contains("hidden"));
+});
+
+document.getElementById("ai-chat-close")?.addEventListener("click", () => setAiChatOpen(false));
+
+document.getElementById("ai-chat-form")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  const input = document.getElementById("ai-chat-input");
+  const message = input?.value?.trim();
+  if (!message) return;
+  input.value = "";
+  await sendAiChatMessage(message);
+});
+
+document.getElementById("btn-menu-scan-ai")?.addEventListener("click", openMenuScanModal);
+document.getElementById("menu-scan-close")?.addEventListener("click", closeMenuScanModal);
+document.getElementById("menu-scan-backdrop")?.addEventListener("click", closeMenuScanModal);
+document.getElementById("btn-menu-scan-run")?.addEventListener("click", () => {
+  runMenuScan().catch(err => setMenuScanStatus(err.message, false));
+});
+document.getElementById("btn-menu-scan-import")?.addEventListener("click", () => {
+  importScannedMenuItems().catch(err => setMenuScanStatus(err.message, false));
+});
+
+document.getElementById("menu-scan-file")?.addEventListener("change", e => {
+  const file = e.target.files?.[0];
+  const previewWrap = document.getElementById("menu-scan-preview-wrap");
+  const preview = document.getElementById("menu-scan-preview");
+  const runBtn = document.getElementById("btn-menu-scan-run");
+  if (!file) {
+    if (runBtn) runBtn.disabled = true;
+    previewWrap?.classList.add("hidden");
+    return;
+  }
+  if (menuScanPreviewUrl) URL.revokeObjectURL(menuScanPreviewUrl);
+  menuScanPreviewUrl = URL.createObjectURL(file);
+  if (preview) preview.src = menuScanPreviewUrl;
+  previewWrap?.classList.remove("hidden");
+  if (runBtn) runBtn.disabled = false;
+  menuScanItems = [];
+  document.getElementById("menu-scan-results")?.classList.add("hidden");
+  setMenuScanStatus("", true);
+});
+
 document.getElementById("btn-area-add")?.addEventListener("click", async () => {
   const name = document.getElementById("area-add-name")?.value?.trim();
   const table_count = Number(document.getElementById("area-add-count")?.value);

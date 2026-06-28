@@ -124,7 +124,10 @@
 
     <div id="panel-menuja" class="panel-section hidden">
       <div class="card">
-        <div class="card-title">Shto artikull</div>
+        <div class="card-title-row">
+          <div class="card-title" style="margin:0">Shto artikull</div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-menu-scan-ai">Skano Meny me AI</button>
+        </div>
         <div class="filter-row menu-add-row">
           <div>
             <label for="menu-add-name">Emri</label>
@@ -579,8 +582,73 @@
     </div>
   </div>
 
+  <div id="menu-scan-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="menu-scan-title">
+    <div class="owner-modal-backdrop" id="menu-scan-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="menu-scan-title">Skano menynë me AI</h2>
+        <button type="button" class="owner-modal-close" id="menu-scan-close" aria-label="Mbyll">×</button>
+      </div>
+      <p class="links-hint">Ngarkoni foto të menusë (printuar ose ekran). AI nxjerr emrat dhe çmimet automatikisht.</p>
+      <div class="menu-scan-upload">
+        <label class="btn btn-ghost btn-sm" for="menu-scan-file">Zgjidh foto</label>
+        <input type="file" id="menu-scan-file" accept="image/png,image/jpeg,image/jpg,image/webp" hidden>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-menu-scan-run" disabled>Skano</button>
+      </div>
+      <div id="menu-scan-preview-wrap" class="menu-scan-preview-wrap hidden">
+        <img id="menu-scan-preview" alt="Parapamje menusë">
+      </div>
+      <div id="menu-scan-status" class="owner-license-msg"></div>
+      <div id="menu-scan-loading" class="menu-scan-loading hidden">Duke skanuar menynë…</div>
+      <div id="menu-scan-results" class="menu-scan-results hidden">
+        <div class="filter-row menu-add-row" style="margin-top:0.75rem">
+          <div>
+            <label for="menu-scan-category">Kategoria për import</label>
+            <input type="text" id="menu-scan-category" list="menu-category-list" value="Menu" placeholder="p.sh. Menu">
+          </div>
+        </div>
+        <div class="overflow-x">
+          <table class="menu-owner-table">
+            <thead>
+              <tr><th>Emri</th><th>Çmimi (€)</th></tr>
+            </thead>
+            <tbody id="menu-scan-items-body"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-menu-scan-import" style="margin-top:0.75rem">Shto të gjithë në meny</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ai-chat-root" class="ai-chat-root">
+    <div id="ai-chat-panel" class="ai-chat-panel hidden" role="dialog" aria-label="AI Asistent">
+      <div class="ai-chat-header">
+        <div>
+          <strong>AI Asistent</strong>
+          <div class="ai-chat-sub">Pyetje për menu, porosi dhe panelin</div>
+        </div>
+        <button type="button" class="ai-chat-close" id="ai-chat-close" aria-label="Mbyll">×</button>
+      </div>
+      <div id="ai-chat-messages" class="ai-chat-messages">
+        <div class="ai-chat-bubble ai-chat-bubble-assistant">Përshëndetje! Si mund t'ju ndihmoj me menynë ose sistemin POS?</div>
+      </div>
+      <div id="ai-chat-loading" class="ai-chat-loading hidden" aria-live="polite">
+        <span class="ai-chat-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        Duke menduar…
+      </div>
+      <form id="ai-chat-form" class="ai-chat-form">
+        <input type="text" id="ai-chat-input" placeholder="Shkruani pyetjen…" autocomplete="off" maxlength="4000">
+        <button type="submit" class="btn btn-primary btn-sm" id="ai-chat-send">Dërgo</button>
+      </form>
+    </div>
+    <button type="button" id="ai-chat-fab" class="ai-chat-fab" aria-label="AI Asistent" aria-expanded="false">
+      <span class="ai-chat-fab-icon" aria-hidden="true">💬</span>
+      <span>AI Asistent</span>
+    </button>
+  </div>
+
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=17"></script>
+  <script src="/js/owner.js?v=18"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>
