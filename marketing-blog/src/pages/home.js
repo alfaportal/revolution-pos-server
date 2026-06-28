@@ -16,23 +16,32 @@ import { getLang } from "../lib/i18n.js";
 import { assetPath, blogArticlePath } from "../lib/base.js";
 
 const PACKAGE_PLANS = ["p1", "p2", "p3", "p4"];
-const PACKAGE_FEATURE_KEYS = {
-  p1: ["f1", "f2", "f3", "f4"],
-  p2: ["f1", "f2", "f3", "f4"],
-  p3: ["f1", "f2", "f3", "f4"],
-  p4: ["f1", "f2", "f3"],
+const PACKAGE_DETAIL_KEYS = {
+  p1: ["f1", "f2", "f3", "f4", "f5", "f6"],
+  p2: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
+  p3: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
+  p4: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
 };
-const CARD_FEATURE_PREVIEW = 4;
+const PACKAGE_CARD_KEYS = {
+  p1: ["f1", "f2", "f3", "f4", "f5"],
+  p2: ["incl", "f1", "f2", "f3", "f4"],
+  p3: ["incl", "f1", "f2", "f3", "f4"],
+  p4: ["incl", "f1", "f2", "f3", "f4"],
+};
 
-function packageFeaturesHtml(plan, { limit } = {}) {
+function packageFeaturesHtml(plan, { keys } = {}) {
   const prefix = `packages.${plan}`;
-  const keys = PACKAGE_FEATURE_KEYS[plan] ?? [];
-  const visible = limit ? keys.slice(0, limit) : keys;
-  return visible.map((f) => `<li>${t(`${prefix}.${f}`)}</li>`).join("");
+  const featureKeys = keys ?? PACKAGE_DETAIL_KEYS[plan] ?? [];
+  return featureKeys
+    .map((f) => t(`${prefix}.${f}`))
+    .filter(Boolean)
+    .map((line) => `<li>${line}</li>`)
+    .join("");
 }
 
 function packageCard(plan) {
   const prefix = `packages.${plan}`;
+  const tagline = t(`${prefix}.tagline`);
   return `
     <article
       class="package-card"
@@ -44,7 +53,8 @@ function packageCard(plan) {
     >
       <span class="package-badge">${t("packages.badge")}</span>
       <h3 class="package-name">${t(`${prefix}.name`)}</h3>
-      <ul class="package-list">${packageFeaturesHtml(plan, { limit: CARD_FEATURE_PREVIEW })}</ul>
+      ${tagline ? `<p class="package-tagline">${tagline}</p>` : ""}
+      <ul class="package-list">${packageFeaturesHtml(plan, { keys: PACKAGE_CARD_KEYS[plan] })}</ul>
       <span class="btn btn-ghost package-select-btn">${t("cta.choosePackage")}</span>
     </article>
   `;
@@ -68,6 +78,7 @@ function bindPackageCards() {
   const cards = document.querySelectorAll(".package-card[data-package]");
   const detailPanel = document.getElementById("package-detail");
   const detailName = document.getElementById("package-detail-name");
+  const detailSummary = document.getElementById("package-detail-summary");
   const detailList = document.getElementById("package-detail-list");
   const packageField = document.getElementById("contact-package");
   if (!cards.length || !detailPanel) return;
@@ -82,7 +93,12 @@ function bindPackageCards() {
     });
 
     detailName.textContent = t(`${prefix}.name`);
-    detailList.innerHTML = packageFeaturesHtml(plan);
+    if (detailSummary) {
+      const summary = t(`${prefix}.summary`);
+      detailSummary.textContent = summary;
+      detailSummary.hidden = !summary;
+    }
+    detailList.innerHTML = packageFeaturesHtml(plan, { keys: PACKAGE_DETAIL_KEYS[plan] });
     detailPanel.hidden = false;
 
     if (packageField) {
@@ -216,6 +232,7 @@ export function renderHome() {
               <span class="package-detail-badge">${t("packages.selected")}</span>
               <h3 id="package-detail-name"></h3>
             </div>
+            <p class="package-detail-summary" id="package-detail-summary" hidden></p>
             <p class="package-detail-label">${t("packages.includes")}</p>
             <ul class="package-detail-list" id="package-detail-list"></ul>
             <button class="btn btn-primary" type="button" id="package-detail-cta">${t("cta.choosePackage")}</button>
