@@ -233,6 +233,7 @@ async function start() {
     console.log(`  🧾 Fiscal pay:  POST /api/v1/fiscal/pay`);
     console.log(`  📋 Z-Report:    GET /api/owner/z-report`);
     console.log(`  🤖 AI chat:     POST /api/ai/chat`);
+    console.log(`  📷 AI menu:     POST /api/ai/scan-menu`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }
