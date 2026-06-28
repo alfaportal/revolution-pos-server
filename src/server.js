@@ -211,6 +211,18 @@ async function start() {
     console.warn("  ⚠️  Super Admin seed:", formatError(e));
   }
 
+  try {
+    const { ensureInventorySchema } = require("./lib/ensureInventorySchema");
+    const ok = await ensureInventorySchema();
+    if (ok) {
+      console.log("  ✅ Inventari (025): ingredients + menu_ingredients");
+    } else {
+      console.warn("  ⚠️  Inventari: vendosni DATABASE_URL në Railway për auto-migrim 025");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  Inventari schema:", formatError(e));
+  }
+
   startLicenseExpiryCron();
   startTrialNotificationCron();
 
