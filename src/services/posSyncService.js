@@ -113,6 +113,8 @@ async function syncCatalogFromPosSupabase(license, body) {
           price: Number(m.price ?? m.cmimi ?? 0) || 0,
           active: m.active !== false && m.active !== 0,
           photo: photoByLocalId.get(localId) || "",
+          description: String(m.description || "").trim().slice(0, 2000),
+          sku: String(m.sku || "").trim().slice(0, 64),
           track_stock: trackStock,
           stock_quantity: trackStock ? (stockQty ?? 0) : null,
           stock_alert_threshold: stockThreshold,
@@ -286,8 +288,8 @@ async function syncCatalogFromPosTransactional(license, body) {
           ? Math.max(0, Math.floor(Number(m.stock_alert_threshold) || 0))
           : prevStock.stock_alert_threshold ?? 5;
       await client.query(
-        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        `INSERT INTO pos_menu_items (client_id, local_id, name, category, price, active, photo, description, sku, track_stock, stock_quantity, stock_alert_threshold)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           clientId,
           m.local_id,
@@ -296,6 +298,8 @@ async function syncCatalogFromPosTransactional(license, body) {
           m.price,
           m.active,
           photo,
+          String(m.description || "").trim().slice(0, 2000),
+          String(m.sku || "").trim().slice(0, 64),
           trackStock,
           trackStock ? (stockQty ?? 0) : null,
           stockThreshold,

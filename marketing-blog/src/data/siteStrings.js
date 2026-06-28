@@ -94,9 +94,9 @@ export const siteStrings = {
     "packages.p4.name": "Pako 4 — Premium",
     "packages.p4.tagline": "Porosi online & prezencë digjitale e plotë",
     "packages.p4.summary":
-      "Paketa më e plotë: porosi & pagesa online, faqe premium me galeri & vlerësime, vitrinë dyqani me grid produktesh, inventar me përbërës dhe multi-lokal.",
+      "Paketa më e plotë: porosi online, faqe premium me galeri & vlerësime, vitrinë dyqani me grid produktesh, inventar me përbërës dhe multi-lokal.",
     "packages.p4.incl": "Përfshin të gjitha nga Pako Profesionale",
-    "packages.p4.f1": "Porosi online — klienti porosit & paguan nga faqja publike",
+    "packages.p4.f1": "Porosi online — klienti dërgon porosinë nga faqja publike",
     "packages.p4.f2": "Faqe premium — cover, galeri, oferta & vitrinë dyqani /s/",
     "packages.p4.f3": "Vlerësime klientësh — reputacion & feedback publik",
     "packages.p4.f4": "WhatsApp, Instagram, Facebook & TikTok — një klik kontakt",
@@ -235,9 +235,9 @@ export const siteStrings = {
     "packages.p4.name": "Plan 4 — Premium",
     "packages.p4.tagline": "Online orders & a complete digital presence",
     "packages.p4.summary":
-      "The full package: customers order and pay online, public page with cover, gallery, daily offers, reviews and social links — plus inventory and multi-location.",
+      "The full package: online orders, premium public page with gallery & reviews, shop storefront with product grid, ingredient inventory and multi-location.",
     "packages.p4.incl": "Includes everything in Professional",
-    "packages.p4.f1": "Online orders — customers order & pay on the public page",
+    "packages.p4.f1": "Online orders — customers submit orders from the public page",
     "packages.p4.f2": "Premium page — cover, gallery, offers & shop storefront /s/",
     "packages.p4.f3": "Customer reviews — reputation & public feedback",
     "packages.p4.f4": "WhatsApp, Instagram, Facebook & TikTok — one-click contact",
