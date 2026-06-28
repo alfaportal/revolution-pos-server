@@ -1,5 +1,20 @@
 const { getSupabase } = require("../db");
 const { isVisibleOnWebMenu, isOutOfStock } = require("../lib/stockHelpers");
+const { getCatalogFlatMap, normMenuName } = require("../data/menuCatalogTemplate");
+
+let _catalogPhotoByName = null;
+
+function catalogPhotoByName(name) {
+  if (!_catalogPhotoByName) {
+    _catalogPhotoByName = new Map();
+    for (const item of getCatalogFlatMap().values()) {
+      if (item.photoUrl) {
+        _catalogPhotoByName.set(normMenuName(item.name), item.photoUrl);
+      }
+    }
+  }
+  return _catalogPhotoByName.get(normMenuName(name)) || "";
+}
 
 function buildMenuCategories(dbCategories, menuItems) {
   const fromDb = (dbCategories || []).map(c => String(c.name || "").trim()).filter(Boolean);
@@ -30,11 +45,17 @@ function mapMenuItemForWeb(row) {
 
 function mapMenuItemForKitchen(row, { slug, channel = "waiter" } = {}) {
   const item = mapMenuItemForWeb(row);
-  if (!item.has_photo || !slug) return item;
-  return {
-    ...item,
-    photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
-  };
+  if (item.has_photo && slug) {
+    return {
+      ...item,
+      photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
+    };
+  }
+  const templatePhoto = catalogPhotoByName(item.name);
+  if (templatePhoto) {
+    return { ...item, has_photo: true, photo_url: templatePhoto };
+  }
+  return item;
 }
 
 function mapMenuItemForPos(row) {

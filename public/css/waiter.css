@@ -26,7 +26,12 @@ html, body {
 }
 
 .screen { display: none; min-height: 100dvh; flex-direction: column; }
-.screen.active { display: flex; }
+#screen-pin.screen.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.screen.active:not(#screen-pin) { display: flex; }
 
 .waiter-header {
   padding: 1rem 1rem 0.75rem;
@@ -47,6 +52,13 @@ html, body {
   font-size: 0.8rem;
   color: var(--muted);
   margin-top: 0.2rem;
+}
+
+.waiter-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
 }
 
 .waiter-main {

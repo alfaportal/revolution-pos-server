@@ -1,7 +1,10 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = parts[0] === "waiter" ? parts[1] : "";
-  const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
+  const urlParams = new URLSearchParams(window.location.search);
+  const kitchenKey = urlParams.get("key") || "";
+  const returnUrl = urlParams.get("return") || "";
+  const WAITER_IDLE_MS = 10000;
 
   function apiQuery() {
     return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
@@ -27,6 +30,7 @@
   let cancelCountdownTimer = null;
   let cartLinesBound = false;
   let groupBarBound = false;
+  let idleTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -102,12 +106,41 @@
     renderPinDisplay();
   }
 
+  function applyBranding(data) {
+    const venue = data.restaurant_name || data.client_name || "Kamarieri";
+    const location = data.address || data.client_name || "";
+
+    const venueNameEl = $("login-venue-name");
+    if (venueNameEl) venueNameEl.textContent = venue;
+
+    const venueSubEl = $("login-venue-sub");
+    if (venueSubEl) venueSubEl.textContent = location || "Kamarier — hyrje me PIN";
+
+    const venueLogo = $("venue-logo");
+    if (venueLogo) {
+      if (data.logo_url) {
+        venueLogo.src = data.logo_url;
+        venueLogo.classList.remove("hidden");
+      } else {
+        venueLogo.classList.add("hidden");
+        venueLogo.removeAttribute("src");
+      }
+    }
+
+    $("tables-title").textContent = venue;
+    document.title = `Kamarieri — ${venue}`;
+
+    const barVenue = $("bar-venue-name");
+    if (barVenue) barVenue.textContent = venue;
+    const orderBarVenue = $("order-bar-venue");
+    if (orderBarVenue) orderBarVenue.textContent = venue;
+  }
+
   async function loadBootstrap() {
     if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...");
     if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
     bootstrap = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
-    $("login-title").textContent = bootstrap.restaurant_name || bootstrap.client_name || "Kamarieri";
-    $("tables-title").textContent = bootstrap.restaurant_name || "Tavolinat";
+    applyBranding(bootstrap);
     const hint = $("sync-hint");
     const parts = [];
     if (bootstrap.waiter_count != null) {
@@ -282,7 +315,41 @@
 
   function kitchenPhotoUrl(item) {
     if (!item?.photo_url) return "";
-    return item.photo_url + apiQuery();
+    const url = String(item.photo_url);
+    if (/^https?:\/\//i.test(url)) return url;
+    return url + apiQuery();
+  }
+
+  function clearIdleTimer() {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  }
+
+  function scheduleIdleLock() {
+    clearIdleTimer();
+    if (!activeWaiter) return;
+    idleTimer = setTimeout(() => lockSession(), WAITER_IDLE_MS);
+  }
+
+  function setupWaiterIdleLock() {
+    function onActivity() {
+      if (activeWaiter) scheduleIdleLock();
+    }
+    ["pointerdown", "touchstart", "keydown"].forEach(ev => {
+      document.addEventListener(ev, onActivity, { passive: true, capture: true });
+    });
+    window.resetWaiterIdleLock = scheduleIdleLock;
+  }
+
+  function setupDesktopReturn() {
+    const btn = $("btn-back-desktop");
+    if (!btn) return;
+    if (returnUrl && /^https?:\/\//i.test(returnUrl)) {
+      btn.classList.remove("hidden");
+      btn.addEventListener("click", () => window.location.assign(returnUrl));
+    }
   }
 
   function bindMenuGroupBar() {
@@ -363,10 +430,12 @@
     activeWaiter = { id: waiter.id, name: waiter.name };
     $("tables-waiter").textContent = `Kamarieri: ${waiter.name}`;
     renderTables();
+    scheduleIdleLock();
     showScreen("screen-tables");
   }
 
   function lockSession() {
+    clearIdleTimer();
     activeWaiter = null;
     tableNumber = 0;
     cart = [];
@@ -716,6 +785,7 @@
       showScreen("screen-tables");
       showOrderMsg("", false);
       showSuccessToast(sentMsg, { tableNumber: sentTable, allowCancel: true });
+      scheduleIdleLock();
     } catch (e) {
       const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
       showErr(err, msg);
@@ -728,6 +798,8 @@
 
   bindMenuGroupBar();
   bindCartLines();
+  setupWaiterIdleLock();
+  setupDesktopReturn();
   bindTap($("btn-send"), submitOrder);
   $("btn-cancel-order")?.addEventListener("click", cancelPendingOrder);
 

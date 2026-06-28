@@ -125,7 +125,9 @@
 
   function kitchenPhotoUrl(item) {
     if (!item?.photo_url) return "";
-    return item.photo_url + apiQuery();
+    const url = String(item.photo_url);
+    if (/^https?:\/\//i.test(url)) return url;
+    return url + apiQuery();
   }
 
   function bindMenuGroupBar() {
@@ -164,9 +166,12 @@
     if (!tableNumber || tableNumber < 1) throw new Error("Mungon numri i tavolinës (?table=5).");
 
     bootstrap = await api(`/api/kiosk/${encodeURIComponent(slug)}/menu${apiQuery()}`);
-    $("kiosk-title").textContent = bootstrap.restaurant_name || "Porosi tavoline";
+    const venue = bootstrap.restaurant_name || "Porosi tavoline";
+    $("kiosk-title").textContent = venue;
     $("kiosk-table-label").textContent = `T${tableNumber}`;
-    document.title = `${bootstrap.restaurant_name || "Tavolinë"} — T${tableNumber}`;
+    const venueBar = $("kiosk-venue-name");
+    if (venueBar) venueBar.textContent = venue;
+    document.title = `${venue} — T${tableNumber}`;
 
     menuGroupFilter = "pije";
     updateSyncHint();
