@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=25">
+  <link rel="stylesheet" href="/css/panel.css?v=26">
 </head>
 <body>
   <script>
@@ -66,6 +66,7 @@
         <button class="tab" data-tab="licensat">Liçensat</button>
         <button class="tab" data-tab="pronaret">Pronarët</button>
         <button class="tab" data-tab="logu">Log aktiviteti</button>
+        <button class="tab" data-tab="ai-usage">AI Usage</button>
         <button class="tab" data-tab="shto">+ Shto</button>
       </div>
 
@@ -203,6 +204,40 @@
                 </tr>
               </thead>
               <tbody id="tbl-activity"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-ai-usage" class="panel-section hidden">
+        <div class="card admin-only-card">
+          <div class="card-title">AI Usage</div>
+          <p class="field-hint" style="margin-bottom:1rem">
+            Përdorimi i AI (chat &amp; OCR) për çdo lokal — thirrje, tokenë dhe kosto totale USD.
+          </p>
+          <div id="ai-usage-msg" class="alert hidden"></div>
+          <div class="form-row" style="align-items:flex-end;margin-bottom:1rem">
+            <div>
+              <label for="ai-usage-month">Muaj / vit</label>
+              <input type="month" id="ai-usage-month">
+            </div>
+            <div class="link-actions" style="margin-bottom:0">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-ai-usage-load">Shfaq</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-usage-csv">Eksport CSV</button>
+            </div>
+          </div>
+          <div class="overflow-x">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Lokal</th>
+                  <th>Calls këtë muaj</th>
+                  <th>Tokens total</th>
+                  <th>Kosto totale (USD)</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-ai-usage"></tbody>
+              <tfoot id="tbl-ai-usage-foot"></tfoot>
             </table>
           </div>
         </div>
@@ -488,6 +523,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=38"></script>
+  <script src="/js/panel.js?v=39"></script>
 </body>
 </html>

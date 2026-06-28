@@ -1863,6 +1863,89 @@ async function loadActivityLog() {
     : '<tr><td colspan="5" style="color:var(--muted)">Nuk ka veprime të regjistruara</td></tr>';
 }
 
+function currentMonthValue() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function initAiUsageMonthInput() {
+  const input = document.getElementById("ai-usage-month");
+  if (input && !input.value) input.value = currentMonthValue();
+}
+
+function fmtUsd(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0.000000";
+  return n.toFixed(6);
+}
+
+async function loadAiUsage() {
+  initAiUsageMonthInput();
+  const tbl = document.getElementById("tbl-ai-usage");
+  const foot = document.getElementById("tbl-ai-usage-foot");
+  if (!tbl || !foot) return;
+
+  const month = document.getElementById("ai-usage-month")?.value || currentMonthValue();
+  const data = await api(`/api/super/ai-usage?month=${encodeURIComponent(month)}`);
+
+  if (data.table_missing) {
+    showMsg(
+      "ai-usage-msg",
+      "Tabela ai_usage_logs nuk ekziston ende. Ekzekuto migrimin 023_ai_usage_logs.sql në Supabase.",
+      false,
+    );
+  } else {
+    document.getElementById("ai-usage-msg")?.classList.add("hidden");
+  }
+
+  const rows = data.rows || [];
+  tbl.innerHTML = rows.length
+    ? rows
+        .map(
+          (row) => `<tr>
+          <td data-label="Lokal">${esc(row.local_name || row.restaurant_id || "—")}</td>
+          <td data-label="Calls">${Number(row.calls || 0).toLocaleString("sq-AL")}</td>
+          <td data-label="Tokens">${Number(row.tokens_total || 0).toLocaleString("sq-AL")}</td>
+          <td data-label="Kosto USD">${fmtUsd(row.cost_usd_total)}</td>
+        </tr>`,
+        )
+        .join("")
+    : `<tr><td colspan="4" style="color:var(--muted)">Nuk ka përdorim AI për ${esc(data.month || month)}</td></tr>`;
+
+  const totals = data.totals || { calls: 0, tokens_total: 0, cost_usd_total: 0 };
+  foot.innerHTML = `<tr class="admin-table-total">
+    <td><strong>Total</strong></td>
+    <td><strong>${Number(totals.calls || 0).toLocaleString("sq-AL")}</strong></td>
+    <td><strong>${Number(totals.tokens_total || 0).toLocaleString("sq-AL")}</strong></td>
+    <td><strong>${fmtUsd(totals.cost_usd_total)}</strong></td>
+  </tr>`;
+}
+
+async function exportAiUsageCsv() {
+  initAiUsageMonthInput();
+  const month = document.getElementById("ai-usage-month")?.value || currentMonthValue();
+  const res = await fetch(
+    apiUrl(`/api/super/ai-usage?month=${encodeURIComponent(month)}&format=csv`),
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    },
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.gabim || data.error || `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ai-usage-${month}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function refreshAll() {
   showAdminError(null);
   try {
@@ -2000,7 +2083,38 @@ document.querySelectorAll(".tab").forEach(tab => {
       loadActivityLog().catch(() => {});
       loadEmergencyCode().catch(() => {});
     }
+    if (tab.dataset.tab === "ai-usage") {
+      loadAiUsage().catch((err) => showMsg("ai-usage-msg", err.message, false));
+    }
   });
+});
+
+document.getElementById("btn-ai-usage-load")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-ai-usage-load");
+  if (btn) btn.disabled = true;
+  try {
+    await loadAiUsage();
+  } catch (err) {
+    showMsg("ai-usage-msg", err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-ai-usage-csv")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-ai-usage-csv");
+  if (btn) btn.disabled = true;
+  try {
+    await exportAiUsageCsv();
+  } catch (err) {
+    showMsg("ai-usage-msg", err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.getElementById("ai-usage-month")?.addEventListener("change", () => {
+  loadAiUsage().catch((err) => showMsg("ai-usage-msg", err.message, false));
 });
 
 document.getElementById("btn-refresh-emergency")?.addEventListener("click", async () => {
