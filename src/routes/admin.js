@@ -35,6 +35,7 @@ const {
   updateClientAdminSettings,
 } = require("../services/clientAdminService");
 const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
+const { todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
   listTrialExpiryAlerts,
@@ -103,11 +104,14 @@ router.get("/package-tiers", (_req, res) => {
 });
 
 router.get("/emergency-code", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.json({
     ok: true,
     configured: isMasterPinConfigured(),
     daily_code: isMasterPinConfigured() ? getDailyEmergencyCode() : null,
-    hint: "Kodi ditor për hapje offline POS në emergjence (ndryshon çdo ditë).",
+    code_version: 2,
+    hint: "Kodi ditor 6 shifra (vetëm numra) — ndryshon automatikisht çdo 24 orë. Rifreskoni pas mesnatës ose me butonin Rifresko.",
+    valid_for_date: todayISO(),
   });
 });
 

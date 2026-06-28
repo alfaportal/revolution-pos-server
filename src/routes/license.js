@@ -101,7 +101,8 @@ router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
   try {
     const { master_pin, emergency_code, device_id, app_type, hostname } = req.body;
     const pinOk = verifyMasterPin(master_pin);
-    const codeOk = verifyDailyEmergencyCode(emergency_code);
+    const codeInput = String(emergency_code || "").trim() || String(master_pin || "").trim();
+    const codeOk = verifyDailyEmergencyCode(codeInput);
 
     if (!pinOk && !codeOk) {
       return res.status(403).json({

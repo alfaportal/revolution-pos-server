@@ -21,22 +21,25 @@ function verifyMasterPin(pin) {
   }
 }
 
-/** Kodi ditor emergjence (6 shifra) — funksionon offline në POS me të njëjtin algoritëm. */
+/** Kodi ditor emergjence (6 shifra, vetëm numra) — ndryshon çdo 24 orë (UTC). */
 function getDailyEmergencyCode(dateStr = todayISO()) {
   const pin = getMasterEmergencyPin();
   if (!pin) return null;
-  return crypto
-    .createHmac("sha256", `rip-emergency-v1:${pin}`)
+  const hash = crypto
+    .createHmac("sha256", `rip-emergency-v2:${pin}`)
     .update(String(dateStr))
-    .digest("hex")
-    .slice(0, 6)
-    .toUpperCase();
+    .digest();
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += String(hash[i] % 10);
+  }
+  return code;
 }
 
 function verifyDailyEmergencyCode(code, dateStr = todayISO()) {
   const expected = getDailyEmergencyCode(dateStr);
   if (!expected) return false;
-  const provided = String(code || "").trim().toUpperCase();
+  const provided = String(code || "").trim().replace(/\D/g, "");
   if (!provided) return false;
   if (provided === expected) return true;
   const yesterday = new Date(dateStr);

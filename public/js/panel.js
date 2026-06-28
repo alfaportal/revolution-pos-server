@@ -1681,19 +1681,43 @@ async function loadEmergencyCode() {
   const codeEl = document.getElementById("emergency-daily-code");
   if (!hint || !codeEl) return;
   try {
-    const data = await api("/api/admin/emergency-code");
+    const data = await api(`/api/admin/emergency-code?_=${Date.now()}`);
     if (!data.configured) {
       hint.textContent = "Vendosni MASTER_EMERGENCY_PIN në Railway për kod emergjence.";
       codeEl.textContent = "—";
+      emergencyCodeDate = null;
       return;
     }
-    hint.textContent = data.hint || "Kodi ditor për POS offline.";
-    codeEl.textContent = data.daily_code || "—";
+    const code = String(data.daily_code || "").trim();
+    const dateLabel = data.valid_for_date ? ` · data ${data.valid_for_date}` : "";
+    const timeLabel = ` · rifreskuar ${new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`;
+    if (code && /[A-F]/i.test(code)) {
+      hint.textContent =
+        "Serveri online ende i vjetër (kod me germa). Duhet deploy i serverit — pastaj do jetë vetëm 6 numra."
+        + dateLabel
+        + timeLabel;
+    } else {
+      hint.textContent =
+        (data.hint || "Kodi ditor 6 shifra (vetëm numra) — ndryshon pas mesnatës UTC, jo me çdo rifreskim.")
+        + dateLabel
+        + timeLabel;
+    }
+    codeEl.textContent = code || "—";
+    emergencyCodeDate = data.valid_for_date || new Date().toISOString().slice(0, 10);
   } catch (e) {
     hint.textContent = e.message || "Nuk u ngarkua kodi emergjence.";
     codeEl.textContent = "—";
+    emergencyCodeDate = null;
   }
 }
+
+let emergencyCodeDate = null;
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  if (emergencyCodeDate && emergencyCodeDate !== today) {
+    loadEmergencyCode().catch(() => {});
+  }
+}, 60000);
 
 async function loadActivityLog() {
   const tbl = document.getElementById("tbl-activity");
@@ -1855,8 +1879,16 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-document.getElementById("btn-refresh-emergency")?.addEventListener("click", () => {
-  loadEmergencyCode().catch(err => alert(err.message));
+document.getElementById("btn-refresh-emergency")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-refresh-emergency");
+  if (btn) btn.disabled = true;
+  try {
+    await loadEmergencyCode();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 });
 
 document.getElementById("form-client").addEventListener("submit", async e => {
