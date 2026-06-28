@@ -58,6 +58,9 @@ const { listKioskQrCodes, listTableQrMeta, getTableQrCode, getTableQrPng, qrPrin
 const {
   getOwnerPublicPageSettings,
   updateOwnerPublicPageSettings,
+  updateOwnerKitchenSlug,
+  getOwnerPublicPageQr,
+  getOwnerPublicPageQrPng,
 } = require("../services/publicPageService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 
@@ -536,6 +539,41 @@ router.get("/kiosk/qrs/:table", async (req, res) => {
     const base = getPublicAppOrigin();
     const data = await getTableQrCode(req.user.client_id, base, req.params.table);
     res.json({ ok: true, ...data });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/public-page/qr/png", async (req, res) => {
+  try {
+    const base = getPublicAppOrigin();
+    const client = await getClientById(req.user.client_id);
+    const png = await getOwnerPublicPageQrPng(req.user.client_id, base);
+    const slug = client?.kitchen_slug || req.user.client_id;
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="qr-faqe-${slug}.png"`);
+    res.send(png);
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/public-page/qr", async (req, res) => {
+  try {
+    const base = getPublicAppOrigin();
+    const data = await getOwnerPublicPageQr(req.user.client_id, base);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/public-page/slug", async (req, res) => {
+  try {
+    await updateOwnerKitchenSlug(req.user.client_id, req.body?.slug);
+    const base = getPublicAppOrigin();
+    const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
+    res.json({ ok: true, ...settings });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }

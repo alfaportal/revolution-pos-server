@@ -1051,6 +1051,59 @@
   font-size: 0.9rem;
 }
 
+.public-slug-actions {
+  align-items: stretch;
+}
+
+.public-slug-prefix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.65rem;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+#public-page-slug {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.public-page-qr-block {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.public-page-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.65rem 0;
+}
+
+.public-page-qr-preview {
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.public-page-qr-preview img {
+  display: block;
+  margin: 0 auto 0.5rem;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.35rem;
+}
+
+.public-page-qr-preview.hidden {
+  display: none;
+}
+
 .menu-photo-cell {
   min-width: 7.5rem;
   vertical-align: top;

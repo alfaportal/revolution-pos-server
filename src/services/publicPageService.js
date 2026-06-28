@@ -4,6 +4,12 @@ const { getSupabase } = require("../db");
 const { getClientBySlugOrId, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { getClientMenuCatalog } = require("./menuCatalogService");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
+const { qrPngBuffer, assertSameOriginUrl } = require("./qrService");
+const { getClientById } = require("./salesService");
+
+const OWNER_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const MIN_OWNER_SLUG_LEN = 3;
+const MAX_OWNER_SLUG_LEN = 48;
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABELS_SQ = {
@@ -526,6 +532,100 @@ async function getGalleryPhotoResponse(slug, index) {
   return { buffer: parsed.buffer, mime: parsed.mime };
 }
 
+function normalizeOwnerSlug(raw) {
+  return String(raw || "").trim().toLowerCase();
+}
+
+function validateOwnerSlug(raw) {
+  const slug = normalizeOwnerSlug(raw);
+  if (slug.length < MIN_OWNER_SLUG_LEN || slug.length > MAX_OWNER_SLUG_LEN) {
+    throw new Error(`Slug duhet ${MIN_OWNER_SLUG_LEN}–${MAX_OWNER_SLUG_LEN} karaktere.`);
+  }
+  if (!OWNER_SLUG_RE.test(slug)) {
+    throw new Error("Slug lejon vetëm shkronja a-z, numra 0-9 dhe vizë (-).");
+  }
+  return slug;
+}
+
+async function prepareOwnerPublicPageClient(clientId) {
+  let client = await getClientById(clientId);
+  if (!client) throw new Error("Klienti nuk u gjet.");
+  if (!clientHasFeature(client, "website")) {
+    throw new Error(packageUpgradeMessage("website"));
+  }
+  client = await ensureKitchenCredentials(client);
+  return client;
+}
+
+function buildPublicPageUrl(baseUrl, slug) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  return `${base}/r/${encodeURIComponent(slug)}`;
+}
+
+async function getOwnerPublicPageQr(clientId, baseUrl) {
+  const client = await prepareOwnerPublicPageClient(clientId);
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const slug = client.kitchen_slug || client.id;
+  const url = buildPublicPageUrl(base, slug);
+  assertSameOriginUrl(url, base);
+  const png = await qrPngBuffer(url, { width: 320 });
+  const b64 = png.toString("base64");
+  return {
+    slug,
+    url,
+    png_base64: b64,
+    data_url: `data:image/png;base64,${b64}`,
+  };
+}
+
+async function getOwnerPublicPageQrPng(clientId, baseUrl) {
+  const data = await getOwnerPublicPageQr(clientId, baseUrl);
+  return Buffer.from(data.png_base64, "base64");
+}
+
+async function updateOwnerKitchenSlug(clientId, rawSlug) {
+  const slug = validateOwnerSlug(rawSlug);
+  const db = getSupabase();
+
+  const { data: current, error: currentErr } = await db
+    .from("clients")
+    .select("id, kitchen_slug")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (currentErr) throw currentErr;
+  if (!current) throw new Error("Klienti nuk u gjet.");
+
+  if (current.kitchen_slug === slug) {
+    return current;
+  }
+
+  const { data: taken, error: takenErr } = await db
+    .from("clients")
+    .select("id")
+    .eq("kitchen_slug", slug)
+    .maybeSingle();
+  if (takenErr) throw takenErr;
+  if (taken && taken.id !== clientId) {
+    throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+  }
+
+  const { data, error } = await db
+    .from("clients")
+    .update({ kitchen_slug: slug })
+    .eq("id", clientId)
+    .select("*")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+    }
+    throw error;
+  }
+
+  return data;
+}
+
 module.exports = {
   DAY_KEYS,
   DAY_LABELS_SQ,
@@ -543,4 +643,8 @@ module.exports = {
   getMenuItemPhotoResponse,
   normalizeReviews,
   normalizeGallery,
+  validateOwnerSlug,
+  updateOwnerKitchenSlug,
+  getOwnerPublicPageQr,
+  getOwnerPublicPageQrPng,
 };

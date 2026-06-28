@@ -414,6 +414,17 @@
           </div>
           <div class="card-title" style="margin-top:1rem;font-size:0.95rem">Orari i punës</div>
           <div id="public-hours-grid" class="public-hours-grid"></div>
+
+          <div class="public-page-slug-block" style="margin-top:1rem">
+            <label for="public-page-slug">Slug i faqes publike</label>
+            <p class="links-hint">URL: <code>revolution-pos.com/r/<span id="public-slug-preview">slug</span></code> — vetëm a-z, 0-9 dhe vizë (-).</p>
+            <div class="link-actions public-slug-actions">
+              <span class="public-slug-prefix mono-input">/r/</span>
+              <input type="text" id="public-page-slug" class="mono-input" maxlength="48" autocomplete="off" spellcheck="false" placeholder="babylon-ferizaj">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-public-save-slug">Ruaj slug</button>
+            </div>
+          </div>
+
           <div class="link-row" style="margin-top:0.75rem">
             <label>URL publike</label>
             <div class="link-actions">
@@ -421,6 +432,20 @@
               <button type="button" class="btn btn-ghost btn-sm" id="btn-public-copy-url">Kopjo</button>
             </div>
           </div>
+
+          <div class="public-page-qr-block">
+            <div class="card-title" style="font-size:0.95rem;margin-top:0.5rem">QR kodi i faqes publike</div>
+            <p class="links-hint">Klienti skanon → sheh menynë, orarin dhe kontaktin. Në fund: Powered by Revolution POS.</p>
+            <div class="public-page-qr-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btn-public-generate-qr">Gjenero QR Kod</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-public-download-qr" disabled>Shkarko QR</button>
+            </div>
+            <div id="public-page-qr-preview" class="public-page-qr-preview hidden">
+              <img id="public-page-qr-img" alt="QR faqja publike" width="200" height="200">
+              <p class="links-hint" id="public-page-qr-url"></p>
+            </div>
+          </div>
+
           <button type="button" class="btn btn-primary" id="btn-public-save" style="margin-top:1rem">Ruaj faqen publike</button>
           <div id="public-page-msg" class="owner-license-msg"></div>
         </div>
@@ -648,7 +673,7 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=18"></script>
+  <script src="/js/owner.js?v=19"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>

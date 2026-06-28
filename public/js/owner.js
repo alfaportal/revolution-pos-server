@@ -1604,6 +1604,24 @@ function updatePublicLogoPreview(dataUrl) {
   }
 }
 
+function updatePublicSlugPreview(slug) {
+  const preview = document.getElementById("public-slug-preview");
+  if (preview) preview.textContent = slug || "slug";
+}
+
+function resetPublicPageQrPreview() {
+  publicPageQrData = null;
+  document.getElementById("public-page-qr-preview")?.classList.add("hidden");
+  const img = document.getElementById("public-page-qr-img");
+  if (img) img.removeAttribute("src");
+  const urlEl = document.getElementById("public-page-qr-url");
+  if (urlEl) urlEl.textContent = "";
+  const dlBtn = document.getElementById("btn-public-download-qr");
+  if (dlBtn) dlBtn.disabled = true;
+}
+
+let publicPageQrData = null;
+
 async function loadPublicPage() {
   setPublicPageMsg("");
   try {
@@ -1622,6 +1640,10 @@ async function loadPublicPage() {
     document.getElementById("public-description").value = data.public_description || "";
     document.getElementById("public-theme").value = data.public_theme_color || "#c2410c";
     document.getElementById("public-page-url").value = data.public_url || "";
+    const slugInput = document.getElementById("public-page-slug");
+    if (slugInput) slugInput.value = data.slug || "";
+    updatePublicSlugPreview(data.slug || "");
+    resetPublicPageQrPreview();
     const preview = document.getElementById("btn-public-preview");
     if (preview && data.public_url) preview.href = data.public_url;
 
@@ -1768,6 +1790,96 @@ document.getElementById("btn-public-review-add")?.addEventListener("click", () =
 });
 
 document.getElementById("btn-public-save")?.addEventListener("click", savePublicPage);
+
+document.getElementById("public-page-slug")?.addEventListener("input", e => {
+  updatePublicSlugPreview(e.target.value.trim().toLowerCase());
+});
+
+document.getElementById("btn-public-save-slug")?.addEventListener("click", async () => {
+  const slug = document.getElementById("public-page-slug")?.value?.trim();
+  const btn = document.getElementById("btn-public-save-slug");
+  if (btn) btn.disabled = true;
+  setPublicPageMsg("Duke ruajtur slug…", true);
+  try {
+    const data = await api("/api/owner/public-page/slug", {
+      method: "PATCH",
+      body: JSON.stringify({ slug }),
+    });
+    document.getElementById("public-page-slug").value = data.slug || slug;
+    document.getElementById("public-page-url").value = data.public_url || "";
+    updatePublicSlugPreview(data.slug || slug);
+    resetPublicPageQrPreview();
+    const preview = document.getElementById("btn-public-preview");
+    if (preview && data.public_url) preview.href = data.public_url;
+    await loadClient();
+    setPublicPageMsg("Slug u ruajt.", true);
+  } catch (err) {
+    setPublicPageMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-public-generate-qr")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-public-generate-qr");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Duke gjeneruar…";
+  }
+  setPublicPageMsg("");
+  try {
+    const data = await api("/api/owner/public-page/qr");
+    publicPageQrData = data;
+    const wrap = document.getElementById("public-page-qr-preview");
+    const img = document.getElementById("public-page-qr-img");
+    const urlEl = document.getElementById("public-page-qr-url");
+    if (img && data.data_url) img.src = data.data_url;
+    if (urlEl) urlEl.textContent = data.url || "";
+    wrap?.classList.remove("hidden");
+    document.getElementById("btn-public-download-qr").disabled = false;
+    setPublicPageMsg("QR u gjenerua.", true);
+  } catch (err) {
+    setPublicPageMsg(err.message, false);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Gjenero QR Kod";
+    }
+  }
+});
+
+document.getElementById("btn-public-download-qr")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-public-download-qr");
+  if (btn) btn.disabled = true;
+  try {
+    setPublicPageMsg("");
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch("/api/owner/public-page/qr/png", {
+      headers,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.gabim || "Shkarkimi dështoi.");
+    }
+    const blob = await res.blob();
+    const slug = document.getElementById("public-page-slug")?.value?.trim() || "faqja";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qr-faqe-${slug}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setPublicPageMsg("QR u shkarkua (PNG).", true);
+  } catch (err) {
+    setPublicPageMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = !publicPageQrData;
+  }
+});
 
 document.getElementById("btn-public-copy-url")?.addEventListener("click", async () => {
   const url = document.getElementById("public-page-url")?.value;
