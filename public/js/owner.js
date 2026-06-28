@@ -2331,6 +2331,10 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
   registerServiceWorker();
   initPwaInstallBanner();
 
+  if (window.OfflineQueue) {
+    OfflineQueue.initConnectionStatus(document.getElementById("conn-status-owner"));
+  }
+
   if (!token) {
     location.href = "/owner/login";
     return;

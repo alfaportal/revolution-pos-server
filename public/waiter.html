@@ -31,6 +31,7 @@
       <aside class="staff-login-brand">
         <img class="staff-revolution-logo" src="/logo-source.png" width="52" height="52" alt="Revolution Invest POS">
         <p class="staff-brand-label">Revolution Invest POS</p>
+        <span id="conn-status-pin" class="conn-status is-online" aria-live="polite">Online</span>
         <img id="venue-logo" class="staff-venue-logo hidden" width="64" height="64" alt="">
         <h2 class="staff-venue-name" id="login-venue-name">Kamarieri</h2>
         <p class="staff-venue-location" id="login-venue-sub">Duke ngarkuar…</p>
@@ -67,6 +68,7 @@
     <div class="staff-app-bar">
       <img src="/logo-source.png" width="28" height="28" alt="">
       <span>Revolution Invest POS</span>
+      <span id="conn-status-tables" class="conn-status is-online" aria-live="polite">Online</span>
       <span class="staff-app-venue" id="bar-venue-name">—</span>
     </div>
     <div class="waiter-header">
@@ -91,6 +93,7 @@
     <div class="staff-app-bar">
       <img src="/logo-source.png" width="28" height="28" alt="">
       <span>Revolution Invest POS</span>
+      <span id="conn-status-order" class="conn-status is-online" aria-live="polite">Online</span>
       <span class="staff-app-venue" id="order-bar-venue">—</span>
     </div>
     <div class="waiter-header">
@@ -140,8 +143,9 @@
     </div>
   </div>
 
+  <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=1"></script>
-  <script src="/js/waiter.js?v=15"></script>
+  <script src="/js/waiter.js?v=17"></script>
 </body>
 </html>

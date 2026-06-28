@@ -7,6 +7,14 @@
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
   const WAITER_IDLE_MS = 10000;
+  const WAITER_SESSION_KEY = slug ? `waiter_session_${slug}` : "waiter_session";
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js", { scope: "/waiter/" }).catch(() => {});
+  }
+
+  let syncInProgress = false;
 
   function apiQuery() {
     const parts = [];
@@ -81,6 +89,107 @@
     return data;
   }
 
+  function isNetworkError(err) {
+    if (!navigator.onLine) return true;
+    const msg = String(err?.message || err || "").toLowerCase();
+    return msg.includes("failed to fetch") || msg.includes("network") || msg.includes("fetch");
+  }
+
+  function updateConnectionBadges() {
+    document.querySelectorAll(".conn-status").forEach(el => {
+      const online = navigator.onLine;
+      el.textContent = online ? "Online" : "Offline";
+      el.classList.toggle("is-online", online);
+      el.classList.toggle("is-offline", !online);
+    });
+  }
+
+  async function updatePendingIndicator() {
+    if (!window.OfflineQueue) return;
+    const count = await OfflineQueue.countPendingOrders(slug);
+    const online = navigator.onLine;
+    document.querySelectorAll(".conn-status").forEach(el => {
+      const base = online ? "Online" : "Offline";
+      el.textContent = count > 0 ? `${base} · ${count} pritje` : base;
+      el.classList.toggle("is-online", online);
+      el.classList.toggle("is-offline", !online);
+    });
+  }
+
+  function setupConnectionStatus() {
+    updateConnectionBadges();
+    window.addEventListener("online", () => {
+      updateConnectionBadges();
+      syncPendingOrders().catch(() => {});
+    });
+    window.addEventListener("offline", () => {
+      updateConnectionBadges();
+      updatePendingIndicator().catch(() => {});
+    });
+    updatePendingIndicator().catch(() => {});
+  }
+
+  async function syncPendingOrders() {
+    if (syncInProgress || !navigator.onLine || !window.OfflineQueue || !slug) return;
+    syncInProgress = true;
+    try {
+      const result = await OfflineQueue.syncWaiterOrders({
+        slug,
+        fetchImpl: fetch,
+        apiHeaders: () => apiHeaders(),
+      });
+      await updatePendingIndicator();
+      if (result.synced > 0) {
+        showSuccessToast(`✅ ${result.synced} porosi offline u sinkronizuan.`);
+        await refreshBootstrap();
+      }
+    } finally {
+      syncInProgress = false;
+    }
+  }
+
+  function saveWaiterSession() {
+    if (!activeWaiter || !slug) return;
+    try {
+      sessionStorage.setItem(WAITER_SESSION_KEY, JSON.stringify(activeWaiter));
+    } catch { /* ignore */ }
+  }
+
+  function loadWaiterSession() {
+    try {
+      const raw = sessionStorage.getItem(WAITER_SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function clearWaiterSession() {
+    try {
+      sessionStorage.removeItem(WAITER_SESSION_KEY);
+    } catch { /* ignore */ }
+  }
+
+  async function enqueueOfflineOrder(orderUrl, payload, sentTable) {
+    await OfflineQueue.enqueueWaiterOrder({
+      slug,
+      kitchenKey,
+      waiterToken,
+      url: orderUrl,
+      body: payload,
+    });
+    cart = [];
+    renderCart();
+    tableNumber = 0;
+    showScreen("screen-tables");
+    showOrderMsg("", false);
+    showSuccessToast(
+      `📴 Porosia për T${sentTable} u ruajt offline — do të dërgohet kur kthehet interneti.`,
+    );
+    await updatePendingIndicator();
+    scheduleIdleLock();
+  }
+
   function renderPinDisplay() {
     const el = $("pin-display");
     if (!el) return;
@@ -146,7 +255,26 @@
     if (!kitchenKey) {
       throw new Error("Mungon kodi i aksesit (?key=...) në link. Kopjoni linkun e plotë nga paneli → Kamarierët → Kopjo.");
     }
-    bootstrap = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
+    try {
+      bootstrap = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
+      if (window.OfflineQueue) {
+        await OfflineQueue.saveBootstrapCache(slug, kitchenKey, bootstrap);
+      }
+    } catch (e) {
+      if (window.OfflineQueue) {
+        const cached = await OfflineQueue.loadBootstrapCache(slug, kitchenKey);
+        if (cached) {
+          bootstrap = cached;
+          applyBranding(bootstrap);
+          const hint = $("sync-hint");
+          if (hint) {
+            hint.textContent = "Offline — menu e fundit e ruajtur lokalisht.";
+          }
+          return;
+        }
+      }
+      throw e;
+    }
     applyBranding(bootstrap);
     if (bootstrap.assigned_waiter?.name) {
       const welcome = $("login-welcome");
@@ -441,6 +569,7 @@
 
   function enterWaiterSession(waiter) {
     activeWaiter = { id: waiter.id, name: waiter.name };
+    saveWaiterSession();
     $("tables-waiter").textContent = `Kamarieri: ${waiter.name}`;
     renderTables();
     scheduleIdleLock();
@@ -450,6 +579,7 @@
   function lockSession() {
     clearIdleTimer();
     activeWaiter = null;
+    clearWaiterSession();
     tableNumber = 0;
     cart = [];
     clearPin();
@@ -811,8 +941,23 @@
       return;
     }
 
+    const orderUrl = `/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`;
+
+    if (!navigator.onLine && window.OfflineQueue) {
+      try {
+        await enqueueOfflineOrder(orderUrl, payload, sentTable);
+      } catch (e) {
+        showErr(err, e.message);
+        showOrderMsg(e.message, false);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Dërgo Porosinë";
+      }
+      return;
+    }
+
     try {
-      await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+      await api(orderUrl, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -826,6 +971,14 @@
       showSuccessToast(sentMsg, { tableNumber: sentTable, allowCancel: true });
       scheduleIdleLock();
     } catch (e) {
+      if (window.OfflineQueue && isNetworkError(e)) {
+        try {
+          await enqueueOfflineOrder(orderUrl, payload, sentTable);
+          return;
+        } catch (queueErr) {
+          e = queueErr;
+        }
+      }
       const msg = e.message || "Porosia nuk u dërgua. Provoni përsëri.";
       showErr(err, msg);
       showOrderMsg(msg, false);
@@ -839,6 +992,8 @@
   bindCartLines();
   setupWaiterIdleLock();
   setupDesktopReturn();
+  setupConnectionStatus();
+  registerServiceWorker();
   bindTap($("btn-send"), submitOrder);
   $("btn-cancel-order")?.addEventListener("click", cancelPendingOrder);
 
@@ -846,6 +1001,11 @@
     try {
       await loadBootstrap();
       if (await tryKasaSessionEnter()) return;
+      const restored = loadWaiterSession();
+      if (restored?.id && restored?.name && !navigator.onLine) {
+        enterWaiterSession(restored);
+        return;
+      }
       renderPinDisplay();
       showScreen("screen-pin");
     } catch (e) {
@@ -854,6 +1014,7 @@
   })();
 
   setInterval(() => {
+    if (navigator.onLine) syncPendingOrders().catch(() => {});
     if (activeWaiter && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
       refreshBootstrap();
     }
