@@ -68,6 +68,23 @@ async function main() {
   console.log(`Running SQL: ${path.basename(sqlPath)} (host ${host})`);
   await pool.query(sql);
 
+  if (/021_package_tiers/i.test(path.basename(sqlPath))) {
+    const { rows: tiers } = await pool.query(`
+      SELECT package_tier, COUNT(*)::int AS n
+      FROM clients
+      GROUP BY package_tier
+      ORDER BY package_tier
+    `);
+    const { rows: chk } = await pool.query(`
+      SELECT pg_get_constraintdef(oid) AS def
+      FROM pg_constraint
+      WHERE conname = 'clients_package_tier_check'
+    `);
+    console.log("OK — package_tier counts:", tiers.map(r => `${r.package_tier}=${r.n}`).join(", ") || "(none)");
+    console.log("OK — constraint:", chk[0]?.def || "(missing)");
+    return;
+  }
+
   const { rows } = await pool.query(`
     SELECT column_name
     FROM information_schema.columns

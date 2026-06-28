@@ -25,6 +25,15 @@ const {
 
 const MAX_LOGO_BYTES = 512_000;
 const MAX_LOGO_CHARS = 700_000;
+const MAX_COVER_BYTES = 800_000;
+const MAX_COVER_CHARS = 1_100_000;
+const MAX_GALLERY_BYTES = 512_000;
+const MAX_GALLERY_CHARS = 700_000;
+const MAX_GALLERY_COUNT = 5;
+const MAX_REVIEWS = 5;
+const MAX_DAILY_OFFER = 500;
+const MAX_REVIEW_NAME = 80;
+const MAX_REVIEW_TEXT = 500;
 const MAX_MENU_PHOTO_BYTES = 512_000;
 const MAX_MENU_PHOTO_CHARS = 700_000;
 
@@ -72,6 +81,117 @@ function validateLogoInput(logo) {
     maxChars: MAX_LOGO_CHARS,
     label: "Logo",
   });
+}
+
+function validateCoverInput(cover) {
+  return validateImageDataUrl(cover, {
+    maxBytes: MAX_COVER_BYTES,
+    maxChars: MAX_COVER_CHARS,
+    label: "Foto cover",
+  });
+}
+
+function normalizeGallery(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, MAX_GALLERY_COUNT)
+    .map(item => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function validateGalleryInput(raw) {
+  if (raw == null) return undefined;
+  if (!Array.isArray(raw)) throw new Error("Galeria duhet të jetë listë.");
+  if (raw.length > MAX_GALLERY_COUNT) {
+    throw new Error(`Maksimum ${MAX_GALLERY_COUNT} foto në galeri.`);
+  }
+  const out = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i];
+    if (item == null || item === "") continue;
+    out.push(validateImageDataUrl(item, {
+      maxBytes: MAX_GALLERY_BYTES,
+      maxChars: MAX_GALLERY_CHARS,
+      label: `Foto galeri ${i + 1}`,
+    }));
+  }
+  return out;
+}
+
+function normalizeReviews(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, MAX_REVIEWS)
+    .map(row => {
+      const name = String(row?.name || "").trim().slice(0, MAX_REVIEW_NAME);
+      let stars = Math.round(Number(row?.stars) || 0);
+      if (stars < 1) stars = 1;
+      if (stars > 5) stars = 5;
+      const text = String(row?.text || "").trim().slice(0, MAX_REVIEW_TEXT);
+      if (!name) return null;
+      return { name, stars, ...(text ? { text } : {}) };
+    })
+    .filter(Boolean);
+}
+
+function normalizeSocialUrl(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s.slice(0, 500);
+  return `https://${s.replace(/^\/+/, "")}`.slice(0, 500);
+}
+
+function normalizeWhatsAppPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length < 8) return "";
+  return digits.slice(0, 20);
+}
+
+function buildWhatsAppUrl(digits) {
+  if (!digits) return null;
+  return `https://wa.me/${digits}`;
+}
+
+function galleryUrlsForSlug(pageSlug, count) {
+  const enc = encodeURIComponent(pageSlug);
+  return Array.from({ length: count }, (_, i) => `/api/r/${enc}/gallery/${i}`);
+}
+
+function settingsProfileFields(settings, pageSlug) {
+  const gallery = normalizeGallery(settings?.public_gallery);
+  const reviews = normalizeReviews(settings?.public_reviews);
+  const whatsapp = normalizeWhatsAppPhone(settings?.public_whatsapp);
+  const instagram = normalizeSocialUrl(settings?.public_social_instagram);
+  const facebook = normalizeSocialUrl(settings?.public_social_facebook);
+  const tiktok = normalizeSocialUrl(settings?.public_social_tiktok);
+  const dailyOffer = String(settings?.public_daily_offer || "").trim().slice(0, MAX_DAILY_OFFER);
+
+  return {
+    cover_url: settings?.public_cover ? `/api/r/${encodeURIComponent(pageSlug)}/cover` : null,
+    gallery_urls: gallery.length ? galleryUrlsForSlug(pageSlug, gallery.length) : [],
+    daily_offer: dailyOffer,
+    reviews,
+    social: {
+      instagram: instagram || null,
+      facebook: facebook || null,
+      tiktok: tiktok || null,
+    },
+    whatsapp_url: buildWhatsAppUrl(whatsapp),
+    whatsapp_phone: whatsapp || null,
+  };
+}
+
+function ownerProfileFields(settings) {
+  return {
+    cover_preview: settings?.public_cover || null,
+    gallery_previews: normalizeGallery(settings?.public_gallery),
+    daily_offer: String(settings?.public_daily_offer || "").trim(),
+    reviews: normalizeReviews(settings?.public_reviews),
+    social_instagram: String(settings?.public_social_instagram || "").trim(),
+    social_facebook: String(settings?.public_social_facebook || "").trim(),
+    social_tiktok: String(settings?.public_social_tiktok || "").trim(),
+    public_whatsapp: String(settings?.public_whatsapp || "").trim(),
+  };
 }
 
 async function loadSettings(clientId) {
@@ -136,6 +256,7 @@ async function getPublicRestaurantPage(slug, baseUrl) {
     })),
     order_url,
     public_url: `${base}/r/${encodeURIComponent(pageSlug)}`,
+    ...settingsProfileFields(settings, pageSlug),
   };
 }
 
@@ -169,6 +290,7 @@ async function getOwnerPublicPageSettings(clientId, baseUrl) {
     website_enabled: clientHasFeature(client, "website"),
     kiosk_enabled: clientHasFeature(client, "kiosk"),
     online_orders_enabled: clientHasFeature(client, "online_orders"),
+    ...ownerProfileFields(settings),
   };
 }
 
@@ -193,6 +315,34 @@ async function updateOwnerPublicPageSettings(clientId, body) {
       patch.public_logo = logo;
     }
   }
+  if (body.public_cover !== undefined) {
+    if (body.public_cover === null || body.public_cover === "") {
+      patch.public_cover = "";
+    } else {
+      patch.public_cover = validateCoverInput(body.public_cover);
+    }
+  }
+  if (body.public_gallery !== undefined) {
+    patch.public_gallery = validateGalleryInput(body.public_gallery);
+  }
+  if (body.public_daily_offer != null) {
+    patch.public_daily_offer = String(body.public_daily_offer).trim().slice(0, MAX_DAILY_OFFER);
+  }
+  if (body.public_reviews != null) {
+    patch.public_reviews = normalizeReviews(body.public_reviews);
+  }
+  if (body.public_social_instagram != null) {
+    patch.public_social_instagram = normalizeSocialUrl(body.public_social_instagram);
+  }
+  if (body.public_social_facebook != null) {
+    patch.public_social_facebook = normalizeSocialUrl(body.public_social_facebook);
+  }
+  if (body.public_social_tiktok != null) {
+    patch.public_social_tiktok = normalizeSocialUrl(body.public_social_tiktok);
+  }
+  if (body.public_whatsapp != null) {
+    patch.public_whatsapp = normalizeWhatsAppPhone(body.public_whatsapp);
+  }
 
   if (Object.keys(patch).length <= 1) throw new Error("Nuk ka fusha për përditësim.");
 
@@ -208,6 +358,14 @@ async function updateOwnerPublicPageSettings(clientId, body) {
     public_hours: existing?.public_hours || {},
     public_logo: existing?.public_logo || "",
     public_theme_color: existing?.public_theme_color || "#c2410c",
+    public_cover: existing?.public_cover || "",
+    public_gallery: existing?.public_gallery || [],
+    public_daily_offer: existing?.public_daily_offer || "",
+    public_reviews: existing?.public_reviews || [],
+    public_social_instagram: existing?.public_social_instagram || "",
+    public_social_facebook: existing?.public_social_facebook || "",
+    public_social_tiktok: existing?.public_social_tiktok || "",
+    public_whatsapp: existing?.public_whatsapp || "",
     ...patch,
   });
   if (error) throw error;
@@ -347,6 +505,27 @@ async function getLogoResponse(slug, _size) {
   return { buffer: getDefaultIconBuffer(_size), mime: "image/png" };
 }
 
+async function getCoverResponse(slug) {
+  const client = await getClientBySlugOrId(slug);
+  if (!client) return null;
+  const settings = await loadSettings(client.id);
+  const parsed = parseImageDataUrl(settings?.public_cover, MAX_COVER_BYTES);
+  if (!parsed) return null;
+  return { buffer: parsed.buffer, mime: parsed.mime };
+}
+
+async function getGalleryPhotoResponse(slug, index) {
+  const client = await getClientBySlugOrId(slug);
+  if (!client) return null;
+  const settings = await loadSettings(client.id);
+  const gallery = normalizeGallery(settings?.public_gallery);
+  const idx = Number(index);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= gallery.length) return null;
+  const parsed = parseImageDataUrl(gallery[idx], MAX_GALLERY_BYTES);
+  if (!parsed) return null;
+  return { buffer: parsed.buffer, mime: parsed.mime };
+}
+
 module.exports = {
   DAY_KEYS,
   DAY_LABELS_SQ,
@@ -359,5 +538,9 @@ module.exports = {
   buildManifest,
   buildServiceWorkerScript,
   getLogoResponse,
+  getCoverResponse,
+  getGalleryPhotoResponse,
   getMenuItemPhotoResponse,
+  normalizeReviews,
+  normalizeGallery,
 };

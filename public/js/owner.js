@@ -1428,6 +1428,118 @@ const PUBLIC_DAY_LABELS = {
 
 let publicPageLogoData = undefined;
 let publicPageLogoDirty = false;
+let publicCoverData = undefined;
+let publicCoverDirty = false;
+let publicGalleryData = [];
+let publicGalleryDirty = false;
+let publicReviewsData = [];
+
+function readImageFile(file, maxBytes, onDone) {
+  if (!file) return;
+  if (file.size > maxBytes) {
+    setPublicPageMsg(`Skedari max ${Math.round(maxBytes / 1024)} KB.`, false);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => onDone(reader.result);
+  reader.readAsDataURL(file);
+}
+
+function updatePublicCoverPreview(dataUrl) {
+  const img = document.getElementById("public-cover-preview");
+  const ph = document.getElementById("public-cover-placeholder");
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove("hidden");
+    ph?.classList.add("hidden");
+  } else {
+    img.removeAttribute("src");
+    img.classList.add("hidden");
+    ph?.classList.remove("hidden");
+  }
+}
+
+function renderPublicGalleryGrid() {
+  const grid = document.getElementById("public-gallery-grid");
+  const input = document.getElementById("public-gallery-input");
+  if (!grid) return;
+  grid.innerHTML = publicGalleryData.map((url, idx) => `
+    <div class="public-gallery-item">
+      <img src="${escAttr(url)}" alt="Galeri ${idx + 1}">
+      <button type="button" class="btn btn-danger btn-sm" data-gallery-remove="${idx}">×</button>
+    </div>
+  `).join("");
+  grid.querySelectorAll("[data-gallery-remove]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      publicGalleryData.splice(Number(btn.dataset.galleryRemove), 1);
+      publicGalleryDirty = true;
+      renderPublicGalleryGrid();
+    });
+  });
+  if (input) {
+    input.disabled = publicGalleryData.length >= 5;
+  }
+}
+
+function renderPublicReviewsEditor() {
+  const list = document.getElementById("public-reviews-list");
+  const addBtn = document.getElementById("btn-public-review-add");
+  if (!list) return;
+
+  list.innerHTML = publicReviewsData.map((row, idx) => {
+    const stars = Math.max(1, Math.min(5, Number(row.stars) || 5));
+    const starBtns = [1, 2, 3, 4, 5].map(n =>
+      `<button type="button" class="${n <= stars ? "active" : ""}" data-review-star="${idx}" data-star="${n}" aria-label="${n} yje">★</button>`,
+    ).join("");
+    return `
+      <div class="public-review-row" data-review-idx="${idx}">
+        <div class="public-review-row-head">
+          <input type="text" class="public-review-name" value="${escAttr(row.name || "")}" placeholder="Emri i klientit" maxlength="80">
+          <div class="public-review-stars">${starBtns}</div>
+          <button type="button" class="btn btn-danger btn-sm" data-review-remove="${idx}">Fshi</button>
+        </div>
+        <textarea class="public-review-text" rows="2" maxlength="500" placeholder="Koment (opsional)">${escHtml(row.text || "")}</textarea>
+      </div>`;
+  }).join("");
+
+  list.querySelectorAll("[data-review-star]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.reviewStar);
+      publicReviewsData[idx].stars = Number(btn.dataset.star);
+      renderPublicReviewsEditor();
+    });
+  });
+  list.querySelectorAll("[data-review-remove]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      publicReviewsData.splice(Number(btn.dataset.reviewRemove), 1);
+      renderPublicReviewsEditor();
+    });
+  });
+  list.querySelectorAll(".public-review-name").forEach((el, idx) => {
+    el.addEventListener("input", () => {
+      publicReviewsData[idx].name = el.value;
+    });
+  });
+  list.querySelectorAll(".public-review-text").forEach((el, idx) => {
+    el.addEventListener("input", () => {
+      publicReviewsData[idx].text = el.value;
+    });
+  });
+
+  if (addBtn) {
+    addBtn.disabled = publicReviewsData.length >= 5;
+  }
+}
+
+function collectPublicReviews() {
+  return publicReviewsData
+    .map(r => ({
+      name: String(r.name || "").trim(),
+      stars: Math.max(1, Math.min(5, Number(r.stars) || 5)),
+      text: String(r.text || "").trim(),
+    }))
+    .filter(r => r.name);
+}
 
 function setPublicPageMsg(text, ok) {
   const msg = document.getElementById("public-page-msg");
@@ -1516,6 +1628,26 @@ async function loadPublicPage() {
     publicPageLogoData = data.logo_preview || null;
     publicPageLogoDirty = false;
     updatePublicLogoPreview(publicPageLogoData);
+
+    publicCoverData = data.cover_preview || null;
+    publicCoverDirty = false;
+    updatePublicCoverPreview(publicCoverData);
+
+    publicGalleryData = Array.isArray(data.gallery_previews) ? [...data.gallery_previews] : [];
+    publicGalleryDirty = false;
+    renderPublicGalleryGrid();
+
+    publicReviewsData = Array.isArray(data.reviews)
+      ? data.reviews.map(r => ({ name: r.name || "", stars: r.stars || 5, text: r.text || "" }))
+      : [];
+    renderPublicReviewsEditor();
+
+    document.getElementById("public-daily-offer").value = data.daily_offer || "";
+    document.getElementById("public-social-instagram").value = data.social_instagram || "";
+    document.getElementById("public-social-facebook").value = data.social_facebook || "";
+    document.getElementById("public-social-tiktok").value = data.social_tiktok || "";
+    document.getElementById("public-whatsapp").value = data.public_whatsapp || "";
+
     renderPublicHoursGrid(data.public_hours);
   } catch (err) {
     setPublicPageMsg(err.message, false);
@@ -1530,9 +1662,21 @@ async function savePublicPage() {
       public_description: document.getElementById("public-description").value,
       public_hours: collectPublicHours(),
       public_theme_color: document.getElementById("public-theme").value,
+      public_daily_offer: document.getElementById("public-daily-offer").value,
+      public_reviews: collectPublicReviews(),
+      public_social_instagram: document.getElementById("public-social-instagram").value,
+      public_social_facebook: document.getElementById("public-social-facebook").value,
+      public_social_tiktok: document.getElementById("public-social-tiktok").value,
+      public_whatsapp: document.getElementById("public-whatsapp").value,
     };
     if (publicPageLogoDirty) {
       body.public_logo = publicPageLogoData || "";
+    }
+    if (publicCoverDirty) {
+      body.public_cover = publicCoverData || "";
+    }
+    if (publicGalleryDirty) {
+      body.public_gallery = publicGalleryData;
     }
     const data = await api("/api/owner/public-page", {
       method: "PATCH",
@@ -1541,6 +1685,16 @@ async function savePublicPage() {
     publicPageLogoData = data.logo_preview || null;
     publicPageLogoDirty = false;
     updatePublicLogoPreview(publicPageLogoData);
+    publicCoverData = data.cover_preview || null;
+    publicCoverDirty = false;
+    updatePublicCoverPreview(publicCoverData);
+    publicGalleryData = Array.isArray(data.gallery_previews) ? [...data.gallery_previews] : [];
+    publicGalleryDirty = false;
+    renderPublicGalleryGrid();
+    publicReviewsData = Array.isArray(data.reviews)
+      ? data.reviews.map(r => ({ name: r.name || "", stars: r.stars || 5, text: r.text || "" }))
+      : [];
+    renderPublicReviewsEditor();
     document.getElementById("public-page-url").value = data.public_url || "";
     setPublicPageMsg("Faqja publike u ruajt.", true);
   } catch (err) {
@@ -1571,6 +1725,46 @@ document.getElementById("btn-public-logo-remove")?.addEventListener("click", () 
   publicPageLogoData = null;
   publicPageLogoDirty = true;
   updatePublicLogoPreview(null);
+});
+
+document.getElementById("public-cover-input")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  readImageFile(file, 800_000, (dataUrl) => {
+    publicCoverData = dataUrl;
+    publicCoverDirty = true;
+    updatePublicCoverPreview(publicCoverData);
+    setPublicPageMsg("");
+  });
+  e.target.value = "";
+});
+
+document.getElementById("btn-public-cover-remove")?.addEventListener("click", () => {
+  publicCoverData = null;
+  publicCoverDirty = true;
+  updatePublicCoverPreview(null);
+});
+
+document.getElementById("public-gallery-input")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (publicGalleryData.length >= 5) {
+    setPublicPageMsg("Maksimum 5 foto në galeri.", false);
+    e.target.value = "";
+    return;
+  }
+  readImageFile(file, 512_000, (dataUrl) => {
+    publicGalleryData.push(dataUrl);
+    publicGalleryDirty = true;
+    renderPublicGalleryGrid();
+    setPublicPageMsg("");
+  });
+  e.target.value = "";
+});
+
+document.getElementById("btn-public-review-add")?.addEventListener("click", () => {
+  if (publicReviewsData.length >= 5) return;
+  publicReviewsData.push({ name: "", stars: 5, text: "" });
+  renderPublicReviewsEditor();
 });
 
 document.getElementById("btn-public-save")?.addEventListener("click", savePublicPage);

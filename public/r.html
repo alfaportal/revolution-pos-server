@@ -43,6 +43,8 @@
 
   <div id="screen-main" class="screen hidden">
     <header class="hero" id="hero">
+      <img id="hero-cover" class="hero-cover hidden" alt="">
+      <div class="hero-overlay" id="hero-overlay"></div>
       <div class="hero-inner">
         <div class="hero-logo-wrap" id="hero-logo-wrap" hidden>
           <img id="hero-logo" class="hero-logo" alt="" width="88" height="88">
@@ -51,6 +53,11 @@
         <p class="hero-desc" id="biz-desc" hidden></p>
       </div>
     </header>
+
+    <div class="daily-offer-banner hidden" id="daily-offer-banner" role="status">
+      <span class="daily-offer-icon" aria-hidden="true">🔥</span>
+      <span id="daily-offer-text"></span>
+    </div>
 
     <section class="info-section">
       <div class="info-grid">
@@ -77,6 +84,22 @@
         <div class="hours-title">Orari i punës</div>
         <ul class="hours-list" id="hours-list"></ul>
       </div>
+      <div class="contact-actions hidden" id="contact-actions">
+        <a class="contact-btn whatsapp-btn hidden" id="btn-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
+          <span aria-hidden="true">💬</span> Na kontakto
+        </a>
+        <div class="social-links hidden" id="social-links"></div>
+      </div>
+    </section>
+
+    <section class="gallery-section hidden" id="gallery-section">
+      <h2 class="section-title">Galeria</h2>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </section>
+
+    <section class="reviews-section hidden" id="reviews-section">
+      <h2 class="section-title">Vlerësimet e klientëve</h2>
+      <div class="reviews-list" id="reviews-list"></div>
     </section>
 
     <section class="menu-section">
@@ -102,6 +125,6 @@
     <div id="menu-photo-lightbox-caption" class="menu-photo-lightbox-caption"></div>
   </div>
 
-  <script src="/js/r.js?v=7"></script>
+  <script src="/js/r.js?v=8"></script>
 </body>
 </html>

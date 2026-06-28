@@ -6,6 +6,8 @@ const {
   buildManifest,
   buildServiceWorkerScript,
   getLogoResponse,
+  getCoverResponse,
+  getGalleryPhotoResponse,
   getMenuItemPhotoResponse,
 } = require("../services/publicPageService");
 const { submitPublicOrder } = require("../services/publicOrderService");
@@ -61,6 +63,24 @@ router.get("/:slug/logo", resolvePublicClient, asyncHandler(async (req, res) => 
   }
   res.setHeader("Cache-Control", "public, max-age=3600");
   res.type(logo.mime).send(logo.buffer);
+}));
+
+router.get("/:slug/cover", resolvePublicClient, asyncHandler(async (req, res) => {
+  const cover = await getCoverResponse(req.params.slug);
+  if (!cover) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.type(cover.mime).send(cover.buffer);
+}));
+
+router.get("/:slug/gallery/:index", resolvePublicClient, asyncHandler(async (req, res) => {
+  const photo = await getGalleryPhotoResponse(req.params.slug, req.params.index);
+  if (!photo) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.type(photo.mime).send(photo.buffer);
 }));
 
 async function manifestHandler(req, res) {

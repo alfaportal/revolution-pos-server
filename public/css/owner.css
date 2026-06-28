@@ -913,6 +913,144 @@
   line-height: 1.4;
 }
 
+.public-cover-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.public-cover-preview-wrap {
+  width: 100%;
+  max-width: 280px;
+  flex: 1 1 200px;
+}
+
+.public-cover-preview,
+.public-cover-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.public-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.public-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.public-gallery-item {
+  position: relative;
+}
+
+.public-gallery-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.public-gallery-item .btn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  min-height: auto;
+  font-size: 0.72rem;
+}
+
+.public-gallery-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.public-reviews-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.public-review-row {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.public-review-row-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.public-review-row-head input[type="text"] {
+  flex: 1 1 140px;
+}
+
+.public-review-stars {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.public-review-stars button {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.public-review-stars button.active {
+  color: #fbbf24;
+}
+
+.public-social-grid {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (min-width: 720px) {
+  .public-social-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.public-page-form input[type="url"],
+.public-page-form input[type="tel"],
+.public-page-form input[type="text"]:not([type="color"]) {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #0b1220;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
 .menu-photo-cell {
   min-width: 7.5rem;
   vertical-align: top;

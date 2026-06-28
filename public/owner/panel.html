@@ -353,6 +353,54 @@
               <p class="public-logo-hint">PNG ose JPG, max 500 KB. Shfaqet në faqen publike dhe si ikonë PWA.</p>
             </div>
           </div>
+          <div class="public-cover-row">
+            <div class="public-cover-preview-wrap">
+              <img id="public-cover-preview" class="public-cover-preview hidden" alt="Cover">
+              <div id="public-cover-placeholder" class="public-cover-placeholder">Cover</div>
+            </div>
+            <div class="public-logo-actions">
+              <label class="btn btn-primary btn-sm" for="public-cover-input">Ngarko foto cover</label>
+              <input type="file" id="public-cover-input" accept="image/png,image/jpeg,image/jpg,image/webp" hidden>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-public-cover-remove">Hiq cover-in</button>
+              <p class="public-logo-hint">Foto e madhe në krye të faqes. PNG/JPG, max 800 KB.</p>
+            </div>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="public-daily-offer">Oferta e ditës</label>
+            <input type="text" id="public-daily-offer" maxlength="500" placeholder='p.sh. Sot special: Burger + Kafe = €4'>
+            <p class="public-logo-hint">Shfaqet si banner i verdhë në faqen publike.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label>Galeri foto (max 5)</label>
+            <div id="public-gallery-grid" class="public-gallery-grid"></div>
+            <div class="public-gallery-actions">
+              <label class="btn btn-ghost btn-sm" for="public-gallery-input">+ Shto foto</label>
+              <input type="file" id="public-gallery-input" accept="image/png,image/jpeg,image/jpg,image/webp" hidden>
+            </div>
+          </div>
+          <div class="hub-fiscal-field">
+            <label>Vlerësimet e klientëve (max 5)</label>
+            <div id="public-reviews-list" class="public-reviews-list"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-public-review-add">+ Shto vlerësim</button>
+          </div>
+          <div class="public-social-grid">
+            <div class="hub-fiscal-field">
+              <label for="public-social-instagram">Instagram</label>
+              <input type="url" id="public-social-instagram" placeholder="https://instagram.com/...">
+            </div>
+            <div class="hub-fiscal-field">
+              <label for="public-social-facebook">Facebook</label>
+              <input type="url" id="public-social-facebook" placeholder="https://facebook.com/...">
+            </div>
+            <div class="hub-fiscal-field">
+              <label for="public-social-tiktok">TikTok</label>
+              <input type="url" id="public-social-tiktok" placeholder="https://tiktok.com/@...">
+            </div>
+            <div class="hub-fiscal-field">
+              <label for="public-whatsapp">WhatsApp (Na kontakto)</label>
+              <input type="tel" id="public-whatsapp" placeholder="+383 44 123 456">
+            </div>
+          </div>
           <div class="hub-fiscal-field">
             <label for="public-description">Përshkrim i shkurtër</label>
             <textarea id="public-description" rows="3" maxlength="2000" placeholder="p.sh. Restorant tradicional me specialitete të kuzhinës shqiptare…"></textarea>
@@ -532,7 +580,7 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=16"></script>
+  <script src="/js/owner.js?v=17"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>

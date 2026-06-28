@@ -146,6 +146,126 @@
     return String(s ?? "").replace(/"/g, "&quot;");
   }
 
+  function renderStars(count) {
+    const n = Math.max(1, Math.min(5, Number(count) || 0));
+    return "★".repeat(n) + "☆".repeat(5 - n);
+  }
+
+  function renderDailyOffer(text) {
+    const banner = document.getElementById("daily-offer-banner");
+    const el = document.getElementById("daily-offer-text");
+    const t = String(text || "").trim();
+    if (!banner || !el || !t) {
+      banner?.classList.add("hidden");
+      return;
+    }
+    el.textContent = t;
+    banner.classList.remove("hidden");
+  }
+
+  function renderGallery(urls) {
+    const section = document.getElementById("gallery-section");
+    const grid = document.getElementById("gallery-grid");
+    const list = (urls || []).filter(Boolean);
+    if (!section || !grid || !list.length) {
+      section?.classList.add("hidden");
+      if (grid) grid.innerHTML = "";
+      return;
+    }
+    grid.innerHTML = list.map((url, idx) => `
+      <button type="button" class="gallery-item" data-photo="${escapeAttr(url)}" data-name="Galeria ${idx + 1}" aria-label="Shiko foton ${idx + 1}">
+        <img src="${escapeAttr(url)}" alt="Foto ${idx + 1}" loading="lazy">
+      </button>
+    `).join("");
+    section.classList.remove("hidden");
+    grid.querySelectorAll(".gallery-item").forEach(btn => {
+      btn.addEventListener("click", () => openPhotoLightbox(btn.dataset.photo, btn.dataset.name));
+    });
+  }
+
+  function renderReviews(reviews) {
+    const section = document.getElementById("reviews-section");
+    const listEl = document.getElementById("reviews-list");
+    const rows = (reviews || []).filter(r => r?.name);
+    if (!section || !listEl || !rows.length) {
+      section?.classList.add("hidden");
+      if (listEl) listEl.innerHTML = "";
+      return;
+    }
+    listEl.innerHTML = rows.map(r => `
+      <article class="review-card">
+        <div class="review-stars" aria-label="${r.stars} yje">${renderStars(r.stars)}</div>
+        <div class="review-name">${escapeHtml(r.name)}</div>
+        ${r.text ? `<p class="review-text">${escapeHtml(r.text)}</p>` : ""}
+      </article>
+    `).join("");
+    section.classList.remove("hidden");
+  }
+
+  function renderContactActions(data) {
+    const wrap = document.getElementById("contact-actions");
+    const waBtn = document.getElementById("btn-whatsapp");
+    const socialEl = document.getElementById("social-links");
+    if (!wrap) return;
+
+    let any = false;
+
+    if (waBtn) {
+      const wa = String(data?.whatsapp_url || "").trim();
+      if (wa) {
+        waBtn.href = wa;
+        waBtn.classList.remove("hidden");
+        waBtn.onclick = (e) => {
+          e.preventDefault();
+          openExternalUrl(wa);
+        };
+        any = true;
+      } else {
+        waBtn.classList.add("hidden");
+      }
+    }
+
+    if (socialEl) {
+      const social = data?.social || {};
+      const items = [];
+      if (social.instagram) {
+        items.push({ label: "Instagram", url: social.instagram, icon: "📷" });
+      }
+      if (social.facebook) {
+        items.push({ label: "Facebook", url: social.facebook, icon: "👍" });
+      }
+      if (social.tiktok) {
+        items.push({ label: "TikTok", url: social.tiktok, icon: "🎵" });
+      }
+      if (items.length) {
+        socialEl.innerHTML = items.map(it => `
+          <a class="social-link" href="${escapeAttr(it.url)}" target="_blank" rel="noopener noreferrer">
+            <span aria-hidden="true">${it.icon}</span>${escapeHtml(it.label)}
+          </a>
+        `).join("");
+        socialEl.classList.remove("hidden");
+        any = true;
+      } else {
+        socialEl.innerHTML = "";
+        socialEl.classList.add("hidden");
+      }
+    }
+
+    wrap.classList.toggle("hidden", !any);
+  }
+
+  function openPhotoLightbox(url, name) {
+    const box = document.getElementById("menu-photo-lightbox");
+    const img = document.getElementById("menu-photo-lightbox-img");
+    const caption = document.getElementById("menu-photo-lightbox-caption");
+    if (!box || !img || !url) return;
+    img.src = url;
+    img.alt = name || "";
+    if (caption) caption.textContent = name || "";
+    box.classList.remove("hidden");
+    document.body.classList.add("menu-lightbox-open");
+  }
+
   function bindMenuPhotoLightbox() {
     const box = document.getElementById("menu-photo-lightbox");
     const img = document.getElementById("menu-photo-lightbox-img");
@@ -162,14 +282,7 @@
 
     document.querySelectorAll(".menu-item-photo-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const url = btn.getAttribute("data-photo") || "";
-        const name = btn.getAttribute("data-name") || "";
-        if (!url) return;
-        img.src = url;
-        img.alt = name;
-        if (caption) caption.textContent = name;
-        box.classList.remove("hidden");
-        document.body.classList.add("menu-lightbox-open");
+        openPhotoLightbox(btn.getAttribute("data-photo") || "", btn.getAttribute("data-name") || "");
       });
     });
 
@@ -290,6 +403,18 @@
     applyTheme(data.theme_color);
     document.getElementById("biz-name").textContent = data.name || "Restorant";
 
+    const hero = document.getElementById("hero");
+    const coverImg = document.getElementById("hero-cover");
+    if (coverImg && data.cover_url) {
+      coverImg.src = data.cover_url;
+      coverImg.alt = data.name || "Cover";
+      coverImg.classList.remove("hidden");
+      hero?.classList.add("has-cover");
+    } else {
+      coverImg?.classList.add("hidden");
+      hero?.classList.remove("has-cover");
+    }
+
     const descEl = document.getElementById("biz-desc");
     if (data.description) {
       descEl.textContent = data.description;
@@ -315,6 +440,10 @@
     }
 
     renderHours(data.hours_display);
+    renderDailyOffer(data.daily_offer);
+    renderGallery(data.gallery_urls);
+    renderReviews(data.reviews);
+    renderContactActions(data);
     renderMenu(data.categories, data.menu);
 
     const orderBar = document.getElementById("order-bar");
