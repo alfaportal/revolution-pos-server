@@ -1609,11 +1609,65 @@ function updatePublicSlugPreview(slug) {
   if (preview) preview.textContent = slug || "slug";
 }
 
+const PUBLIC_SLUG_CHARS_RE = /^[a-z0-9-]*$/;
+const PUBLIC_SLUG_FULL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PUBLIC_SLUG_MIN = 3;
+const PUBLIC_SLUG_MAX = 48;
+
+function sanitizePublicSlugInput(raw) {
+  return String(raw || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+}
+
+function validatePublicSlugClient(raw) {
+  const slug = sanitizePublicSlugInput(raw);
+  if (slug.length < PUBLIC_SLUG_MIN || slug.length > PUBLIC_SLUG_MAX) {
+    throw new Error(`Slug duhet ${PUBLIC_SLUG_MIN}–${PUBLIC_SLUG_MAX} karaktere.`);
+  }
+  if (!PUBLIC_SLUG_FULL_RE.test(slug)) {
+    throw new Error("Slug lejon vetëm a-z, 0-9 dhe vizë (-), pa vizë në fillim/fund.");
+  }
+  return slug;
+}
+
+function getPublicPageTargetUrl() {
+  const slugInput = document.getElementById("public-page-slug")?.value;
+  try {
+    const slug = validatePublicSlugClient(slugInput);
+    return `${window.location.origin}/r/${encodeURIComponent(slug)}`;
+  } catch {
+    const saved = document.getElementById("public-page-url")?.value?.trim();
+    if (saved) return saved;
+    throw new Error("Shkruani slug të vlefshme (a-z, 0-9, vizë) ose ruajeni fillimisht.");
+  }
+}
+
+function renderPublicPageQrCanvas(url) {
+  const canvasWrap = document.getElementById("public-page-qr-canvas");
+  if (!canvasWrap) throw new Error("Mungon zona e QR.");
+  if (typeof QRCode === "undefined") throw new Error("Biblioteka qrcode.js nuk u ngarkua.");
+  canvasWrap.innerHTML = "";
+  // eslint-disable-next-line no-new
+  new QRCode(canvasWrap, {
+    text: url,
+    width: 200,
+    height: 200,
+    colorDark: "#0f172a",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+}
+
+function getPublicPageQrPngDataUrl() {
+  const canvas = document.querySelector("#public-page-qr-canvas canvas");
+  if (!canvas) throw new Error("Gjeneroni QR fillimisht.");
+  return canvas.toDataURL("image/png");
+}
+
 function resetPublicPageQrPreview() {
   publicPageQrData = null;
   document.getElementById("public-page-qr-preview")?.classList.add("hidden");
-  const img = document.getElementById("public-page-qr-img");
-  if (img) img.removeAttribute("src");
+  const canvasWrap = document.getElementById("public-page-qr-canvas");
+  if (canvasWrap) canvasWrap.innerHTML = "";
   const urlEl = document.getElementById("public-page-qr-url");
   if (urlEl) urlEl.textContent = "";
   const dlBtn = document.getElementById("btn-public-download-qr");
@@ -1792,27 +1846,30 @@ document.getElementById("btn-public-review-add")?.addEventListener("click", () =
 document.getElementById("btn-public-save")?.addEventListener("click", savePublicPage);
 
 document.getElementById("public-page-slug")?.addEventListener("input", e => {
-  updatePublicSlugPreview(e.target.value.trim().toLowerCase());
+  const cleaned = sanitizePublicSlugInput(e.target.value);
+  if (e.target.value !== cleaned) e.target.value = cleaned;
+  updatePublicSlugPreview(cleaned);
 });
 
 document.getElementById("btn-public-save-slug")?.addEventListener("click", async () => {
-  const slug = document.getElementById("public-page-slug")?.value?.trim();
+  const input = document.getElementById("public-page-slug");
   const btn = document.getElementById("btn-public-save-slug");
   if (btn) btn.disabled = true;
   setPublicPageMsg("Duke ruajtur slug…", true);
   try {
-    const data = await api("/api/owner/public-page/slug", {
-      method: "PATCH",
+    const slug = validatePublicSlugClient(input?.value);
+    const data = await api("/api/owner/slug", {
+      method: "PUT",
       body: JSON.stringify({ slug }),
     });
-    document.getElementById("public-page-slug").value = data.slug || slug;
+    if (input) input.value = data.slug || slug;
     document.getElementById("public-page-url").value = data.public_url || "";
     updatePublicSlugPreview(data.slug || slug);
     resetPublicPageQrPreview();
     const preview = document.getElementById("btn-public-preview");
     if (preview && data.public_url) preview.href = data.public_url;
     await loadClient();
-    setPublicPageMsg("Slug u ruajt.", true);
+    setPublicPageMsg("Slug u ruajt në kitchen_slug.", true);
   } catch (err) {
     setPublicPageMsg(err.message, false);
   } finally {
@@ -1820,7 +1877,7 @@ document.getElementById("btn-public-save-slug")?.addEventListener("click", async
   }
 });
 
-document.getElementById("btn-public-generate-qr")?.addEventListener("click", async () => {
+document.getElementById("btn-public-generate-qr")?.addEventListener("click", () => {
   const btn = document.getElementById("btn-public-generate-qr");
   if (btn) {
     btn.disabled = true;
@@ -1828,13 +1885,12 @@ document.getElementById("btn-public-generate-qr")?.addEventListener("click", asy
   }
   setPublicPageMsg("");
   try {
-    const data = await api("/api/owner/public-page/qr");
-    publicPageQrData = data;
+    const url = getPublicPageTargetUrl();
+    renderPublicPageQrCanvas(url);
+    publicPageQrData = { url };
     const wrap = document.getElementById("public-page-qr-preview");
-    const img = document.getElementById("public-page-qr-img");
     const urlEl = document.getElementById("public-page-qr-url");
-    if (img && data.data_url) img.src = data.data_url;
-    if (urlEl) urlEl.textContent = data.url || "";
+    if (urlEl) urlEl.textContent = url;
     wrap?.classList.remove("hidden");
     document.getElementById("btn-public-download-qr").disabled = false;
     setPublicPageMsg("QR u gjenerua.", true);
@@ -1848,31 +1904,19 @@ document.getElementById("btn-public-generate-qr")?.addEventListener("click", asy
   }
 });
 
-document.getElementById("btn-public-download-qr")?.addEventListener("click", async () => {
+document.getElementById("btn-public-download-qr")?.addEventListener("click", () => {
   const btn = document.getElementById("btn-public-download-qr");
   if (btn) btn.disabled = true;
   try {
     setPublicPageMsg("");
-    const headers = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch("/api/owner/public-page/qr/png", {
-      headers,
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.gabim || "Shkarkimi dështoi.");
-    }
-    const blob = await res.blob();
-    const slug = document.getElementById("public-page-slug")?.value?.trim() || "faqja";
-    const url = URL.createObjectURL(blob);
+    const dataUrl = getPublicPageQrPngDataUrl();
+    const slug = sanitizePublicSlugInput(document.getElementById("public-page-slug")?.value) || "faqja";
     const a = document.createElement("a");
-    a.href = url;
+    a.href = dataUrl;
     a.download = `qr-faqe-${slug}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
     setPublicPageMsg("QR u shkarkua (PNG).", true);
   } catch (err) {
     setPublicPageMsg(err.message, false);

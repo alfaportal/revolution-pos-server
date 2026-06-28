@@ -568,7 +568,7 @@ router.get("/public-page/qr", async (req, res) => {
   }
 });
 
-router.patch("/public-page/slug", async (req, res) => {
+async function saveOwnerKitchenSlug(req, res) {
   try {
     await updateOwnerKitchenSlug(req.user.client_id, req.body?.slug);
     const base = getPublicAppOrigin();
@@ -577,7 +577,10 @@ router.patch("/public-page/slug", async (req, res) => {
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }
-});
+}
+
+router.put("/slug", saveOwnerKitchenSlug);
+router.patch("/public-page/slug", saveOwnerKitchenSlug);
 
 router.get("/public-page", async (req, res) => {
   try {

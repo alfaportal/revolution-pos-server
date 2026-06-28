@@ -1123,12 +1123,20 @@
   border-radius: 12px;
 }
 
-.public-page-qr-preview img {
-  display: block;
+.public-page-qr-canvas {
+  display: inline-block;
   margin: 0 auto 0.5rem;
+  padding: 0.35rem;
   border-radius: 8px;
   background: #fff;
-  padding: 0.35rem;
+  line-height: 0;
+}
+
+.public-page-qr-canvas canvas,
+.public-page-qr-canvas img {
+  display: block;
+  width: 200px;
+  height: 200px;
 }
 
 .public-page-qr-preview.hidden {
