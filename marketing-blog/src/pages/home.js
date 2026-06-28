@@ -17,10 +17,10 @@ import { assetPath, blogArticlePath } from "../lib/base.js";
 
 const PACKAGE_PLANS = ["p1", "p2", "p3", "p4"];
 const PACKAGE_FEATURE_KEYS = {
-  p1: ["f1", "f2", "f3", "f4", "f5", "f6"],
-  p2: ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8"],
-  p3: ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10"],
-  p4: ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"],
+  p1: ["f1", "f2", "f3", "f4"],
+  p2: ["f1", "f2", "f3", "f4"],
+  p3: ["f1", "f2", "f3", "f4"],
+  p4: ["f1", "f2", "f3"],
 };
 const CARD_FEATURE_PREVIEW = 4;
 

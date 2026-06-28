@@ -328,6 +328,7 @@
         <button type="button" class="hub-tab" data-hub-tab="biznesi">Biznesi</button>
         <button type="button" class="hub-tab" data-hub-tab="fiskale">Fiskale</button>
         <button type="button" class="hub-tab" data-hub-tab="linqe">Linqe</button>
+        <button type="button" class="hub-tab" data-hub-tab="qr">QR Tavolinat</button>
       </div>
       <div id="hub-msg" class="alert hidden"></div>
 
@@ -444,6 +445,33 @@
         <p id="hub-links-empty" class="field-hint hidden">Kjo paketë nuk përfshin asnjë link (KDS, Kiosk, Kamarier ose faqe publike). Ndryshoni paketën në Ndrysho klientin.</p>
         <button type="button" class="btn btn-ghost btn-sm" id="hub-regenerate-links">Rigjenero kodet e aksesit</button>
       </div>
+
+      <div id="hub-panel-qr" class="hub-panel hidden">
+        <div class="hub-qr-head">
+          <p class="field-hint">
+            QR kodet janë <strong>unike për këtë lokal</strong> — slug:
+            <code id="hub-qr-slug">—</code>.
+            Çdo tavolinë lidhet me URL të vet: <code>/menu/[slug]/[nr]</code>.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" id="hub-print-all-qrs">Printo të gjitha (PDF)</button>
+        </div>
+        <p id="hub-qr-msg" class="field-hint"></p>
+        <div class="hub-qr-scroll">
+          <table class="admin-table hub-qr-table">
+            <thead>
+              <tr>
+                <th>Tavolina</th>
+                <th>URL</th>
+                <th>QR</th>
+                <th>Veprime</th>
+              </tr>
+            </thead>
+            <tbody id="hub-qr-body">
+              <tr><td colspan="4" style="color:var(--muted)">Hapni këtë skedë për të ngarkuar QR kodet e lokalit.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -460,6 +488,6 @@
     </div>
   </div>
 
-  <script src="/js/panel.js?v=37"></script>
+  <script src="/js/panel.js?v=38"></script>
 </body>
 </html>

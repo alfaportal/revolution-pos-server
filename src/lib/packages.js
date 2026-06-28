@@ -1,6 +1,12 @@
 /** Pakot e softuerit dhe funksionet e lejuara. */
 
-const PACKAGE_TIERS = ["pako_1", "pako_1_1", "pako_2", "pako_2_1"];
+const PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_4"];
+
+/** Tier të vjetër → tier i ri (para migrimit DB). */
+const LEGACY_TIER_MAP = {
+  pako_1_1: "pako_3",
+  pako_2_1: "pako_4",
+};
 
 const TIER_FEATURES = {
   pako_1: {
@@ -11,15 +17,7 @@ const TIER_FEATURES = {
     kds: false,
     kiosk: false,
     waiter: false,
-  },
-  pako_1_1: {
-    pos: true,
-    owner_panel: true,
-    website: true,
-    mobile: true,
-    kds: false,
-    kiosk: false,
-    waiter: false,
+    online_orders: false,
   },
   pako_2: {
     pos: true,
@@ -29,8 +27,9 @@ const TIER_FEATURES = {
     kds: true,
     kiosk: true,
     waiter: true,
+    online_orders: false,
   },
-  pako_2_1: {
+  pako_3: {
     pos: true,
     owner_panel: true,
     website: true,
@@ -38,19 +37,31 @@ const TIER_FEATURES = {
     kds: true,
     kiosk: true,
     waiter: true,
+    online_orders: false,
+  },
+  pako_4: {
+    pos: true,
+    owner_panel: true,
+    website: true,
+    mobile: true,
+    kds: true,
+    kiosk: true,
+    waiter: true,
+    online_orders: true,
   },
 };
 
 const TIER_LABELS = {
-  pako_1: "Pako 1 — POS",
-  pako_1_1: "Pako 1.1 — POS + Mobile",
-  pako_2: "Pako 2 — POS + KDS + Kiosk + Kamarier",
-  pako_2_1: "Pako 2.1 — Gjithçka + Mobile",
+  pako_1: "Pako 1 — POS, panel, faqe publike, raporte",
+  pako_2: "Pako 2 — + KDS, kiosk, kamarier",
+  pako_3: "Pako 3 — + mobile, cloud",
+  pako_4: "Pako 4 — + porosi online",
 };
 
 function normalizePackageTier(tier) {
   const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
-  return PACKAGE_TIERS.includes(t) ? t : "pako_1";
+  const mapped = LEGACY_TIER_MAP[t] || t;
+  return PACKAGE_TIERS.includes(mapped) ? mapped : "pako_1";
 }
 
 function featuresForTier(tier) {
@@ -70,6 +81,7 @@ function packageUpgradeMessage(feature) {
     kiosk: "Kiosk",
     mobile: "Aplikacioni mobile",
     website: "Website",
+    online_orders: "Porosi online (takeaway & delivery)",
   };
   const name = labels[feature] || feature;
   return `${name} nuk përfshihet në paketën tuaj. Kontaktoni administratorin për upgrade.`;
@@ -77,6 +89,7 @@ function packageUpgradeMessage(feature) {
 
 module.exports = {
   PACKAGE_TIERS,
+  LEGACY_TIER_MAP,
   TIER_FEATURES,
   TIER_LABELS,
   normalizePackageTier,

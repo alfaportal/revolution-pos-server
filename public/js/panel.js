@@ -356,15 +356,17 @@ let modalState = null;
 
 /** Fallback — same as src/lib/packages.js (used when tier cache is empty or stale). */
 const TIER_FEATURES = {
-  pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false },
-  pako_1_1: { pos: true, owner_panel: true, website: true, mobile: true, kds: false, kiosk: false, waiter: false },
-  pako_2: { pos: true, owner_panel: true, website: true, mobile: false, kds: true, kiosk: true, waiter: true },
-  pako_2_1: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true },
+  pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false, online_orders: false },
+  pako_2: { pos: true, owner_panel: true, website: true, mobile: false, kds: true, kiosk: true, waiter: true, online_orders: false },
+  pako_3: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: false },
+  pako_4: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true },
 };
 
 function normalizeTierId(tier) {
   const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
-  return Object.prototype.hasOwnProperty.call(TIER_FEATURES, t) ? t : "pako_1";
+  const legacy = { pako_1_1: "pako_3", pako_2_1: "pako_4" };
+  const mapped = legacy[t] || t;
+  return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_1";
 }
 
 async function loadPackageTiers() {
@@ -382,7 +384,7 @@ function packageTierLabel(id) {
 function packageTierOptionsHtml(selected) {
   const sel = normalizeTierId(selected || "pako_1");
   if (!packageTiersCache.length) {
-    return ["pako_1", "pako_1_1", "pako_2", "pako_2_1"]
+    return ["pako_1", "pako_2", "pako_3", "pako_4"]
       .map(id => `<option value="${id}"${id === sel ? " selected" : ""}>${id}</option>`)
       .join("");
   }
@@ -739,16 +741,17 @@ function switchHubTab(tab) {
   });
   document.querySelectorAll(".hub-panel").forEach(p => p.classList.add("hidden"));
   document.getElementById(`hub-panel-${tab}`)?.classList.remove("hidden");
+  if (tab === "qr" && hubClientId) loadHubQrPanel();
 }
 
-function openClientHub(id) {
+function openClientHub(id, initialTab = "menu") {
   const c = clientsCache.find(x => x.id === id);
   if (!c) return;
   hubClientId = id;
   document.getElementById("hub-title").textContent = `Menaxho: ${c.emri}`;
   document.getElementById("modal-client-hub").classList.remove("hidden");
   showHubMsg("");
-  switchHubTab("menu");
+  switchHubTab(initialTab);
   loadAdminHubSettings();
   loadAdminMenu();
   fillHubLinks(id);
@@ -771,6 +774,123 @@ function fillHubLinks(clientId) {
   if (empty) {
     const any = features.waiter || features.kds || features.kiosk || features.website;
     empty.classList.toggle("hidden", any);
+  }
+}
+
+function setHubQrMsg(text, ok) {
+  const el = document.getElementById("hub-qr-msg");
+  if (!el) return;
+  if (!text) {
+    el.textContent = "";
+    el.className = "field-hint";
+    return;
+  }
+  el.textContent = text;
+  el.className = ok ? "field-hint ok" : "field-hint err";
+}
+
+function bindHubQrActions(clientId) {
+  document.querySelectorAll("[data-hub-download-qr]").forEach(btn => {
+    btn.onclick = async () => {
+      const table = btn.dataset.hubDownloadQr;
+      try {
+        setHubQrMsg("");
+        const res = await fetch(`/api/admin/clients/${clientId}/kiosk/qrs/${table}/png`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `qr-${clientId.slice(0, 8)}-t${table}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setHubQrMsg(`QR T${table} u shkarkua.`, true);
+      } catch (err) {
+        setHubQrMsg(err.message || "Shkarkimi dështoi.", false);
+      }
+    };
+  });
+  document.querySelectorAll("[data-hub-print-qr]").forEach(btn => {
+    btn.onclick = () => {
+      openAuthedPrintHtml(`/api/admin/clients/${clientId}/kiosk/qrs/${btn.dataset.hubPrintQr}/print`);
+    };
+  });
+  document.querySelectorAll("[data-hub-copy-qr-url]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.hubCopyQrUrl);
+        setHubQrMsg("URL u kopjua.", true);
+      } catch {
+        setHubQrMsg("Nuk u kopjua URL.", false);
+      }
+    };
+  });
+}
+
+async function openAuthedPrintHtml(url) {
+  try {
+    setHubQrMsg("");
+    const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new Error(await res.text());
+    const html = await res.text();
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = window.open(blobUrl, "_blank", "noopener");
+    if (!w) throw new Error("Lejoni popup-et për printim.");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  } catch (err) {
+    setHubQrMsg(err.message || "Printimi dështoi.", false);
+  }
+}
+
+async function loadHubQrPanel() {
+  if (!hubClientId) return;
+  const body = document.getElementById("hub-qr-body");
+  const slugEl = document.getElementById("hub-qr-slug");
+  if (!body) return;
+
+  body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Duke ngarkuar QR kodet…</td></tr>';
+  setHubQrMsg("");
+
+  const features = clientTierFeatures(hubClientId);
+  if (!features.kiosk) {
+    body.innerHTML = "";
+    if (slugEl) slugEl.textContent = "—";
+    setHubQrMsg("Ky lokal ka Pako 1 — QR kiosk kërkon Pako 2 ose më lart. Ndryshoni paketën te «Ndrysho klientin».", false);
+    return;
+  }
+
+  try {
+    const data = await api(`/api/admin/clients/${hubClientId}/kiosk/qrs`);
+    if (slugEl) slugEl.textContent = data.slug || "—";
+
+    if (!data.tables?.length) {
+      body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">Nuk ka tavolina. Vendosni «Nr. tavolinave» te skeda Biznesi.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = data.tables.map(t => `
+      <tr>
+        <td data-label="Tavolina"><strong>T${t.table}</strong></td>
+        <td data-label="URL">
+          <code class="table-qr-url">${esc(t.url)}</code>
+          <button type="button" class="btn btn-ghost btn-sm" data-hub-copy-qr-url="${escAttr(t.url)}">Kopjo</button>
+        </td>
+        <td data-label="QR">
+          <img src="${escAttr(t.data_url)}" alt="QR T${t.table}" class="table-qr-preview-img" width="88" height="88">
+        </td>
+        <td data-label="Veprime" class="table-qr-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-hub-download-qr="${t.table}">Shkarko PNG</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-hub-print-qr="${t.table}">Printo</button>
+        </td>
+      </tr>`).join("");
+
+    bindHubQrActions(hubClientId);
+    setHubQrMsg(`${data.count} QR kode për lokal «${esc(clientsCache.find(c => c.id === hubClientId)?.emri || "")}».`, true);
+  } catch (err) {
+    body.innerHTML = "";
+    setHubQrMsg(err.message || "QR nuk u ngarkuan.", false);
   }
 }
 
@@ -1269,6 +1389,7 @@ async function loadClients() {
             <button type="button" class="btn btn-ghost btn-sm" data-copy-waiter="${esc(c.id)}">Kamarier</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-bar="${esc(c.id)}">Banak</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kiosk="${esc(c.id)}">Tavolinë</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-qr-client="${esc(c.id)}"${clientTierFeatures(c.id).kiosk ? "" : ' title="Kërkon Pako 2+"'}>QR Kodet</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-kitchen="${esc(c.id)}">Kuzhina</button>
           </div>
         </td>
@@ -1288,6 +1409,9 @@ async function loadClients() {
   });
   tbl.querySelectorAll("[data-copy-kiosk]").forEach(btn => {
     btn.addEventListener("click", () => copyKioskLink(btn.dataset.copyKiosk, btn));
+  });
+  tbl.querySelectorAll("[data-qr-client]").forEach(btn => {
+    btn.addEventListener("click", () => openClientHub(btn.dataset.qrClient, "qr"));
   });
   tbl.querySelectorAll("[data-copy-waiter]").forEach(btn => {
     btn.addEventListener("click", () => copyWaiterLink(btn.dataset.copyWaiter, btn));
@@ -2092,6 +2216,11 @@ document.querySelectorAll(".hub-tab").forEach(tab => {
     switchHubTab(tab.dataset.hubTab);
     if (tab.dataset.hubTab === "linqe" && hubClientId) fillHubLinks(hubClientId);
   });
+});
+
+document.getElementById("hub-print-all-qrs")?.addEventListener("click", () => {
+  if (!hubClientId) return;
+  openAuthedPrintHtml(`/api/admin/clients/${hubClientId}/kiosk/qrs/print`);
 });
 
 document.getElementById("hub-menu-add")?.addEventListener("click", async () => {

@@ -10,8 +10,8 @@ function normalizeOrderType(raw) {
 }
 
 async function submitPublicOrder(client, body) {
-  if (!clientHasFeature(client, "kds") && !clientHasFeature(client, "kiosk")) {
-    const err = new Error(packageUpgradeMessage("kiosk"));
+  if (!clientHasFeature(client, "online_orders")) {
+    const err = new Error(packageUpgradeMessage("online_orders"));
     err.code = "PACKAGE";
     throw err;
   }

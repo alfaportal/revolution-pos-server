@@ -121,8 +121,11 @@ function buildClientWebLinks(baseUrl, client, packageTier) {
   }
   if (features.kiosk) links.kiosk_url = buildTableMenuUrl(base, client, 1);
   const slug = client.kitchen_slug || client.id;
-  if (slug && features.website) {
+  if (features.website) {
     links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;
+  }
+  if (features.online_orders && slug) {
+    links.public_order_url = `${base}/r/${encodeURIComponent(slug)}/order`;
   }
   return links;
 }

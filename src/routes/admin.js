@@ -56,6 +56,15 @@ const {
 } = require("../services/userService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { buildKitchenUrl, buildTableMenuUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
+const { getClientById } = require("../services/salesService");
+const {
+  listKioskQrCodes,
+  listTableQrMeta,
+  getTableQrCode,
+  getTableQrPng,
+  qrPrintHtml,
+  singleQrPrintHtml,
+} = require("../services/kioskQrService");
 
 function requestBaseUrl(_req) {
   return getPublicAppOrigin();
@@ -324,6 +333,79 @@ router.post("/clients/:id/regenerate-kitchen-access", asyncHandler(async (req, r
   } catch (e) {
     const msg = logRouteError("admin:POST /clients/:id/regenerate-kitchen-access", e);
     res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/tables/qr", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const data = await listTableQrMeta(req.params.id, base);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/tables/qr", e);
+    res.status(400).json({ ok: false, gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/kiosk/qrs", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const data = await listKioskQrCodes(req.params.id, base);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/kiosk/qrs", e);
+    res.status(400).json({ ok: false, gabim: msg });
+  }
+}));
+
+router.get("/clients/:id/kiosk/qrs/print", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const client = await getClientById(req.params.id);
+    const data = await listKioskQrCodes(req.params.id, base);
+    const html = qrPrintHtml(data.tables, client?.emri || "");
+    res.type("html").send(html);
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/kiosk/qrs/print", e);
+    res.status(400).type("text/plain").send(msg);
+  }
+}));
+
+router.get("/clients/:id/kiosk/qrs/:table/png", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const table = Number(req.params.table);
+    const png = await getTableQrPng(req.params.id, base, table);
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="qr-tavolina-${table}.png"`);
+    res.send(png);
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/kiosk/qrs/:table/png", e);
+    res.status(400).type("text/plain").send(msg);
+  }
+}));
+
+router.get("/clients/:id/kiosk/qrs/:table/print", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const client = await getClientById(req.params.id);
+    const data = await getTableQrCode(req.params.id, base, req.params.table);
+    const html = singleQrPrintHtml(data, client?.emri || "");
+    res.type("html").send(html);
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/kiosk/qrs/:table/print", e);
+    res.status(400).type("text/plain").send(msg);
+  }
+}));
+
+router.get("/clients/:id/kiosk/qrs/:table", asyncHandler(async (req, res) => {
+  try {
+    const base = requestBaseUrl(req);
+    const data = await getTableQrCode(req.params.id, base, req.params.table);
+    res.json({ ok: true, ...data });
+  } catch (e) {
+    const msg = logRouteError("admin:GET /clients/:id/kiosk/qrs/:table", e);
+    res.status(400).json({ ok: false, gabim: msg });
   }
 }));
 

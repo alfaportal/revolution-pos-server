@@ -1210,15 +1210,18 @@ async function loadTableQrPanel() {
   body.innerHTML = '<tr><td colspan="4" class="links-hint">Duke ngarkuar tavolinat…</td></tr>';
   setTableQrMsg("");
   tableQrCache.clear();
+  card.hidden = false;
 
   try {
-    const data = await api("/api/owner/tables/qr");
+    const data = await api("/api/owner/kiosk/qrs");
     if (slugEl) slugEl.textContent = data.slug || "—";
 
     if (!data.tables?.length) {
-      body.innerHTML = '<tr><td colspan="4" class="links-hint">Nuk ka tavolina. Shtoni hapësira te skeda Lokal &amp; Stafi.</td></tr>';
+      body.innerHTML = '<tr><td colspan="4" class="links-hint">Nuk ka tavolina. Shtoni hapësira te skeda Lokal &amp; Stafi ose rritni numrin e tavolinave.</td></tr>';
       return;
     }
+
+    data.tables.forEach(t => tableQrCache.set(t.table, t));
 
     body.innerHTML = data.tables.map(t => `
       <tr data-table="${t.table}">
@@ -1227,20 +1230,26 @@ async function loadTableQrPanel() {
           <code class="table-qr-url">${escAttr(t.url)}</code>
           <button type="button" class="btn btn-ghost btn-sm" data-copy-qr-url="${escAttr(t.url)}">Kopjo</button>
         </td>
-        <td data-qr-preview="${t.table}"><span class="links-hint">—</span></td>
+        <td data-qr-preview="${t.table}">
+          <img src="${escAttr(t.data_url)}" alt="QR T${t.table}" class="table-qr-preview-img" width="96" height="96">
+        </td>
         <td class="col-actions table-qr-actions">
-          <button type="button" class="btn btn-primary btn-sm" data-generate-qr="${t.table}">Gjenero QR Code</button>
           <button type="button" class="btn btn-ghost btn-sm" data-download-qr="${t.table}">Shkarko QR</button>
           <button type="button" class="btn btn-ghost btn-sm" data-print-qr="${t.table}">Printo</button>
         </td>
       </tr>`).join("");
 
     bindTableQrActions();
-    card.hidden = false;
+    setTableQrMsg(`${data.count} QR kode për lokalin tuaj (slug: ${data.slug || "—"}).`, true);
   } catch (err) {
     body.innerHTML = "";
-    setTableQrMsg(err.message || "QR nuk u ngarkuan.", false);
-    if (/paketa|kiosk/i.test(err.message || "")) card.hidden = true;
+    const needsUpgrade = /paketa|kiosk/i.test(err.message || "");
+    setTableQrMsg(
+      needsUpgrade
+        ? "QR kiosk kërkon Pako 2 ose më lart. Kontaktoni administratorin për upgrade."
+        : (err.message || "QR nuk u ngarkuan."),
+      false,
+    );
   }
 }
 

@@ -104,7 +104,7 @@ async function getPublicRestaurantPage(slug, baseUrl) {
 
   const base = String(baseUrl || "").replace(/\/+$/, "");
   let order_url = null;
-  if (clientHasFeature(client, "kiosk") || clientHasFeature(client, "kds")) {
+  if (clientHasFeature(client, "online_orders")) {
     order_url = `${base}/r/${encodeURIComponent(pageSlug)}/order`;
   }
 
@@ -168,6 +168,7 @@ async function getOwnerPublicPageSettings(clientId, baseUrl) {
     phone: String(settings?.phone || client.telefoni || "").trim(),
     website_enabled: clientHasFeature(client, "website"),
     kiosk_enabled: clientHasFeature(client, "kiosk"),
+    online_orders_enabled: clientHasFeature(client, "online_orders"),
   };
 }
 

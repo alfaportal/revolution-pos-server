@@ -1156,3 +1156,44 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
   padding: 0.7rem 1.35rem;
   font-size: 1rem;
 }
+
+.hub-qr-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.hub-qr-head .field-hint { margin: 0; flex: 1 1 16rem; }
+
+.hub-qr-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hub-qr-table .table-qr-url {
+  display: block;
+  font-size: 0.72rem;
+  word-break: break-all;
+  margin-bottom: 0.35rem;
+}
+
+.hub-qr-table .table-qr-preview-img {
+  width: 88px;
+  height: 88px;
+  display: block;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+}
+
+.hub-qr-table .table-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+#hub-qr-msg.err { color: #fca5a5; }
+#hub-qr-msg.ok { color: #86efac; }
