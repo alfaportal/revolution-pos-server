@@ -52,7 +52,7 @@ const {
   updateWaiterWithPin,
   deleteWaiterWithPin,
 } = require("../services/waiterPinService");
-const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
+const { ensureKitchenCredentials, buildClientWebLinks } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { listKioskQrCodes, listTableQrMeta, getTableQrCode, getTableQrPng, qrPrintHtml, singleQrPrintHtml, tableMenuUrl } = require("../services/kioskQrService");
 const {
@@ -73,20 +73,14 @@ router.get("/client", async (req, res) => {
     }
     const base = getPublicAppOrigin();
     const features = featuresForTier(client?.package_tier);
-    const links = {};
-    if (client?.id && features.waiter) {
-      links.waiter = buildKitchenUrl(base, client, "waiter");
-    }
-    if (client?.id && features.kds) {
-      links.kitchen = buildKitchenUrl(base, client, "kitchen");
-      links.bar = buildKitchenUrl(base, client, "bar");
-    }
-    if (client?.id && features.kiosk) {
-      links.kiosk = tableMenuUrl(base, client, 1);
-    }
-    if (client?.kitchen_slug && features.website) {
-      links.public_page = `${base}/r/${encodeURIComponent(client.kitchen_slug)}`;
-    }
+    const built = buildClientWebLinks(base, client, client?.package_tier);
+    const links = {
+      waiter: built.waiter_url || null,
+      kitchen: built.kitchen_url || null,
+      bar: built.bar_url || null,
+      kiosk: built.kiosk_url || null,
+      public_page: built.public_page_url || null,
+    };
     res.json({
       ok: true,
       client: client

@@ -55,7 +55,7 @@ const {
   adminResetOwnerPassword,
 } = require("../services/userService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
-const { buildKitchenUrl, buildTableMenuUrl } = require("../lib/kitchenAccess");
+const { buildKitchenUrl, buildTableMenuUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 
 function requestBaseUrl(_req) {
   return getPublicAppOrigin();
@@ -122,7 +122,18 @@ router.get("/activity-log", asyncHandler(async (req, res) => {
 }));
 
 router.get("/clients", asyncHandler(async (_req, res) => {
-  res.json({ ok: true, clients: await listClients() });
+  const raw = await listClients();
+  const clients = await Promise.all(
+    raw.map(async c => {
+      if (c.kitchen_slug && c.kitchen_key) return c;
+      try {
+        return await ensureKitchenCredentials(c);
+      } catch {
+        return c;
+      }
+    }),
+  );
+  res.json({ ok: true, clients });
 }));
 
 router.post("/clients", asyncHandler(async (req, res) => {

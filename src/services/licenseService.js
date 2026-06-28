@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
-const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl } = require("../lib/kitchenAccess");
+const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl, buildClientWebLinks } = require("../lib/kitchenAccess");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { featuresForTier } = require("../lib/packages");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
@@ -340,6 +340,11 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     terminals_active: terminalSummary.active_terminal_count,
     terminals_max: terminalSummary.max_terminals,
     grace_until: terminalAccess.grace_until || terminalSummary.grace_until || null,
+    ...buildClientWebLinks(getPublicAppOrigin(), {
+      id: license.client_id,
+      kitchen_slug: kitchenSlug,
+      kitchen_key: kitchenKey,
+    }, normalizePackageTier(license.clients?.package_tier)),
   };
 }
 
@@ -362,24 +367,8 @@ async function getLicenseAccessLinks({ celesi, device_id, app_type, hostname, cl
 
   const slug = result.kitchen_slug || result.client_id || "";
   const key = result.kitchen_key || "";
-  const base = getPublicAppOrigin();
-  const features = featuresForTier(result.package_tier);
   const client = { id: result.client_id, kitchen_slug: slug, kitchen_key: key };
-  const links = {};
-
-  if (client.id && features.waiter) {
-    links.waiter_url = buildKitchenUrl(base, client, "waiter");
-  }
-  if (client.id && features.kds) {
-    links.kitchen_url = buildKitchenUrl(base, client, "kitchen");
-    links.bar_url = buildKitchenUrl(base, client, "bar");
-  }
-  if (client.id && features.kiosk) {
-    links.kiosk_url = buildTableMenuUrl(base, client, 1);
-  }
-  if (slug && features.website) {
-    links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;
-  }
+  const links = buildClientWebLinks(getPublicAppOrigin(), client, result.package_tier);
 
   return {
     ok: true,

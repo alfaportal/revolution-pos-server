@@ -177,7 +177,7 @@
 
   async function fetchOrders() {
     if (!slug) {
-      showError("Linku i banakut nuk është i saktë. Duhet /bar/[slug]?key=...");
+      showError("Linku i kuzhinës nuk është i saktë. Duhet /bar/[slug]?key=...");
       return;
     }
     if (!kitchenKey) {

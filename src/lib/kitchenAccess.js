@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getSupabase } = require("../db");
+const { featuresForTier } = require("./packages");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -98,6 +99,26 @@ function buildTableMenuUrl(baseUrl, client, tableNumber) {
   return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
 }
 
+/** Linket web për një lokal — sipas paketës (banak, kuzhinë, kamarier, kiosk, faqe). */
+function buildClientWebLinks(baseUrl, client, packageTier) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const features = featuresForTier(packageTier);
+  const links = {};
+  if (!client?.kitchen_slug && !client?.id) return links;
+
+  if (features.waiter) links.waiter_url = buildKitchenUrl(base, client, "waiter");
+  if (features.kds) {
+    links.bar_url = buildKitchenUrl(base, client, "bar");
+    links.kitchen_url = buildKitchenUrl(base, client, "kitchen");
+  }
+  if (features.kiosk) links.kiosk_url = buildTableMenuUrl(base, client, 1);
+  const slug = client.kitchen_slug || client.id;
+  if (slug && features.website) {
+    links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;
+  }
+  return links;
+}
+
 module.exports = {
   UUID_RE,
   generateKitchenKey,
@@ -108,4 +129,5 @@ module.exports = {
   ensureKitchenCredentials,
   buildKitchenUrl,
   buildTableMenuUrl,
+  buildClientWebLinks,
 };
