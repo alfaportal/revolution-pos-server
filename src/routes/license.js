@@ -3,6 +3,9 @@ const { licenseApiKeyOptional } = require("../middleware/auth");
 const { validateLicense, getLicenseAccessLinks } = require("../services/licenseService");
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
+const { verifyWaiterPin } = require("../services/waiterPinService");
+const { getSupabase } = require("../db");
+const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
 
 const router = express.Router();
 
@@ -141,6 +144,106 @@ router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+async function countPendingOnlineOrders(clientId) {
+  if (!clientId) return 0;
+  const db = getSupabase();
+  const { count, error } = await db
+    .from("sales_orders")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientId)
+    .in("status", ["ordered", "ready"])
+    .in("device_id", [WEB_KIOSK, WEB_PUBLIC]);
+  if (error) return 0;
+  return count || 0;
+}
+
+/**
+ * POST /api/v1/license/kasa-pin — PIN kamarieri (4 shifra) ose emergjencë
+ */
+router.post("/kasa-pin", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname, pin } = req.body;
+    const key = celesi || license_key;
+    const pinStr = String(pin || "").trim();
+    if (!key) {
+      return res.status(400).json({ valid: false, gabim: "Mungon çelësi i licencës." });
+    }
+    if (!pinStr) {
+      return res.status(400).json({ valid: false, gabim: "Vendosni PIN-in." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        valid: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const clientId = licenseResult.client_id;
+    if (/^\d{4}$/.test(pinStr)) {
+      try {
+        const waiter = await verifyWaiterPin(clientId, pinStr);
+        return res.json({ valid: true, role: "waiter", waiter });
+      } catch {
+        /* vazhdo te emergjenca */
+      }
+    }
+
+    const pinOk = verifyMasterPin(pinStr);
+    const codeOk = verifyDailyEmergencyCode(pinStr.replace(/\D/g, ""));
+    if (pinOk || codeOk) {
+      return res.json({
+        valid: true,
+        role: "admin",
+        message: "Hapje e autorizuar.",
+      });
+    }
+
+    return res.status(403).json({ valid: false, gabim: "PIN i gabuar." });
+  } catch (e) {
+    res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/pending-online-orders — numri i porosive kiosk/online
+ */
+router.post("/pending-online-orders", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        ok: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const pending = await countPendingOnlineOrders(licenseResult.client_id);
+    res.json({ ok: true, pending, has_pending: pending > 0 });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
   }
 });
 
