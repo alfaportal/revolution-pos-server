@@ -4,6 +4,7 @@ const { validateLicense, getLicenseAccessLinks } = require("../services/licenseS
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
+const { createKasaSessionToken } = require("../lib/kasaSession");
 const { getSupabase } = require("../db");
 const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
 
@@ -193,7 +194,12 @@ router.post("/kasa-pin", licenseApiKeyOptional, async (req, res) => {
     if (/^\d{4}$/.test(pinStr)) {
       try {
         const waiter = await verifyWaiterPin(clientId, pinStr);
-        return res.json({ valid: true, role: "waiter", waiter });
+        return res.json({
+          valid: true,
+          role: "waiter",
+          waiter,
+          session_token: createKasaSessionToken(clientId, waiter.id),
+        });
       } catch {
         /* vazhdo te emergjenca */
       }

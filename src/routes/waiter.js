@@ -10,6 +10,8 @@ const {
 } = require("../services/waiterService");
 
 const { getKitchenMenuItemPhoto } = require("../services/menuService");
+const { verifyKasaSessionToken } = require("../lib/kasaSession");
+const { getWaiterById } = require("../services/waiterPinService");
 
 const router = express.Router();
 
@@ -51,6 +53,23 @@ router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"
     res.json({ ok: true, waiter });
   } catch (e) {
     res.status(401).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/:slug/kasa-session", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const token = String(req.body?.session_token || "").trim();
+    const parsed = verifyKasaSessionToken(token, req.kitchenClient.id);
+    if (!parsed?.waiterId) {
+      return res.status(401).json({ ok: false, gabim: "Sesioni i kasës ka skaduar. Shkruani PIN-in." });
+    }
+    const waiter = await getWaiterById(req.kitchenClient.id, parsed.waiterId);
+    if (!waiter) {
+      return res.status(401).json({ ok: false, gabim: "Kamarieri nuk u gjet." });
+    }
+    res.json({ ok: true, waiter });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 

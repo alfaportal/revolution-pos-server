@@ -4,6 +4,7 @@
   const urlParams = new URLSearchParams(window.location.search);
   const kitchenKey = urlParams.get("key") || "";
   const returnUrl = urlParams.get("return") || "";
+  const kasaSession = urlParams.get("kasa_session") || "";
   const WAITER_IDLE_MS = 10000;
 
   function apiQuery() {
@@ -447,6 +448,32 @@
     showScreen("screen-pin");
   }
 
+  async function tryKasaSessionEnter() {
+    if (!kasaSession) return false;
+    try {
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/kasa-session${apiQuery()}`, {
+        method: "POST",
+        body: JSON.stringify({ session_token: kasaSession }),
+      });
+      stripKasaSessionFromUrl();
+      enterWaiterSession(data.waiter);
+      return true;
+    } catch {
+      stripKasaSessionFromUrl();
+      return false;
+    }
+  }
+
+  function stripKasaSessionFromUrl() {
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("kasa_session");
+      window.history.replaceState({}, "", u.pathname + u.search + u.hash);
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function submitPinLogin() {
     const err = $("login-err");
     showErr(err, "");
@@ -806,6 +833,7 @@
   (async () => {
     try {
       await loadBootstrap();
+      if (await tryKasaSessionEnter()) return;
       renderPinDisplay();
       showScreen("screen-pin");
     } catch (e) {
