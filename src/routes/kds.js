@@ -3,6 +3,7 @@ const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
 const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady } = require("../services/kdsService");
 const { subscribe } = require("../services/kdsEvents");
+const { getStaffBrandingForClient } = require("../lib/staffBranding");
 
 const router = express.Router();
 
@@ -15,10 +16,12 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     const client = req.kitchenClient;
     const orders = await listBarOrders(client.id);
     const cancelled = await listBarCancelledOrders(client.id);
+    const branding = await getStaffBrandingForClient(client, req.params.slug);
     res.json({
       ok: true,
       client_name: client.emri,
       kitchen_slug: client.kitchen_slug,
+      ...branding,
       orders,
       cancelled,
     });
@@ -32,10 +35,12 @@ router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), 
     const client = req.kitchenClient;
     const orders = await listKitchenOrders(client.id);
     const cancelled = await listRecentlyCancelledOrders(client.id);
+    const branding = await getStaffBrandingForClient(client, req.params.slug);
     res.json({
       ok: true,
       client_name: client.emri,
       kitchen_slug: client.kitchen_slug,
+      ...branding,
       orders,
       cancelled,
     });

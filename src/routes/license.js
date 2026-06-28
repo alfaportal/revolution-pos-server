@@ -6,7 +6,8 @@ const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const { getSupabase } = require("../db");
-const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
+const { WEB_KIOSK, WEB_PUBLIC, orderSourceLabel } = require("../lib/orderSource");
+const { normalizeItems } = require("../services/salesService");
 
 const router = express.Router();
 
@@ -155,10 +156,39 @@ async function countPendingOnlineOrders(clientId) {
     .from("sales_orders")
     .select("id", { count: "exact", head: true })
     .eq("client_id", clientId)
-    .in("status", ["ordered", "ready"])
+    .in("status", ["ordered"])
     .in("device_id", [WEB_KIOSK, WEB_PUBLIC]);
   if (error) return 0;
   return count || 0;
+}
+
+async function listPendingOnlineOrders(clientId) {
+  if (!clientId) return [];
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("sales_orders")
+    .select("id, table_number, waiter_name, items_json, total, ordered_at, status, device_id")
+    .eq("client_id", clientId)
+    .in("status", ["ordered"])
+    .in("device_id", [WEB_KIOSK, WEB_PUBLIC])
+    .order("ordered_at", { ascending: false })
+    .limit(40);
+  if (error) return [];
+  return (data || []).map(row => {
+    const src = orderSourceLabel(row);
+    return {
+      id: row.id,
+      table_number: Number(row.table_number) || 0,
+      customer_label: String(row.waiter_name || "").trim(),
+      source: src.code,
+      source_label: src.label,
+      source_icon: src.icon,
+      items: normalizeItems(row.items_json),
+      total: Number(row.total) || 0,
+      ordered_at: row.ordered_at,
+      status: row.status,
+    };
+  });
 }
 
 /**
@@ -324,6 +354,43 @@ router.post("/pending-online-orders", licenseApiKeyOptional, async (req, res) =>
 
     const pending = await countPendingOnlineOrders(licenseResult.client_id);
     res.json({ ok: true, pending, has_pending: pending > 0 });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/online-orders — listë porosish kiosk/online (për ekranin e hyrjes POS)
+ */
+router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        ok: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const orders = await listPendingOnlineOrders(licenseResult.client_id);
+    res.json({
+      ok: true,
+      pending: orders.length,
+      has_pending: orders.length > 0,
+      orders,
+    });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
   }

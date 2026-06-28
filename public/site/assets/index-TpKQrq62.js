@@ -1,8 +1,10 @@
-(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const o of document.querySelectorAll('link[rel="modulepreload"]'))n(o);new MutationObserver(o=>{for(const r of o)if(r.type==="childList")for(const s of r.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&n(s)}).observe(document,{childList:!0,subtree:!0});function a(o){const r={};return o.integrity&&(r.integrity=o.integrity),o.referrerPolicy&&(r.referrerPolicy=o.referrerPolicy),o.crossOrigin==="use-credentials"?r.credentials="include":o.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function n(o){if(o.ep)return;o.ep=!0;const r=a(o);fetch(o.href,r)}})();const y=[];function R(e,t){const a=[],n=new RegExp("^"+e.replace(/\//g,"\\/").replace(/:([a-zA-Z]+)/g,(o,r)=>(a.push(r),"([^/]+)"))+"$");y.push({regex:n,keys:a,handler:t})}function F(e){const t=e.indexOf("#"),a=t>=0?e.slice(t+1):"",n=t>=0?e.slice(0,t)||"/":e;window.history.pushState({},"",a?`${n}#${a}`:n),f(),a&&requestAnimationFrame(()=>{var o;(o=document.getElementById(a))==null||o.scrollIntoView({behavior:"smooth"})})}function j(){return window.location.pathname.replace(/\/+$/,"")||"/"}function f(){var t;const e=j();for(const a of y){const n=e.match(a.regex);if(!n)continue;const o={};a.keys.forEach((r,s)=>{o[r]=decodeURIComponent(n[s+1])}),a.handler(o);return}(t=y.find(a=>a.regex.source==="^\\/$"))==null||t.handler({})}function E(){document.addEventListener("click",e=>{const t=e.target.closest("a[data-navigate]");t&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||(e.preventDefault(),F(t.getAttribute("href"))))}),window.addEventListener("popstate",f),f()}const P={sq:{navLabel:"Kryesore",langLabel:"Gjuha",features:"Veçoritë",howItWorks:"Si funksionon",packages:"Paketat",faq:"FAQ",blog:"Blog",backToTop:"Kthehu lart",blogBadge:"Blog",heroTitle:"Këshilla & Njohuri për",heroAccent:"Restorante Moderne",heroSubtitle:"Artikuj praktikë për menaxhimin e restorantit, teknologjinë POS dhe eficiencën operacionale.",readMore:"Lexo →",backToBlog:"← Kthehu në ballina",pageTitle:"Revolution Invest POS — Restorante & Kafene",metaDescription:"Këshilla dhe njohuri për restorante moderne — menaxhim, POS, teknologji dhe eficiencë operacionale."},en:{navLabel:"Main navigation",langLabel:"Language",features:"Features",howItWorks:"How it works",packages:"Pricing",faq:"FAQ",blog:"Blog",backToTop:"Back to top",blogBadge:"Blog",heroTitle:"Tips & Insights for",heroAccent:"Modern Restaurants",heroSubtitle:"Practical articles on restaurant management, POS technology, and operational efficiency.",readMore:"Read →",backToBlog:"← Back to home",pageTitle:"Revolution Invest POS — Restaurants & Cafés",metaDescription:"Tips and insights for modern restaurants — management, POS, technology, and operational efficiency."}},v={sq:{"meta.title":"Revolution Invest POS — Sistemi POS për Restorantet dhe Kafenetë","meta.description":"Revolution Invest POS — sistemi i plotë për restorante dhe kafene. POS, KDS, kamarier, kiosk, raporte dhe faqe publike.","brand.subtitle":"Restorant & Kafene","nav.home":"Ballina","nav.howItWorks":"Si funksionon","nav.packages":"Pakot","nav.blog":"Blog","nav.manual":"Manuali","nav.contact":"Kontakti","nav.openMenu":"Hap menunë","cta.startFree":"Fillo Falas","cta.choosePackage":"Zgjidh Pakon","cta.contactUs":"Na Kontaktoni","cta.sendRequest":"Dërgo kërkesën","how.title":"Si funksionon sistemi","how.subtitle":"Çdo modul ka rolin e vet — së bashku mbulojnë operimin e plotë të restorantit, nga porosia deri te raporti.","how.pos.title":"POS Kasa","how.pos.desc":"Merr porosi, bëj fatura fiskale dhe menaxho tavolinat — qendra e operimit të restorantit tuaj.","how.waiter.title":"Kamarieri","how.waiter.desc":"Tablet ose telefon — merr porosi direkt nga tavolina dhe i dërgon automatikisht në kuzhinë.","how.kds.title":"KDS Kuzhina","how.kds.desc":"Ekran dixhital — sheh porositë në kohë reale dhe konfirmon kur pjata është gati për servim.","how.owner.title":"Pronari","how.owner.desc":"Panel online — sheh raportet, menaxhon menunë dhe stafin nga kudo, edhe nga telefoni.","how.readManual":"Lexo në manual →","packages.title":"Pakot fleksibile për çdo madhësi biznesi","packages.subtitle":"Zgjidhni modulin që ju nevojitet — upgrade kur rriteni. Të gjitha pakot fillojnë me provë falas.","packages.badge":"3 muaj falas","packages.perWeek":"/javë","packages.p1.name":"Pako 1","packages.p1.f1":"POS Kasa","packages.p1.f2":"Panel pronari","packages.p1.f3":"Faqja publike","packages.p1.f4":"Raportet & Z-Report","packages.p2.name":"Pako 2","packages.p2.f1":"POS + Faqja publike","packages.p2.f2":"KDS Kuzhina","packages.p2.f3":"Kiosk QR tavolinë","packages.p2.f4":"Kamarier tablet","packages.p3.name":"Pako 3","packages.p3.f1":"Gjithçka nga Pako 1","packages.p3.f2":"Aplikacion mobile","packages.p3.f3":"Menaxhim nga telefoni","packages.p3.f4":"Sinkronizim cloud","packages.p4.name":"Pako 4","packages.p4.f1":"Gjithçka nga Pako 2","packages.p4.f2":"Aplikacion mobile","packages.p4.f3":"Porosi online delivery","packages.p4.f4":"Module të plota","contact.title":"Filloni sot — provë 3 muaj falas","contact.subtitle":"Na kontaktoni për instalim, demo live dhe zgjedhjen e pakos së duhur për restorantin ose kafenen tuaj.","contact.direct":"Kontakt i drejtpërdrejtë","contact.sendMessage":"Dërgo mesazh","form.name":"Emri","form.phone":"Telefoni","form.message":"Mesazhi","form.namePlaceholder":"Emri i biznesit","form.messagePlaceholder":"P.sh. Restorant me 15 tavolina në Prishtinë…","form.error":"Plotësoni të gjitha fushat.","form.success":"Faleminderit! Po ju hapim WhatsApp për të dërguar kërkesën.","footer.rights":"Revolution Invest. Të gjitha të drejtat e rezervuara.","wa.trial":"Përshëndetje, dëshiroj të provoj Revolution Invest POS.","wa.custom":"Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.","wa.formIntro":"Përshëndetje, jam {name} ({phone}).","wa.formSuffix":"Dëshiroj Revolution Invest POS — 3 muaj falas.","articles.heading":"Artikujt e fundit"},en:{"meta.title":"Revolution Invest POS — POS System for Restaurants & Cafés","meta.description":"Revolution Invest POS — the complete system for restaurants and cafés. POS, KDS, waiter, kiosk, reports, and public page.","brand.subtitle":"Restaurant & Café","nav.home":"Home","nav.howItWorks":"How it works","nav.packages":"Pricing","nav.blog":"Blog","nav.manual":"Manual","nav.contact":"Contact","nav.openMenu":"Open menu","cta.startFree":"Start Free","cta.choosePackage":"Choose Plan","cta.contactUs":"Contact Us","cta.sendRequest":"Send request","how.title":"How the system works","how.subtitle":"Each module has its role — together they cover full restaurant operations, from order to report.","how.pos.title":"POS Register","how.pos.desc":"Take orders, issue fiscal invoices, and manage tables — the hub of your restaurant operations.","how.waiter.title":"Waiter","how.waiter.desc":"Tablet or phone — take orders directly from the table and send them automatically to the kitchen.","how.kds.title":"Kitchen KDS","how.kds.desc":"Digital screen — see orders in real time and confirm when a dish is ready to serve.","how.owner.title":"Owner","how.owner.desc":"Online panel — view reports, manage menu and staff from anywhere, even your phone.","how.readManual":"Read in manual →","packages.title":"Flexible plans for every business size","packages.subtitle":"Choose the modules you need — upgrade as you grow. All plans start with a free trial.","packages.badge":"3 months free","packages.perWeek":"/week","packages.p1.name":"Plan 1","packages.p1.f1":"POS Register","packages.p1.f2":"Owner panel","packages.p1.f3":"Public page","packages.p1.f4":"Reports & Z-Report","packages.p2.name":"Plan 2","packages.p2.f1":"POS + Public page","packages.p2.f2":"Kitchen KDS","packages.p2.f3":"Table QR kiosk","packages.p2.f4":"Waiter tablet","packages.p3.name":"Plan 3","packages.p3.f1":"Everything in Plan 1","packages.p3.f2":"Mobile app","packages.p3.f3":"Manage from phone","packages.p3.f4":"Cloud sync","packages.p4.name":"Plan 4","packages.p4.f1":"Everything in Plan 2","packages.p4.f2":"Mobile app","packages.p4.f3":"Online delivery orders","packages.p4.f4":"Full modules","contact.title":"Start today — 3 months free trial","contact.subtitle":"Contact us for installation, a live demo, and choosing the right plan for your restaurant or café.","contact.direct":"Direct contact","contact.sendMessage":"Send a message","form.name":"Name","form.phone":"Phone","form.message":"Message","form.namePlaceholder":"Business name","form.messagePlaceholder":"E.g. Restaurant with 15 tables in Pristina…","form.error":"Please fill in all fields.","form.success":"Thank you! Opening WhatsApp so you can send your request.","footer.rights":"Revolution Invest. All rights reserved.","wa.trial":"Hello, I would like to try Revolution Invest POS.","wa.custom":"Hello, I would like to discuss a tailored solution.","wa.formIntro":"Hello, I'm {name} ({phone}).","wa.formSuffix":"I want Revolution Invest POS — 3 months free.","articles.heading":"Latest articles"}},z="revolution-pos-lang";let l=localStorage.getItem(z)||"sq";function p(){return l}function $(e){e!=="sq"&&e!=="en"||(l=e,localStorage.setItem(z,l),document.documentElement.lang=l==="en"?"en":"sq")}function i(e){var t,a;return((t=P[l])==null?void 0:t[e])??((a=v[l])==null?void 0:a[e])??P.sq[e]??v.sq[e]??e}document.documentElement.lang=l==="en"?"en":"sq";function O(){return"/"}function W(){return"/"}function C(e){return`${W()}/${e}`.replace(/\/+/g,"/")}function w(e){return`/${e.replace(/^\//,"")}`}function b(e){return j()==="/"?`#${e}`:`/#${e}`}function c(e,t,a,n){const o=j()==="/";return`<a href="${b(e)}"${o?"":" data-navigate"} class="${a===n?"active":""}">${t}</a>`}function q({activeNav:e="home"}={}){const t=p(),a=[{id:"home",label:i("nav.home"),section:"ballina"},{id:"how-it-works",label:i("nav.howItWorks"),section:"si-funksionon"},{id:"packages",label:i("nav.packages"),section:"pakot"},{id:"blog",label:i("nav.blog"),section:"artikuj"}];return`
+(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))o(n);new MutationObserver(n=>{for(const r of n)if(r.type==="childList")for(const s of r.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&o(s)}).observe(document,{childList:!0,subtree:!0});function a(n){const r={};return n.integrity&&(r.integrity=n.integrity),n.referrerPolicy&&(r.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?r.credentials="include":n.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function o(n){if(n.ep)return;n.ep=!0;const r=a(n);fetch(n.href,r)}})();const z=[];function S(e,t){const a=[],o=new RegExp("^"+e.replace(/\//g,"\\/").replace(/:([a-zA-Z]+)/g,(n,r)=>(a.push(r),"([^/]+)"))+"$");z.push({regex:o,keys:a,handler:t})}function H(e){const t=e.indexOf("#"),a=t>=0?e.slice(t+1):"",o=t>=0?e.slice(0,t)||"/":e;window.history.pushState({},"",a?`${o}#${a}`:o),w(),a&&requestAnimationFrame(()=>{var n;(n=document.getElementById(a))==null||n.scrollIntoView({behavior:"smooth"})})}function c(){return window.location.pathname.replace(/\/+$/,"")||"/"}function w(){var t;const e=c();for(const a of z){const o=e.match(a.regex);if(!o)continue;const n={};a.keys.forEach((r,s)=>{n[r]=decodeURIComponent(o[s+1])}),a.handler(n);return}(t=z.find(a=>a.regex.source==="^\\/$"))==null||t.handler({})}function Q(){document.addEventListener("click",e=>{const t=e.target.closest("a[data-navigate]");t&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||(e.preventDefault(),H(t.getAttribute("href"))))}),window.addEventListener("popstate",w),w()}const F={sq:{navLabel:"Kryesore",langLabel:"Gjuha",features:"Veçoritë",howItWorks:"Si funksionon",packages:"Paketat",faq:"FAQ",blog:"Blog",backToTop:"Kthehu lart",blogBadge:"Blog",heroTitle:"Këshilla & Njohuri për",heroAccent:"Restorante Moderne",heroSubtitle:"Artikuj praktikë për menaxhimin e restorantit, teknologjinë POS dhe eficiencën operacionale.",readMore:"Lexo →",backToBlog:"← Kthehu në ballina",pageTitle:"Revolution Invest POS — Restorante & Kafene",metaDescription:"Këshilla dhe njohuri për restorante moderne — menaxhim, POS, teknologji dhe eficiencë operacionale."},en:{navLabel:"Main navigation",langLabel:"Language",features:"Features",howItWorks:"How it works",packages:"Pricing",faq:"FAQ",blog:"Blog",backToTop:"Back to top",blogBadge:"Blog",heroTitle:"Tips & Insights for",heroAccent:"Modern Restaurants",heroSubtitle:"Practical articles on restaurant management, POS technology, and operational efficiency.",readMore:"Read →",backToBlog:"← Back to home",pageTitle:"Revolution Invest POS — Restaurants & Cafés",metaDescription:"Tips and insights for modern restaurants — management, POS, technology, and operational efficiency."}},P={sq:{"meta.title":"Revolution Invest POS — Sistemi POS për Restorantet dhe Kafenetë","meta.description":"Revolution Invest POS — sistemi i plotë për restorante dhe kafene. POS, KDS, kamarier, kiosk, raporte dhe faqe publike.","brand.subtitle":"Restorant & Kafene","nav.home":"Ballina","nav.howItWorks":"Si funksionon","nav.packages":"Pakot","nav.blog":"Blog","nav.manual":"Manuali","nav.contact":"Kontakti","nav.openMenu":"Hap menunë","cta.startFree":"Fillo Falas","cta.choosePackage":"Zgjidh Pakon","cta.contactUs":"Na Kontaktoni","cta.sendRequest":"Dërgo kërkesën","hero.badge":"Provë Falas 1 Muaj","hero.title":"Kontrollo çdo Porosi. Çdo Tavolinë. Çdo Ditë.","hero.subtitle":"Sistemi POS që punon për ty — nga kasa te kuzhina, nga kamarieri te pronari. Gjithçka në një platformë.","hero.cta.primary":"Fillo 1 Muaj Falas","hero.cta.secondary":"Shiko si funksionon →","hero.stats.restaurants":"500+ Restorante","hero.stats.support":"24/7 Mbështetje","hero.stats.cloud":"Cloud & Offline","how.title":"Si funksionon sistemi","how.subtitle":"Çdo modul ka rolin e vet — së bashku mbulojnë operimin e plotë të restorantit, nga porosia deri te raporti.","how.pos.title":"POS Kasa","how.pos.desc":"Merr porosi, bëj fatura fiskale dhe menaxho tavolinat — qendra e operimit të restorantit tuaj.","how.waiter.title":"Kamarieri","how.waiter.desc":"Tablet ose telefon — merr porosi direkt nga tavolina dhe i dërgon automatikisht në kuzhinë.","how.kds.title":"KDS Kuzhina","how.kds.desc":"Ekran dixhital — sheh porositë në kohë reale dhe konfirmon kur pjata është gati për servim.","how.owner.title":"Pronari","how.owner.desc":"Panel online — sheh raportet, menaxhon menunë dhe stafin nga kudo, edhe nga telefoni.","how.readManual":"Lexo në manual →","packages.title":"Pakot fleksibile për çdo madhësi biznesi","packages.subtitle":"Zgjidhni modulin që ju nevojitet — upgrade kur rriteni. Të gjitha pakot fillojnë me provë falas.","packages.badge":"1 muaj falas","packages.perWeek":"/javë","packages.p1.name":"Pako 1","packages.p1.f1":"POS Kasa","packages.p1.f2":"Panel pronari","packages.p1.f3":"Faqja publike","packages.p1.f4":"Raportet & Z-Report","packages.p1.f5":"Menaxhim menuje & produkte","packages.p1.f6":"Fatura fiskale ATK","packages.p2.name":"Pako 2","packages.p2.f1":"POS Kasa","packages.p2.f2":"Panel pronari","packages.p2.f3":"Faqja publike","packages.p2.f4":"KDS Kuzhina","packages.p2.f5":"Kiosk QR tavolinë","packages.p2.f6":"Kamarier tablet","packages.p2.f7":"Raportet & Z-Report","packages.p2.f8":"Porosi nga tavolina me QR","packages.p3.name":"Pako 3","packages.p3.f1":"POS Kasa","packages.p3.f2":"Panel pronari","packages.p3.f3":"Faqja publike","packages.p3.f4":"Raportet & Z-Report","packages.p3.f5":"Menaxhim menuje & produkte","packages.p3.f6":"Fatura fiskale ATK","packages.p3.f7":"Aplikacion mobile","packages.p3.f8":"Menaxhim nga telefoni","packages.p3.f9":"Sinkronizim cloud","packages.p3.f10":"Backup automatik","packages.p4.name":"Pako 4","packages.p4.f1":"POS Kasa","packages.p4.f2":"Panel pronari","packages.p4.f3":"Faqja publike","packages.p4.f4":"KDS Kuzhina","packages.p4.f5":"Kiosk QR tavolinë","packages.p4.f6":"Kamarier tablet","packages.p4.f7":"Raportet & Z-Report","packages.p4.f8":"Aplikacion mobile","packages.p4.f9":"Menaxhim nga telefoni","packages.p4.f10":"Porosi online delivery","packages.p4.f11":"Sinkronizim cloud","packages.p4.f12":"Të gjitha modulet e sistemit","packages.clickHint":"Klikoni një paketë për të parë çfarë përfshin","packages.includes":"Çfarë përfshin kjo paketë:","packages.selected":"Zgjedhur","contact.title":"Filloni sot — provë 1 muaj falas","contact.subtitle":"Na kontaktoni për instalim, demo live dhe zgjedhjen e pakos së duhur për restorantin ose kafenen tuaj.","contact.direct":"Kontakt i drejtpërdrejtë","contact.sendMessage":"Dërgo mesazh","form.name":"Emri","form.phone":"Telefoni","form.message":"Mesazhi","form.namePlaceholder":"Emri i biznesit","form.messagePlaceholder":"P.sh. Restorant me 15 tavolina në Prishtinë…","form.error":"Plotësoni të gjitha fushat.","form.success":"Faleminderit! Po ju hapim WhatsApp për të dërguar kërkesën.","footer.tagline":"Sistemi i plotë POS për restorante, kafene dhe bare — porosi, kuzhinë, raporte dhe menaxhim nga një vend i vetëm.","footer.note":"Zhvilluar dhe mirëmbajtur nga ekipi ynë në Kosovë dhe rajon.","footer.col.platform":"Platforma","footer.col.support":"Ndihmë & kontakt","footer.link.howItWorks":"Si funksionon","footer.link.packages":"Pakot & modulet","footer.link.blog":"Artikuj & këshilla","footer.link.manual":"Manuali i përdorimit","footer.link.contact":"Na kontaktoni","footer.link.login":"Hyr në panel pronari","footer.link.trial":"Fillo provën falas","footer.legal.privacy":"Privatësia e të dhënave","footer.legal.terms":"Kushtet e shërbimit","footer.legal.notice":"Revolution Invest POS ofrohet me licencë të rregullt. Të dhënat e biznesit tuaj ruhen në mënyrë të sigurt sipas politikës sonë të privatësisë.","footer.rights":"Revolution Invest. Të gjitha të drejtat e rezervuara.","wa.trial":"Përshëndetje, dëshiroj të provoj Revolution Invest POS.","wa.custom":"Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.","wa.formIntro":"Përshëndetje, jam {name} ({phone}).","wa.formSuffix":"Dëshiroj Revolution Invest POS — 1 muaj falas.","legal.backHome":"← Kthehu në ballina","articles.heading":"Artikujt e fundit"},en:{"meta.title":"Revolution Invest POS — POS System for Restaurants & Cafés","meta.description":"Revolution Invest POS — the complete system for restaurants and cafés. POS, KDS, waiter, kiosk, reports, and public page.","brand.subtitle":"Restaurant & Café","nav.home":"Home","nav.howItWorks":"How it works","nav.packages":"Pricing","nav.blog":"Blog","nav.manual":"Manual","nav.contact":"Contact","nav.openMenu":"Open menu","cta.startFree":"Start Free","cta.choosePackage":"Choose Plan","cta.contactUs":"Contact Us","cta.sendRequest":"Send request","hero.badge":"1 Month Free Trial","hero.title":"Control Every Order. Every Table. Every Day.","hero.subtitle":"The POS system that works for you — from register to kitchen, waiter to owner. Everything in one platform.","hero.cta.primary":"Start 1 Month Free","hero.cta.secondary":"See how it works →","hero.stats.restaurants":"500+ Restaurants","hero.stats.support":"24/7 Support","hero.stats.cloud":"Cloud & Offline","how.title":"How the system works","how.subtitle":"Each module has its role — together they cover full restaurant operations, from order to report.","how.pos.title":"POS Register","how.pos.desc":"Take orders, issue fiscal invoices, and manage tables — the hub of your restaurant operations.","how.waiter.title":"Waiter","how.waiter.desc":"Tablet or phone — take orders directly from the table and send them automatically to the kitchen.","how.kds.title":"Kitchen KDS","how.kds.desc":"Digital screen — see orders in real time and confirm when a dish is ready to serve.","how.owner.title":"Owner","how.owner.desc":"Online panel — view reports, manage menu and staff from anywhere, even your phone.","how.readManual":"Read in manual →","packages.title":"Flexible plans for every business size","packages.subtitle":"Choose the modules you need — upgrade as you grow. All plans start with a free trial.","packages.badge":"1 month free","packages.perWeek":"/week","packages.p1.name":"Plan 1","packages.p1.f1":"POS Register","packages.p1.f2":"Owner panel","packages.p1.f3":"Public page","packages.p1.f4":"Reports & Z-Report","packages.p1.f5":"Menu & product management","packages.p1.f6":"Fiscal invoices (ATK)","packages.p2.name":"Plan 2","packages.p2.f1":"POS Register","packages.p2.f2":"Owner panel","packages.p2.f3":"Public page","packages.p2.f4":"Kitchen KDS","packages.p2.f5":"Table QR kiosk","packages.p2.f6":"Waiter tablet","packages.p2.f7":"Reports & Z-Report","packages.p2.f8":"Table orders via QR","packages.p3.name":"Plan 3","packages.p3.f1":"POS Register","packages.p3.f2":"Owner panel","packages.p3.f3":"Public page","packages.p3.f4":"Reports & Z-Report","packages.p3.f5":"Menu & product management","packages.p3.f6":"Fiscal invoices (ATK)","packages.p3.f7":"Mobile app","packages.p3.f8":"Manage from phone","packages.p3.f9":"Cloud sync","packages.p3.f10":"Automatic backup","packages.p4.name":"Plan 4","packages.p4.f1":"POS Register","packages.p4.f2":"Owner panel","packages.p4.f3":"Public page","packages.p4.f4":"Kitchen KDS","packages.p4.f5":"Table QR kiosk","packages.p4.f6":"Waiter tablet","packages.p4.f7":"Reports & Z-Report","packages.p4.f8":"Mobile app","packages.p4.f9":"Manage from phone","packages.p4.f10":"Online delivery orders","packages.p4.f11":"Cloud sync","packages.p4.f12":"All system modules included","packages.clickHint":"Click a plan to see what's included","packages.includes":"What's included in this plan:","packages.selected":"Selected","contact.title":"Start today — 1 month free trial","contact.subtitle":"Contact us for installation, a live demo, and choosing the right plan for your restaurant or café.","contact.direct":"Direct contact","contact.sendMessage":"Send a message","form.name":"Name","form.phone":"Phone","form.message":"Message","form.namePlaceholder":"Business name","form.messagePlaceholder":"E.g. Restaurant with 15 tables in Pristina…","form.error":"Please fill in all fields.","form.success":"Thank you! Opening WhatsApp so you can send your request.","footer.tagline":"The complete POS system for restaurants, cafés, and bars — orders, kitchen, reports, and management from one place.","footer.note":"Developed and maintained by our team in Kosovo and the region.","footer.col.platform":"Platform","footer.col.support":"Help & contact","footer.link.howItWorks":"How it works","footer.link.packages":"Plans & modules","footer.link.blog":"Articles & tips","footer.link.manual":"User manual","footer.link.contact":"Contact us","footer.link.login":"Owner panel login","footer.link.trial":"Start free trial","footer.legal.privacy":"Data privacy","footer.legal.terms":"Terms of service","footer.legal.notice":"Revolution Invest POS is provided under a standard license. Your business data is stored securely in line with our privacy policy.","footer.rights":"Revolution Invest. All rights reserved.","wa.trial":"Hello, I would like to try Revolution Invest POS.","wa.custom":"Hello, I would like to discuss a tailored solution.","wa.formIntro":"Hello, I'm {name} ({phone}).","wa.formSuffix":"I want Revolution Invest POS — 1 month free.","legal.backHome":"← Back to home","articles.heading":"Latest articles"}},E="revolution-pos-lang";let m=localStorage.getItem(E)||"sq";function g(){return m}function G(e){e!=="sq"&&e!=="en"||(m=e,localStorage.setItem(E,m),document.documentElement.lang=m==="en"?"en":"sq")}function i(e){var t,a;return((t=F[m])==null?void 0:t[e])??((a=P[m])==null?void 0:a[e])??F.sq[e]??P.sq[e]??e}document.documentElement.lang=m==="en"?"en":"sq";function R(){return"/"}function V(){return"/blog"}function U(e){return`${V()}/${e}`.replace(/\/+/g,"/")}function k(e){return`/${e.replace(/^\//,"")}`}function O(e){return c()==="/"?`#${e}`:`/#${e}`}function j(e,t,a,o){const n=c()==="/";return`<a href="${O(e)}"${n?"":" data-navigate"} class="${a===o?"active":""}">${t}</a>`}function A({activeNav:e="home"}={}){const t=g(),a=[{id:"home",label:i("nav.home"),section:"ballina"},{id:"how-it-works",label:i("nav.howItWorks"),section:"si-funksionon"},{id:"packages",label:i("nav.packages"),section:"pakot"},{id:"blog",label:i("nav.blog"),section:"artikuj"}];return`
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="${O()}" ${j()==="/"?"":"data-navigate"}>
-          <span class="brand-mark" aria-hidden="true">R</span>
+        <a class="brand" href="${R()}" ${c()==="/"?"":"data-navigate"} aria-label="Revolution Invest POS">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="${k("logo-source.png")}" width="40" height="40" alt="" />
+          </span>
           <span class="brand-text">
             Revolution Invest POS
             <small>${i("brand.subtitle")}</small>
@@ -10,9 +12,9 @@
         </a>
 
         <nav class="nav nav-desktop" aria-label="${i("navLabel")}">
-          ${a.map(n=>c(n.section,n.label,e,n.id)).join("")}
+          ${a.map(o=>j(o.section,o.label,e,o.id)).join("")}
           <a href="/website/manual.html">${i("nav.manual")}</a>
-          ${c("kontakt",i("nav.contact"),e,"contact")}
+          ${j("kontakt",i("nav.contact"),e,"contact")}
         </nav>
 
         <div class="header-actions">
@@ -20,29 +22,73 @@
             <button type="button" data-lang="sq" class="${t==="sq"?"active":""}">SQ</button>
             <button type="button" data-lang="en" class="${t==="en"?"active":""}">EN</button>
           </div>
-          <a class="btn btn-primary header-cta-desktop" href="${b("kontakt")}">${i("cta.startFree")}</a>
+          <a class="btn btn-primary header-cta-desktop" href="${O("kontakt")}">${i("cta.startFree")}</a>
           <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-mobile" aria-label="${i("nav.openMenu")}">☰</button>
         </div>
       </div>
 
       <nav class="nav-mobile" id="nav-mobile" aria-label="${i("navLabel")}">
-        ${a.map(n=>c(n.section,n.label,e,n.id)).join("")}
+        ${a.map(o=>j(o.section,o.label,e,o.id)).join("")}
         <a href="/website/manual.html">${i("nav.manual")}</a>
-        ${c("kontakt",i("nav.contact"),e,"contact")}
-        <a class="btn btn-primary" href="${b("kontakt")}">${i("cta.startFree")}</a>
+        ${j("kontakt",i("nav.contact"),e,"contact")}
+        <a class="btn btn-primary" href="${O("kontakt")}">${i("cta.startFree")}</a>
       </nav>
     </header>
-  `}function B(){return`
+  `}function f(e,t){const a=c()==="/";return`<li><a href="${a?`#${e}`:`/#${e}`}"${a?"":" data-navigate"}>${t}</a></li>`}function q(){const t=c()==="/"?"":" data-navigate";return`
     <footer class="site-footer">
-      <div class="container">
-        <p>© ${new Date().getFullYear()} ${i("footer.rights")}</p>
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <a class="footer-logo" href="${R()}"${t} aria-label="Revolution Invest POS">
+            <span class="brand-mark" aria-hidden="true">
+              <img src="${k("logo-source.png")}" width="40" height="40" alt="" />
+            </span>
+            <span class="footer-logo-text">Revolution Invest POS</span>
+          </a>
+          <p class="footer-tagline">${i("footer.tagline")}</p>
+          <p class="footer-note">${i("footer.note")}</p>
+        </div>
+
+        <div class="footer-col">
+          <h4>${i("footer.col.platform")}</h4>
+          <ul>
+            ${f("si-funksionon",i("footer.link.howItWorks"))}
+            ${f("pakot",i("footer.link.packages"))}
+            ${f("artikuj",i("footer.link.blog"))}
+            <li><a href="/website/manual.html">${i("footer.link.manual")}</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>${i("footer.col.support")}</h4>
+          <ul>
+            ${f("kontakt",i("footer.link.contact"))}
+            ${f("kontakt",i("footer.link.trial"))}
+            <li><a href="/owner/login">${i("footer.link.login")}</a></li>
+            <li><a id="footer-whatsapp" href="#" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+            <li><a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="container footer-bottom-inner">
+          <p class="footer-copy">© ${new Date().getFullYear()} ${i("footer.rights")}</p>
+          <p class="footer-legal-notice">${i("footer.legal.notice")}</p>
+          <div class="footer-legal-links">
+            <a href="/privacy" data-navigate>${i("footer.legal.privacy")}</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms" data-navigate>${i("footer.legal.terms")}</a>
+          </div>
+        </div>
       </div>
     </footer>
-  `}function A(){return`<button id="back-to-top" class="back-to-top" type="button" aria-label="${i("backToTop")}">↑</button>`}function T(){const e=document.querySelector("#back-to-top");if(!e)return;const t=()=>{e.classList.toggle("visible",window.scrollY>400)};window.removeEventListener("scroll",t),window.addEventListener("scroll",t),t(),e.onclick=()=>{window.scrollTo({top:0,behavior:"smooth"})}}function K(){document.querySelectorAll(".lang-switch button[data-lang]").forEach(e=>{e.onclick=()=>{const t=e.dataset.lang;t!==p()&&($(t),f())}})}function D(){const e=document.getElementById("menu-toggle"),t=document.getElementById("nav-mobile");e==null||e.addEventListener("click",()=>{const a=t.classList.toggle("open");e.setAttribute("aria-expanded",a?"true":"false")}),t==null||t.querySelectorAll("a").forEach(a=>{a.addEventListener("click",()=>t.classList.remove("open"))})}function L(){const e=document.getElementById("contact-form"),t=document.getElementById("form-msg");if(!e)return;let a="38344123456",n="+383 44 123 456";async function o(){try{const r=await fetch("/api/public/config"),s=await r.json();if(!r.ok||!s.ok)return;s.support_phone&&(n=s.support_phone),s.support_phone_digits&&(a=s.support_phone_digits);const h=document.getElementById("contact-whatsapp-label"),u=document.getElementById("contact-tel-label"),d=document.getElementById("contact-tel"),m=document.getElementById("contact-whatsapp"),S=document.getElementById("contact-phone");h&&(h.textContent=`WhatsApp — ${n}`),u&&(u.textContent=n),d&&(d.href=`tel:${n.replace(/\s/g,"")}`),S&&(S.placeholder=n),m&&(m.href=`https://wa.me/${a}?text=${encodeURIComponent(i("wa.trial"))}`)}catch{}}o(),e.addEventListener("submit",r=>{r.preventDefault();const s=document.getElementById("contact-name").value.trim(),h=document.getElementById("contact-phone").value.trim(),u=document.getElementById("contact-message").value.trim();if(!s||!h||!u){t.textContent=i("form.error"),t.className="form-msg err";return}const d=i("wa.formIntro").replace("{name}",s).replace("{phone}",h),m=encodeURIComponent(`${d}
+  `}function T(){const e=document.getElementById("footer-whatsapp");if(!e)return;async function t(){try{const a=await fetch("/api/public/config"),o=await a.json();if(!a.ok||!o.ok)return;const n=o.support_phone||"+383 44 123 456",r=o.support_phone_digits||"38344123456";e.textContent=`WhatsApp — ${n}`,e.href=`https://wa.me/${r}?text=${encodeURIComponent(i("wa.trial"))}`}catch{e.textContent="WhatsApp",e.href=`https://wa.me/38344123456?text=${encodeURIComponent(i("wa.trial"))}`}}t()}function I(){return`<button id="back-to-top" class="back-to-top" type="button" aria-label="${i("backToTop")}">↑</button>`}function K(){const e=document.querySelector("#back-to-top");if(!e)return;const t=()=>{e.classList.toggle("visible",window.scrollY>400)};window.removeEventListener("scroll",t),window.addEventListener("scroll",t),t(),e.onclick=()=>{window.scrollTo({top:0,behavior:"smooth"})}}function M(){document.querySelectorAll(".lang-switch button[data-lang]").forEach(e=>{e.onclick=()=>{const t=e.dataset.lang;t!==g()&&(G(t),w())}})}function x(){const e=document.getElementById("menu-toggle"),t=document.getElementById("nav-mobile");e==null||e.addEventListener("click",()=>{const a=t.classList.toggle("open");e.setAttribute("aria-expanded",a?"true":"false")}),t==null||t.querySelectorAll("a").forEach(a=>{a.addEventListener("click",()=>t.classList.remove("open"))})}function Z(){const e=document.getElementById("contact-form"),t=document.getElementById("form-msg");if(!e)return;let a="38344123456",o="+383 44 123 456";async function n(){try{const r=await fetch("/api/public/config"),s=await r.json();if(!r.ok||!s.ok)return;s.support_phone&&(o=s.support_phone),s.support_phone_digits&&(a=s.support_phone_digits);const d=document.getElementById("contact-whatsapp-label"),l=document.getElementById("contact-tel-label"),u=document.getElementById("contact-tel"),p=document.getElementById("contact-whatsapp"),h=document.getElementById("contact-phone");d&&(d.textContent=`WhatsApp — ${o}`),l&&(l.textContent=o),u&&(u.href=`tel:${o.replace(/\s/g,"")}`),h&&(h.placeholder=o),p&&(p.href=`https://wa.me/${a}?text=${encodeURIComponent(i("wa.trial"))}`)}catch{}}n(),e.addEventListener("submit",r=>{var $;r.preventDefault();const s=document.getElementById("contact-name").value.trim(),d=document.getElementById("contact-phone").value.trim(),l=document.getElementById("contact-message").value.trim(),u=(($=document.getElementById("contact-package"))==null?void 0:$.value.trim())||"";if(!s||!d||!l){t.textContent=i("form.error"),t.className="form-msg err";return}const p=i("wa.formIntro").replace("{name}",s).replace("{phone}",d),h=u?`
 
-${u}
+Pako: ${u}`:"",v=encodeURIComponent(`${p}${h}
 
-${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noopener,noreferrer"),t.textContent=i("form.success"),t.className="form-msg ok",e.reset()})}const H={"stoku-faturat-dhe-skanimi-me-ai":`
+${l}
+
+${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${v}`,"_blank","noopener,noreferrer"),t.textContent=i("form.success"),t.className="form-msg ok",e.reset()})}const Y={"stoku-faturat-dhe-skanimi-me-ai":`
     <p>Në restorantet e Kosovës, Shqipërisë dhe Maqedonisë së Veriut, menaxhimi i stokut dhe faturave mbetet një nga sfidat më të mëdha operative. Shumë biznese ende mbështeten në fletore, Excel ose regjistrime manuale që krijojnë gabime, humbje produktesh dhe vonesa në raportim. Revolution POS ofron një qasje moderne që kombinon menaxhimin e stokut, faturave dhe skanimin me inteligjencë artificiale — gjithçka në një platformë të vetme.</p>
 
     <h2>Pse stoku dhe faturat janë të lidhura ngusht</h2>
@@ -200,7 +246,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Filloni me Revolution POS</h2>
     <p>Porositë e klientëve direkt nga telefoni nuk janë luks — janë standardi i ri për restorantet që duan të rriten. Revolution POS e ofron këtë funksionalitet të integruar, pa kosto shtesë për aplikacion të veçantë klienti. Aktivizoni sot dhe jepuni klientëve tuaj kontrollin që kërkojnë — ndërkohë që optimizoni operacionet e restorantit.</p>
-  `},Q={"meny-digjitale-qr":`
+  `},_={"meny-digjitale-qr":`
     <p>Menytë e printuara po bëhen të kaluara. Në Kosovë, Shqipëri dhe Maqedoni, restorantet po kalojnë në meny digjitale me QR code — një zgjidhje e thjeshtë, ekonomike dhe higjienike që klientët e kanë adoptuar shpejt pas pandemisë. Në vend që të printoni menu të re çdo muaj kur ndryshojnë çmimet, një QR code në tavolinë hap menynë e përditësuar automatikisht në telefonin e klientit.</p>
 
     <h2>Çfarë është meny digjitale me QR code</h2>
@@ -427,7 +473,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Filloni të merrni vendime me numra</h2>
     <p>Analitika nuk kërkon ekspertizë teknike. Revolution POS e bën të thjeshtë: hapni panelin, zgjidhni raportin, shihni grafikët. Nëse restoranti juaj ende merr vendime "me sy", koha për të kaluar te të dhënat është tani. Regjistrimi juaj fillon të mbledhë informacion që ditën e parë — çdo porosi, çdo pagesë, çdo zbritje. Pas një jave, do të keni insight që më parë nuk i kishit.</p>
-  `},G={"bashko-tavolina":`
+  `},J={"bashko-tavolina":`
     <p>Grupet e mëdha — familje, kolegë, festa — janë klientë me vlerë të lartë për restorantet. Por kur duhet të kombinohen dy ose tre tavolina, ose kur klientët kalojnë nga një tavolinë në tjetrën, porositë shpesh bëhen kaotike. Kuzhina merr porosi të ndara, faturat ndahen gabim, dhe stafi humbet kohë duke koordinuar manualisht. Funksionaliteti "Bashko Tavolina" i Revolution POS e zgjidh këtë — pa ndërprerje, pa konfuzion.</p>
 
     <h2>Çfarë do të thotë bashkimi i tavolinave</h2>
@@ -636,7 +682,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Filloni pa konfuzion</h2>
     <p>Split bill është standard në Revolution POS — pa modul shtesë. Stafi trajnohet për 5 minuta: zgjidh porosi, kliko "Nda faturën", zgjidh metodën, printo. Klientët tuaj do ta vlerësojnë — dhe stafi do të kursen orë çdo javë që më parë shkonte te llogaritjet manuale.</p>
-  `},V={...H,...Q,...G},U={"stoku-faturat-dhe-skanimi-me-ai":`
+  `},X={...Y,..._,...J},ee={"stoku-faturat-dhe-skanimi-me-ai":`
     <p>In restaurants across Kosovo, Albania, and North Macedonia, stock management and supplier invoices remain among the biggest operational challenges. Many businesses still rely on notebooks, Excel spreadsheets, or manual entries that create errors, product loss, and reporting delays. Revolution POS offers a modern approach that combines inventory management, invoicing, and AI-powered scanning — all in a single platform built for the realities of the Albanian-speaking market.</p>
 
     <h2>Why stock and invoices are closely linked</h2>
@@ -794,7 +840,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Get started with Revolution POS</h2>
     <p>Customer orders directly from their phone are not a luxury — they are the new standard for restaurants that want to grow. Revolution POS offers this functionality integrated, without extra cost for a separate customer app. Activate it today and give your customers the control they want — while optimizing your restaurant operations.</p>
-  `},Y={"meny-digjitale-qr":`
+  `},te={"meny-digjitale-qr":`
     <p>Printed menus are becoming a thing of the past. In Kosovo, Albania, and North Macedonia, restaurants are switching to digital menus with QR codes — a simple, cost-effective, and hygienic solution that customers adopted quickly after the pandemic. Instead of printing a new menu every month when prices change, a QR code on the table opens an automatically updated menu on the customer's phone.</p>
 
     <h2>What is a digital menu with QR code</h2>
@@ -1022,7 +1068,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Start making decisions with numbers</h2>
     <p>Analytics does not require technical expertise. Revolution POS makes it simple: open the dashboard, select the report, view the charts. If your restaurant still makes decisions "by eye," the time to switch to data is now. Your registration starts collecting information from day one — every order, every payment, every discount. After one week, you will have insights you never had before.</p>
-  `},Z={"bashko-tavolina":`
+  `},ie={"bashko-tavolina":`
     <p>Large groups — families, colleagues, celebrations — are high-value customers for restaurants. But when two or three tables need to be combined, or when customers move from one table to another, orders often become chaotic. The kitchen receives split orders, bills are divided incorrectly, and staff waste time coordinating manually. The "Merge Tables" feature in Revolution POS solves this — without interruption, without confusion.</p>
 
     <h2>What merging tables means</h2>
@@ -1233,36 +1279,52 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
 
     <h2>Start without confusion</h2>
     <p>Split bill is standard in Revolution POS — no extra module. Staff training takes 5 minutes: select order, click "Split Bill", choose method, print. Your customers will appreciate it — and staff will save hours every week that previously went to manual calculations.</p>
-  `},_={...U,...Y,...Z},I=[{slug:"stoku-faturat-dhe-skanimi-me-ai",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku, Faturat dhe Skanimi me AI: Kontroll më i Lehtë për Restorantin",date:"06 maj 2026"},en:{category:"MANAGEMENT",title:"Inventory, Invoices & AI Scanning: Easier Control for Your Restaurant",date:"06 May 2026"}},{slug:"aplikacion-offline-me-sync",variant:"mobile",sq:{category:"POS & TEKNOLOGJI",title:"Aplikacion Offline me Sync për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Offline App with Sync for Restaurants",date:"06 May 2026"}},{slug:"program-pos-falas",variant:"pos",sq:{category:"POS & TEKNOLOGJI",title:"Program POS Falas për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Free POS Software for Restaurants",date:"06 May 2026"}},{slug:"5-arsye-pos",variant:"analytics",sq:{category:"MENAXHIM",title:"5 Arsye pse çdo restorant ka nevojë për POS",date:"05 maj 2026"},en:{category:"MANAGEMENT",title:"5 Reasons Every Restaurant Needs a POS System",date:"05 May 2026"}},{slug:"porosite-klienteve",variant:"mobile",sq:{category:"FUNKSIONALITETE",title:"Porositë e Klientëve: Klientët porosisin direkt nga telefoni",date:"04 maj 2026"},en:{category:"FEATURES",title:"Customer Orders: Guests Order Directly from Their Phone",date:"04 May 2026"}},{slug:"meny-digjitale-qr",variant:"qr",sq:{category:"TEKNOLOGJI",title:"Meny Digjitale me QR Code",date:"03 maj 2026"},en:{category:"TECHNOLOGY",title:"Digital Menu with QR Code",date:"03 May 2026"}},{slug:"skanoni-menyne-me-ai",variant:"scan",sq:{category:"TEKNOLOGJI",title:"Skanoni Menunë me AI: Shtoni 50 Produkte në 2 Minuta",date:"28 mars 2026"},en:{category:"TECHNOLOGY",title:"Scan Your Menu with AI: Add 50 Products in 2 Minutes",date:"28 March 2026"}},{slug:"stoku-menaxhimi-inventarit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku: Si të Menaxhoni Inventarin e Restorantit pa Humbje",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Inventory: How to Manage Restaurant Stock Without Losses",date:"28 March 2026"}},{slug:"zbritjet-ne-restorante",variant:"pos",sq:{category:"MENAXHIM",title:"Zbritjet në Restorante: Si të Rrisni Shitjet me Oferta të Zgjuara",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Discounts: Grow Sales with Smart Offers",date:"28 March 2026"}},{slug:"analitika-ne-restorante",variant:"analytics",sq:{category:"ANALITIKË",title:"Analitika në Restorante: Nga të Dhënat te Vendime më të Mira",date:"27 mars 2026"},en:{category:"ANALYTICS",title:"Restaurant Analytics: From Data to Better Decisions",date:"27 March 2026"}},{slug:"bashko-tavolina",variant:"tables",sq:{category:"VEÇORI",title:"Bashko Tavolina: Si të Kombinosh Porositë pa Ndërprerje",date:"27 mars 2026"},en:{category:"FEATURES",title:"Merge Tables: Combine Orders Without Disruption",date:"27 March 2026"}},{slug:"identifikim-stafi",variant:"login",sq:{category:"VEÇORI",title:"Identifikim Stafi: PIN, RFID apo Fjalëkalim — Cila Metodë për Çfarë?",date:"27 mars 2026"},en:{category:"FEATURES",title:"Staff Login: PIN, RFID or Password — Which Method for What?",date:"27 March 2026"}},{slug:"librat-kontabel-atk",variant:"brand",sq:{category:"KONTABILITET",title:"Librat Kontabël për ATK: Si i Gjeneron Revolution Automatikisht",date:"27 mars 2026"},en:{category:"ACCOUNTING",title:"Accounting Books for Tax Authorities: How Revolution Generates Them Automatically",date:"27 March 2026"}},{slug:"raportet-e-restorantit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Raportet e Restorantit: Si të Kuptosh Biznesin Tënd me Numra",date:"27 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Reports: Understand Your Business by the Numbers",date:"27 March 2026"}},{slug:"split-bill",variant:"pos",sq:{category:"UDHËZUES",title:"Split Bill: Si të Ndash Faturën pa Konfuzion",date:"27 mars 2026"},en:{category:"GUIDE",title:"Split Bill: Divide the Check Without Confusion",date:"27 March 2026"}}];function J(e){return e==="en"?_:V}function M(e,t){const a=e[t]??e.sq,n=J(t)[e.slug];return n?{slug:e.slug,variant:e.variant,category:a.category,title:a.title,date:a.date,content:n}:null}function X(e,t=p()){const a=I.find(n=>n.slug===e);return a?M(a,t):null}function ee(e=p()){return I.map(t=>M(t,e)).filter(Boolean)}const te=w("images/articles/program-pos-falas.jpg");function ie(e){return w(`images/articles/${e}.jpg`)}function N(e,{alt:t="",loading:a="lazy",className:n="article-photo"}={}){const o=t.replace(/"/g,"&quot;");return`<img src="${ie(e)}" alt="${o}" class="${n}" loading="${a}" onerror="this.onerror=null;this.src='${te}';" />`}const ae=w("images/hero.jpg");function g(e,t,a=!1){const n=`packages.${e}`,o=["f1","f2","f3","f4"].map(r=>`<li>${i(`${n}.${r}`)}</li>`).join("");return`
-    <article class="package-card${a?" featured":""}">
+  `},ae={...ee,...te,...ie},W=[{slug:"stoku-faturat-dhe-skanimi-me-ai",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku, Faturat dhe Skanimi me AI: Kontroll më i Lehtë për Restorantin",date:"06 maj 2026"},en:{category:"MANAGEMENT",title:"Inventory, Invoices & AI Scanning: Easier Control for Your Restaurant",date:"06 May 2026"}},{slug:"aplikacion-offline-me-sync",variant:"mobile",sq:{category:"POS & TEKNOLOGJI",title:"Aplikacion Offline me Sync për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Offline App with Sync for Restaurants",date:"06 May 2026"}},{slug:"program-pos-falas",variant:"pos",sq:{category:"POS & TEKNOLOGJI",title:"Program POS Falas për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Free POS Software for Restaurants",date:"06 May 2026"}},{slug:"5-arsye-pos",variant:"analytics",sq:{category:"MENAXHIM",title:"5 Arsye pse çdo restorant ka nevojë për POS",date:"05 maj 2026"},en:{category:"MANAGEMENT",title:"5 Reasons Every Restaurant Needs a POS System",date:"05 May 2026"}},{slug:"porosite-klienteve",variant:"mobile",sq:{category:"FUNKSIONALITETE",title:"Porositë e Klientëve: Klientët porosisin direkt nga telefoni",date:"04 maj 2026"},en:{category:"FEATURES",title:"Customer Orders: Guests Order Directly from Their Phone",date:"04 May 2026"}},{slug:"meny-digjitale-qr",variant:"qr",sq:{category:"TEKNOLOGJI",title:"Meny Digjitale me QR Code",date:"03 maj 2026"},en:{category:"TECHNOLOGY",title:"Digital Menu with QR Code",date:"03 May 2026"}},{slug:"skanoni-menyne-me-ai",variant:"scan",sq:{category:"TEKNOLOGJI",title:"Skanoni Menunë me AI: Shtoni 50 Produkte në 2 Minuta",date:"28 mars 2026"},en:{category:"TECHNOLOGY",title:"Scan Your Menu with AI: Add 50 Products in 2 Minutes",date:"28 March 2026"}},{slug:"stoku-menaxhimi-inventarit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku: Si të Menaxhoni Inventarin e Restorantit pa Humbje",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Inventory: How to Manage Restaurant Stock Without Losses",date:"28 March 2026"}},{slug:"zbritjet-ne-restorante",variant:"pos",sq:{category:"MENAXHIM",title:"Zbritjet në Restorante: Si të Rrisni Shitjet me Oferta të Zgjuara",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Discounts: Grow Sales with Smart Offers",date:"28 March 2026"}},{slug:"analitika-ne-restorante",variant:"analytics",sq:{category:"ANALITIKË",title:"Analitika në Restorante: Nga të Dhënat te Vendime më të Mira",date:"27 mars 2026"},en:{category:"ANALYTICS",title:"Restaurant Analytics: From Data to Better Decisions",date:"27 March 2026"}},{slug:"bashko-tavolina",variant:"tables",sq:{category:"VEÇORI",title:"Bashko Tavolina: Si të Kombinosh Porositë pa Ndërprerje",date:"27 mars 2026"},en:{category:"FEATURES",title:"Merge Tables: Combine Orders Without Disruption",date:"27 March 2026"}},{slug:"identifikim-stafi",variant:"login",sq:{category:"VEÇORI",title:"Identifikim Stafi: PIN, RFID apo Fjalëkalim — Cila Metodë për Çfarë?",date:"27 mars 2026"},en:{category:"FEATURES",title:"Staff Login: PIN, RFID or Password — Which Method for What?",date:"27 March 2026"}},{slug:"librat-kontabel-atk",variant:"brand",sq:{category:"KONTABILITET",title:"Librat Kontabël për ATK: Si i Gjeneron Revolution Automatikisht",date:"27 mars 2026"},en:{category:"ACCOUNTING",title:"Accounting Books for Tax Authorities: How Revolution Generates Them Automatically",date:"27 March 2026"}},{slug:"raportet-e-restorantit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Raportet e Restorantit: Si të Kuptosh Biznesin Tënd me Numra",date:"27 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Reports: Understand Your Business by the Numbers",date:"27 March 2026"}},{slug:"split-bill",variant:"pos",sq:{category:"UDHËZUES",title:"Split Bill: Si të Ndash Faturën pa Konfuzion",date:"27 mars 2026"},en:{category:"GUIDE",title:"Split Bill: Divide the Check Without Confusion",date:"27 March 2026"}}];function oe(e){return e==="en"?ae:X}function C(e,t){const a=e[t]??e.sq,o=oe(t)[e.slug];return o?{slug:e.slug,variant:e.variant,category:a.category,title:a.title,date:a.date,content:o}:null}function ne(e,t=g()){const a=W.find(o=>o.slug===e);return a?C(a,t):null}function re(e=g()){return W.map(t=>C(t,e)).filter(Boolean)}const se=k("images/articles/program-pos-falas.jpg");function le(e){return k(`images/articles/${e}.jpg`)}function D(e,{alt:t="",loading:a="lazy",className:o="article-photo"}={}){const n=t.replace(/"/g,"&quot;");return`<img src="${le(e)}" alt="${n}" class="${o}" loading="${a}" onerror="this.onerror=null;this.src='${se}';" />`}const he=k("images/hero.jpg"),ue=["p1","p2","p3","p4"],pe={p1:["f1","f2","f3","f4","f5","f6"],p2:["f1","f2","f3","f4","f5","f6","f7","f8"],p3:["f1","f2","f3","f4","f5","f6","f7","f8","f9","f10"],p4:["f1","f2","f3","f4","f5","f6","f7","f8","f9","f10","f11","f12"]},de=4;function L(e,{limit:t}={}){const a=`packages.${e}`,o=pe[e]??[];return(t?o.slice(0,t):o).map(r=>`<li>${i(`${a}.${r}`)}</li>`).join("")}function y(e){const t=`packages.${e}`;return`
+    <article
+      class="package-card"
+      data-package="${e}"
+      role="button"
+      tabindex="0"
+      aria-pressed="false"
+      aria-label="${i(`${t}.name`)}"
+    >
       <span class="package-badge">${i("packages.badge")}</span>
-      <h3 class="package-name">${i(`${n}.name`)}</h3>
-      <div class="package-price">${t}<small>${i("packages.perWeek")}</small></div>
-      <ul class="package-list">${o}</ul>
-      <a class="btn ${a?"btn-primary":"btn-ghost"}" href="#kontakt">${i("cta.choosePackage")}</a>
+      <h3 class="package-name">${i(`${t}.name`)}</h3>
+      <ul class="package-list">${L(e,{limit:de})}</ul>
+      <span class="btn btn-ghost package-select-btn">${i("cta.choosePackage")}</span>
     </article>
-  `}function k(e,t,a,n){return`
+  `}function b(e,t,a,o){const n=i(t);return`
     <article class="how-card">
-      <div class="how-card-icon" aria-hidden="true">${e}</div>
-      <h3>${i(t)}</h3>
+      <div class="how-card-photo">
+        <img src="${k(e)}" alt="${n}" loading="lazy" />
+      </div>
+      <h3>${n}</h3>
       <p>${i(a)}</p>
-      <a class="how-card-link" href="${n}">${i("how.readManual")}</a>
+      <a class="how-card-link" href="${o}">${i("how.readManual")}</a>
     </article>
-  `}function x(){var a,n;const e=ee(),t=p();document.title=i("meta.title"),(n=document.querySelector('meta[name="description"]'))==null||n.setAttribute("content",((a=v[t])==null?void 0:a["meta.description"])??v.sq["meta.description"]),document.getElementById("app").innerHTML=`
-    ${q({activeNav:"home"})}
+  `}function me(){var d;const e=document.querySelectorAll(".package-card[data-package]"),t=document.getElementById("package-detail"),a=document.getElementById("package-detail-name"),o=document.getElementById("package-detail-list"),n=document.getElementById("contact-package");if(!e.length||!t)return;const r=l=>{const u=`packages.${l}`;e.forEach(p=>{const h=p.dataset.package===l;p.classList.toggle("selected",h),p.setAttribute("aria-pressed",h?"true":"false")}),a.textContent=i(`${u}.name`),o.innerHTML=L(l),t.hidden=!1,n&&(n.value=i(`${u}.name`)),sessionStorage.setItem("selectedPackage",l)};e.forEach(l=>{const u=l.dataset.package,p=h=>{var v;(v=h==null?void 0:h.target)!=null&&v.closest(".how-card-link")||r(u)};l.addEventListener("click",p),l.addEventListener("keydown",h=>{(h.key==="Enter"||h.key===" ")&&(h.preventDefault(),r(u))})}),(d=document.getElementById("package-detail-cta"))==null||d.addEventListener("click",()=>{var l,u;(l=document.getElementById("kontakt"))==null||l.scrollIntoView({behavior:"smooth"}),(u=document.getElementById("contact-message"))==null||u.focus()});const s=sessionStorage.getItem("selectedPackage");s&&ue.includes(s)&&r(s)}function N(){var a,o;const e=re(),t=g();document.title=i("meta.title"),(o=document.querySelector('meta[name="description"]'))==null||o.setAttribute("content",((a=P[t])==null?void 0:a["meta.description"])??P.sq["meta.description"]),document.getElementById("app").innerHTML=`
+    ${A({activeNav:"home"})}
     <main>
-      <section class="hero hero-with-image" id="ballina" style="--hero-image: url('${ae}')">
-        <div class="hero-overlay"></div>
-        <div class="container hero-content">
-          <div class="hero-badge">
-            <span aria-hidden="true">📘</span>
-            ${i("blogBadge")}
+      <section class="hero hero-with-image hero-home" id="ballina" style="--hero-image: url('${he}')">
+        <div class="hero-overlay hero-overlay-dark"></div>
+        <div class="container hero-content hero-home-content">
+          <div class="hero-badge hero-home-badge">
+            <span aria-hidden="true">🔥</span>
+            ${i("hero.badge")}
           </div>
-          <h1>
-            ${i("heroTitle")}<br />
-            <span class="accent">${i("heroAccent")}</span>
-          </h1>
-          <p>${i("heroSubtitle")}</p>
+          <h1>${i("hero.title")}</h1>
+          <p class="hero-home-subtitle">${i("hero.subtitle")}</p>
+          <div class="hero-actions">
+            <a class="btn btn-hero-primary" href="#kontakt">${i("hero.cta.primary")}</a>
+            <a class="btn btn-hero-secondary" href="#si-funksionon">${i("hero.cta.secondary")}</a>
+          </div>
+          <div class="hero-stats" aria-label="Statistika">
+            <span>${i("hero.stats.restaurants")}</span>
+            <span class="hero-stats-sep" aria-hidden="true">·</span>
+            <span>${i("hero.stats.support")}</span>
+            <span class="hero-stats-sep" aria-hidden="true">·</span>
+            <span>${i("hero.stats.cloud")}</span>
+          </div>
         </div>
       </section>
 
@@ -1272,16 +1334,15 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
             <h2>${i("articles.heading")}</h2>
           </div>
           <div class="article-grid">
-            ${e.map(o=>`
-                  <a class="article-card" href="${C(o.slug)}" data-navigate>
+            ${e.map(n=>`
+                  <a class="article-card" href="${U(n.slug)}" data-navigate>
                     <div class="article-thumb">
-                      ${N(o.slug,{alt:o.title})}
+                      ${D(n.slug,{alt:n.title})}
                     </div>
                     <div class="article-body">
-                      <div class="article-category">${o.category}</div>
-                      <h2 class="article-title">${o.title}</h2>
+                      <div class="article-category">${n.category}</div>
+                      <h2 class="article-title">${n.title}</h2>
                       <div class="article-footer">
-                        <span class="article-date">${o.date}</span>
                         <span class="article-link">${i("readMore")}</span>
                       </div>
                     </div>
@@ -1298,10 +1359,10 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
             <p>${i("how.subtitle")}</p>
           </div>
           <div class="how-grid">
-            ${k("🖥️","how.pos.title","how.pos.desc","/website/manual.html#menuja")}
-            ${k("📱","how.waiter.title","how.waiter.desc","/website/manual.html#kamarieri")}
-            ${k("🍳","how.kds.title","how.kds.desc","/website/manual.html#kuzhina")}
-            ${k("👤","how.owner.title","how.owner.desc","/website/manual.html#hyrja")}
+            ${b("images/modules/pos-kasa.jpg","how.pos.title","how.pos.desc","/website/manual.html#menuja")}
+            ${b("images/modules/kamarieri.jpg","how.waiter.title","how.waiter.desc","/website/manual.html#kamarieri")}
+            ${b("images/modules/kds-kuzhina.jpg","how.kds.title","how.kds.desc","/website/manual.html#kuzhina")}
+            ${b("images/modules/pronari.jpg","how.owner.title","how.owner.desc","/website/manual.html#hyrja")}
           </div>
         </div>
       </section>
@@ -1311,12 +1372,22 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
           <div class="section-head">
             <h2>${i("packages.title")}</h2>
             <p>${i("packages.subtitle")}</p>
+            <p class="packages-hint">${i("packages.clickHint")}</p>
           </div>
           <div class="packages-grid">
-            ${g("p1","10€")}
-            ${g("p2","15€",!0)}
-            ${g("p3","20€")}
-            ${g("p4","25€")}
+            ${y("p1")}
+            ${y("p2")}
+            ${y("p3")}
+            ${y("p4")}
+          </div>
+          <div class="package-detail-panel" id="package-detail" hidden>
+            <div class="package-detail-head">
+              <span class="package-detail-badge">${i("packages.selected")}</span>
+              <h3 id="package-detail-name"></h3>
+            </div>
+            <p class="package-detail-label">${i("packages.includes")}</p>
+            <ul class="package-detail-list" id="package-detail-list"></ul>
+            <button class="btn btn-primary" type="button" id="package-detail-cta">${i("cta.choosePackage")}</button>
           </div>
         </div>
       </section>
@@ -1348,6 +1419,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
             <div class="contact-card">
               <h3>${i("contact.sendMessage")}</h3>
               <form class="contact-form" id="contact-form">
+                <input type="hidden" id="contact-package" name="package" value="">
                 <div class="field">
                   <label for="contact-name">${i("form.name")}</label>
                   <input type="text" id="contact-name" name="name" required placeholder="${i("form.namePlaceholder")}">
@@ -1368,23 +1440,22 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
         </div>
       </section>
     </main>
-    ${B()}
-    ${A()}
-  `,T(),K(),D(),L(),window.location.hash?requestAnimationFrame(()=>{var o;(o=document.querySelector(window.location.hash))==null||o.scrollIntoView({behavior:"smooth"})}):window.scrollTo(0,0)}function ne(e){const t=X(e);if(!t){x();return}document.title=`${t.title} — Revolution POS`,document.getElementById("app").innerHTML=`
-    ${q({activeNav:"blog"})}
+    ${q()}
+    ${I()}
+  `,K(),M(),x(),Z(),T(),me(),window.location.hash?requestAnimationFrame(()=>{var n;(n=document.querySelector(window.location.hash))==null||n.scrollIntoView({behavior:"smooth"})}):window.scrollTo(0,0)}function ce(e){const t=ne(e);if(!t){N();return}document.title=`${t.title} — Revolution POS`,document.getElementById("app").innerHTML=`
+    ${A({activeNav:"blog"})}
     <main class="article-page">
       <div class="container">
-        <a class="article-back" href="${O()}" data-navigate>${i("backToBlog")}</a>
+        <a class="article-back" href="${R()}" data-navigate>${i("backToBlog")}</a>
 
         <article class="article-full">
           <header class="article-full-header">
             <div class="article-category">${t.category}</div>
             <h1>${t.title}</h1>
-            <time class="article-date" datetime="${t.date}">${t.date}</time>
           </header>
 
           <div class="article-full-image">
-            ${N(t.slug,{alt:t.title,loading:"eager"})}
+            ${D(t.slug,{alt:t.title,loading:"eager"})}
           </div>
 
           <div class="article-content">
@@ -1393,5 +1464,310 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${m}`,"_blank","noo
         </article>
       </div>
     </main>
-    ${A()}
-  `,T(),K(),window.scrollTo(0,0)}R("/",()=>x());R("/blog/:slug",({slug:e})=>ne(e));E();
+    ${q()}
+    ${I()}
+  `,K(),M(),x(),T(),window.scrollTo(0,0)}const ge={privacy:{sq:{title:"Privatësia e të dhënave",updated:"Përditësuar: qershor 2026",content:`
+        <p class="legal-lead">Kjo politikë shpjegon si <strong>Revolution Invest POS</strong> (“ne”, “shërbimi”) mbledh, përdor dhe mbron të dhënat kur bizneset në Kosovë, Shqipëri dhe rajon përdorin platformën tonë.</p>
+
+        <h2>1. Kush jemi ne</h2>
+        <p>Revolution Invest POS ofrohet nga Revolution Invest. Për pyetje rreth privatësisë: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>.</p>
+
+        <h2>2. Cilat të dhëna mbledhim</h2>
+        <p>Varet nga mënyra se si e përdorni shërbimin:</p>
+        <ul>
+          <li><strong>Të dhëna biznesi:</strong> emri i restorantit/kafenesë, adresa, numri i telefonit, email, NUI/NIPT (kur kërkohet), logo dhe informacion publik i faqes së restorantit.</li>
+          <li><strong>Llogari pronari & staf:</strong> emër, email, telefon, roli (pronar, menaxher, kamarier, kuzhinier), regjistrime hyrjeje në sistem.</li>
+          <li><strong>Të dhëna operacionale POS:</strong> porosi, tavolina, artikuj menuje, çmime, pagesa, fatura, raporte shitjeje dhe Z-Report (kur moduli fiskal përdoret).</li>
+          <li><strong>Të dhëna klientësh (nga porositë):</strong> emër ose telefon vetëm kur klienti i jep vullnetarisht (p.sh. delivery, rezervim).</li>
+          <li><strong>Të dhëna teknike:</strong> lloji i pajisjes, shfletuesi, adresa IP, log-e gabimesh dhe performancës — për siguri dhe diagnostikim.</li>
+          <li><strong>Kontakt & marketing:</strong> mesazhet që na dërgoni përmes formës së kontaktit ose WhatsApp.</li>
+        </ul>
+
+        <h2>3. Si i përdorim të dhënat</h2>
+        <ul>
+          <li>Furnizimi dhe mirëmbajtja i sistemit POS (porosi, kuzhinë, raporte, faqe publike).</li>
+          <li>Aktivizimi i licencës, provës falas dhe menaxhimi i abonimit.</li>
+          <li>Mbështetje teknike, trajnime dhe përgjigje ndaj kërkesave tuaja.</li>
+          <li>Përmirësimi i shërbimit, sigurisë dhe stabilitetit të platformës.</li>
+          <li>Përmbushja e detyrimeve ligjore (p.sh. mbajtja e evidencave fiskale kur klienti përdor modulin ATK).</li>
+        </ul>
+        <p>Ne <strong>nuk shesim</strong> të dhënat tuaja personale palëve të treta për qëllime marketingu.</p>
+
+        <h2>4. Si ruhen të dhënat</h2>
+        <ul>
+          <li>Të dhënat ruhen në serverë cloud me enkriptim gjatë transmetimit (HTTPS/TLS).</li>
+          <li>Aksesi është i kufizuar vetëm për stafin e autorizuar të Revolution Invest.</li>
+          <li>Backup periodik për të shmangur humbjen e të dhënave.</li>
+          <li>Disa pajisje (POS, tablet) mund të punojnë offline; të dhënat sinkronizohen kur lidhet interneti.</li>
+        </ul>
+
+        <h2>5. Me kë ndajmë të dhënat</h2>
+        <p>Mund t’i ndajmë vetëm kur është e nevojshme:</p>
+        <ul>
+          <li><strong>Ofrues infrastrukture:</strong> hosting cloud, baza të dhënash — me kontrata që kërkojnë mbrojtje të të dhënave.</li>
+          <li><strong>Integrime që zgjidhni ju:</strong> p.sh. printues fiskal, delivery, njoftime WhatsApp/SMS — vetëm të dhënat e nevojshme për atë shërbim.</li>
+          <li><strong>Autoritete:</strong> kur ligji e kërkon (p.sh. kërkesë zyrtare nga organet kompetente).</li>
+        </ul>
+
+        <h2>6. Afati i ruajtjes</h2>
+        <p>Të dhënat ruhen gjatë kohës që keni kontratë aktive me ne. Pas mbylljes së llogarisë, fshijmë ose anonimizojmë të dhënat brenda një afati të arsyeshëm (zakonisht deri 12 muaj), përveç kur ligji kërkon ruajtje më të gjatë — p.sh. evidenca fiskale sipas rregulloreve të ATK-së në Kosovë ose autoriteteve përkatëse në Shqipëri.</p>
+
+        <h2>7. Të drejtat tuaja (GDPR & ligji lokal)</h2>
+        <p>Nëse jeni në Kosovë, Shqipëri ose BE, keni të drejtë të:</p>
+        <ul>
+          <li><strong>Akses:</strong> kërkoni kopje të të dhënave tuaja.</li>
+          <li><strong>Korrigjim:</strong> kërkoni përditësim të të dhënave të pasakta.</li>
+          <li><strong>Fshirje:</strong> kërkoni fshirjen e të dhënave kur nuk ka bazë ligjore për ruajtje.</li>
+          <li><strong>Kufizim & kundërshtim:</strong> kundërshtoni përpunimin për qëllime të caktuara.</li>
+          <li><strong>Portabilitet:</strong> merrni të dhënat tuaja në format të lexueshëm, kur aplikohet.</li>
+          <li><strong>Ankim:</strong> ankoheni te autoriteti i mbrojtjes së të dhënave në vendin tuaj.</li>
+        </ul>
+        <p>Për të ushtruar këto të drejta, shkruani te <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>. Përgjigjemi brenda 30 ditëve.</p>
+
+        <h2>8. Cookies & teknologji të ngjashme</h2>
+        <p>Faqja publique dhe paneli përdorin cookies thelbësore për hyrjen në llogari, preferencën e gjuhës dhe sigurinë e sesionit. Nuk përdorim cookies reklamuese palësh të treta në platformën tonë.</p>
+
+        <h2>9. Fëmijët</h2>
+        <p>Shërbimi është i destinuar për biznese. Ne nuk mbledhim me vetëdije të dhëna nga persona nën 16 vjeç.</p>
+
+        <h2>10. Ndryshime në këtë politikë</h2>
+        <p>Mund ta përditësojmë këtë faqe. Data e përditësimit shfaqet sipër. Përdorimi i vazhdueshëm i shërbimit pas ndryshimeve nënkupton pranimin e politikës së re.</p>
+
+        <h2>11. Kontakt</h2>
+        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Faqja e kontaktit: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+      `},en:{title:"Privacy Policy",updated:"Last updated: June 2026",content:`
+        <p class="legal-lead">This policy explains how <strong>Revolution Invest POS</strong> (“we”, “the service”) collects, uses, and protects data when businesses in Kosovo, Albania, and the region use our platform.</p>
+
+        <h2>1. Who we are</h2>
+        <p>Revolution Invest POS is provided by Revolution Invest. Privacy inquiries: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>.</p>
+
+        <h2>2. What data we collect</h2>
+        <p>Depending on how you use the service:</p>
+        <ul>
+          <li><strong>Business data:</strong> restaurant/café name, address, phone, email, tax ID when required, logo, and public restaurant page information.</li>
+          <li><strong>Owner & staff accounts:</strong> name, email, phone, role (owner, manager, waiter, kitchen), login activity.</li>
+          <li><strong>POS operational data:</strong> orders, tables, menu items, prices, payments, invoices, sales reports, and Z-Reports (when the fiscal module is used).</li>
+          <li><strong>Customer data (from orders):</strong> name or phone only when the customer provides it voluntarily (e.g. delivery, reservation).</li>
+          <li><strong>Technical data:</strong> device type, browser, IP address, error and performance logs — for security and diagnostics.</li>
+          <li><strong>Contact & marketing:</strong> messages you send via our contact form or WhatsApp.</li>
+        </ul>
+
+        <h2>3. How we use data</h2>
+        <ul>
+          <li>Providing and maintaining the POS system (orders, kitchen, reports, public page).</li>
+          <li>Activating licenses, free trials, and managing subscriptions.</li>
+          <li>Technical support, training, and responding to your requests.</li>
+          <li>Improving service, security, and platform stability.</li>
+          <li>Legal compliance (e.g. fiscal records when you use the ATK fiscal module).</li>
+        </ul>
+        <p>We do <strong>not sell</strong> your personal data to third parties for marketing.</p>
+
+        <h2>4. How data is stored</h2>
+        <ul>
+          <li>Data is stored on cloud servers with encryption in transit (HTTPS/TLS).</li>
+          <li>Access is limited to authorized Revolution Invest staff only.</li>
+          <li>Periodic backups to prevent data loss.</li>
+          <li>Some devices (POS, tablets) may work offline; data syncs when connected.</li>
+        </ul>
+
+        <h2>5. Who we share data with</h2>
+        <p>We share data only when necessary:</p>
+        <ul>
+          <li><strong>Infrastructure providers:</strong> cloud hosting, databases — under data protection agreements.</li>
+          <li><strong>Integrations you choose:</strong> e.g. fiscal printer, delivery, WhatsApp/SMS notifications — only data required for that service.</li>
+          <li><strong>Authorities:</strong> when required by law (official requests from competent bodies).</li>
+        </ul>
+
+        <h2>6. Retention period</h2>
+        <p>Data is kept while you have an active agreement with us. After account closure, we delete or anonymize data within a reasonable period (usually up to 12 months), except where law requires longer retention — e.g. fiscal records under ATK rules in Kosovo or relevant authorities in Albania.</p>
+
+        <h2>7. Your rights (GDPR & local law)</h2>
+        <p>If you are in Kosovo, Albania, or the EU, you have the right to:</p>
+        <ul>
+          <li><strong>Access:</strong> request a copy of your data.</li>
+          <li><strong>Rectification:</strong> request correction of inaccurate data.</li>
+          <li><strong>Erasure:</strong> request deletion when there is no legal basis to retain.</li>
+          <li><strong>Restriction & objection:</strong> object to processing for certain purposes.</li>
+          <li><strong>Portability:</strong> receive your data in a readable format, where applicable.</li>
+          <li><strong>Complaint:</strong> lodge a complaint with your local data protection authority.</li>
+        </ul>
+        <p>To exercise these rights, email <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>. We respond within 30 days.</p>
+
+        <h2>8. Cookies & similar technologies</h2>
+        <p>The public site and panel use essential cookies for login, language preference, and session security. We do not use third-party advertising cookies on our platform.</p>
+
+        <h2>9. Children</h2>
+        <p>The service is intended for businesses. We do not knowingly collect data from persons under 16.</p>
+
+        <h2>10. Changes to this policy</h2>
+        <p>We may update this page. The update date is shown above. Continued use after changes means acceptance of the updated policy.</p>
+
+        <h2>11. Contact</h2>
+        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Contact page: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+      `}},terms:{sq:{title:"Kushtet e shërbimit",updated:"Përditësuar: qershor 2026",content:`
+        <p class="legal-lead">Duke përdorur <strong>Revolution Invest POS</strong>, ju (“Klienti”, “Pronari i biznesit”) pranoni këto kushte. Lexojini me kujdes para aktivizimit të provës ose abonimit.</p>
+
+        <h2>1. Çfarë ofron shërbimi</h2>
+        <p>Revolution Invest POS është platformë softuerike për restorante, kafene dhe bare, që përfshin (sipas pakos së zgjedhur):</p>
+        <ul>
+          <li>POS kasë — porosi, fatura, menaxhim tavolinash</li>
+          <li>Panel pronari — menu, staf, raporte</li>
+          <li>KDS kuzhinë, kamarier tablet, kiosk QR</li>
+          <li>Faqe publike restoranti dhe module shtesë (mobile, delivery, etj.)</li>
+        </ul>
+        <p>Funksionalitetet e sakta varen nga paketa e zgjedhur. Lista aktuale shfaqet në faqen “Pakot”.</p>
+
+        <h2>2. Llogaria & përgjegjësitë tuaja</h2>
+        <ul>
+          <li>Jeni përgjegjës për saktësinë e të dhënave të biznesit tuaj.</li>
+          <li>Mbrojtja e fjalëkalimeve dhe aksesit të stafit është detyrë juaj.</li>
+          <li>Informoni stafin për përdorimin e duhur të sistemit dhe të dhënave të klientëve.</li>
+          <li>Nuk lejohet përdorimi i shërbimit për aktivitete të paligjshme.</li>
+        </ul>
+
+        <h2>3. Provë falas & abonimi</h2>
+        <ul>
+          <li>Ofrojmë <strong>provë falas 1 muaj</strong> për pakot e reja, nëse nuk thuhet ndryshe në ofertë.</li>
+          <li>Pas provës, shërbimi vazhdon vetëm me abonim aktiv.</li>
+          <li>Çmimet dhe modulet e përfshira komunikohen gjatë regjistrimit ose rinovimit — nuk shfaqen publikisht nëse kemi marrëveshje individuale.</li>
+        </ul>
+
+        <h2>4. Pagesat</h2>
+        <ul>
+          <li>Pagesat bëhen sipas ciklit të rënë dakord (javor, mujor ose vjetor).</li>
+          <li>Pagesa vonuar mund të çojë në pezullim të përkohshëm të aksesit deri në sqarim.</li>
+          <li>Çmimet mund të ndryshojnë me njoftim paraprak — jo për periudhën e paguar tashmë.</li>
+        </ul>
+
+        <h2>5. Anulimi & mbyllja</h2>
+        <ul>
+          <li>Mund ta anuloni abonimin duke na kontaktuar me email ose WhatsApp.</li>
+          <li>Anulimi hyn në fuqi në fund të periudhës së paguar, përveç rasteve të veçanta të rëna dakord.</li>
+          <li>Ne mund ta pezullojmë ose mbyllim llogarinë në rast shkeljeje të kushteve, mos-pagese të vazhdueshme ose keqpërdorimi.</li>
+          <li>Pas mbylljes, mund të eksportoni raportet tuaja brenda afatit të arsyeshëm; pastaj të dhënat trajtohen sipas politikës së privatësisë.</li>
+        </ul>
+
+        <h2>6. Licenca e softuerit</h2>
+        <p>Revolution Invest POS mbetet pronë e Revolution Invest. Ju merrni një <strong>licencë jo-ekskluzive, jo-transferueshme</strong> për ta përdorur gjatë kohës së abonimit, vetëm për biznesin tuaj të regjistruar.</p>
+        <p>Nuk lejohet:</p>
+        <ul>
+          <li>Kopjimi, shpërndarja ose rishitja e softuerit pa leje me shkrim</li>
+          <li>Modifikimi i kodit burimor ose tentativa për ta prishur sigurinë</li>
+          <li>Përdorimi i një licence për më shumë se një lokacion pa marrëveshje shtesë</li>
+        </ul>
+
+        <h2>7. Disponueshmëria & mbështetja</h2>
+        <p>Forcojmë përpjekjet për uptime të lartë, por nuk garantojmë shërbim pa ndërprerje 100%. Mirëmbajtje e planifikuar njoftohet paraprakisht kur është e mundur.</p>
+        <p>Mbështetja ofrohet përmes email, WhatsApp dhe dokumentacionit online (manuali).</p>
+
+        <h2>8. Përgjegjësia</h2>
+        <ul>
+          <li>Revolution Invest nuk mban përgjegjësi për humbje indirekte (fitim i humbur, reputacion) përveç kur ligji e kërkon.</li>
+          <li>Përgjegjësia jonë totale për çdo kërkesë nuk tejkalon shumën e paguar nga klienti për 3 muajt e fundit të shërbimit.</li>
+          <li>Ju mbani përgjegjësi për saktësinë fiskale të faturave dhe raportimeve që gjeneroni në sistem.</li>
+        </ul>
+
+        <h2>9. Të dhënat & privatësia</h2>
+        <p>Përpunimi i të dhënave rregullohet nga <a href="/privacy" data-navigate>Politika e Privatësisë</a>. Duke përdorur shërbimin, pranoni edhe atë politikë.</p>
+
+        <h2>10. Ndryshime në kushte</h2>
+        <p>Mund t’i përditësojmë këto kushte. Ndryshimet materiale njoftohen me email ose në panel. Përdorimi pas njoftimit konsiderohet pranim.</p>
+
+        <h2>11. Ligji zbatues & mosmarrëveshje</h2>
+        <p>Këto kushte rregullohen sipas ligjeve të Republikës së Kosovës, përveç kur marrëveshja e shkruar parashikon ndryshe. Mosmarrëveshjet zgjidhen fillimisht me negociata të ndershme; nëse dështojnë, kompetente janë gjykatat e Kosovës.</p>
+
+        <h2>12. Kontakt</h2>
+        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Kontakt: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+      `},en:{title:"Terms of Service",updated:"Last updated: June 2026",content:`
+        <p class="legal-lead">By using <strong>Revolution Invest POS</strong>, you (“Client”, “Business Owner”) accept these terms. Please read them carefully before activating a trial or subscription.</p>
+
+        <h2>1. What the service provides</h2>
+        <p>Revolution Invest POS is a software platform for restaurants, cafés, and bars, including (depending on your plan):</p>
+        <ul>
+          <li>POS register — orders, invoices, table management</li>
+          <li>Owner panel — menu, staff, reports</li>
+          <li>Kitchen KDS, waiter tablet, QR kiosk</li>
+          <li>Public restaurant page and add-on modules (mobile, delivery, etc.)</li>
+        </ul>
+        <p>Exact features depend on the selected plan. The current list is shown on the “Pricing” page.</p>
+
+        <h2>2. Account & your responsibilities</h2>
+        <ul>
+          <li>You are responsible for the accuracy of your business information.</li>
+          <li>Protecting passwords and staff access is your duty.</li>
+          <li>Inform staff about proper use of the system and customer data.</li>
+          <li>Use of the service for unlawful activities is not permitted.</li>
+        </ul>
+
+        <h2>3. Free trial & subscription</h2>
+        <ul>
+          <li>We offer a <strong>1-month free trial</strong> for new plans, unless otherwise stated in the offer.</li>
+          <li>After the trial, the service continues only with an active subscription.</li>
+          <li>Pricing and included modules are communicated during signup or renewal.</li>
+        </ul>
+
+        <h2>4. Payments</h2>
+        <ul>
+          <li>Payments follow the agreed billing cycle (weekly, monthly, or annual).</li>
+          <li>Late payment may result in temporary suspension until resolved.</li>
+          <li>Prices may change with prior notice — not for already paid periods.</li>
+        </ul>
+
+        <h2>5. Cancellation & termination</h2>
+        <ul>
+          <li>You may cancel by contacting us via email or WhatsApp.</li>
+          <li>Cancellation takes effect at the end of the paid period, unless otherwise agreed.</li>
+          <li>We may suspend or close accounts for terms violations, persistent non-payment, or misuse.</li>
+          <li>After closure, you may export your reports within a reasonable time; data is then handled per the privacy policy.</li>
+        </ul>
+
+        <h2>6. Software license</h2>
+        <p>Revolution Invest POS remains the property of Revolution Invest. You receive a <strong>non-exclusive, non-transferable license</strong> to use it during your subscription, only for your registered business.</p>
+        <p>You may not:</p>
+        <ul>
+          <li>Copy, distribute, or resell the software without written permission</li>
+          <li>Modify source code or attempt to breach security</li>
+          <li>Use one license for multiple locations without an additional agreement</li>
+        </ul>
+
+        <h2>7. Availability & support</h2>
+        <p>We strive for high uptime but do not guarantee 100% uninterrupted service. Planned maintenance is announced in advance when possible.</p>
+        <p>Support is provided via email, WhatsApp, and online documentation (manual).</p>
+
+        <h2>8. Liability</h2>
+        <ul>
+          <li>Revolution Invest is not liable for indirect losses (lost profit, reputation) except where required by law.</li>
+          <li>Our total liability for any claim does not exceed fees paid by the client in the last 3 months of service.</li>
+          <li>You remain responsible for the fiscal accuracy of invoices and reports you generate in the system.</li>
+        </ul>
+
+        <h2>9. Data & privacy</h2>
+        <p>Data processing is governed by our <a href="/privacy" data-navigate>Privacy Policy</a>. By using the service, you also accept that policy.</p>
+
+        <h2>10. Changes to terms</h2>
+        <p>We may update these terms. Material changes are notified by email or in the panel. Use after notification constitutes acceptance.</p>
+
+        <h2>11. Governing law & disputes</h2>
+        <p>These terms are governed by the laws of the Republic of Kosovo, unless a written agreement states otherwise. Disputes are first resolved through good-faith negotiation; if that fails, courts in Kosovo have jurisdiction.</p>
+
+        <h2>12. Contact</h2>
+        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Contact: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+      `}}};function ke(e){const t=ge[e];if(!t)return null;const a=g();return t[a]??t.sq}function B(e){const t=ke(e);if(!t){N();return}document.title=`${t.title} — Revolution Invest POS`,document.getElementById("app").innerHTML=`
+    ${A({activeNav:"home"})}
+    <main class="legal-page">
+      <div class="container">
+        <a class="article-back" href="${R()}" data-navigate>${i("legal.backHome")}</a>
+        <article class="legal-doc">
+          <header class="legal-doc-header">
+            <p class="legal-doc-meta">${t.updated}</p>
+            <h1>${t.title}</h1>
+          </header>
+          <div class="legal-doc-body article-content">
+            ${t.content}
+          </div>
+        </article>
+      </div>
+    </main>
+    ${q()}
+    ${I()}
+  `,K(),M(),x(),T(),window.scrollTo(0,0)}S("/",()=>N());S("/privacy",()=>B("privacy"));S("/terms",()=>B("terms"));S("/blog/:slug",({slug:e})=>ce(e));Q();

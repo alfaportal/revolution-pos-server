@@ -88,6 +88,14 @@ function buildKitchenUrl(baseUrl, client, kind) {
   return `${base}/${path}/${encodeURIComponent(slug)}?key=${encodeURIComponent(key)}`;
 }
 
+/** URL publike për skanim QR tavoline — pa key në link */
+function buildTableMenuUrl(baseUrl, client, tableNumber) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const slug = client.kitchen_slug || client.id;
+  const table = Math.max(1, Number(tableNumber) || 1);
+  return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
+}
+
 module.exports = {
   UUID_RE,
   generateKitchenKey,
@@ -97,4 +105,5 @@ module.exports = {
   getClientBySlugOrId,
   ensureKitchenCredentials,
   buildKitchenUrl,
+  buildTableMenuUrl,
 };

@@ -45,7 +45,6 @@ export function renderBlogList() {
                       <div class="article-category">${article.category}</div>
                       <h2 class="article-title">${article.title}</h2>
                       <div class="article-footer">
-                        <span class="article-date">${article.date}</span>
                         <span class="article-link">${t("readMore")}</span>
                       </div>
                     </div>

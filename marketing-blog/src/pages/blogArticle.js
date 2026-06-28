@@ -1,4 +1,4 @@
-import { renderHeader, renderBackToTop, bindBackToTop, bindLangSwitch } from "../components/layout.js";
+import { renderHeader, renderBackToTop, bindBackToTop, bindLangSwitch, bindMobileNav, renderFooter, bindFooterContact } from "../components/layout.js";
 import { getArticleBySlug } from "../data/articles.js";
 import { renderHome } from "./home.js";
 import { renderArticleImage } from "../lib/images.js";
@@ -24,7 +24,6 @@ export function renderBlogArticle(slug) {
           <header class="article-full-header">
             <div class="article-category">${article.category}</div>
             <h1>${article.title}</h1>
-            <time class="article-date" datetime="${article.date}">${article.date}</time>
           </header>
 
           <div class="article-full-image">
@@ -37,10 +36,13 @@ export function renderBlogArticle(slug) {
         </article>
       </div>
     </main>
+    ${renderFooter()}
     ${renderBackToTop()}
   `;
 
   bindBackToTop();
   bindLangSwitch();
+  bindMobileNav();
+  bindFooterContact();
   window.scrollTo(0, 0);
 }

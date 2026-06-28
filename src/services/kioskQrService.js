@@ -1,12 +1,17 @@
 const { qrPngBuffer, assertSameOriginUrl } = require("./qrService");
-const { buildKitchenUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
+const { buildTableMenuUrl, ensureKitchenCredentials } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { getClientById } = require("./salesService");
 const { listVenue, loadAreasForClient } = require("./venueService");
 const { buildTablesFromAreas } = require("../lib/tableLayout");
 
+function tableMenuUrl(baseUrl, client, tableNumber) {
+  return buildTableMenuUrl(baseUrl, client, tableNumber);
+}
+
+/** @deprecated — përdor tableMenuUrl; mbajtur për linket e vjetra me key */
 function kioskTableUrl(baseUrl, client, tableNumber) {
-  return `${buildKitchenUrl(baseUrl, client, "kiosk")}&table=${Number(tableNumber)}`;
+  return tableMenuUrl(baseUrl, client, tableNumber);
 }
 
 async function resolveTableNumbers(clientId) {
@@ -21,7 +26,7 @@ async function resolveTableNumbers(clientId) {
   return numbers;
 }
 
-async function listKioskQrCodes(clientId, baseUrl) {
+async function prepareKioskQrClient(clientId) {
   let client = await getClientById(clientId);
   if (!client) throw new Error("Klienti nuk u gjet.");
   client = await ensureKitchenCredentials(client);
@@ -31,21 +36,69 @@ async function listKioskQrCodes(clientId, baseUrl) {
     throw new Error("Paketa juaj nuk përfshin modulin Kiosk.");
   }
 
+  return client;
+}
+
+async function buildTableQrEntry(base, client, table) {
+  const url = tableMenuUrl(base, client, table);
+  assertSameOriginUrl(url, base);
+  const png = await qrPngBuffer(url, { width: 280 });
+  const b64 = png.toString("base64");
+  return {
+    table,
+    url,
+    png_base64: b64,
+    data_url: `data:image/png;base64,${b64}`,
+  };
+}
+
+async function listTableQrMeta(clientId, baseUrl) {
+  const client = await prepareKioskQrClient(clientId);
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const tables = await resolveTableNumbers(clientId);
+  return {
+    slug: client.kitchen_slug,
+    business_name: client.emri || "",
+    count: tables.length,
+    tables: tables.map(table => ({
+      table,
+      url: tableMenuUrl(base, client, table),
+    })),
+  };
+}
+
+async function getTableQrCode(clientId, baseUrl, tableNumber) {
+  const client = await prepareKioskQrClient(clientId);
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const table = Number(tableNumber);
+  if (!table || table < 1) throw new Error("Numri i tavolinës është i pavlefshëm.");
+
+  const allowed = await resolveTableNumbers(clientId);
+  if (!allowed.includes(table)) {
+    throw new Error(`Tavolina T${table} nuk ekziston në planin tuaj.`);
+  }
+
+  const entry = await buildTableQrEntry(base, client, table);
+  return {
+    slug: client.kitchen_slug,
+    business_name: client.emri || "",
+    ...entry,
+  };
+}
+
+async function getTableQrPng(clientId, baseUrl, tableNumber) {
+  const data = await getTableQrCode(clientId, baseUrl, tableNumber);
+  return Buffer.from(data.png_base64, "base64");
+}
+
+async function listKioskQrCodes(clientId, baseUrl) {
+  const client = await prepareKioskQrClient(clientId);
   const base = String(baseUrl || "").replace(/\/+$/, "");
   const tables = await resolveTableNumbers(clientId);
   const codes = [];
 
   for (const table of tables) {
-    const url = kioskTableUrl(base, client, table);
-    assertSameOriginUrl(url, base);
-    const png = await qrPngBuffer(url, { width: 280 });
-    const b64 = png.toString("base64");
-    codes.push({
-      table,
-      url,
-      png_base64: b64,
-      data_url: `data:image/png;base64,${b64}`,
-    });
+    codes.push(await buildTableQrEntry(base, client, table));
   }
 
   return {
@@ -107,9 +160,18 @@ function qrPrintHtml(codes, businessName = "") {
 </html>`;
 }
 
+function singleQrPrintHtml(entry, businessName = "") {
+  return qrPrintHtml([entry], businessName);
+}
+
 module.exports = {
+  tableMenuUrl,
   kioskTableUrl,
   resolveTableNumbers,
+  listTableQrMeta,
+  getTableQrCode,
+  getTableQrPng,
   listKioskQrCodes,
   qrPrintHtml,
+  singleQrPrintHtml,
 };

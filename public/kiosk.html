@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
-  <title>Tavolinë — Porosi</title>
+  <meta name="theme-color" content="#0f1b3d">
+  <link rel="icon" type="image/png" href="/logo-source.png">
+  <title>Tavolinë — Revolution Invest POS</title>
+  <link rel="stylesheet" href="/css/staff-brand.css">
   <link rel="stylesheet" href="/css/waiter.css">
   <style>
     .kiosk-badge {
@@ -55,6 +57,11 @@
 </head>
 <body>
   <div id="screen-order" class="screen active">
+    <div class="staff-app-bar">
+      <img src="/logo-source.png" width="28" height="28" alt="Revolution Invest POS">
+      <span>Revolution Invest POS</span>
+      <span class="staff-app-venue" id="kiosk-venue-name">Tavolinë</span>
+    </div>
     <div class="waiter-header">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
         <div>
@@ -93,6 +100,6 @@
 
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=1"></script>
-  <script src="/js/kiosk.js?v=5"></script>
+  <script src="/js/kiosk.js?v=6"></script>
 </body>
 </html>

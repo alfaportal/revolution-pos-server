@@ -21,6 +21,7 @@ const ownerRoutes = require("./routes/owner");
 const kdsRoutes = require("./routes/kds");
 const waiterRoutes = require("./routes/waiter");
 const kioskRoutes = require("./routes/kiosk");
+const tableMenuRoutes = require("./routes/tableMenu");
 const posRoutes = require("./routes/pos");
 const receiptRoutes = require("./routes/receipt");
 const fiscalRoutes = require("./routes/fiscal");
@@ -52,7 +53,7 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "revolution-pos-server",
     version: pkg.version || "1.0.0",
-    site_version: "2026-06-27-unified-home-v3",
+    site_version: "2026-06-28-unified-home-v12",
     git_commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || null,
     git_branch: process.env.RAILWAY_GIT_BRANCH || null,
     time: new Date().toISOString(),
@@ -80,6 +81,7 @@ app.use("/api/owner", ownerRoutes);
 app.use("/api/kds", kdsRoutes);
 app.use("/api/waiter", waiterRoutes);
 app.use("/api/kiosk", kioskRoutes);
+app.use("/api/menu", tableMenuRoutes);
 app.use("/api/r", publicApiRouter);
 
 app.get("/panel.html", (_req, res) => {
@@ -112,6 +114,9 @@ app.get("/blog/:slug", (req, res, next) => {
   if (req.params.slug.includes(".")) return next();
   sendMarketingPage(res, SITE_INDEX);
 });
+
+app.get("/privacy", (_req, res) => sendMarketingPage(res, SITE_INDEX));
+app.get("/terms", (_req, res) => sendMarketingPage(res, SITE_INDEX));
 
 app.use(express.static(SITE_DIR));
 
@@ -147,6 +152,10 @@ app.get("/bar/:slug", (_req, res) => {
 });
 
 app.get("/kiosk/:slug", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../public/kiosk.html"));
+});
+
+app.get("/menu/:slug/:tableNumber", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/kiosk.html"));
 });
 
@@ -211,7 +220,8 @@ async function start() {
     console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...`);
     console.log(`  🍹 Banak:       /bar/:slug?key=...`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
-    console.log(`  🪑 Tavolinë:    /kiosk/:slug?key=...&table=5`);
+    console.log(`  🪑 Tavolinë:    /menu/:slug/:tableNumber  (QR publike)`);
+    console.log(`  🪑 Kiosk vjetër: /kiosk/:slug?key=...&table=5`);
     console.log(`  🍽️  Restorant:   /r/:slug`);
     console.log(`  🛵 Porosi web:  /r/:slug/order`);
     console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);

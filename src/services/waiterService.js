@@ -10,6 +10,7 @@ const {
   loadAreasForClient,
 } = require("./venueService");
 const { resolveWaiterForOrder } = require("./waiterPinService");
+const { getStaffBrandingForClient } = require("../lib/staffBranding");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = WEB_WAITER;
@@ -127,10 +128,14 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
   }
   const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
   const pinWaiters = await loadPinWaitersCount(clientId);
+  const branding = await getStaffBrandingForClient(client, kitchenSlug);
 
   return {
     client_name: client.emri,
     restaurant_name: settings?.restaurant_name || client.emri,
+    address: branding.address,
+    logo_url: branding.logo_url,
+    revolution_logo_url: branding.revolution_logo_url,
     table_count: layout.table_count,
     synced_at: settings?.synced_at || null,
     pin_auth: true,

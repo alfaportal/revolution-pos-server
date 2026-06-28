@@ -5,7 +5,7 @@ export function siteRoot() {
 }
 
 export function blogRoot() {
-  return "/";
+  return "/blog";
 }
 
 export function blogArticlePath(slug) {

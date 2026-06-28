@@ -58,7 +58,7 @@
         </div>
       </div>
       <div class="link-row" id="owner-link-kiosk-row">
-        <label>Tavolinë (Kiosk)</label>
+        <label>Tavolinë (QR menu)</label>
         <div class="link-actions">
           <input type="text" id="owner-kiosk-url" readonly>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
@@ -79,6 +79,7 @@
       <button class="tab" data-tab="menuja">Menuja</button>
       <button class="tab" data-tab="stoku">Stoku <span id="tab-stoku-badge" class="tab-badge hidden"></span></button>
       <button class="tab" data-tab="katalogu">Katalogu</button>
+      <button class="tab" data-tab="qr-tavolinat">Tavolinat &amp; QR Kodet</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="faqja">Faqja publike</button>
@@ -209,6 +210,37 @@
       </div>
     </div>
 
+    <div id="panel-qr-tavolinat" class="panel-section hidden">
+      <div class="card" id="table-qr-card">
+        <div class="card-title card-title-row">
+          <span>Tavolinat &amp; QR Kodet</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-print-all-table-qrs">Printo të gjitha (PDF)</button>
+        </div>
+        <p class="links-hint">
+          Çdo tavolinë ka QR unik që çon te
+          <code>/menu/[slug-lokali]/[nr-tavolines]</code>.
+          Slug-u i lokalit tuaj (<strong id="table-qr-slug">—</strong>) garanton që QR-et nuk ngatërrohen me lokale të tjera.
+          Printoni dhe vendosni QR-në në tavolinë.
+        </p>
+        <div id="table-qr-msg" class="owner-license-msg"></div>
+        <div class="table-wrap">
+          <table class="menu-owner-table table-qr-table">
+            <thead>
+              <tr>
+                <th>Tavolina</th>
+                <th>URL</th>
+                <th>QR</th>
+                <th class="col-actions">Veprime</th>
+              </tr>
+            </thead>
+            <tbody id="table-qr-body">
+              <tr><td colspan="4" class="links-hint">Duke ngarkuar tavolinat…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-kamarieret" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Kamarierët me PIN</div>
@@ -262,17 +294,7 @@
             <tbody id="venue-areas-body"></tbody>
           </table>
         </div>
-        <p class="links-hint">Nëse nuk shtoni hapësira, përdoret numri i tavolinave nga POS ose vlera e vjetër (<span id="venue-fallback-count">—</span> tavolina).</p>
-      </div>
-
-      <div class="card" id="kiosk-qr-card" style="margin-top:1rem">
-        <div class="card-title card-title-row">
-          <span>QR Kodi i tavolinave (Kiosk)</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-print-kiosk-qrs">Printo QR Kodet</button>
-        </div>
-        <p class="links-hint">Çdo kod lidhet me <code>/kiosk/:slug?key=SECRET&amp;table=N</code>. Klientët skanojnë për të porositur nga tavolina.</p>
-        <div id="kiosk-qr-grid" class="kiosk-qr-grid"></div>
-        <div id="kiosk-qr-msg" class="owner-license-msg"></div>
+        <p class="links-hint">Nëse nuk shtoni hapësira, përdoret numri i tavolinave nga POS ose vlera e vjetër (<span id="venue-fallback-count">—</span> tavolina). Për QR kodet, shkoni te skeda <strong>Tavolinat &amp; QR Kodet</strong>.</p>
       </div>
 
       <div class="card" style="margin-top:1rem">
@@ -510,7 +532,7 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=14"></script>
+  <script src="/js/owner.js?v=15"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>

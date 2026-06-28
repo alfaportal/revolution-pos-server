@@ -1,9 +1,15 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "kiosk" ? parts[1] : "";
   const params = new URLSearchParams(window.location.search);
-  const kitchenKey = params.get("key") || "";
-  const tableNumber = Number(params.get("table") || 0);
+  const isTableMenu = parts[0] === "menu" && parts.length >= 3;
+  const isLegacyKiosk = parts[0] === "kiosk" && parts.length >= 2;
+
+  const slug = isTableMenu ? parts[1] : isLegacyKiosk ? parts[1] : "";
+  const tableNumber = isTableMenu
+    ? Number(parts[2] || 0)
+    : Number(params.get("table") || 0);
+  const kitchenKey = isTableMenu ? "" : (params.get("key") || "");
+  const apiChannel = isTableMenu ? "menu" : "kiosk";
 
   let bootstrap = null;
   let cart = [];
@@ -99,13 +105,17 @@
     cancelCountdownTimer = setInterval(tick, 1000);
   }
 
+  function apiPath(suffix) {
+    return `/api/${apiChannel}/${encodeURIComponent(slug)}${suffix}${apiQuery()}`;
+  }
+
   async function cancelPendingOrder() {
     if (!pendingCancel) return;
     if (!confirm(`Anulloni porosinë për T${pendingCancel.tableNumber}?`)) return;
     const btn = $("btn-cancel-order");
     if (btn) btn.disabled = true;
     try {
-      await api(`/api/kiosk/${encodeURIComponent(slug)}/order/cancel${apiQuery()}`, {
+      await api(apiPath("/order/cancel"), {
         method: "POST",
         body: JSON.stringify({ table_number: pendingCancel.tableNumber }),
       });
@@ -161,11 +171,19 @@
   }
 
   async function loadBootstrap() {
-    if (!slug) throw new Error("URL i gabuar. Duhet /kiosk/[slug]?key=...&table=5");
-    if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
-    if (!tableNumber || tableNumber < 1) throw new Error("Mungon numri i tavolinës (?table=5).");
+    if (!slug) {
+      throw new Error("URL i gabuar. Duhet /menu/[slug]/[nr-tavoline] ose /kiosk/[slug]?key=...&table=5");
+    }
+    if (!isTableMenu && !kitchenKey) {
+      throw new Error("Mungon kodi i aksesit (?key=...) në link.");
+    }
+    if (!tableNumber || tableNumber < 1) {
+      throw new Error(isTableMenu
+        ? "Numri i tavolinës në URL është i pavlefshëm."
+        : "Mungon numri i tavolinës (?table=5).");
+    }
 
-    bootstrap = await api(`/api/kiosk/${encodeURIComponent(slug)}/menu${apiQuery()}`);
+    bootstrap = await api(apiPath("/menu"));
     const venue = bootstrap.restaurant_name || "Porosi tavoline";
     $("kiosk-title").textContent = venue;
     $("kiosk-table-label").textContent = `T${tableNumber}`;
@@ -232,7 +250,7 @@
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     try {
-      await api(`/api/kiosk/${encodeURIComponent(slug)}/order${apiQuery()}`, {
+      await api(apiPath("/order"), {
         method: "POST",
         body: JSON.stringify({
           table_number: tableNumber,
@@ -257,7 +275,7 @@
   async function refreshMenu() {
     if (!bootstrap) return;
     try {
-      const data = await api(`/api/kiosk/${encodeURIComponent(slug)}/menu${apiQuery()}`);
+      const data = await api(apiPath("/menu"));
       bootstrap.synced_at = data.synced_at;
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;

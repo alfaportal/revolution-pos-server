@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
-const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl } = require("../lib/kitchenAccess");
+const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl } = require("../lib/kitchenAccess");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { featuresForTier } = require("../lib/packages");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
@@ -375,7 +375,7 @@ async function getLicenseAccessLinks({ celesi, device_id, app_type, hostname, cl
     links.bar_url = buildKitchenUrl(base, client, "bar");
   }
   if (client.id && features.kiosk) {
-    links.kiosk_url = `${buildKitchenUrl(base, client, "kiosk")}&table=1`;
+    links.kiosk_url = buildTableMenuUrl(base, client, 1);
   }
   if (slug && features.website) {
     links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;

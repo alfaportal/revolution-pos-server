@@ -26,10 +26,12 @@ async function listKitchenOrders(clientId) {
     .limit(80);
 
   if (error) throw error;
-  return (data || []).map(o => ({
-    ...o,
-    items_json: normalizeItems(o.items_json),
-  }));
+  return (data || [])
+    .filter(o => !isBarMobileOrder(o))
+    .map(o => ({
+      ...o,
+      items_json: normalizeItems(o.items_json),
+    }));
 }
 
 async function listBarOrders(clientId) {

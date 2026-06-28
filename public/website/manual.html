@@ -83,13 +83,17 @@
     .brand-mark {
       width: 2.2rem;
       height: 2.2rem;
+      overflow: hidden;
       border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), #ff6b6b);
-      display: grid;
-      place-items: center;
-      font-size: 1rem;
-      font-weight: 900;
-      color: #fff;
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .brand-mark img {
+      width: 118%;
+      max-width: none;
+      margin: 6% 0 0 -9%;
+      display: block;
     }
 
     .brand-text { font-size: 0.98rem; }
@@ -484,11 +488,13 @@
   <header class="site-header">
     <div class="container">
       <div class="header-inner">
-        <a class="brand" href="/">
-          <span class="brand-mark">R</span>
+        <a class="brand" href="/" aria-label="Revolution Invest POS">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="/logo-source.png" width="40" height="40" alt="" />
+          </span>
           <span class="brand-text">
-            Revolution Invest
-            <small>POS System</small>
+            Revolution Invest POS
+            <small>Restorant &amp; Kafene</small>
           </span>
         </a>
         <div class="header-actions">

@@ -829,18 +829,30 @@
   padding: 4px;
 }
 
-.kiosk-qr-table {
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: #38bdf8;
+.table-qr-url {
+  display: block;
+  font-size: 0.72rem;
+  word-break: break-all;
+  margin-bottom: 0.35rem;
+  color: #94a3b8;
 }
 
-.card-title-row {
+.table-qr-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
   flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.table-qr-preview-img {
+  width: 72px;
+  height: 72px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.table-qr-table td {
+  vertical-align: middle;
 }
 
 .public-page-form textarea {

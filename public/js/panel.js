@@ -649,9 +649,8 @@ function barLink(clientId) {
 
 function kioskTableLink(clientId, table = 1) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c
-    ? clientAccessLink(c, "kiosk", `table=${table}`)
-    : `${publicOrigin()}/kiosk/${clientId}?table=${table}`;
+  const slug = c?.kitchen_slug || c?.id || clientId;
+  return `${publicOrigin()}/menu/${encodeURIComponent(slug)}/${Number(table) || 1}`;
 }
 
 function publicPageLink(clientId) {

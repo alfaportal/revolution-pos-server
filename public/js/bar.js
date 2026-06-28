@@ -169,10 +169,13 @@
         showError(data.gabim || "Nuk u ngarkuan porositë.");
         return;
       }
-      if (data.client_name) {
-        titleEl.textContent = `Banak — ${data.client_name}`;
-        subEl.textContent = "Porosi nga kamarieri (telefon) dhe tavolina — jo faturë";
-        document.title = `Banak — ${data.client_name}`;
+      if (data.restaurant_name || data.client_name) {
+        const venue = data.restaurant_name || data.client_name;
+        titleEl.textContent = `Banak — ${venue}`;
+        subEl.textContent = data.address || "Porosi nga kamarieri dhe tavolina — jo faturë";
+        document.title = `Banak — ${venue}`;
+        const venueBar = document.getElementById("bar-venue-name");
+        if (venueBar) venueBar.textContent = venue;
       }
       renderOrders(data.orders || [], data.cancelled || []);
     } catch (e) {

@@ -10,11 +10,11 @@ function tableWaiterLabel(tableNumber) {
   return `Tavolinë T${tableNumber}`;
 }
 
-async function getKioskMenu(clientId, { kitchenSlug = "" } = {}) {
+async function getKioskMenu(clientId, { kitchenSlug = "", channel = "kiosk" } = {}) {
   return getClientMenuCatalog(clientId, {
     activeOnly: true,
     kitchenSlug,
-    channel: "kiosk",
+    channel,
   });
 }
 

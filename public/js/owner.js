@@ -1083,39 +1083,146 @@ async function loadOwnerVenue() {
   renderVenueAreas();
   renderVenueStaff();
   updateVenueSyncHint(data.synced_at, data.table_count);
-  await loadKioskQrs();
 }
 
-async function loadKioskQrs() {
-  const grid = document.getElementById("kiosk-qr-grid");
-  const msg = document.getElementById("kiosk-qr-msg");
-  const card = document.getElementById("kiosk-qr-card");
-  if (!grid || !card) return;
-  grid.innerHTML = "<p class=\"links-hint\">Duke gjeneruar QR kodet…</p>";
-  if (msg) msg.textContent = "";
+const tableQrCache = new Map();
+
+function setTableQrMsg(text, ok) {
+  const msg = document.getElementById("table-qr-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function renderTableQrPreview(table, dataUrl) {
+  const cell = document.querySelector(`[data-qr-preview="${table}"]`);
+  if (!cell) return;
+  if (dataUrl) {
+    cell.innerHTML = `<img src="${dataUrl}" alt="QR T${table}" class="table-qr-preview-img">`;
+  } else {
+    cell.innerHTML = '<span class="links-hint">—</span>';
+  }
+}
+
+async function generateTableQr(table, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Duke gjeneruar…";
+  }
   try {
-    const data = await api("/api/owner/kiosk/qrs");
+    setTableQrMsg("");
+    const data = await api(`/api/owner/kiosk/qrs/${table}`);
+    tableQrCache.set(table, data);
+    renderTableQrPreview(table, data.data_url);
+    setTableQrMsg(`QR për T${table} u gjenerua.`, true);
+  } catch (err) {
+    setTableQrMsg(err.message, false);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Gjenero QR Code";
+    }
+  }
+}
+
+function bindTableQrActions() {
+  document.querySelectorAll("[data-generate-qr]").forEach(btn => {
+    btn.addEventListener("click", () => generateTableQr(Number(btn.dataset.generateQr), btn));
+  });
+  document.querySelectorAll("[data-download-qr]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const table = btn.dataset.downloadQr;
+      try {
+        setTableQrMsg("");
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`/api/owner/kiosk/qrs/${table}/png`, {
+          headers,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.gabim || "Shkarkimi dështoi.");
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `qr-tavolina-${table}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setTableQrMsg(`QR për T${table} u shkarkua (PNG).`, true);
+      } catch (err) {
+        setTableQrMsg(err.message, false);
+      }
+    });
+  });
+  document.querySelectorAll("[data-print-qr]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const table = btn.dataset.printQr;
+      window.open(`/api/owner/kiosk/qrs/${table}/print`, "_blank", "noopener");
+    });
+  });
+  document.querySelectorAll("[data-copy-qr-url]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const url = btn.dataset.copyQrUrl;
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        setTableQrMsg("URL u kopjua.", true);
+      } catch {
+        setTableQrMsg("Nuk u kopjua URL.", false);
+      }
+    });
+  });
+}
+
+async function loadTableQrPanel() {
+  const body = document.getElementById("table-qr-body");
+  const card = document.getElementById("table-qr-card");
+  const slugEl = document.getElementById("table-qr-slug");
+  if (!body || !card) return;
+
+  body.innerHTML = '<tr><td colspan="4" class="links-hint">Duke ngarkuar tavolinat…</td></tr>';
+  setTableQrMsg("");
+  tableQrCache.clear();
+
+  try {
+    const data = await api("/api/owner/tables/qr");
+    if (slugEl) slugEl.textContent = data.slug || "—";
+
     if (!data.tables?.length) {
-      grid.innerHTML = "<p class=\"links-hint\">Nuk ka tavolina për QR.</p>";
+      body.innerHTML = '<tr><td colspan="4" class="links-hint">Nuk ka tavolina. Shtoni hapësira te skeda Lokal &amp; Stafi.</td></tr>';
       return;
     }
-    grid.innerHTML = data.tables.map(t => `
-      <div class="kiosk-qr-card">
-        <img src="${t.data_url}" alt="QR T${t.table}" loading="lazy">
-        <div class="kiosk-qr-table">T${t.table}</div>
-      </div>`).join("");
+
+    body.innerHTML = data.tables.map(t => `
+      <tr data-table="${t.table}">
+        <td><strong>T${t.table}</strong></td>
+        <td>
+          <code class="table-qr-url">${escAttr(t.url)}</code>
+          <button type="button" class="btn btn-ghost btn-sm" data-copy-qr-url="${escAttr(t.url)}">Kopjo</button>
+        </td>
+        <td data-qr-preview="${t.table}"><span class="links-hint">—</span></td>
+        <td class="col-actions table-qr-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-generate-qr="${t.table}">Gjenero QR Code</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-download-qr="${t.table}">Shkarko QR</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-print-qr="${t.table}">Printo</button>
+        </td>
+      </tr>`).join("");
+
+    bindTableQrActions();
     card.hidden = false;
   } catch (err) {
-    grid.innerHTML = "";
-    if (msg) {
-      msg.textContent = err.message || "QR nuk u ngarkuan.";
-      msg.className = "owner-license-msg err";
-    }
+    body.innerHTML = "";
+    setTableQrMsg(err.message || "QR nuk u ngarkuan.", false);
     if (/paketa|kiosk/i.test(err.message || "")) card.hidden = true;
   }
 }
 
-document.getElementById("btn-print-kiosk-qrs")?.addEventListener("click", () => {
+document.getElementById("btn-print-all-table-qrs")?.addEventListener("click", () => {
   window.open("/api/owner/kiosk/qrs/print", "_blank", "noopener");
 });
 
@@ -1139,7 +1246,7 @@ async function saveAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at, ownerVenueCache.table_count);
     setVenueMsg("Hapësira u ruajt.", true);
-    await loadKioskQrs();
+    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1160,7 +1267,7 @@ async function toggleAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg(updated.active ? "Hapësira u aktivizua." : "Hapësira u fsheh.", true);
-    await loadKioskQrs();
+    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1178,7 +1285,7 @@ async function deleteAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u fshi.", true);
-    await loadKioskQrs();
+    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1461,6 +1568,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "stoku" && typeof loadOwnerStock === "function") loadOwnerStock();
     if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
+    if (tab.dataset.tab === "qr-tavolinat") loadTableQrPanel();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
@@ -1616,7 +1724,7 @@ document.getElementById("btn-area-add")?.addEventListener("click", async () => {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u shtua.", true);
-    await loadKioskQrs();
+    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }

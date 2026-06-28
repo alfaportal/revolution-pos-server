@@ -55,6 +55,7 @@ const {
   adminResetOwnerPassword,
 } = require("../services/userService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const { buildKitchenUrl, buildTableMenuUrl } = require("../lib/kitchenAccess");
 
 function requestBaseUrl(_req) {
   return getPublicAppOrigin();
@@ -307,7 +308,7 @@ router.post("/clients/:id/regenerate-kitchen-access", asyncHandler(async (req, r
       kitchen_url: buildKitchenUrl(base, client, "kitchen"),
       bar_url: buildKitchenUrl(base, client, "bar"),
       waiter_url: buildKitchenUrl(base, client, "waiter"),
-      kiosk_url: `${buildKitchenUrl(base, client, "kiosk")}&table=1`,
+      kiosk_url: buildTableMenuUrl(base, client, 1),
     });
   } catch (e) {
     const msg = logRouteError("admin:POST /clients/:id/regenerate-kitchen-access", e);
