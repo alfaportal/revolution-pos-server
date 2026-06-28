@@ -658,9 +658,9 @@ function renderMenuTable() {
       <td class="menu-photo-cell">
         ${photoCell}
         <div class="menu-photo-actions">
-          <label class="btn btn-ghost btn-sm menu-photo-upload" for="menu-photo-${item.id}">Foto</label>
+          <label class="btn btn-ghost btn-sm menu-photo-upload" for="menu-photo-${item.id}">${item.has_photo ? "Ndrysho foto" : "Shto foto"}</label>
           <input type="file" id="menu-photo-${item.id}" class="menu-photo-input" accept="image/png,image/jpeg,image/jpg" hidden data-id="${item.id}">
-          ${item.has_photo ? `<button type="button" class="btn btn-ghost btn-sm btn-menu-photo-remove" data-id="${item.id}">Hiq</button>` : ""}
+          ${item.has_photo ? `<button type="button" class="btn btn-ghost btn-sm btn-menu-photo-remove" data-id="${item.id}">Hiq foton</button>` : ""}
         </div>
       </td>
       <td><input type="text" class="menu-edit-name" value="${escAttr(item.name)}"></td>
@@ -725,7 +725,7 @@ async function uploadMenuPhoto(input) {
     if (idx >= 0) ownerMenuCache.items[idx] = item;
     renderMenuTable();
     updateOwnerMenuSyncHint(synced_at);
-    setMenuMsg("Fotoja u ruajt — shfaqet në faqen publike.", true);
+    setMenuMsg("Fotoja u ruajt — shfaqet te tavolina, kamarieri, banaku dhe faqja publike.", true);
   } catch (err) {
     setMenuMsg(err.message, false);
   }
@@ -743,7 +743,7 @@ async function removeMenuPhoto(id) {
     if (idx >= 0) ownerMenuCache.items[idx] = item;
     renderMenuTable();
     updateOwnerMenuSyncHint(synced_at);
-    setMenuMsg("Fotoja u hoq.", true);
+    setMenuMsg("Fotoja u hoq — shfaqet fotoja e paracaktuar e katalogut (nëse ka).", true);
   } catch (err) {
     setMenuMsg(err.message, false);
   }

@@ -24,6 +24,30 @@ async function fetchOrderedSales(clientId) {
   }));
 }
 
+async function getPosDeviceIds(clientId) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("licenses")
+    .select("device_id")
+    .eq("client_id", clientId)
+    .eq("statusi", "aktive");
+  if (error) return new Set();
+  return new Set(
+    (data || [])
+      .map(r => String(r.device_id || "").trim().toUpperCase())
+      .filter(Boolean),
+  );
+}
+
+function isPosBanakOrder(order, posDeviceIds) {
+  const device = String(order?.device_id || "").trim().toUpperCase();
+  return Boolean(device && posDeviceIds.has(device));
+}
+
+function isBanakOrder(order, posDeviceIds) {
+  return isBarMobileOrder(order) || isPosBanakOrder(order, posDeviceIds);
+}
+
 async function getClientForKitchen(clientId) {
   const id = String(clientId || "").trim();
   if (!UUID_RE.test(id)) throw new Error("ID klienti nuk është i vlefshëm.");
@@ -33,13 +57,19 @@ async function getClientForKitchen(clientId) {
 }
 
 async function listKitchenOrders(clientId) {
-  const orders = await fetchOrderedSales(clientId);
-  return orders.filter(o => !isBarMobileOrder(o));
+  const [orders, posDeviceIds] = await Promise.all([
+    fetchOrderedSales(clientId),
+    getPosDeviceIds(clientId),
+  ]);
+  return orders.filter(o => !isBanakOrder(o, posDeviceIds));
 }
 
 async function listBarOrders(clientId) {
-  const orders = await fetchOrderedSales(clientId);
-  return orders.filter(isBarMobileOrder);
+  const [orders, posDeviceIds] = await Promise.all([
+    fetchOrderedSales(clientId),
+    getPosDeviceIds(clientId),
+  ]);
+  return orders.filter(o => isBanakOrder(o, posDeviceIds));
 }
 
 async function markKitchenOrderReady(clientId, orderId) {
@@ -83,8 +113,11 @@ async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
 }
 
 async function listBarCancelledOrders(clientId, windowSec = 30) {
-  const orders = await listRecentlyCancelledOrders(clientId, windowSec);
-  return orders.filter(isBarMobileOrder);
+  const [orders, posDeviceIds] = await Promise.all([
+    listRecentlyCancelledOrders(clientId, windowSec),
+    getPosDeviceIds(clientId),
+  ]);
+  return orders.filter(o => isBanakOrder(o, posDeviceIds));
 }
 
 module.exports = {

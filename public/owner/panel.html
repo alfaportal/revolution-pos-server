@@ -34,8 +34,15 @@
 
     <div class="card links-card" id="owner-links-card">
       <div class="card-title">Linqet e lokalit tuaj</div>
-      <p class="links-hint">Linket me <code>?key=</code> — kopjojini për kamarierët, banakun, kuzhinën ose tavolinat (sipas paketës suaj).</p>
+      <p class="links-hint">Hapni <strong>Banak</strong> në monitor/tablet të banakut — aty vijnë porositë e tavolinës (QR), kamarierit, online dhe POS-it. <strong>Kuzhina</strong> është vetëm për ushqim që përgatitet në kuzhinë.</p>
       <p id="owner-links-empty" class="links-hint hidden">Paketa juaj nuk përfshin module web (KDS/Kiosk/Kamarier). Kontaktoni administratorin për upgrade.</p>
+      <div class="link-row" id="owner-link-bar-row">
+        <label>Banak — porosi (QR, kamarier, online, POS)</label>
+        <div class="link-actions">
+          <input type="text" id="owner-bar-url" readonly>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-bar">Kopjo</button>
+        </div>
+      </div>
       <div class="link-row" id="owner-link-waiter-row">
         <label>Kamarierët (telefon)</label>
         <div class="link-actions">
@@ -44,17 +51,10 @@
         </div>
       </div>
       <div class="link-row" id="owner-link-kitchen-row">
-        <label>Kuzhina (KDS)</label>
+        <label>Kuzhina (KDS) — vetëm ushqim</label>
         <div class="link-actions">
           <input type="text" id="owner-kitchen-url" readonly>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kitchen">Kopjo</button>
-        </div>
-      </div>
-      <div class="link-row" id="owner-link-bar-row">
-        <label>Banak</label>
-        <div class="link-actions">
-          <input type="text" id="owner-bar-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-bar">Kopjo</button>
         </div>
       </div>
       <div class="link-row" id="owner-link-kiosk-row">
@@ -145,7 +145,7 @@
       </div>
       <div class="card">
         <div class="card-title">Lista e menusë</div>
-        <p class="links-hint">Shtoni artikuj manualisht këtu, ose përdorni skedën <strong>Katalogu</strong> për artikuj të gatshëm me foto. Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>.</p>
+        <p class="links-hint">Shtoni artikuj manualisht këtu, ose përdorni skedën <strong>Katalogu</strong> për artikuj të gatshëm me foto. Fotot e katalogut janë të paracaktuara — klikoni <strong>Ndrysho foto</strong> te çdo artikull për të ngarkuar foto tuaj (tavolinë, kamarier, banak, faqe publike). Ndryshoni emrin, kategorinë ose çmimin dhe klikoni <strong>Ruaj</strong>.</p>
         <p id="menu-sync-hint" class="links-hint" style="margin-top:0"></p>
         <div class="overflow-x">
           <table class="menu-owner-table">
@@ -532,7 +532,7 @@
   </div>
 
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
-  <script src="/js/owner.js?v=15"></script>
+  <script src="/js/owner.js?v=16"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>

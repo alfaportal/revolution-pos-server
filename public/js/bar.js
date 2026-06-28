@@ -95,10 +95,34 @@
     </li>`;
   }
 
+  function playNewOrderSound() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch { /* */ }
+  }
+
   function renderOrders(orders, cancelledOrders) {
     hideError();
     const active = orders || [];
     const cancelled = cancelledOrders || [];
+    let hasNew = false;
+    for (const o of active) {
+      if (!knownIds.has(o.id)) hasNew = true;
+    }
+    if (hasNew && knownIds.size) playNewOrderSound();
     countEl.textContent = `${active.length} porosi`;
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
@@ -223,5 +247,5 @@
 
   fetchOrders();
   connectSse();
-  setInterval(fetchOrders, 15000);
+  setInterval(fetchOrders, 5000);
 })();

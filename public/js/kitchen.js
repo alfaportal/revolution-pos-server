@@ -173,10 +173,17 @@
       if (data.restaurant_name || data.client_name) {
         const venue = data.restaurant_name || data.client_name;
         titleEl.textContent = venue;
-        subEl.textContent = data.address || "Porositë e reja nga POS";
         document.title = `Kuzhina — ${venue}`;
         const venueBar = document.getElementById("kitchen-venue-name");
         if (venueBar) venueBar.textContent = venue;
+      }
+      const barLink = document.getElementById("kitchen-bar-link");
+      if (barLink && slug && kitchenKey) {
+        barLink.href = `/bar/${encodeURIComponent(slug)}?key=${encodeURIComponent(kitchenKey)}`;
+      }
+      if (subEl) {
+        subEl.innerHTML = "Ushqim nga POS — porositë e tavolinës (QR/kamarier/online) shkojnë te <a href=\"" +
+          (barLink?.href || "#") + "\" style=\"color:#93c5fd;font-weight:700\">Banak</a>";
       }
       renderOrders(data.orders || [], data.cancelled || []);
     } catch (e) {
