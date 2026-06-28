@@ -164,6 +164,7 @@ app.get("/kitchen/:slug", (_req, res) => {
 });
 
 app.get("/waiter/:slug", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/waiter.html"));
 });
 

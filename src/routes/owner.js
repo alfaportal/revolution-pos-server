@@ -52,7 +52,7 @@ const {
   updateWaiterWithPin,
   deleteWaiterWithPin,
 } = require("../services/waiterPinService");
-const { ensureKitchenCredentials, buildClientWebLinks } = require("../lib/kitchenAccess");
+const { ensureKitchenCredentials, buildClientWebLinks, buildWaiterUrl } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { listKioskQrCodes, listTableQrMeta, getTableQrCode, getTableQrPng, qrPrintHtml, singleQrPrintHtml, tableMenuUrl } = require("../services/kioskQrService");
 const {
@@ -426,8 +426,19 @@ router.delete("/venue/staff/:id", async (req, res) => {
 
 router.get("/waiters", async (req, res) => {
   try {
+    let client = await getClientById(req.user.client_id);
+    if (client) client = await ensureKitchenCredentials(client);
+    const base = getPublicAppOrigin();
     const waiters = await listWaitersForOwner(req.user.client_id);
-    res.json({ ok: true, waiters });
+    const shared_waiter_url = client ? buildWaiterUrl(base, client, "") : "";
+    res.json({
+      ok: true,
+      waiters: waiters.map(w => ({
+        ...w,
+        waiter_url: client && w.web_token ? buildWaiterUrl(base, client, w.web_token) : "",
+      })),
+      shared_waiter_url,
+    });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
   }

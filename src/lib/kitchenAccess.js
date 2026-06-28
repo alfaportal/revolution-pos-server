@@ -99,6 +99,14 @@ function buildTableMenuUrl(baseUrl, client, tableNumber) {
   return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
 }
 
+/** Link personal i kamarierit — shto &w=token (çdo kamarier tablet i veçantë) */
+function buildWaiterUrl(baseUrl, client, webToken = "") {
+  const url = buildKitchenUrl(baseUrl, client, "waiter");
+  const t = String(webToken || "").trim();
+  if (!url || !t) return url;
+  return `${url}&w=${encodeURIComponent(t)}`;
+}
+
 /** Linket web për një lokal — sipas paketës (banak, kuzhinë, kamarier, kiosk, faqe). */
 function buildClientWebLinks(baseUrl, client, packageTier) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
@@ -129,5 +137,6 @@ module.exports = {
   ensureKitchenCredentials,
   buildKitchenUrl,
   buildTableMenuUrl,
+  buildWaiterUrl,
   buildClientWebLinks,
 };

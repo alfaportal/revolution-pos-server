@@ -15,6 +15,10 @@ const { getWaiterById } = require("../services/waiterPinService");
 
 const router = express.Router();
 
+function extractWaiterToken(req) {
+  return String(req.query.w || req.body?.web_token || "").trim();
+}
+
 router.get("/:slug/menu/:itemId/photo", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
     const photo = await getKitchenMenuItemPhoto(req.kitchenClient.id, req.params.itemId);
@@ -40,6 +44,7 @@ router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("wait
     const data = await getWaiterBootstrap(req.kitchenClient.id, {
       kitchenSlug: req.kitchenClient.kitchen_slug,
       channel: "waiter",
+      webToken: extractWaiterToken(req),
     });
     res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
   } catch (e) {
@@ -49,7 +54,7 @@ router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("wait
 
 router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
   try {
-    const waiter = await loginWaiterWithPin(req.kitchenClient.id, req.body?.pin);
+    const waiter = await loginWaiterWithPin(req.kitchenClient.id, req.body?.pin, extractWaiterToken(req) || null);
     res.json({ ok: true, waiter });
   } catch (e) {
     res.status(401).json({ ok: false, gabim: e.message });

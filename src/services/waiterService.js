@@ -104,9 +104,20 @@ function assertWaiterOnTable(existing, waiter, tableNumber) {
   }
 }
 
-async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter" } = {}) {
+async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter", webToken = "" } = {}) {
   const client = await assertClient(clientId);
   const db = getSupabase();
+  const { getWaiterByWebToken } = require("./waiterPinService");
+
+  let assigned_waiter = null;
+  const token = String(webToken || "").trim();
+  if (token) {
+    const w = await getWaiterByWebToken(clientId, token);
+    if (!w) {
+      throw new Error("Linku personal i kamarierit nuk është i vlefshëm. Kopjoni linkun nga paneli → Kamarierët.");
+    }
+    assigned_waiter = { id: w.id, name: w.name };
+  }
 
   const [{ data: settings }, { data: categories }, { data: menu }] =
     await Promise.all([
@@ -144,6 +155,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     menu: (menu || []).filter(isVisibleOnWebMenu).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
     areas: layout.areas,
     tables: layout.tables,
+    assigned_waiter,
   };
 }
 
@@ -160,10 +172,10 @@ async function loadPinWaitersCount(clientId) {
   return count || 0;
 }
 
-async function loginWaiterWithPin(clientId, pin) {
+async function loginWaiterWithPin(clientId, pin, webToken = null) {
   await assertClient(clientId);
   const { verifyWaiterPin } = require("./waiterPinService");
-  return verifyWaiterPin(clientId, pin);
+  return verifyWaiterPin(clientId, pin, webToken);
 }
 
 async function submitWaiterOrder(clientId, body) {

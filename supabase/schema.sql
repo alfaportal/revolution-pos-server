@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS pos_staff (
   source      TEXT NOT NULL DEFAULT 'owner' CHECK (source IN ('owner', 'pos')),
   sort_order  INTEGER NOT NULL DEFAULT 0,
   pin_hash    TEXT,
+  web_token   TEXT,
   active      BOOLEAN NOT NULL DEFAULT true,
   UNIQUE (client_id, name)
 );

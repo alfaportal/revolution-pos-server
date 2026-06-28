@@ -1,8 +1,68 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { getSupabase } = require("../db");
 const { touchMenuSync } = require("./menuService");
 
 const PIN_RE = /^\d{4}$/;
+
+function generateWebToken() {
+  return crypto.randomBytes(12).toString("hex");
+}
+
+async function ensureWaiterWebToken(clientId, waiterId) {
+  const db = getSupabase();
+  const { data: row, error: findErr } = await db
+    .from("pos_staff")
+    .select("id, web_token")
+    .eq("id", waiterId)
+    .eq("client_id", clientId)
+    .eq("role", "waiter")
+    .maybeSingle();
+  if (findErr) throw findErr;
+  if (!row) return null;
+  if (row.web_token) return row.web_token;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const web_token = generateWebToken();
+    const { data, error } = await db
+      .from("pos_staff")
+      .update({ web_token })
+      .eq("id", waiterId)
+      .eq("client_id", clientId)
+      .is("web_token", null)
+      .select("web_token")
+      .maybeSingle();
+    if (!error && data?.web_token) return data.web_token;
+    if (error && !String(error.message || "").includes("unique")) throw error;
+  }
+  const { data: again } = await db
+    .from("pos_staff")
+    .select("web_token")
+    .eq("id", waiterId)
+    .maybeSingle();
+  return again?.web_token || null;
+}
+
+async function ensureAllWaiterWebTokens(clientId) {
+  const rows = await loadPinWaiters(clientId);
+  await Promise.all(rows.map(w => ensureWaiterWebToken(clientId, w.id)));
+}
+
+async function getWaiterByWebToken(clientId, webToken) {
+  const token = String(webToken || "").trim().toLowerCase();
+  if (!token) return null;
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("pos_staff")
+    .select("id, name, role, active, pin_hash, web_token")
+    .eq("client_id", clientId)
+    .eq("role", "waiter")
+    .eq("web_token", token)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id || data.active === false) return null;
+  return data;
+}
 
 function assertPin(pin) {
   const p = String(pin || "").trim();
@@ -27,7 +87,7 @@ async function loadPinWaiters(clientId, { activeOnly = false } = {}) {
   const db = getSupabase();
   let q = db
     .from("pos_staff")
-    .select("id, name, role, active, pin_hash, sort_order")
+    .select("id, name, role, active, pin_hash, sort_order, web_token")
     .eq("client_id", clientId)
     .eq("role", "waiter")
     .not("pin_hash", "is", null);
@@ -53,16 +113,28 @@ function mapWaiterPublic(row) {
     name: row.name,
     active: row.active !== false,
     has_pin: Boolean(row.pin_hash),
+    web_token: row.web_token || null,
   };
 }
 
 async function listWaitersForOwner(clientId) {
+  await ensureAllWaiterWebTokens(clientId);
   const rows = await loadPinWaiters(clientId);
   return rows.map(mapWaiterPublic);
 }
 
-async function verifyWaiterPin(clientId, pin) {
+async function verifyWaiterPin(clientId, pin, webToken = null) {
   const normalized = assertPin(pin);
+  const token = String(webToken || "").trim();
+  if (token) {
+    const w = await getWaiterByWebToken(clientId, token);
+    if (!w) throw new Error("Linku i kamarierit nuk është i vlefshëm. Kopjoni linkun nga paneli.");
+    if (!w.pin_hash) throw new Error("Ky kamarier nuk ka PIN. Pronari e vendos te Kamarierët.");
+    if (!(await pinMatches(normalized, w.pin_hash))) {
+      throw new Error(`PIN i gabuar për ${w.name}.`);
+    }
+    return { id: w.id, name: w.name };
+  }
   const waiters = await loadPinWaiters(clientId, { activeOnly: true });
   if (!waiters.length) {
     throw new Error("Nuk ka kamarierë me PIN. Pronari i shton te Kamarierët.");
@@ -119,6 +191,7 @@ async function addWaiterWithPin(clientId, body) {
     .maybeSingle();
 
   const pin_hash = await hashPin(pin);
+  const web_token = generateWebToken();
   const { data, error } = await db
     .from("pos_staff")
     .insert({
@@ -127,10 +200,11 @@ async function addWaiterWithPin(clientId, body) {
       role: "waiter",
       source: "owner",
       pin_hash,
+      web_token,
       sort_order: (Number(last?.sort_order) || 0) + 1,
       active: true,
     })
-    .select("id, name, active, pin_hash")
+    .select("id, name, active, pin_hash, web_token")
     .single();
   if (error) {
     if (String(error.message || "").includes("unique")) {
@@ -202,4 +276,8 @@ module.exports = {
   addWaiterWithPin,
   updateWaiterWithPin,
   deleteWaiterWithPin,
+  getWaiterById,
+  getWaiterByWebToken,
+  ensureWaiterWebToken,
+  ensureAllWaiterWebTokens,
 };

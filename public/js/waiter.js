@@ -3,12 +3,16 @@
   const slug = parts[0] === "waiter" ? parts[1] : "";
   const urlParams = new URLSearchParams(window.location.search);
   const kitchenKey = urlParams.get("key") || "";
+  const waiterToken = urlParams.get("w") || "";
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
   const WAITER_IDLE_MS = 10000;
 
   function apiQuery() {
-    return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
+    const parts = [];
+    if (kitchenKey) parts.push(`key=${encodeURIComponent(kitchenKey)}`);
+    if (waiterToken) parts.push(`w=${encodeURIComponent(waiterToken)}`);
+    return parts.length ? `?${parts.join("&")}` : "";
   }
 
   function apiHeaders(extra = {}) {
@@ -138,10 +142,18 @@
   }
 
   async function loadBootstrap() {
-    if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...");
-    if (!kitchenKey) throw new Error("Mungon kodi i aksesit (?key=...) në link.");
+    if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...&w=...");
+    if (!kitchenKey) {
+      throw new Error("Mungon kodi i aksesit (?key=...) në link. Kopjoni linkun e plotë nga paneli → Kamarierët → Kopjo.");
+    }
     bootstrap = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
     applyBranding(bootstrap);
+    if (bootstrap.assigned_waiter?.name) {
+      const welcome = $("login-welcome");
+      const sub = $("login-sub");
+      if (welcome) welcome.textContent = `Mirë se vini, ${bootstrap.assigned_waiter.name}`;
+      if (sub) sub.textContent = "Shkruani PIN-in tuaj (4 shifra) — vetëm për ju";
+    }
     const hint = $("sync-hint");
     const parts = [];
     if (bootstrap.waiter_count != null) {
