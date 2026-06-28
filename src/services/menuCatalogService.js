@@ -43,6 +43,26 @@ function mapMenuItemForWeb(row) {
   };
 }
 
+function mapMenuItemForShop(row) {
+  const outOfStock = isOutOfStock(row);
+  const compareAt = row.compare_at_price != null ? Number(row.compare_at_price) : null;
+  const price = Number(row.price);
+  const onSale = compareAt != null && compareAt > price;
+  return {
+    id: row.local_id,
+    name: row.name,
+    description: String(row.description || "").trim(),
+    sku: String(row.sku || "").trim(),
+    category: String(row.category || "").trim(),
+    price,
+    compare_at_price: compareAt,
+    on_sale: onSale,
+    has_photo: Boolean(String(row.photo || "").trim()),
+    out_of_stock: outOfStock,
+    sold_out_label: outOfStock ? "Mbaroi" : null,
+  };
+}
+
 function mapMenuItemForKitchen(row, { slug, channel = "waiter" } = {}) {
   const item = mapMenuItemForWeb(row);
   if (item.has_photo && slug) {
@@ -81,7 +101,9 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
   const db = getSupabase();
   let menuQuery = db
     .from("pos_menu_items")
-    .select("local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold")
+    .select(
+      "local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold, description, sku, compare_at_price",
+    )
     .eq("client_id", clientId)
     .order("category")
     .order("name");
@@ -123,6 +145,27 @@ async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug =
   };
 }
 
+async function getClientShopCatalog(clientId, { activeOnly = true, pageSlug = "" } = {}) {
+  const { settings, categories, menu } = await loadMenuCatalogRows(clientId, { activeOnly });
+  const enc = pageSlug ? encodeURIComponent(pageSlug) : "";
+  const mapItem = row => {
+    const item = mapMenuItemForShop(row);
+    if (item.has_photo && enc) {
+      return {
+        ...item,
+        photo_url: `/api/s/${enc}/menu/${item.id}/photo`,
+      };
+    }
+    return item;
+  };
+  return {
+    shop_name: settings?.restaurant_name || "",
+    synced_at: settings?.synced_at || null,
+    categories: buildMenuCategories(categories, menu),
+    products: (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem),
+  };
+}
+
 async function getCatalogForPos(clientId) {
   const { settings, categories, menu, staff, areas } = await loadMenuCatalogRows(clientId, { activeOnly: false });
   return {
@@ -158,7 +201,9 @@ async function getCatalogForPos(clientId) {
 module.exports = {
   buildMenuCategories,
   mapMenuItemForWeb,
+  mapMenuItemForShop,
   mapMenuItemForKitchen,
   getClientMenuCatalog,
+  getClientShopCatalog,
   getCatalogForPos,
 };

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { getSupabase } = require("../db");
 const { featuresForTier } = require("./packages");
+const { isShopStorefront, storefrontPrefix } = require("./storefront");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -121,11 +122,17 @@ function buildClientWebLinks(baseUrl, client, packageTier) {
   }
   if (features.kiosk) links.kiosk_url = buildTableMenuUrl(base, client, 1);
   const slug = client.kitchen_slug || client.id;
+  const prefix = storefrontPrefix(client);
   if (features.website) {
-    links.public_page_url = `${base}/r/${encodeURIComponent(slug)}`;
+    links.public_page_url = `${base}/${prefix}/${encodeURIComponent(slug)}`;
+    if (isShopStorefront(client)) {
+      links.shop_page_url = links.public_page_url;
+    } else {
+      links.restaurant_page_url = links.public_page_url;
+    }
   }
   if (features.online_orders && slug) {
-    links.public_order_url = `${base}/r/${encodeURIComponent(slug)}/order`;
+    links.public_order_url = `${base}/${prefix}/${encodeURIComponent(slug)}/order`;
   }
   return links;
 }

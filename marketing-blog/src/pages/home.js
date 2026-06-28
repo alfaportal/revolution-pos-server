@@ -74,6 +74,61 @@ function howCard(imagePath, titleKey, descKey, manualHref) {
   `;
 }
 
+function spotlightVisual(variant) {
+  if (variant === "ai") {
+    return `
+      <div class="spotlight-mock spotlight-mock-ai" aria-hidden="true">
+        <div class="sm-top">
+          <span class="sm-dot"></span><span class="sm-dot"></span><span class="sm-dot"></span>
+        </div>
+        <div class="sm-kpis">
+          <div class="sm-kpi"><strong>98%</strong><span>Stok OK</span></div>
+          <div class="sm-kpi"><strong>AI</strong><span>Menu scan</span></div>
+          <div class="sm-kpi"><strong>€</strong><span>Fatura</span></div>
+        </div>
+        <div class="sm-bars">
+          <span style="--h:72%"></span><span style="--h:48%"></span><span style="--h:88%"></span><span style="--h:56%"></span>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="spotlight-mock spotlight-mock-platform" aria-hidden="true">
+      <div class="sm-phone">
+        <div class="sm-phone-screen">
+          <span class="sm-badge">/r/</span>
+          <span class="sm-line"></span><span class="sm-line sm-short"></span>
+          <div class="sm-grid-mini"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="sm-phone sm-phone-alt">
+        <div class="sm-phone-screen">
+          <span class="sm-badge sm-badge-shop">/s/</span>
+          <div class="sm-grid-mini sm-grid-shop"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function spotlightCard({ variant, categoryKey, titleKey, descKey, linkKey, href, imageSlug = "" }) {
+  const imgBlock = imageSlug
+    ? `<div class="spotlight-photo-fallback">${renderArticleImage(imageSlug, { className: "spotlight-img" })}</div>`
+    : "";
+  return `
+    <a class="spotlight-card spotlight-card-${variant}" href="${href}" data-navigate>
+      <div class="spotlight-photo">
+        ${spotlightVisual(variant)}
+        ${imgBlock}
+      </div>
+      <div class="spotlight-body">
+        <div class="spotlight-category">${t(categoryKey)}</div>
+        <h3 class="spotlight-title">${t(titleKey)}</h3>
+        <p class="spotlight-desc">${t(descKey)}</p>
+        <span class="spotlight-link">${t(linkKey)}</span>
+      </div>
+    </a>
+  `;
+}
+
 function bindPackageCards() {
   const cards = document.querySelectorAll(".package-card[data-package]");
   const detailPanel = document.getElementById("package-detail");
@@ -159,7 +214,7 @@ export function renderHome() {
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
             <a class="btn btn-hero-primary" href="#kontakt">${t("hero.cta.primary")}</a>
-            <a class="btn btn-hero-secondary" href="#si-funksionon">${t("hero.cta.secondary")}</a>
+            <a class="btn btn-hero-secondary" href="#veçorite">${t("hero.cta.secondary")}</a>
           </div>
           <div class="hero-stats" aria-label="Statistika">
             <span>${t("hero.stats.restaurants")}</span>
@@ -167,6 +222,34 @@ export function renderHome() {
             <span>${t("hero.stats.support")}</span>
             <span class="hero-stats-sep" aria-hidden="true">·</span>
             <span>${t("hero.stats.cloud")}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="site-section spotlight-section" id="veçorite">
+        <div class="container">
+          <div class="section-head">
+            <h2>${t("spotlight.title")}</h2>
+            <p>${t("spotlight.subtitle")}</p>
+          </div>
+          <div class="spotlight-grid">
+            ${spotlightCard({
+              variant: "ai",
+              categoryKey: "spotlight.card1.category",
+              titleKey: "spotlight.card1.title",
+              descKey: "spotlight.card1.desc",
+              linkKey: "spotlight.card1.link",
+              href: blogArticlePath("stoku-faturat-dhe-skanimi-me-ai"),
+              imageSlug: "stoku-faturat-dhe-skanimi-me-ai",
+            })}
+            ${spotlightCard({
+              variant: "platform",
+              categoryKey: "spotlight.card2.category",
+              titleKey: "spotlight.card2.title",
+              descKey: "spotlight.card2.desc",
+              linkKey: "spotlight.card2.link",
+              href: "#pakot",
+            })}
           </div>
         </div>
       </section>

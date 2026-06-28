@@ -131,7 +131,13 @@ async function loadClient() {
   const { client, links = {}, features = {} } = data;
   if (client) {
     document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
-    const typeLbl = client.tipi === "kafene" ? "Kafene" : client.tipi === "restorant" ? "Restorant" : "Lokali";
+    const typeLbl = client.tipi === "kafene"
+      ? "Kafene"
+      : client.tipi === "restorant"
+        ? "Restorant"
+        : client.tipi === "dyqan"
+          ? "Dyqan"
+          : "Lokali";
     document.getElementById("biz-sub").textContent =
       typeLbl + (client.adresa ? ` · ${client.adresa}` : "");
   } else {
@@ -1604,9 +1610,15 @@ function updatePublicLogoPreview(dataUrl) {
   }
 }
 
+let publicPageUrlPrefix = "/r/";
+
 function updatePublicSlugPreview(slug) {
   const preview = document.getElementById("public-slug-preview");
   if (preview) preview.textContent = slug || "slug";
+  const prefixEl = document.getElementById("public-slug-prefix");
+  if (prefixEl) prefixEl.textContent = publicPageUrlPrefix;
+  const pathEl = document.getElementById("public-slug-path");
+  if (pathEl) pathEl.textContent = publicPageUrlPrefix;
 }
 
 const PUBLIC_SLUG_CHARS_RE = /^[a-z0-9-]*$/;
@@ -1631,9 +1643,10 @@ function validatePublicSlugClient(raw) {
 
 function getPublicPageTargetUrl() {
   const slugInput = document.getElementById("public-page-slug")?.value;
+  const prefix = publicPageUrlPrefix || "/r/";
   try {
     const slug = validatePublicSlugClient(slugInput);
-    return `${window.location.origin}/r/${encodeURIComponent(slug)}`;
+    return `${window.location.origin}${prefix}${encodeURIComponent(slug)}`;
   } catch {
     const saved = document.getElementById("public-page-url")?.value?.trim();
     if (saved) return saved;
@@ -1690,6 +1703,7 @@ async function loadPublicPage() {
       }
     }
 
+    publicPageUrlPrefix = data.url_prefix || (data.storefront_type === "shop" ? "/s/" : "/r/");
     document.getElementById("public-enabled").checked = data.public_enabled !== false;
     document.getElementById("public-description").value = data.public_description || "";
     document.getElementById("public-theme").value = data.public_theme_color || "#c2410c";

@@ -450,7 +450,7 @@ async function createClient(body) {
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
 
-  const allowed = ["restorant", "kafene", "tjeter"];
+  const allowed = ["restorant", "kafene", "tjeter", "dyqan"];
   if (!allowed.includes(row.tipi)) {
     throw new Error(`Tipi i pavlefshëm: ${row.tipi}`);
   }
@@ -476,7 +476,7 @@ async function updateClient(id, body) {
     if (!patch.emri) throw new Error("Emri i klientit është i detyrueshëm.");
   }
   if (body.tipi != null) {
-    const allowed = ["restorant", "kafene", "tjeter"];
+    const allowed = ["restorant", "kafene", "tjeter", "dyqan"];
     if (!allowed.includes(body.tipi)) throw new Error(`Tipi i pavlefshëm: ${body.tipi}`);
     patch.tipi = body.tipi;
   }

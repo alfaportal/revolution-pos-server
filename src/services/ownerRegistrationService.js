@@ -44,12 +44,12 @@ async function registerOwnerWithCode(body, baseUrl) {
   }
   if (!bizEmri) throw new Error("Emri i kafenes/restorantit është i detyrueshëm.");
 
-  const allowedTipi = ["restorant", "kafene", "tjeter"];
+  const allowedTipi = ["restorant", "kafene", "tjeter", "dyqan"];
   if (!allowedTipi.includes(tipi)) {
-    throw new Error("Tipi i biznesit duhet të jetë restorant ose kafene.");
+    throw new Error("Tipi i biznesit duhet të jetë restorant, kafene ose dyqan.");
   }
 
-  const appType = tipi === "kafene" ? "kafene" : "restorant";
+  const appType = tipi === "kafene" ? "kafene" : tipi === "dyqan" ? "restorant" : "restorant";
 
   let client = null;
   let license = null;

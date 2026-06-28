@@ -28,6 +28,11 @@ const receiptRoutes = require("./routes/receipt");
 const fiscalRoutes = require("./routes/fiscal");
 const aiRoutes = require("./routes/ai");
 const { apiRouter: publicApiRouter, manifestHandler, serviceWorkerHandler } = require("./routes/public");
+const {
+  apiRouter: shopApiRouter,
+  shopManifestHandler,
+  shopServiceWorkerHandler,
+} = require("./routes/shop");
 const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
@@ -55,7 +60,7 @@ app.get("/health", (_req, res) => {
     ok: true,
     service: "revolution-pos-server",
     version: pkg.version || "1.0.0",
-    site_version: "2026-06-28-unified-home-v12",
+    site_version: "2026-06-28-spotlight-v13",
     git_commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || null,
     git_branch: process.env.RAILWAY_GIT_BRANCH || null,
     time: new Date().toISOString(),
@@ -87,6 +92,7 @@ app.use("/api/kiosk", kioskRoutes);
 app.use("/api/menu", tableMenuRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/r", publicApiRouter);
+app.use("/api/s", shopApiRouter);
 
 app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
@@ -183,6 +189,17 @@ app.get("/r/:slug", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/r.html"));
 });
 
+app.get("/s/:slug/manifest.json", shopManifestHandler);
+app.get("/s/:slug/sw.js", resolvePublicClient, shopServiceWorkerHandler);
+app.get("/s/:slug/order", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/s-order.html"));
+});
+app.get("/s/:slug", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/s.html"));
+});
+
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
   if (!res.headersSent) {
@@ -223,6 +240,18 @@ async function start() {
     console.warn("  ⚠️  Inventari schema:", formatError(e));
   }
 
+  try {
+    const { ensureShopSchema } = require("./lib/ensureShopSchema");
+    const shopOk = await ensureShopSchema();
+    if (shopOk) {
+      console.log("  ✅ Dyqani (026): tipi dyqan + fusha produktesh");
+    } else {
+      console.warn("  ⚠️  Dyqani: vendosni DATABASE_URL në Railway për auto-migrim 026");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  Dyqani schema:", formatError(e));
+  }
+
   startLicenseExpiryCron();
   startTrialNotificationCron();
 
@@ -241,6 +270,8 @@ async function start() {
     console.log(`  🪑 Kiosk vjetër: /kiosk/:slug?key=...&table=5`);
     console.log(`  🍽️  Restorant:   /r/:slug`);
     console.log(`  🛵 Porosi web:  /r/:slug/order`);
+    console.log(`  🛍️  Dyqani:      /s/:slug`);
+    console.log(`  📦 Porosi dyqan: /s/:slug/order`);
     console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);

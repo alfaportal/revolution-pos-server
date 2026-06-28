@@ -496,6 +496,7 @@ function openEditClient(id) {
     <select name="tipi">
       <option value="restorant" ${c.tipi === "restorant" ? "selected" : ""}>Restorant</option>
       <option value="kafene" ${c.tipi === "kafene" ? "selected" : ""}>Kafene</option>
+      <option value="dyqan" ${c.tipi === "dyqan" ? "selected" : ""}>Dyqan</option>
       <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
     </select>
     <label>Pakoja</label>

@@ -385,7 +385,7 @@
           <a class="btn btn-ghost btn-sm" id="btn-public-preview" href="#" target="_blank" rel="noopener">Shiko faqen</a>
         </div>
         <p class="links-hint">
-          Faqja publike shfaqet në <code>/r/:slug</code> — emri, logo, menuja nga POS. Butoni i porosive online shfaqet vetëm me <strong>Pako 4</strong>.
+          Faqja publike shfaqet në <code>/r/:slug</code> (restorant/kafene) ose <code>/s/:slug</code> (dyqan) — emri, logo, produktet nga POS. Porositë online kërkojnë <strong>Pako 4</strong>.
           Adresa dhe telefoni merren nga cilësimet e biznesit (POS / Super Admin).
         </p>
         <div id="public-page-upgrade" class="owner-license-msg err hidden"></div>
@@ -467,9 +467,9 @@
 
           <div class="public-page-slug-block" style="margin-top:1rem">
             <label for="public-page-slug">Slug i faqes publike</label>
-            <p class="links-hint">URL: <code>revolution-pos.com/r/<span id="public-slug-preview">slug</span></code> — vetëm a-z, 0-9 dhe vizë (-).</p>
+            <p class="links-hint" id="public-slug-url-hint">URL: <code>revolution-pos.com<span id="public-slug-path">/r/</span><span id="public-slug-preview">slug</span></code> — vetëm a-z, 0-9 dhe vizë (-).</p>
             <div class="link-actions public-slug-actions">
-              <span class="public-slug-prefix mono-input">/r/</span>
+              <span class="public-slug-prefix mono-input" id="public-slug-prefix">/r/</span>
               <input type="text" id="public-page-slug" class="mono-input" maxlength="48" autocomplete="off" spellcheck="false" placeholder="babylon-ferizaj">
               <button type="button" class="btn btn-primary btn-sm" id="btn-public-save-slug">Ruaj slug</button>
             </div>
@@ -485,7 +485,7 @@
 
           <div class="public-page-qr-block">
             <div class="card-title" style="font-size:0.95rem;margin-top:0.5rem">QR kodi i faqes publike</div>
-            <p class="links-hint">Klienti skanon → sheh menynë, orarin dhe kontaktin. Në fund: Powered by Revolution POS.</p>
+            <p class="links-hint">Klienti skanon → sheh produktet, kontaktin dhe ofertat. Në fund: Powered by Revolution POS.</p>
             <div class="public-page-qr-actions">
               <button type="button" class="btn btn-primary btn-sm" id="btn-public-generate-qr">Gjenero QR Kod</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-public-download-qr" disabled>Shkarko QR</button>

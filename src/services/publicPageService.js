@@ -2,8 +2,9 @@ const fs = require("fs");
 const path = require("path");
 const { getSupabase } = require("../db");
 const { getClientBySlugOrId, ensureKitchenCredentials } = require("../lib/kitchenAccess");
-const { getClientMenuCatalog } = require("./menuCatalogService");
+const { getClientMenuCatalog, getClientShopCatalog } = require("./menuCatalogService");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
+const { isShopStorefront, storefrontPrefix, buildStorefrontUrl } = require("../lib/storefront");
 const { qrPngBuffer, assertSameOriginUrl } = require("./qrService");
 const { getClientById } = require("./salesService");
 
@@ -158,12 +159,12 @@ function buildWhatsAppUrl(digits) {
   return `https://wa.me/${digits}`;
 }
 
-function galleryUrlsForSlug(pageSlug, count) {
+function galleryUrlsForSlug(pageSlug, count, apiPrefix = "r") {
   const enc = encodeURIComponent(pageSlug);
-  return Array.from({ length: count }, (_, i) => `/api/r/${enc}/gallery/${i}`);
+  return Array.from({ length: count }, (_, i) => `/api/${apiPrefix}/${enc}/gallery/${i}`);
 }
 
-function settingsProfileFields(settings, pageSlug) {
+function settingsProfileFields(settings, pageSlug, apiPrefix = "r") {
   const gallery = normalizeGallery(settings?.public_gallery);
   const reviews = normalizeReviews(settings?.public_reviews);
   const whatsapp = normalizeWhatsAppPhone(settings?.public_whatsapp);
@@ -171,10 +172,11 @@ function settingsProfileFields(settings, pageSlug) {
   const facebook = normalizeSocialUrl(settings?.public_social_facebook);
   const tiktok = normalizeSocialUrl(settings?.public_social_tiktok);
   const dailyOffer = String(settings?.public_daily_offer || "").trim().slice(0, MAX_DAILY_OFFER);
+  const enc = encodeURIComponent(pageSlug);
 
   return {
-    cover_url: settings?.public_cover ? `/api/r/${encodeURIComponent(pageSlug)}/cover` : null,
-    gallery_urls: gallery.length ? galleryUrlsForSlug(pageSlug, gallery.length) : [],
+    cover_url: settings?.public_cover ? `/api/${apiPrefix}/${enc}/cover` : null,
+    gallery_urls: gallery.length ? galleryUrlsForSlug(pageSlug, gallery.length, apiPrefix) : [],
     daily_offer: dailyOffer,
     reviews,
     social: {
@@ -214,6 +216,12 @@ async function loadSettings(clientId) {
 async function getPublicRestaurantPage(slug, baseUrl) {
   const client = await getClientBySlugOrId(slug);
   if (!client) return null;
+
+  if (isShopStorefront(client)) {
+    const err = new Error("Ky lokal ka webfaqe dyqani. Hapni faqen në /s/ slug.");
+    err.code = "WRONG_STOREFRONT";
+    throw err;
+  }
 
   if (!clientHasFeature(client, "website")) {
     const err = new Error(packageUpgradeMessage("website"));
@@ -262,7 +270,64 @@ async function getPublicRestaurantPage(slug, baseUrl) {
     })),
     order_url,
     public_url: `${base}/r/${encodeURIComponent(pageSlug)}`,
-    ...settingsProfileFields(settings, pageSlug),
+    ...settingsProfileFields(settings, pageSlug, "r"),
+  };
+}
+
+async function getPublicShopPage(slug, baseUrl) {
+  const client = await getClientBySlugOrId(slug);
+  if (!client) return null;
+
+  if (!isShopStorefront(client)) {
+    const err = new Error("Ky lokal ka faqe restoranti. Hapni faqen në /r/ slug.");
+    err.code = "WRONG_STOREFRONT";
+    throw err;
+  }
+
+  if (!clientHasFeature(client, "website")) {
+    const err = new Error(packageUpgradeMessage("website"));
+    err.code = "PACKAGE";
+    throw err;
+  }
+
+  const settings = await loadSettings(client.id);
+  if (settings?.public_enabled === false) return null;
+
+  const creds = await ensureKitchenCredentials(client);
+  const pageSlug = creds.kitchen_slug || client.id;
+  const catalog = await getClientShopCatalog(client.id, { activeOnly: true, pageSlug });
+
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  let order_url = null;
+  if (clientHasFeature(client, "online_orders")) {
+    order_url = `${base}/s/${encodeURIComponent(pageSlug)}/order`;
+  }
+
+  const name = String(settings?.restaurant_name || client.emri || "Dyqani").trim();
+  const hours = normalizeHours(settings?.public_hours);
+
+  const address = String(settings?.address || client.adresa || "").trim();
+  const mapsUrl = address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+    : null;
+
+  return {
+    slug: pageSlug,
+    storefront_type: "shop",
+    name,
+    description: String(settings?.public_description || "").trim(),
+    address,
+    maps_url: mapsUrl,
+    phone: String(settings?.phone || client.telefoni || "").trim(),
+    hours,
+    hours_display: formatHoursForDisplay(hours),
+    logo_url: settings?.public_logo ? `/api/s/${encodeURIComponent(pageSlug)}/logo` : null,
+    theme_color: String(settings?.public_theme_color || "#2563eb").trim(),
+    categories: catalog.categories,
+    products: catalog.products || [],
+    order_url,
+    public_url: `${base}/s/${encodeURIComponent(pageSlug)}`,
+    ...settingsProfileFields(settings, pageSlug, "s"),
   };
 }
 
@@ -280,16 +345,20 @@ async function getOwnerPublicPageSettings(clientId, baseUrl) {
   const creds = await ensureKitchenCredentials(client);
   const slug = creds.kitchen_slug || client.id;
   const base = String(baseUrl || "").replace(/\/+$/, "");
+  const prefix = storefrontPrefix(client);
+  const publicUrl = buildStorefrontUrl(base, creds) || `${base}/${prefix}/${encodeURIComponent(slug)}`;
 
   return {
     slug,
+    storefront_type: isShopStorefront(client) ? "shop" : "restaurant",
     public_enabled: settings?.public_enabled !== false,
     public_description: String(settings?.public_description || "").trim(),
     public_hours: normalizeHours(settings?.public_hours),
     has_logo: Boolean(settings?.public_logo),
     logo_preview: settings?.public_logo || null,
-    public_theme_color: String(settings?.public_theme_color || "#c2410c").trim(),
-    public_url: `${base}/r/${encodeURIComponent(slug)}`,
+    public_theme_color: String(settings?.public_theme_color || (prefix === "s" ? "#2563eb" : "#c2410c")).trim(),
+    public_url: publicUrl,
+    url_prefix: `/${prefix}/`,
     restaurant_name: String(settings?.restaurant_name || client.emri || "").trim(),
     address: String(settings?.address || client.adresa || "").trim(),
     phone: String(settings?.phone || client.telefoni || "").trim(),
@@ -377,6 +446,95 @@ async function updateOwnerPublicPageSettings(clientId, body) {
   if (error) throw error;
 
   return patch;
+}
+
+function buildShopManifest(page, baseUrl) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const slug = encodeURIComponent(page.slug);
+  const iconBase = `${base}/api/s/${slug}/logo`;
+  const icons = page.logo_url
+    ? [
+        { src: `${iconBase}?size=192`, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: `${iconBase}?size=512`, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: `${iconBase}?size=512`, sizes: "512x512", type: "image/png", purpose: "maskable" },
+      ]
+    : [
+        { src: `${base}/icons/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: `${base}/icons/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },
+      ];
+
+  return {
+    name: page.name,
+    short_name: page.name.slice(0, 24),
+    description: page.description || `Produktet e ${page.name}`,
+    start_url: `/s/${slug}`,
+    scope: `/s/${slug}/`,
+    display: "standalone",
+    orientation: "portrait-primary",
+    theme_color: page.theme_color,
+    background_color: "#f8fafc",
+    icons,
+  };
+}
+
+function buildShopServiceWorkerScript(slug) {
+  const encSlug = encodeURIComponent(slug);
+  const scope = `/s/${encSlug}/`;
+  return `/* PWA — ${scope} */
+const CACHE = "ri-shop-${encSlug}-v1";
+const PRECACHE = [
+  "/s/${encSlug}",
+  "/s/${encSlug}/order",
+  "/css/s.css",
+  "/js/s.js",
+  "/js/s-order.js",
+  "/icons/icon-192.png",
+];
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+    ).then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.startsWith("/s/") && !url.pathname.endsWith(".js")
+      && !url.pathname.endsWith(".json") && url.pathname !== "/css/s.css") {
+    e.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    e.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+  if (!url.pathname.startsWith("/s/") && !url.pathname.startsWith("/css/s.css")
+      && !url.pathname.startsWith("/js/s.js") && !url.pathname.startsWith("/js/s-order.js")
+      && !url.pathname.startsWith("/icons/")) {
+    return;
+  }
+  e.respondWith(
+    fetch(req).then((res) => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, clone));
+      }
+      return res;
+    }).catch(() => caches.match(req)),
+  );
+});
+`;
 }
 
 function buildManifest(page, baseUrl) {
@@ -557,7 +715,11 @@ async function prepareOwnerPublicPageClient(clientId) {
   return client;
 }
 
-function buildPublicPageUrl(baseUrl, slug) {
+function buildPublicPageUrl(baseUrl, client) {
+  return buildStorefrontUrl(baseUrl, client) || buildPublicPageUrlLegacy(baseUrl, client?.kitchen_slug || client?.id);
+}
+
+function buildPublicPageUrlLegacy(baseUrl, slug) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
   return `${base}/r/${encodeURIComponent(slug)}`;
 }
@@ -565,13 +727,12 @@ function buildPublicPageUrl(baseUrl, slug) {
 async function getOwnerPublicPageQr(clientId, baseUrl) {
   const client = await prepareOwnerPublicPageClient(clientId);
   const base = String(baseUrl || "").replace(/\/+$/, "");
-  const slug = client.kitchen_slug || client.id;
-  const url = buildPublicPageUrl(base, slug);
+  const url = buildPublicPageUrl(base, client);
   assertSameOriginUrl(url, base);
   const png = await qrPngBuffer(url, { width: 320 });
   const b64 = png.toString("base64");
   return {
-    slug,
+    slug: client.kitchen_slug || client.id,
     url,
     png_base64: b64,
     data_url: `data:image/png;base64,${b64}`,
@@ -633,10 +794,13 @@ module.exports = {
   normalizeHours,
   formatHoursForDisplay,
   getPublicRestaurantPage,
+  getPublicShopPage,
   getOwnerPublicPageSettings,
   updateOwnerPublicPageSettings,
   buildManifest,
+  buildShopManifest,
   buildServiceWorkerScript,
+  buildShopServiceWorkerScript,
   getLogoResponse,
   getCoverResponse,
   getGalleryPhotoResponse,
