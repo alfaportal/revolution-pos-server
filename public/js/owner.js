@@ -1936,6 +1936,195 @@ document.getElementById("btn-public-copy-url")?.addEventListener("click", async 
   }
 });
 
+let reservationsCache = [];
+let reservationsTableCount = 10;
+let reservationsFilter = "today";
+
+function isoDateOffset(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function reservationStatusLabel(status) {
+  if (status === "confirmed") return "Konfirmuar";
+  if (status === "cancelled") return "Anuluar";
+  return "Në pritje";
+}
+
+function setReservationsMsg(text, ok) {
+  const msg = document.getElementById("reservations-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function setReservationModalMsg(text, ok) {
+  const msg = document.getElementById("reservation-modal-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function reservationQueryForFilter(filter) {
+  if (filter === "tomorrow") {
+    const d = isoDateOffset(1);
+    return { date: d };
+  }
+  if (filter === "week") {
+    return { from: isoDateOffset(0), to: isoDateOffset(6) };
+  }
+  return { date: isoDateOffset(0) };
+}
+
+function renderReservationsList() {
+  const list = document.getElementById("reservations-list");
+  if (!list) return;
+  if (!reservationsCache.length) {
+    list.innerHTML = '<p class="links-hint">Nuk ka rezervime për këtë periudhë.</p>';
+    return;
+  }
+  list.innerHTML = reservationsCache.map(r => {
+    const actions = r.status === "cancelled"
+      ? ""
+      : `<div class="reservation-actions">
+          ${r.status === "pending"
+        ? `<button type="button" class="btn btn-primary btn-sm" data-res-confirm="${r.id}">Konfirmo</button>`
+        : ""}
+          <button type="button" class="btn btn-ghost btn-sm" data-res-cancel="${r.id}">Anulo</button>
+        </div>`;
+    return `
+      <article class="reservation-card reservation-${r.status}">
+        <div class="reservation-card-head">
+          <strong>T${r.table_number} · ${escapeHtml(r.customer_name)}</strong>
+          <span class="reservation-status reservation-status-${r.status}">${reservationStatusLabel(r.status)}</span>
+        </div>
+        <div class="reservation-card-meta">
+          <span>${fmtDateSq(r.date)} · ${escapeHtml(String(r.time).slice(0, 5))}</span>
+          <span>${r.guests} persona</span>
+          ${r.customer_phone ? `<span>${escapeHtml(r.customer_phone)}</span>` : ""}
+        </div>
+        ${r.notes ? `<p class="reservation-notes">${escapeHtml(r.notes)}</p>` : ""}
+        ${actions}
+      </article>`;
+  }).join("");
+
+  list.querySelectorAll("[data-res-confirm]").forEach(btn => {
+    btn.addEventListener("click", () => updateReservationStatus(btn.dataset.resConfirm, "confirmed"));
+  });
+  list.querySelectorAll("[data-res-cancel]").forEach(btn => {
+    btn.addEventListener("click", () => updateReservationStatus(btn.dataset.resCancel, "cancelled"));
+  });
+}
+
+function fmtDateSq(iso) {
+  const [y, m, d] = String(iso || "").split("-");
+  if (!y) return iso;
+  return `${d}.${m}.${y}`;
+}
+
+function escapeHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function loadReservations() {
+  setReservationsMsg("Duke ngarkuar…", true);
+  try {
+    const q = reservationQueryForFilter(reservationsFilter);
+    const params = new URLSearchParams(q);
+    const data = await api(`/api/owner/reservations?${params}`);
+    reservationsCache = data.reservations || [];
+    reservationsTableCount = Number(data.table_count) || reservationsTableCount;
+    renderReservationsList();
+    setReservationsMsg("", true);
+  } catch (err) {
+    setReservationsMsg(err.message, false);
+  }
+}
+
+function populateReservationTableSelect() {
+  const sel = document.getElementById("reservation-table");
+  if (!sel) return;
+  const count = Math.max(1, reservationsTableCount || 10);
+  sel.innerHTML = Array.from({ length: count }, (_, i) => {
+    const n = i + 1;
+    return `<option value="${n}">T${n}</option>`;
+  }).join("");
+}
+
+function openReservationModal() {
+  populateReservationTableSelect();
+  document.getElementById("reservation-customer-name").value = "";
+  document.getElementById("reservation-customer-phone").value = "";
+  document.getElementById("reservation-guests").value = "2";
+  document.getElementById("reservation-date").value = isoDateOffset(0);
+  document.getElementById("reservation-time").value = "19:00";
+  document.getElementById("reservation-notes").value = "";
+  setReservationModalMsg("");
+  document.getElementById("reservation-modal")?.classList.remove("hidden");
+}
+
+function closeReservationModal() {
+  document.getElementById("reservation-modal")?.classList.add("hidden");
+}
+
+async function saveReservationFromModal() {
+  const btn = document.getElementById("btn-reservation-save");
+  if (btn) btn.disabled = true;
+  setReservationModalMsg("Duke ruajtur…", true);
+  try {
+    await api("/api/owner/reservations", {
+      method: "POST",
+      body: JSON.stringify({
+        customer_name: document.getElementById("reservation-customer-name")?.value?.trim(),
+        customer_phone: document.getElementById("reservation-customer-phone")?.value?.trim(),
+        table_number: Number(document.getElementById("reservation-table")?.value),
+        date: document.getElementById("reservation-date")?.value,
+        time: document.getElementById("reservation-time")?.value,
+        guests: Number(document.getElementById("reservation-guests")?.value) || 2,
+        notes: document.getElementById("reservation-notes")?.value?.trim(),
+      }),
+    });
+    closeReservationModal();
+    await loadReservations();
+    setReservationsMsg("Rezervimi u shtua.", true);
+  } catch (err) {
+    setReservationModalMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function updateReservationStatus(id, status) {
+  const label = status === "confirmed" ? "konfirmuar" : "anuluar";
+  if (!confirm(`Të ${label} ky rezervim?`)) return;
+  setReservationsMsg(`Duke ${label}…`, true);
+  try {
+    await api(`/api/owner/reservations/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    await loadReservations();
+    setReservationsMsg(`Rezervimi u ${label}.`, true);
+  } catch (err) {
+    setReservationsMsg(err.message, false);
+  }
+}
+
+document.getElementById("btn-reservation-add")?.addEventListener("click", openReservationModal);
+document.getElementById("reservation-modal-close")?.addEventListener("click", closeReservationModal);
+document.getElementById("reservation-modal-backdrop")?.addEventListener("click", closeReservationModal);
+document.getElementById("btn-reservation-save")?.addEventListener("click", saveReservationFromModal);
+
+document.querySelectorAll(".reservation-filter").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".reservation-filter").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    reservationsFilter = btn.dataset.resFilter || "today";
+    loadReservations().catch(() => {});
+  });
+});
+
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -1949,6 +2138,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "stoku" && typeof loadOwnerStock === "function") loadOwnerStock();
     if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
+    if (tab.dataset.tab === "rezervime") loadReservations();
     if (tab.dataset.tab === "qr-tavolinat") loadTableQrPanel();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "faqja") loadPublicPage();

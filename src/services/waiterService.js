@@ -11,6 +11,10 @@ const {
 } = require("./venueService");
 const { resolveWaiterForOrder } = require("./waiterPinService");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
+const {
+  listWaiterReservations,
+  attachReservationsToLayout,
+} = require("./reservationService");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const WEB_DEVICE = WEB_WAITER;
@@ -138,6 +142,8 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     });
   }
   const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
+  const reservations = await listWaiterReservations(clientId);
+  const layoutWithReservations = attachReservationsToLayout(layout, reservations);
   const pinWaiters = await loadPinWaitersCount(clientId);
   const branding = await getStaffBrandingForClient(client, kitchenSlug);
 
@@ -147,14 +153,15 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     address: branding.address,
     logo_url: branding.logo_url,
     revolution_logo_url: branding.revolution_logo_url,
-    table_count: layout.table_count,
+    table_count: layoutWithReservations.table_count,
     synced_at: settings?.synced_at || null,
     pin_auth: true,
     waiter_count: pinWaiters,
     categories: buildMenuCategories(categories, menu),
     menu: (menu || []).filter(isVisibleOnWebMenu).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
-    areas: layout.areas,
-    tables: layout.tables,
+    areas: layoutWithReservations.areas,
+    tables: layoutWithReservations.tables,
+    reservations,
     assigned_waiter,
   };
 }

@@ -84,6 +84,7 @@
       <button class="tab" data-tab="katalogu">Katalogu</button>
       <button class="tab" data-tab="qr-tavolinat">Tavolinat &amp; QR Kodet</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
+      <button class="tab" data-tab="rezervime">Rezervime</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
       <button class="tab" data-tab="faqja">Faqja publike</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
@@ -272,6 +273,23 @@
             <tbody id="waiters-body"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="panel-rezervime" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Rezervime tavolinash</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-reservation-add">Shto rezervim</button>
+        </div>
+        <p class="links-hint">Menaxhoni rezervimet — kamarieri sheh tavolinat e rezervuara me 🔒 dhe merr njoftim 15 min para orës.</p>
+        <div class="reservation-filter-row">
+          <button type="button" class="btn btn-ghost btn-sm reservation-filter active" data-res-filter="today">Sot</button>
+          <button type="button" class="btn btn-ghost btn-sm reservation-filter" data-res-filter="tomorrow">Nesër</button>
+          <button type="button" class="btn btn-ghost btn-sm reservation-filter" data-res-filter="week">Java</button>
+        </div>
+        <div id="reservations-msg" class="owner-license-msg"></div>
+        <div id="reservations-list" class="reservations-list"></div>
       </div>
     </div>
 
@@ -610,6 +628,50 @@
     </div>
   </div>
 
+  <div id="reservation-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reservation-modal-title">
+    <div class="owner-modal-backdrop" id="reservation-modal-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="reservation-modal-title">Shto rezervim</h2>
+        <button type="button" class="owner-modal-close" id="reservation-modal-close" aria-label="Mbyll">×</button>
+      </div>
+      <div class="hub-fiscal-field">
+        <label for="reservation-customer-name">Emri i klientit</label>
+        <input type="text" id="reservation-customer-name" maxlength="120" placeholder="p.sh. Arben Krasniqi">
+      </div>
+      <div class="hub-fiscal-field">
+        <label for="reservation-customer-phone">Telefoni</label>
+        <input type="tel" id="reservation-customer-phone" maxlength="40" placeholder="+383 44 123 456">
+      </div>
+      <div class="filter-row menu-add-row">
+        <div>
+          <label for="reservation-table">Tavolina</label>
+          <select id="reservation-table"></select>
+        </div>
+        <div>
+          <label for="reservation-guests">Persona</label>
+          <input type="number" id="reservation-guests" min="1" max="50" value="2">
+        </div>
+      </div>
+      <div class="filter-row menu-add-row">
+        <div>
+          <label for="reservation-date">Data</label>
+          <input type="date" id="reservation-date">
+        </div>
+        <div>
+          <label for="reservation-time">Ora</label>
+          <input type="time" id="reservation-time" value="19:00">
+        </div>
+      </div>
+      <div class="hub-fiscal-field">
+        <label for="reservation-notes">Shënime</label>
+        <textarea id="reservation-notes" rows="2" maxlength="500" placeholder="p.sh. ditëlindje, allergji…"></textarea>
+      </div>
+      <div id="reservation-modal-msg" class="owner-license-msg"></div>
+      <button type="button" class="btn btn-primary" id="btn-reservation-save">Ruaj rezervimin</button>
+    </div>
+  </div>
+
   <div id="menu-scan-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="menu-scan-title">
     <div class="owner-modal-backdrop" id="menu-scan-backdrop"></div>
     <div class="owner-modal-card">
@@ -678,7 +740,7 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=22"></script>
+  <script src="/js/owner.js?v=23"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=1"></script>
 </body>

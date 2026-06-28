@@ -63,6 +63,12 @@ const {
   getOwnerPublicPageQrPng,
 } = require("../services/publicPageService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const {
+  listOwnerReservations,
+  createOwnerReservation,
+  updateOwnerReservationStatus,
+  getMaxTableNumber,
+} = require("../services/reservationService");
 
 const router = express.Router();
 
@@ -598,6 +604,42 @@ router.patch("/public-page", async (req, res) => {
     const base = getPublicAppOrigin();
     const settings = await getOwnerPublicPageSettings(req.user.client_id, base);
     res.json({ ok: true, ...settings });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/reservations", async (req, res) => {
+  try {
+    const rows = await listOwnerReservations(req.user.client_id, {
+      date: req.query.date,
+      from: req.query.from,
+      to: req.query.to,
+    });
+    const table_count = await getMaxTableNumber(req.user.client_id);
+    res.json({ ok: true, reservations: rows, table_count });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.post("/reservations", async (req, res) => {
+  try {
+    const reservation = await createOwnerReservation(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, reservation });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/reservations/:id", async (req, res) => {
+  try {
+    const reservation = await updateOwnerReservationStatus(
+      req.user.client_id,
+      req.params.id,
+      req.body?.status,
+    );
+    res.json({ ok: true, reservation });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }

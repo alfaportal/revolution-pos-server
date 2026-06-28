@@ -44,6 +44,8 @@
   let cartLinesBound = false;
   let groupBarBound = false;
   let idleTimer = null;
+  const reservationNotified = new Set();
+  let reservationCheckTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -439,13 +441,52 @@
   }
 
   function renderTableCard(t) {
+    const reserved = Boolean(t.reserved || t.reservation);
+    const lock = reserved ? '<span class="table-reserve-icon" aria-hidden="true">🔒</span>' : "";
+    const reserveMeta = t.reservation
+      ? `<br><span class="table-reserve-meta">${escapeHtml(t.reservation.time)} · ${t.reservation.guests}p</span>`
+      : "";
+    const cardClass = [t.status, reserved ? "reserved" : ""].filter(Boolean).join(" ");
     return `
-      <button type="button" class="table-card ${t.status}" data-table="${t.number}">
-        <div class="num">T${t.number}</div>
+      <button type="button" class="table-card ${cardClass}" data-table="${t.number}">
+        <div class="num">T${t.number}${lock}</div>
         <div class="meta">${t.status === "occupied"
           ? `${escapeHtml(t.waiter_name || "E zënë")}<br>${formatEuro(t.order_total || 0)}`
-          : "E lirë"}</div>
+          : reserved
+            ? `Rezervuar${reserveMeta}`
+            : "E lirë"}</div>
       </button>`;
+  }
+
+  function reservationDateTimeMs(r) {
+    if (!r?.date || !r?.time) return NaN;
+    return new Date(`${r.date}T${String(r.time).slice(0, 5)}:00`).getTime();
+  }
+
+  function checkReservationReminders() {
+    const rows = bootstrap?.reservations || [];
+    if (!rows.length || !activeWaiter) return;
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000;
+    for (const r of rows) {
+      if (reservationNotified.has(r.id)) continue;
+      if (r.status === "cancelled") continue;
+      const at = reservationDateTimeMs(r);
+      if (!Number.isFinite(at)) continue;
+      const diff = at - now;
+      if (diff > 0 && diff <= windowMs) {
+        reservationNotified.add(r.id);
+        showSuccessToast(
+          `🔒 Rezervim T${r.table_number}: ${r.customer_name} om ${String(r.time).slice(0, 5)} (${r.guests} persona)`,
+        );
+      }
+    }
+  }
+
+  function setupReservationReminders() {
+    if (reservationCheckTimer) clearInterval(reservationCheckTimer);
+    checkReservationReminders();
+    reservationCheckTimer = setInterval(checkReservationReminders, 60000);
   }
 
   function bindTableCards(root) {
@@ -572,6 +613,7 @@
     saveWaiterSession();
     $("tables-waiter").textContent = `Kamarieri: ${waiter.name}`;
     renderTables();
+    setupReservationReminders();
     scheduleIdleLock();
     showScreen("screen-tables");
   }
@@ -718,6 +760,7 @@
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/bootstrap${apiQuery()}`);
       bootstrap.tables = data.tables;
       bootstrap.areas = data.areas;
+      bootstrap.reservations = data.reservations || [];
       bootstrap.synced_at = data.synced_at;
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;
@@ -730,6 +773,7 @@
         renderMenu();
       }
       renderTables();
+      checkReservationReminders();
     } catch { /* ignore background refresh */ }
   }
 
@@ -994,6 +1038,7 @@
   setupDesktopReturn();
   setupConnectionStatus();
   registerServiceWorker();
+  setupReservationReminders();
   bindTap($("btn-send"), submitOrder);
   $("btn-cancel-order")?.addEventListener("click", cancelPendingOrder);
 

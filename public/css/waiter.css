@@ -255,6 +255,18 @@ html, body {
 
 .table-card.free { border-color: var(--ok); }
 .table-card.occupied { border-color: var(--warn); background: #422006; }
+.table-card.reserved { border-color: #6366f1; box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35); }
+.table-card.reserved.free { background: #1e1b4b; }
+
+.table-reserve-icon {
+  margin-left: 0.15rem;
+  font-size: 0.85em;
+}
+
+.table-reserve-meta {
+  font-size: 0.72rem;
+  color: #a5b4fc;
+}
 
 .table-card .num {
   font-size: 1.75rem;
