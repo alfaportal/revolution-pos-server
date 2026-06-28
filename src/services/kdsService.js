@@ -41,14 +41,16 @@ async function getClientForKitchen(clientId) {
   return client;
 }
 
-/** Banak — të gjitha porositë aktive (QR, kamarier, online, POS) */
+/** Banak — porosi QR, kamarier, online, POS (rruga /kitchen/ në link) */
 async function listBarOrders(clientId) {
-  return fetchOrderedSales(clientId);
+  const orders = await fetchOrderedSales(clientId);
+  return orders.filter(isBanakOrder);
 }
 
-/** Kuzhina — e njëjta listë (kafene: banak + kuzhinë shfaqin porositë; filtrimi i ushqimit më vonë) */
+/** Kuzhina — vetëm porosi ushqimi (rruga /bar/ në link) */
 async function listKitchenOrders(clientId) {
-  return fetchOrderedSales(clientId);
+  const orders = await fetchOrderedSales(clientId);
+  return orders.filter(o => !isBanakOrder(o));
 }
 
 async function markKitchenOrderReady(clientId, orderId) {
@@ -92,7 +94,8 @@ async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
 }
 
 async function listBarCancelledOrders(clientId, windowSec = 30) {
-  return listRecentlyCancelledOrders(clientId, windowSec);
+  const orders = await listRecentlyCancelledOrders(clientId, windowSec);
+  return orders.filter(isBanakOrder);
 }
 
 module.exports = {

@@ -614,7 +614,8 @@ function openEditClient(id) {
 function clientAccessLink(client, kind, extraQuery = "") {
   const slug = client?.kitchen_slug || client?.id || "";
   const key = client?.kitchen_key || "";
-  const base = `${publicOrigin()}/${kind}/${encodeURIComponent(slug)}`;
+  const pathKind = kind === "bar" ? "kitchen" : kind === "kitchen" ? "bar" : kind;
+  const base = `${publicOrigin()}/${pathKind}/${encodeURIComponent(slug)}`;
   const q = `key=${encodeURIComponent(key)}${extraQuery ? `&${extraQuery}` : ""}`;
   return `${base}?${q}`;
 }
@@ -639,12 +640,12 @@ function waiterLink(clientId) {
 
 function kitchenLink(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c ? clientAccessLink(c, "kitchen") : `${publicOrigin()}/kitchen/${clientId}`;
+  return c ? clientAccessLink(c, "kitchen") : `${publicOrigin()}/bar/${clientId}`;
 }
 
 function barLink(clientId) {
   const c = clientsCache.find(x => x.id === clientId);
-  return c ? clientAccessLink(c, "bar") : `${publicOrigin()}/bar/${clientId}`;
+  return c ? clientAccessLink(c, "bar") : `${publicOrigin()}/kitchen/${clientId}`;
 }
 
 function kioskTableLink(clientId, table = 1) {

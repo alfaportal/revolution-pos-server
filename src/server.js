@@ -217,8 +217,8 @@ async function start() {
     console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
     console.log(`  🏠 Website:     /  (revolution-pos.com)`);
     console.log(`  🏪 Pronarët:    /owner/login`);
-    console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...`);
-    console.log(`  🍹 Banak:       /bar/:slug?key=...`);
+    console.log(`  🍹 Banak:       /kitchen/:slug?key=...  (porosi tavolinë/online/POS)`);
+    console.log(`  🍳 Kuzhina KDS:  /bar/:slug?key=...  (ushqim)`);
     console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
     console.log(`  🪑 Tavolinë:    /menu/:slug/:tableNumber  (QR publike)`);
     console.log(`  🪑 Kiosk vjetër: /kiosk/:slug?key=...&table=5`);

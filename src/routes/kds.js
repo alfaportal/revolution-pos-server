@@ -14,8 +14,8 @@ router.get("/:slug/events", resolveKitchenClient, requirePackageFeature("kds"), 
 router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    const orders = await listBarOrders(client.id);
-    const cancelled = await listBarCancelledOrders(client.id);
+    const orders = await listKitchenOrders(client.id);
+    const cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
     res.json({
       ok: true,
@@ -33,8 +33,8 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
 router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    const orders = await listKitchenOrders(client.id);
-    const cancelled = await listRecentlyCancelledOrders(client.id);
+    const orders = await listBarOrders(client.id);
+    const cancelled = await listBarCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
     res.json({
       ok: true,
