@@ -25,6 +25,7 @@ const tableMenuRoutes = require("./routes/tableMenu");
 const posRoutes = require("./routes/pos");
 const receiptRoutes = require("./routes/receipt");
 const fiscalRoutes = require("./routes/fiscal");
+const aiRoutes = require("./routes/ai");
 const { apiRouter: publicApiRouter, manifestHandler, serviceWorkerHandler } = require("./routes/public");
 const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
@@ -82,6 +83,7 @@ app.use("/api/kds", kdsRoutes);
 app.use("/api/waiter", waiterRoutes);
 app.use("/api/kiosk", kioskRoutes);
 app.use("/api/menu", tableMenuRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/r", publicApiRouter);
 
 app.get("/panel.html", (_req, res) => {
@@ -230,6 +232,7 @@ async function start() {
     console.log(`  📊 Sales sync:  POST /api/v1/sales/sync`);
     console.log(`  🧾 Fiscal pay:  POST /api/v1/fiscal/pay`);
     console.log(`  📋 Z-Report:    GET /api/owner/z-report`);
+    console.log(`  🤖 AI chat:     POST /api/ai/chat`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }
