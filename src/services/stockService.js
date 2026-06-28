@@ -359,4 +359,5 @@ module.exports = {
   deductStockForOrder,
   listStockAlertsForAdmin,
   countStockAlertClients,
+  matchMenuItemForOrder,
 };

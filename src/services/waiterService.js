@@ -227,6 +227,13 @@ async function submitWaiterOrder(clientId, body) {
     console.warn("[stock] waiter deduct failed:", err.message);
   }
 
+  try {
+    const { deductIngredientsForOrder } = require("./inventoryService");
+    await deductIngredientsForOrder(clientId, newItems);
+  } catch (err) {
+    console.warn("[inventory] waiter deduct failed:", err.message);
+  }
+
   return { ok: true, order: sale, sent_to: "bar", waiter };
 }
 

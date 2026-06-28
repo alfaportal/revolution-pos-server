@@ -169,7 +169,36 @@
 
     <div id="panel-stoku" class="panel-section hidden">
       <div class="card">
-        <div class="card-title">Menaxhimi i stokut</div>
+        <div class="card-title card-title-row">
+          <span>Përbërësit (inventari)</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-ingredient-add">Shto përbërës</button>
+        </div>
+        <p class="links-hint">
+          Menaxhoni përbërësit e kuzhinës (miell, vaj, pije…). Kur konfirmohet porosi, stoku zbritet automatikisht
+          sipas recetës (<code>menu_ingredients</code>). Rreshtat e kuq = nën minimum.
+        </p>
+        <div id="inventory-alerts" class="inventory-alerts hidden"></div>
+        <div id="inventory-msg" class="owner-license-msg"></div>
+        <div class="overflow-x">
+          <table class="menu-owner-table inventory-owner-table">
+            <thead>
+              <tr>
+                <th>Përbërësi</th>
+                <th>Njësia</th>
+                <th>Sasia</th>
+                <th>Minimum</th>
+                <th>Kosto/njësi</th>
+                <th>Statusi</th>
+                <th class="col-actions">Veprime</th>
+              </tr>
+            </thead>
+            <tbody id="ingredients-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Stoku i artikujve të menusë</div>
         <p class="links-hint">
           Aktivizoni ndjekjen e stokut për artikujt që dëshironi të kontrolloni.
           Artikujt me stok 0 fshihen automatikisht nga menuja e kamarierit/kioskut.
@@ -628,6 +657,46 @@
     </div>
   </div>
 
+  <div id="ingredient-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="ingredient-modal-title">
+    <div class="owner-modal-backdrop" id="ingredient-modal-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="ingredient-modal-title">Shto përbërës</h2>
+        <button type="button" class="owner-modal-close" id="ingredient-modal-close" aria-label="Mbyll">×</button>
+      </div>
+      <div class="hub-fiscal-field">
+        <label for="ingredient-name">Emri</label>
+        <input type="text" id="ingredient-name" maxlength="120" placeholder="p.sh. Miell">
+      </div>
+      <div class="filter-row menu-add-row">
+        <div>
+          <label for="ingredient-unit">Njësia</label>
+          <select id="ingredient-unit">
+            <option value="kg">kg</option>
+            <option value="l">l</option>
+            <option value="copë">copë</option>
+          </select>
+        </div>
+        <div>
+          <label for="ingredient-guests">Sasia fillestare</label>
+          <input type="number" id="ingredient-quantity" min="0" step="0.001" value="0">
+        </div>
+      </div>
+      <div class="filter-row menu-add-row">
+        <div>
+          <label for="ingredient-min">Minimum (alarm)</label>
+          <input type="number" id="ingredient-min" min="0" step="0.001" value="5">
+        </div>
+        <div>
+          <label for="ingredient-cost">Kosto / njësi (€)</label>
+          <input type="number" id="ingredient-cost" min="0" step="0.01" value="0">
+        </div>
+      </div>
+      <div id="ingredient-modal-msg" class="owner-license-msg"></div>
+      <button type="button" class="btn btn-primary" id="btn-ingredient-save">Ruaj përbërësin</button>
+    </div>
+  </div>
+
   <div id="reservation-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reservation-modal-title">
     <div class="owner-modal-backdrop" id="reservation-modal-backdrop"></div>
     <div class="owner-modal-card">
@@ -740,8 +809,9 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=23"></script>
+  <script src="/js/owner.js?v=24"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
-  <script src="/js/owner-stock.js?v=1"></script>
+  <script src="/js/owner-stock.js?v=2"></script>
+  <script src="/js/owner-inventory.js?v=1"></script>
 </body>
 </html>

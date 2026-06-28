@@ -1,5 +1,5 @@
 /* PWA vetëm për pronarët — scope /owner/ */
-const CACHE_NAME = "ri-pos-owner-v5";
+const CACHE_NAME = "ri-pos-owner-v6";
 const PRECACHE = [
   "/owner/panel",
   "/owner/login",
@@ -11,6 +11,8 @@ const PRECACHE = [
   "/js/offlineQueue.js",
   "/js/qrcode.js",
   "/js/owner.js",
+  "/js/owner-stock.js",
+  "/js/owner-inventory.js",
 ];
 
 self.addEventListener("install", (event) => {

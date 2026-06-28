@@ -69,6 +69,12 @@ const {
   updateOwnerReservationStatus,
   getMaxTableNumber,
 } = require("../services/reservationService");
+const {
+  listIngredients,
+  listInventoryAlerts,
+  createIngredient,
+  updateIngredient,
+} = require("../services/inventoryService");
 
 const router = express.Router();
 
@@ -365,6 +371,42 @@ router.post("/stock/:id/restock", async (req, res) => {
     const add = req.body.add ?? req.body.quantity ?? req.body.qty;
     const result = await restockItem(req.user.client_id, req.params.id, add);
     res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/ingredients", async (req, res) => {
+  try {
+    const ingredients = await listIngredients(req.user.client_id);
+    res.json({ ok: true, ingredients });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.post("/ingredients", async (req, res) => {
+  try {
+    const ingredient = await createIngredient(req.user.client_id, req.body);
+    res.status(201).json({ ok: true, ingredient });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/ingredients/:id", async (req, res) => {
+  try {
+    const ingredient = await updateIngredient(req.user.client_id, req.params.id, req.body);
+    res.json({ ok: true, ingredient });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/inventory/alerts", async (req, res) => {
+  try {
+    const alerts = await listInventoryAlerts(req.user.client_id);
+    res.json({ ok: true, alerts, count: alerts.length });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }

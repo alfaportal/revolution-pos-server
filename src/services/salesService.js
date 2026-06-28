@@ -187,6 +187,12 @@ async function syncSaleFromPos(body) {
     } catch (err) {
       console.warn("[stock] POS deduct failed:", err.message);
     }
+    try {
+      const { deductIngredientsForOrder } = require("./inventoryService");
+      await deductIngredientsForOrder(sale.client_id, sale.items_json || body.items);
+    } catch (err) {
+      console.warn("[inventory] POS deduct failed:", err.message);
+    }
   }
   const receipt = await buildSaleReceipt(sale, body);
   return { sale, receipt };

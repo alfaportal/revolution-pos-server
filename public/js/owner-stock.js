@@ -21,8 +21,11 @@
     const badge = document.getElementById("tab-stoku-badge");
     if (!badge) return;
     const count = Number(summary?.alert_count) || 0;
-    if (count > 0) {
-      badge.textContent = String(count);
+    badge.dataset.menuAlerts = String(count);
+    const invAlerts = Number(badge.dataset.invAlerts) || 0;
+    const total = count + invAlerts;
+    if (total > 0) {
+      badge.textContent = String(total);
       badge.classList.remove("hidden");
     } else {
       badge.textContent = "";

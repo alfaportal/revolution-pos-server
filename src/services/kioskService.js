@@ -59,6 +59,13 @@ async function submitKioskOrder(client, body) {
     console.warn("[stock] kiosk deduct failed:", err.message);
   }
 
+  try {
+    const { deductIngredientsForOrder } = require("./inventoryService");
+    await deductIngredientsForOrder(client.id, newItems);
+  } catch (err) {
+    console.warn("[inventory] kiosk deduct failed:", err.message);
+  }
+
   return {
     ok: true,
     order: sale,
