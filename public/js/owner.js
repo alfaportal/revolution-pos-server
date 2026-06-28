@@ -139,9 +139,9 @@ async function loadClient() {
   }
 
   const rows = [
+    ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar || data.bar_url],
     ["owner-link-waiter-row", "owner-waiter-url", features.waiter, links.waiter || data.waiter_url],
     ["owner-link-kitchen-row", "owner-kitchen-url", features.kds, links.kitchen || data.kitchen_url],
-    ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar],
     ["owner-link-kiosk-row", "owner-kiosk-url", features.kiosk, links.kiosk],
     ["owner-link-public-row", "owner-public-url", features.website, links.public_page],
   ];

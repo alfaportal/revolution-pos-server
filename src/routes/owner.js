@@ -103,6 +103,7 @@ router.get("/client", async (req, res) => {
       links,
       waiter_url: links.waiter || null,
       kitchen_url: links.kitchen || null,
+      bar_url: links.bar || null,
     });
   } catch (e) {
     res.status(500).json({ gabim: e.message });

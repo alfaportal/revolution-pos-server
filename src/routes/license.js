@@ -5,9 +5,9 @@ const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMast
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { createKasaSessionToken } = require("../lib/kasaSession");
-const { getSupabase } = require("../db");
 const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
+const { listBarOrders } = require("../services/kdsService");
 
 const router = express.Router();
 
@@ -151,42 +151,30 @@ router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
 
 async function countPendingOnlineOrders(clientId) {
   if (!clientId) return 0;
-  const db = getSupabase();
-  const { count, error } = await db
-    .from("sales_orders")
-    .select("id", { count: "exact", head: true })
-    .eq("client_id", clientId)
-    .eq("status", "ordered");
-  if (error) return 0;
-  return count || 0;
+  const orders = await listBarOrders(clientId);
+  return orders.length;
 }
 
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
-  const db = getSupabase();
-  const { data, error } = await db
-    .from("sales_orders")
-    .select("id, table_number, waiter_name, items_json, total, ordered_at, status, device_id")
-    .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .order("ordered_at", { ascending: false })
-    .limit(40);
-  if (error) return [];
-  return (data || []).map(row => {
-    const src = orderSourceLabel(row);
-    return {
-      id: row.id,
-      table_number: Number(row.table_number) || 0,
-      customer_label: String(row.waiter_name || "").trim(),
-      source: src.code,
-      source_label: src.label,
-      source_icon: src.icon,
-      items: normalizeItems(row.items_json),
-      total: Number(row.total) || 0,
-      ordered_at: row.ordered_at,
-      status: row.status,
-    };
-  });
+  const rows = await listBarOrders(clientId);
+  return rows.map(formatOrderForPos);
+}
+
+function formatOrderForPos(row) {
+  const src = orderSourceLabel(row);
+  return {
+    id: row.id,
+    table_number: Number(row.table_number) || 0,
+    customer_label: String(row.waiter_name || "").trim(),
+    source: src.code,
+    source_label: src.label,
+    source_icon: src.icon,
+    items: normalizeItems(row.items_json),
+    total: Number(row.total) || 0,
+    ordered_at: row.ordered_at,
+    status: row.status || "ordered",
+  };
 }
 
 /**
@@ -358,7 +346,7 @@ router.post("/pending-online-orders", licenseApiKeyOptional, async (req, res) =>
 });
 
 /**
- * POST /api/v1/license/online-orders — listë porosish kiosk/online (për ekranin e hyrjes POS)
+ * POST /api/v1/license/online-orders — listë porosish banak (për ekranin e hyrjes POS)
  */
 router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
   try {
