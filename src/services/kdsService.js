@@ -1,7 +1,7 @@
 const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
-const { isBarMobileOrder } = require("../lib/orderSource");
+const { isBarMobileOrder, isKioskWaiterName } = require("../lib/orderSource");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -24,28 +24,13 @@ async function fetchOrderedSales(clientId) {
   }));
 }
 
-async function getPosDeviceIds(clientId) {
-  const db = getSupabase();
-  const { data, error } = await db
-    .from("licenses")
-    .select("device_id")
-    .eq("client_id", clientId)
-    .eq("statusi", "aktive");
-  if (error) return new Set();
-  return new Set(
-    (data || [])
-      .map(r => String(r.device_id || "").trim().toUpperCase())
-      .filter(Boolean),
-  );
-}
-
-function isPosBanakOrder(order, posDeviceIds) {
-  const device = String(order?.device_id || "").trim().toUpperCase();
-  return Boolean(device && posDeviceIds.has(device));
-}
-
-function isBanakOrder(order, posDeviceIds) {
-  return isBarMobileOrder(order) || isPosBanakOrder(order, posDeviceIds);
+/** Porosi që duhen te banaku (QR, kamarier web, online, POS lokal) */
+function isBanakOrder(order) {
+  if (isBarMobileOrder(order)) return true;
+  if (isKioskWaiterName(order?.waiter_name)) return true;
+  const device = String(order?.device_id || "").trim();
+  if (!device) return true;
+  return !device.startsWith("WEB-");
 }
 
 async function getClientForKitchen(clientId) {
@@ -56,20 +41,14 @@ async function getClientForKitchen(clientId) {
   return client;
 }
 
-async function listKitchenOrders(clientId) {
-  const [orders, posDeviceIds] = await Promise.all([
-    fetchOrderedSales(clientId),
-    getPosDeviceIds(clientId),
-  ]);
-  return orders.filter(o => !isBanakOrder(o, posDeviceIds));
+/** Banak — të gjitha porositë aktive (QR, kamarier, online, POS) */
+async function listBarOrders(clientId) {
+  return fetchOrderedSales(clientId);
 }
 
-async function listBarOrders(clientId) {
-  const [orders, posDeviceIds] = await Promise.all([
-    fetchOrderedSales(clientId),
-    getPosDeviceIds(clientId),
-  ]);
-  return orders.filter(o => isBanakOrder(o, posDeviceIds));
+/** Kuzhina — e njëjta listë (kafene: banak + kuzhinë shfaqin porositë; filtrimi i ushqimit më vonë) */
+async function listKitchenOrders(clientId) {
+  return fetchOrderedSales(clientId);
 }
 
 async function markKitchenOrderReady(clientId, orderId) {
@@ -113,11 +92,7 @@ async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
 }
 
 async function listBarCancelledOrders(clientId, windowSec = 30) {
-  const [orders, posDeviceIds] = await Promise.all([
-    listRecentlyCancelledOrders(clientId, windowSec),
-    getPosDeviceIds(clientId),
-  ]);
-  return orders.filter(o => isBanakOrder(o, posDeviceIds));
+  return listRecentlyCancelledOrders(clientId, windowSec);
 }
 
 module.exports = {
@@ -127,4 +102,5 @@ module.exports = {
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
   markKitchenOrderReady,
+  isBanakOrder,
 };

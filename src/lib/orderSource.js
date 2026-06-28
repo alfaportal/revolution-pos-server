@@ -48,7 +48,9 @@ function isPublicWebOrder(order) {
 
 function isBarMobileOrder(order) {
   const device = String(order?.device_id || "").trim().toUpperCase();
-  return device === WEB_WAITER || device === WEB_KIOSK || device === WEB_PUBLIC;
+  if (device === WEB_WAITER || device === WEB_KIOSK || device === WEB_PUBLIC) return true;
+  if (isKioskWaiterName(order?.waiter_name)) return true;
+  return false;
 }
 
 module.exports = {

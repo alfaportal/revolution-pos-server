@@ -6,7 +6,7 @@ const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const { getSupabase } = require("../db");
-const { WEB_KIOSK, WEB_PUBLIC, orderSourceLabel } = require("../lib/orderSource");
+const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
 
 const router = express.Router();
@@ -156,8 +156,7 @@ async function countPendingOnlineOrders(clientId) {
     .from("sales_orders")
     .select("id", { count: "exact", head: true })
     .eq("client_id", clientId)
-    .in("status", ["ordered"])
-    .in("device_id", [WEB_KIOSK, WEB_PUBLIC]);
+    .eq("status", "ordered");
   if (error) return 0;
   return count || 0;
 }
@@ -169,8 +168,7 @@ async function listPendingOnlineOrders(clientId) {
     .from("sales_orders")
     .select("id, table_number, waiter_name, items_json, total, ordered_at, status, device_id")
     .eq("client_id", clientId)
-    .in("status", ["ordered"])
-    .in("device_id", [WEB_KIOSK, WEB_PUBLIC])
+    .eq("status", "ordered")
     .order("ordered_at", { ascending: false })
     .limit(40);
   if (error) return [];
