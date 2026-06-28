@@ -5,15 +5,7 @@ const { isBarMobileOrder } = require("../lib/orderSource");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function getClientForKitchen(clientId) {
-  const id = String(clientId || "").trim();
-  if (!UUID_RE.test(id)) throw new Error("ID klienti nuk është i vlefshëm.");
-  const client = await getClientById(id);
-  if (!client) throw new Error("Klienti nuk u gjet.");
-  return client;
-}
-
-async function listKitchenOrders(clientId) {
+async function fetchOrderedSales(clientId) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
@@ -26,16 +18,27 @@ async function listKitchenOrders(clientId) {
     .limit(80);
 
   if (error) throw error;
-  return (data || [])
-    .filter(o => !isBarMobileOrder(o))
-    .map(o => ({
-      ...o,
-      items_json: normalizeItems(o.items_json),
-    }));
+  return (data || []).map(o => ({
+    ...o,
+    items_json: normalizeItems(o.items_json),
+  }));
+}
+
+async function getClientForKitchen(clientId) {
+  const id = String(clientId || "").trim();
+  if (!UUID_RE.test(id)) throw new Error("ID klienti nuk është i vlefshëm.");
+  const client = await getClientById(id);
+  if (!client) throw new Error("Klienti nuk u gjet.");
+  return client;
+}
+
+async function listKitchenOrders(clientId) {
+  const orders = await fetchOrderedSales(clientId);
+  return orders.filter(o => !isBarMobileOrder(o));
 }
 
 async function listBarOrders(clientId) {
-  const orders = await listKitchenOrders(clientId);
+  const orders = await fetchOrderedSales(clientId);
   return orders.filter(isBarMobileOrder);
 }
 
