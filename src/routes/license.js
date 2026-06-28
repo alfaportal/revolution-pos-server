@@ -3,7 +3,7 @@ const { licenseApiKeyOptional } = require("../middleware/auth");
 const { validateLicense, getLicenseAccessLinks } = require("../services/licenseService");
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
-const { verifyWaiterPin } = require("../services/waiterPinService");
+const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { getSupabase } = require("../db");
 const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
 
@@ -212,6 +212,82 @@ router.post("/kasa-pin", licenseApiKeyOptional, async (req, res) => {
     return res.status(403).json({ valid: false, gabim: "PIN i gabuar." });
   } catch (e) {
     res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/waiters-list — kamarierët me PIN për kasën desktop
+ */
+router.post("/waiters-list", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        ok: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const waiters = await listWaitersForOwner(licenseResult.client_id);
+    res.json({
+      ok: true,
+      waiters: (waiters || []).filter(w => w.active !== false && w.has_pin),
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/waiter-login — PIN + (ops.) id kamarieri
+ */
+router.post("/waiter-login", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname, pin, waiter_id, staff_id } = req.body;
+    const key = celesi || license_key;
+    const pinStr = String(pin || "").trim();
+    const wantedId = String(waiter_id || staff_id || "").trim();
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+    if (!/^\d{4}$/.test(pinStr)) {
+      return res.status(400).json({ ok: false, gabim: "PIN duhet të jetë 4 shifra." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        ok: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const waiter = await verifyWaiterPin(licenseResult.client_id, pinStr);
+    if (wantedId && String(waiter.id) !== wantedId) {
+      return res.status(403).json({ ok: false, gabim: "PIN i gabuar." });
+    }
+
+    res.json({ ok: true, valid: true, role: "waiter", waiter });
+  } catch (e) {
+    res.status(403).json({ ok: false, gabim: e.message || "PIN i gabuar." });
   }
 });
 
