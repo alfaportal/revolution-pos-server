@@ -217,7 +217,7 @@ async function submitWaiterOrder(clientId, body) {
     items,
     total,
     status: "ordered",
-    ordered_at: now,
+    ordered_at: existing?.ordered_at || now,
   });
 
   try {

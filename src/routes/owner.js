@@ -78,6 +78,27 @@ const {
 
 const router = express.Router();
 
+const { subscribe: subscribeTableEvents } = require("../services/kdsEvents");
+const { verifyToken } = require("../middleware/auth");
+
+/** SSE — rifreskim i menjëhershëm i tavolinave live (token në query për EventSource) */
+router.get("/tables/events", (req, res) => {
+  const header = req.headers.authorization || "";
+  const cookie = req.cookies?.owner_token;
+  const queryToken = typeof req.query?.token === "string" ? req.query.token.trim() : "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : (cookie || queryToken);
+  if (!token) return res.status(401).end();
+  try {
+    const user = verifyToken(token);
+    if (user.roli !== "client_admin" || !user.client_id) {
+      return res.status(403).end();
+    }
+    subscribeTableEvents(user.client_id, res);
+  } catch {
+    res.status(401).end();
+  }
+});
+
 router.use(authOwner, ownerOnly);
 
 router.get("/client", async (req, res) => {

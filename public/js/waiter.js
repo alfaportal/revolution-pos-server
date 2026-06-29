@@ -1063,5 +1063,5 @@
     if (activeWaiter && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
       refreshBootstrap();
     }
-  }, 15000);
+  }, 5000);
 })();

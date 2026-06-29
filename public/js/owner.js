@@ -226,6 +226,25 @@ async function loadLiveTables() {
   }
 }
 
+function connectOwnerLiveEvents() {
+  if (!token || typeof EventSource === "undefined") return;
+  const url = `/api/owner/tables/events?token=${encodeURIComponent(token)}`;
+  let es;
+  const connect = () => {
+    es = new EventSource(url);
+    es.addEventListener("kitchen", () => {
+      if (!document.getElementById("panel-tavolinat")?.classList.contains("hidden")) {
+        loadLiveTables().catch(() => {});
+      }
+    });
+    es.onerror = () => {
+      es.close();
+      setTimeout(connect, 5000);
+    };
+  };
+  connect();
+}
+
 async function loadOrders() {
   const q = new URLSearchParams({ limit: "50" });
   const waiter = document.getElementById("filter-waiter").value;
@@ -2602,6 +2621,7 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
     await loadClient();
     await loadStats();
     await loadLiveTables();
+    connectOwnerLiveEvents();
     await loadOrderFilters();
     await loadOrders();
     setInterval(async () => {
@@ -2613,7 +2633,7 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
         await loadOrderFilters();
         await loadOrders();
       }
-    }, 5000);
+    }, 3000);
   } catch {
     localStorage.removeItem("owner_token");
     location.href = "/owner/login";

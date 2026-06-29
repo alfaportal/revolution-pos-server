@@ -72,7 +72,8 @@ function ownerOnly(req, res, next) {
 function authOwner(req, res, next) {
   const header = req.headers.authorization || "";
   const cookie = req.cookies?.owner_token;
-  const token = header.startsWith("Bearer ") ? header.slice(7) : cookie;
+  const queryToken = typeof req.query?.token === "string" ? req.query.token.trim() : "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : (cookie || queryToken);
 
   if (!token) {
     return res.status(401).json({ gabim: "Kërkohet autentifikim." });

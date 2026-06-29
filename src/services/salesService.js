@@ -40,6 +40,58 @@ function mergeOrderItems(existingItems, newItems) {
   return merged;
 }
 
+/** Një porosi aktive për tavolinë — mbyll rreshtat e vjetër (WEB-WAITER vs POS etj.) */
+async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = null) {
+  const num = Number(tableNumber);
+  if (!num || num < 1) return 0;
+  const db = getSupabase();
+  const { data: rows, error } = await db
+    .from("sales_orders")
+    .select("id, local_order_id, device_id")
+    .eq("client_id", clientId)
+    .eq("table_number", num)
+    .in("status", ["ordered", "ready"]);
+  if (error) throw error;
+
+  const now = new Date().toISOString();
+  let cancelled = 0;
+  for (const row of rows || []) {
+    if (
+      except &&
+      String(row.local_order_id) === String(except.local_order_id) &&
+      String(row.device_id).toUpperCase() === String(except.device_id).toUpperCase()
+    ) {
+      continue;
+    }
+    const { error: updErr } = await db
+      .from("sales_orders")
+      .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+      .eq("id", row.id);
+    if (!updErr) cancelled += 1;
+    else console.warn("[sales] cancel stale row:", updErr.message);
+  }
+  return cancelled;
+}
+
+async function freeTableFromPos(body) {
+  const celesi = normalizeKey(body.celesi || body.license_key);
+  if (!celesi) throw new Error("Mungon çelësi i licencës.");
+  const license = await findLicenseByKey(celesi);
+  assertLicenseUsable(license);
+  const tableNum = Number(body.table_number);
+  if (!tableNum || tableNum < 1) throw new Error("Mungon numri i tavolinës.");
+  const cancelled = await cancelOtherActiveOrdersForTable(license.client_id, tableNum);
+  try {
+    require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
+      table_number: tableNum,
+      status: "free",
+    });
+  } catch {
+    /* optional */
+  }
+  return { ok: true, cancelled };
+}
+
 async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const celesi = normalizeKey(body.celesi || body.license_key);
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
@@ -74,6 +126,12 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     const prevItems = JSON.stringify(normalizeItems(existing.items_json));
     const nextItems = JSON.stringify(items);
     finalStatus = prevItems === nextItems ? "ready" : "ordered";
+  }
+
+  const tableNum = Number(body.table_number) || 0;
+  const keepKey = { local_order_id: localOrderId, device_id: deviceId };
+  if (tableNum >= 1 && ["ordered", "ready", "closed", "cancelled"].includes(finalStatus)) {
+    await cancelOtherActiveOrdersForTable(license.client_id, tableNum, keepKey);
   }
 
   const row = {
@@ -210,48 +268,70 @@ async function updateActiveSaleFromPos(body) {
 
 async function getLiveTablesForOwner(clientId) {
   const db = getSupabase();
+  const { loadAreasForClient } = require("./venueService");
+  const { buildTablesFromAreas } = require("../lib/tableLayout");
 
-  const [{ data: settings }, { data: activeOrders, error }] = await Promise.all([
-    db.from("pos_settings").select("table_count").eq("client_id", clientId).maybeSingle(),
+  const [{ data: settings }, { data: activeOrders, error }, areas] = await Promise.all([
+    db.from("pos_settings").select("table_count, restaurant_name").eq("client_id", clientId).maybeSingle(),
     db
       .from("sales_orders")
       .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status")
       .eq("client_id", clientId)
       .in("status", ["ordered", "ready"])
       .order("ordered_at", { ascending: false }),
+    loadAreasForClient(clientId),
   ]);
 
   if (error) throw error;
 
-  const tableCount = Math.max(1, Math.min(99, Number(settings?.table_count) || 10));
-  const byTable = new Map();
+  const metaByTable = new Map();
+  const activeByTable = new Map();
   for (const o of activeOrders || []) {
     const num = Number(o.table_number) || 0;
-    if (num < 1 || byTable.has(num)) continue;
-    byTable.set(num, {
-      table_number: num,
-      waiter_name: o.waiter_name || "",
-      waiter_id: o.waiter_id || null,
-      items: normalizeItems(o.items_json),
-      total: Number(o.total) || 0,
+    if (num < 1 || metaByTable.has(num)) continue;
+    metaByTable.set(num, {
       ordered_at: o.ordered_at,
       local_order_id: o.local_order_id,
       order_status: o.status || "ordered",
     });
-  }
-
-  const tables = [];
-  for (let n = 1; n <= tableCount; n += 1) {
-    const order = byTable.get(n) || null;
-    tables.push({
-      number: n,
-      label: `T${n}`,
-      status: order ? "occupied" : "free",
-      order,
+    activeByTable.set(num, {
+      waiter_name: o.waiter_name || "",
+      waiter_id: o.waiter_id || null,
+      total: Number(o.total) || 0,
+      active_items: normalizeItems(o.items_json),
     });
   }
 
-  return { table_count: tableCount, tables, updated_at: new Date().toISOString() };
+  const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
+  const tables = layout.tables.map(t => {
+    const meta = metaByTable.get(t.number);
+    const order = t.status === "occupied"
+      ? {
+          table_number: t.number,
+          waiter_name: t.waiter_name || "",
+          waiter_id: t.waiter_id || null,
+          items: t.active_items || [],
+          total: t.order_total || 0,
+          ordered_at: meta?.ordered_at || null,
+          local_order_id: meta?.local_order_id || null,
+          order_status: meta?.order_status || "ordered",
+        }
+      : null;
+    return {
+      number: t.number,
+      label: `T${t.number}`,
+      area_name: t.area_name || null,
+      status: t.status === "occupied" ? "occupied" : "free",
+      order,
+    };
+  });
+
+  return {
+    table_count: layout.table_count,
+    tables,
+    areas: layout.areas,
+    updated_at: new Date().toISOString(),
+  };
 }
 
 async function sumSales(clientId, fromDate, toDate) {
@@ -381,6 +461,7 @@ module.exports = {
   syncSaleFromPos,
   buildSaleReceipt,
   updateActiveSaleFromPos,
+  freeTableFromPos,
   getLiveTablesForOwner,
   getOwnerStats,
   listOwnerOrders,
