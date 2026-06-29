@@ -806,36 +806,134 @@ a.article-card {
 }
 
 @media (max-width: 640px) {
+  .container {
+    width: min(100% - 1rem, var(--max-width));
+  }
+
+  .header-inner {
+    min-height: 64px;
+    gap: 0.5rem;
+  }
+
+  .brand-text {
+    font-size: 0.82rem;
+  }
+
+  .brand-text small {
+    font-size: 0.62rem;
+  }
+
+  .brand-mark {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+
   .hero-home {
-    padding: 2.5rem 0 2rem;
+    padding: 2rem 0 1.75rem;
     max-height: none;
     min-height: auto;
+  }
+
+  .hero-home h1 {
+    font-size: clamp(1.45rem, 6.5vw, 1.85rem);
+  }
+
+  .hero-home-subtitle {
+    font-size: 0.88rem;
+    margin-top: 0.65rem;
+  }
+
+  .hero-home-badge,
+  .hero-home .hero-badge {
+    font-size: 0.78rem;
+    margin-bottom: 0.75rem;
   }
 
   .hero-actions {
     flex-direction: column;
     align-items: stretch;
+    margin-top: 1rem;
   }
 
   .hero-actions .btn {
     width: 100%;
   }
 
-  .hero-stats {
-    flex-direction: column;
-    gap: 0.35rem;
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.92rem;
   }
 
-  .hero-stats-sep {
-    display: none;
+  .hero-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 0.5rem;
+    font-size: 0.78rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
   }
 
   .hero {
-    padding-top: 3rem;
+    padding-top: 2.5rem;
+  }
+
+  .site-section {
+    padding: 2.75rem 0;
+  }
+
+  .section-head {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.35rem, 5.5vw, 1.65rem);
+  }
+
+  .section-head p {
+    font-size: 0.88rem;
+  }
+
+  .spotlight-section {
+    padding-bottom: 2.5rem;
+  }
+
+  .spotlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .spotlight-body {
+    padding: 0.7rem 0.6rem 0.75rem;
+  }
+
+  .spotlight-category {
+    font-size: 0.58rem;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.06em;
+  }
+
+  .spotlight-title {
+    font-size: 0.76rem;
+    margin-bottom: 0.35rem;
+    line-height: 1.25;
+  }
+
+  .spotlight-desc {
+    display: none;
+  }
+
+  .spotlight-link {
+    font-size: 0.68rem;
+    margin-top: 0.45rem;
+  }
+
+  .spotlight-mock {
+    padding: 0.5rem;
   }
 
   .article-grid,
-  .spotlight-grid,
   .how-grid,
   .packages-grid {
     grid-template-columns: 1fr;

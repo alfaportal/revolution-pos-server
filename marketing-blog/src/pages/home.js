@@ -341,9 +341,9 @@ export function renderHome() {
                   <span aria-hidden="true">📞</span>
                   <span id="contact-tel-label">+383 44 123 456</span>
                 </a>
-                <a class="contact-link" href="mailto:info@revolution-pos.com">
+                <a class="contact-link" href="mailto:${t("contact.email")}">
                   <span aria-hidden="true">✉️</span>
-                  <span>info@revolution-pos.com</span>
+                  <span>${t("contact.email")}</span>
                 </a>
               </div>
             </div>

@@ -102,7 +102,7 @@ export function renderFooter() {
             ${footerSectionLink("kontakt", t("footer.link.trial"))}
             <li><a href="/owner/login">${t("footer.link.login")}</a></li>
             <li><a id="footer-whatsapp" href="#" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
-            <li><a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a></li>
+            <li><a href="mailto:${t("contact.email")}">${t("contact.email")}</a></li>
           </ul>
         </div>
       </div>

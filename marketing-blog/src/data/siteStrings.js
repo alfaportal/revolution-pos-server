@@ -109,6 +109,7 @@ export const siteStrings = {
     "contact.subtitle":
       "Na kontaktoni për instalim, demo live dhe zgjedhjen e pakos së duhur për restorantin, kafenen ose dyqanin tuaj.",
     "contact.direct": "Kontakt i drejtpërdrejtë",
+    "contact.email": "revolutioninvest05@gmail.com",
     "contact.sendMessage": "Dërgo mesazh",
     "form.name": "Emri",
     "form.phone": "Telefoni",
@@ -250,6 +251,7 @@ export const siteStrings = {
     "contact.subtitle":
       "Contact us for installation, a live demo, and choosing the right plan for your restaurant or café.",
     "contact.direct": "Direct contact",
+    "contact.email": "revolutioninvest05@gmail.com",
     "contact.sendMessage": "Send a message",
     "form.name": "Name",
     "form.phone": "Phone",
