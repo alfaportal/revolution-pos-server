@@ -99,9 +99,9 @@ function renderLiveTableCard(t) {
         return `<li><span>${qty}× ${it.name}</span><span>${euro(price)}</span></li>`;
       }).join("")}</ul>`
     : "";
-  return `<div class="live-table-card occupied">
+  return `<div class="live-table-card occupied${o.order_status === "ready" ? " ready" : ""}">
     <div class="live-table-title">${t.label}</div>
-    <div class="live-table-status">E zënë</div>
+    <div class="live-table-status">${o.order_status === "ready" ? "Gati · tavolinë aktive" : "E zënë"}</div>
     <div class="live-table-meta">👤 ${o.waiter_name || "—"}<br>🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
     ${itemsHtml}
     <div class="live-table-total">${euro(o.total)}</div>
@@ -2613,7 +2613,7 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
         await loadOrderFilters();
         await loadOrders();
       }
-    }, 15000);
+    }, 5000);
   } catch {
     localStorage.removeItem("owner_token");
     location.href = "/owner/login";

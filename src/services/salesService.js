@@ -147,7 +147,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     throw new Error(msg);
   }
 
-  if (finalStatus === "ordered" || finalStatus === "cancelled") {
+  if (finalStatus === "ordered" || finalStatus === "cancelled" || finalStatus === "ready" || finalStatus === "closed") {
     try {
       require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
         order_id: data?.id,
@@ -215,9 +215,9 @@ async function getLiveTablesForOwner(clientId) {
     db.from("pos_settings").select("table_count").eq("client_id", clientId).maybeSingle(),
     db
       .from("sales_orders")
-      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id")
+      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status")
       .eq("client_id", clientId)
-      .eq("status", "ordered")
+      .in("status", ["ordered", "ready"])
       .order("ordered_at", { ascending: false }),
   ]);
 
@@ -236,6 +236,7 @@ async function getLiveTablesForOwner(clientId) {
       total: Number(o.total) || 0,
       ordered_at: o.ordered_at,
       local_order_id: o.local_order_id,
+      order_status: o.status || "ordered",
     });
   }
 
