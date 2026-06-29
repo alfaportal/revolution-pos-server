@@ -3,6 +3,7 @@ const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName } = require("../lib/orderSource");
 const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
+const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -11,18 +12,22 @@ const CATEGORY_CACHE_MS = 60_000;
 
 async function fetchOrderedSales(clientId) {
   const db = getSupabase();
-  const { data, error } = await db
-    .from("sales_orders")
-    .select(
-      "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at",
-    )
-    .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .order("ordered_at", { ascending: true, nullsFirst: false })
-    .limit(80);
+  const base =
+    "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id";
+  const rows = await selectWithAcceptanceFallback(withAcceptance => {
+    const select = withAcceptance
+      ? `${base}, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at`
+      : base;
+    return db
+      .from("sales_orders")
+      .select(select)
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .order("ordered_at", { ascending: true, nullsFirst: false })
+      .limit(80);
+  });
 
-  if (error) throw error;
-  return (data || []).map(o => ({
+  return rows.map(o => ({
     ...o,
     items_json: normalizeItems(o.items_json),
   }));

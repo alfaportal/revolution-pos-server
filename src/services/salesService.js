@@ -268,29 +268,21 @@ async function updateActiveSaleFromPos(body) {
 
 async function fetchOwnerActiveOrders(clientId) {
   const db = getSupabase();
-  const fullSelect =
-    "table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at";
-  const baseSelect =
+  const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
+  const base =
     "table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id";
 
-  let result = await db
-    .from("sales_orders")
-    .select(fullSelect)
-    .eq("client_id", clientId)
-    .in("status", ["ordered", "ready"])
-    .order("ordered_at", { ascending: false });
-
-  if (result.error && /accepted_by|accepted_at/i.test(String(result.error.message || ""))) {
-    result = await db
+  return selectWithAcceptanceFallback(withAcceptance => {
+    const select = withAcceptance
+      ? `${base}, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at`
+      : base;
+    return db
       .from("sales_orders")
-      .select(baseSelect)
+      .select(select)
       .eq("client_id", clientId)
       .in("status", ["ordered", "ready"])
       .order("ordered_at", { ascending: false });
-  }
-
-  if (result.error) throw result.error;
-  return result.data || [];
+  });
 }
 
 async function getLiveTablesForOwner(clientId) {
@@ -439,23 +431,31 @@ async function getOwnerStats(clientId) {
 async function listOwnerOrders(clientId, opts = {}) {
   const limit = Math.min(100, Number(opts.limit) || 50);
   const db = getSupabase();
-  let q = db
-    .from("sales_orders")
-    .select("id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status, device_id, accepted_by_waiter_name, accepted_at")
-    .eq("client_id", clientId)
-    .eq("status", "closed")
-    .order("closed_at", { ascending: false })
-    .limit(limit);
+  const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
+  const base =
+    "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status, device_id";
 
-  if (opts.waiter) q = q.eq("waiter_name", String(opts.waiter).trim());
-  if (opts.table != null && opts.table !== "") {
-    q = q.eq("table_number", Number(opts.table));
-  }
+  const rows = await selectWithAcceptanceFallback(withAcceptance => {
+    const select = withAcceptance
+      ? `${base}, accepted_by_waiter_name, accepted_at`
+      : base;
+    let q = db
+      .from("sales_orders")
+      .select(select)
+      .eq("client_id", clientId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: false })
+      .limit(limit);
 
-  const { data, error } = await q;
-  if (error) throw error;
+    if (opts.waiter) q = q.eq("waiter_name", String(opts.waiter).trim());
+    if (opts.table != null && opts.table !== "") {
+      q = q.eq("table_number", Number(opts.table));
+    }
+    return q;
+  });
+
   const { orderSourceLabel } = require("../lib/orderSource");
-  return (data || []).map(o => ({
+  return rows.map(o => ({
     ...o,
     items_json: normalizeItems(o.items_json),
     source: orderSourceLabel(o),

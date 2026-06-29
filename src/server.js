@@ -252,6 +252,18 @@ async function start() {
     console.warn("  ⚠️  Dyqani schema:", formatError(e));
   }
 
+  try {
+    const { ensureOrderAcceptanceSchema } = require("./lib/ensureOrderAcceptanceSchema");
+    const accOk = await ensureOrderAcceptanceSchema();
+    if (accOk) {
+      console.log("  ✅ Porosi online (021): accepted_by_waiter_* kolonat");
+    } else {
+      console.warn("  ⚠️  Porosi online: vendosni DATABASE_URL për auto-migrim 021");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  Porosi online schema:", formatError(e));
+  }
+
   startLicenseExpiryCron();
   startTrialNotificationCron();
 
