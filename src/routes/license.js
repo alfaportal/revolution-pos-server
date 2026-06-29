@@ -8,7 +8,7 @@ const { createKasaSessionToken } = require("../lib/kasaSession");
 const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
 const { acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
-const { isBarMobileOrder } = require("../lib/orderSource");
+const { isCustomerBarOrder } = require("../lib/orderSource");
 
 const router = express.Router();
 
@@ -185,7 +185,7 @@ async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
   const rows = await fetchOrderedSales(clientId);
   return rows
-    .filter(isBarMobileOrder)
+    .filter(isCustomerBarOrder)
     .filter(row => !row.accepted_at)
     .map(formatOrderForPos);
 }
@@ -193,7 +193,7 @@ async function listPendingOnlineOrders(clientId) {
 async function listBarMobileOrderedForPos(clientId) {
   if (!clientId) return [];
   const rows = await fetchOrderedSales(clientId);
-  return rows.filter(isBarMobileOrder).map(formatOrderForPos);
+  return rows.filter(isCustomerBarOrder).map(formatOrderForPos);
 }
 
 function formatOrderForPos(row) {

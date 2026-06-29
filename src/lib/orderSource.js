@@ -46,6 +46,17 @@ function isPublicWebOrder(order) {
   return String(order?.device_id || "").trim().toUpperCase() === WEB_PUBLIC;
 }
 
+function isStaffWaiterOrder(order) {
+  return String(order?.device_id || "").trim().toUpperCase() === WEB_WAITER;
+}
+
+/** Porosi nga klientët (QR, kiosk, web) — jo nga kamarierët me telefon */
+function isCustomerBarOrder(order) {
+  if (!isBarMobileOrder(order)) return false;
+  if (isStaffWaiterOrder(order)) return false;
+  return true;
+}
+
 function isBarMobileOrder(order) {
   const device = String(order?.device_id || "").trim().toUpperCase();
   if (device === WEB_WAITER || device === WEB_KIOSK || device === WEB_PUBLIC) return true;
@@ -62,5 +73,7 @@ module.exports = {
   publicOrderTypeFromWaiter,
   orderSourceLabel,
   isPublicWebOrder,
+  isStaffWaiterOrder,
+  isCustomerBarOrder,
   isBarMobileOrder,
 };
