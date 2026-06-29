@@ -205,8 +205,16 @@
       const isNew = !knownIds.has(o.id);
       const src = sourceMeta(o);
       const items = (o.items_json || []).map(renderOrderItem).join("");
+      const accepted = !!(o.accepted_at || o.accepted_by_waiter_name);
+      const acceptor = String(o.accepted_by_waiter_name || "").trim();
+      const acceptLine = accepted
+        ? `<div class="ticket-waiter ticket-accepted">✅ Pranuar nga: <strong>${escapeHtml(acceptor || "—")}</strong></div>`
+        : `<div class="ticket-waiter ticket-pending">⏳ Në pritje — pranoni me PIN</div>`;
+      const actions = accepted
+        ? ""
+        : `<button type="button" class="btn-ready" data-accept="${o.id}">Prano me PIN 🔐</button>`;
       return `
-        <article class="order-ticket${isNew ? " new" : ""}" data-id="${o.id}">
+        <article class="order-ticket${isNew ? " new" : ""}${accepted ? " accepted" : " pending"}" data-id="${o.id}">
           <div class="ticket-kind">Porosi — jo faturë</div>
           <div class="ticket-source">${src.icon} ${src.label}</div>
           <div class="ticket-head">
@@ -214,14 +222,15 @@
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
           <div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>
+          ${acceptLine}
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
-          <button type="button" class="btn-ready" data-ready="${o.id}">Prano me PIN 🔐</button>
+          ${actions}
         </article>`;
     }).join("");
 
     knownIds = new Set(active.map(o => o.id));
-    gridEl.querySelectorAll("[data-ready]").forEach(btn => {
-      btn.addEventListener("click", () => markReady(btn.dataset.ready, btn));
+    gridEl.querySelectorAll("[data-accept]").forEach(btn => {
+      btn.addEventListener("click", () => acceptOrder(btn.dataset.accept, btn));
     });
   }
 
@@ -257,7 +266,45 @@
     }
   }
 
-  async function markReady(orderId, btn) {
+  function printBarSlip(order, acceptedBy) {
+    const src = sourceMeta(order);
+    const items = (order.items_json || [])
+      .map(it => {
+        const qty = Number(it.quantity) || 1;
+        const price = Number(it.price) || 0;
+        return `<tr><td>${qty}×</td><td>${escapeHtml(it.name)}</td><td style="text-align:right">${formatEuro(price * qty)}</td></tr>`;
+      })
+      .join("");
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Porosi</title>
+<style>
+body{font-family:monospace;font-size:14px;max-width:320px;margin:1rem auto}
+h1{font-size:16px;text-align:center;margin:0 0 8px}
+.meta{margin:4px 0} table{width:100%;border-collapse:collapse} td{padding:2px 0}
+hr{border:none;border-top:1px dashed #000;margin:8px 0}
+@media print{body{margin:0}}
+</style></head><body>
+<h1>POROSI — JO FATURË</h1>
+<div class="meta">${src.icon} ${src.label}</div>
+<div class="meta"><strong>${escapeHtml(tableLabel(order))}</strong></div>
+<div class="meta">Klienti: ${escapeHtml(order.waiter_name || "—")}</div>
+<div class="meta">Pranuar nga: <strong>${escapeHtml(acceptedBy || "—")}</strong></div>
+<div class="meta">${formatTime(order.ordered_at || order.created_at)}</div>
+<hr>
+<table>${items || "<tr><td>—</td></tr>"}</table>
+<hr>
+<div class="meta" style="text-align:right"><strong>${formatEuro(order.total)}</strong></div>
+<script>window.onload=function(){window.print();setTimeout(function(){window.close()},400)}<\/script>
+</body></html>`;
+    const w = window.open("", "_blank", "width=400,height=640");
+    if (!w) {
+      alert("Lejoni dritaret popup për printim.");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  }
+
+  async function acceptOrder(orderId, btn) {
     const pin = prompt("PIN i kamarierit që e pranon porosinë (4 shifra):");
     if (!pin) return;
     const pinTrim = String(pin).trim();
@@ -269,7 +316,7 @@
     btn.textContent = "Duke u përpunuar...";
     try {
       const res = await fetch(
-        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/ready${apiQuery()}`,
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/accept${apiQuery()}`,
         {
           method: "POST",
           headers: { ...apiHeaders(), "Content-Type": "application/json" },
@@ -278,12 +325,14 @@
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        alert(data.gabim || "Nuk u shënua si gati.");
+        alert(data.gabim || "Nuk u pranua porosia.");
         btn.disabled = false;
         btn.textContent = "Prano me PIN 🔐";
         return;
       }
-      if (data.accepted_by) alert(`Porosia u pranua nga ${data.accepted_by}`);
+      const acceptedBy = data.accepted_by || "";
+      if (data.order) printBarSlip(data.order, acceptedBy);
+      if (acceptedBy) alert(`Porosia u pranua nga ${acceptedBy} — fletë porosie u printua.`);
       await refreshAll();
     } catch (e) {
       alert(e.message || "Gabim.");

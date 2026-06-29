@@ -98,6 +98,7 @@ function buildReceiptPayload(clientId, business, body) {
     order_number: String(body.order_number || body.local_order_id || body.receipt_number || "").trim(),
     table_number: Number(body.table_number) || 0,
     waiter_name: String(body.waiter_name || "").trim(),
+    accepted_by: String(body.accepted_by || "").trim(),
     cashier_name: String(body.cashier_name || body.operator_name || "").trim(),
     register_name: String(body.register_name || body.arka || "").trim(),
     items,
@@ -161,7 +162,8 @@ function buildReceiptLines(receipt) {
     lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
   }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
-  if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
+  if (receipt.waiter_name) lines.push(`Klienti: ${receipt.waiter_name}`);
+  if (receipt.accepted_by) lines.push(`Pranuar nga: ${receipt.accepted_by}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
   if (receipt.cashier_name) lines.push(`Operatori: ${receipt.cashier_name}`);
   lines.push(`Data: ${receipt.date}  Ora: ${receipt.time}`);
@@ -198,7 +200,8 @@ function buildMarkedReceiptLines(receipt) {
     lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
   }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
-  if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
+  if (receipt.waiter_name) lines.push(`Klienti: ${receipt.waiter_name}`);
+  if (receipt.accepted_by) lines.push(`Pranuar nga: ${receipt.accepted_by}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
   if (receipt.cashier_name) lines.push(`Operatori: ${receipt.cashier_name}`);
   lines.push(`Data: ${receipt.date}  Ora: ${receipt.time}`);
@@ -271,7 +274,8 @@ function formatReceiptHtml(receipt) {
         ? `<div><span class="rc-meta-label">Nr. Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>`
         : "",
     receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : "",
-    receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
+    receipt.waiter_name ? `<div><span class="rc-meta-label">Klienti</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
+    receipt.accepted_by ? `<div><span class="rc-meta-label">Pranuar nga</span> ${escapeHtml(receipt.accepted_by)}</div>` : "",
     receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
     receipt.cashier_name ? `<div><span class="rc-meta-label">Operatori</span> ${escapeHtml(receipt.cashier_name)}</div>` : "",
     `<div><span class="rc-meta-label">Data</span> ${receipt.date} &nbsp; ${receipt.time}</div>`,

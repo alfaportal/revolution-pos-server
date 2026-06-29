@@ -184,6 +184,15 @@ async function countPendingOnlineOrders(clientId) {
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
   const rows = await fetchOrderedSales(clientId);
+  return rows
+    .filter(isBarMobileOrder)
+    .filter(row => !row.accepted_at)
+    .map(formatOrderForPos);
+}
+
+async function listBarMobileOrderedForPos(clientId) {
+  if (!clientId) return [];
+  const rows = await fetchOrderedSales(clientId);
   return rows.filter(isBarMobileOrder).map(formatOrderForPos);
 }
 
@@ -371,12 +380,14 @@ router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
       return res.status(resolved.error.status).json(resolved.error.body);
     }
 
-    const orders = await listPendingOnlineOrders(resolved.clientId);
+    const allOrders = await listBarMobileOrderedForPos(resolved.clientId);
+    const orders = allOrders.filter(o => !o.accepted_at);
     res.json({
       ok: true,
       pending: orders.length,
       has_pending: orders.length > 0,
       orders,
+      all_orders: allOrders,
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });

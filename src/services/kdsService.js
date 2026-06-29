@@ -149,16 +149,50 @@ async function listKitchenOrders(clientId) {
   return result;
 }
 
-async function markKitchenOrderReady(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
+async function acceptBarOrder(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
+  const db = getSupabase();
+  const now = new Date().toISOString();
+  const patch = {
+    accepted_at: now,
+    accepted_by_waiter_id: waiterId,
+    accepted_by_waiter_name: String(waiterName || "").trim(),
+  };
+
+  let { data, error } = await db
+    .from("sales_orders")
+    .update(patch)
+    .eq("id", orderId)
+    .eq("client_id", clientId)
+    .eq("status", "ordered")
+    .is("accepted_at", null)
+    .select()
+    .single();
+
+  if (error && /accepted_by/i.test(String(error.message || ""))) {
+    delete patch.accepted_by_waiter_id;
+    delete patch.accepted_by_waiter_name;
+    ({ data, error } = await db
+      .from("sales_orders")
+      .update({ accepted_at: now })
+      .eq("id", orderId)
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .is("accepted_at", null)
+      .select()
+      .single());
+  }
+
+  if (error) throw error;
+  if (!data) throw new Error("Porosia nuk u gjet, është pranuar tashmë, ose është mbyllur.");
+  notifyKitchenUpdate(clientId, { order_id: orderId, status: "accepted", accepted_by: patch.accepted_by_waiter_name || waiterName });
+  return data;
+}
+
+async function markKitchenOrderReady(clientId, orderId) {
   const db = getSupabase();
   const now = new Date().toISOString();
   const patch = { status: "ready", ready_at: now };
-  if (waiterId) {
-    patch.accepted_by_waiter_id = waiterId;
-    patch.accepted_by_waiter_name = String(waiterName || "").trim();
-    patch.accepted_at = now;
-  }
-  let { data, error } = await db
+  const { data, error } = await db
     .from("sales_orders")
     .update(patch)
     .eq("id", orderId)
@@ -166,20 +200,6 @@ async function markKitchenOrderReady(clientId, orderId, { waiterId = null, waite
     .eq("status", "ordered")
     .select()
     .single();
-
-  if (error && /accepted_by/i.test(String(error.message || ""))) {
-    delete patch.accepted_by_waiter_id;
-    delete patch.accepted_by_waiter_name;
-    delete patch.accepted_at;
-    ({ data, error } = await db
-      .from("sales_orders")
-      .update(patch)
-      .eq("id", orderId)
-      .eq("client_id", clientId)
-      .eq("status", "ordered")
-      .select()
-      .single());
-  }
 
   if (error) throw error;
   if (!data) throw new Error("Porosia nuk u gjet ose është përfunduar.");
@@ -193,29 +213,27 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
 
   const db = getSupabase();
   const now = new Date().toISOString();
-  const patch = { status: "ready", ready_at: now };
-  if (waiterId) {
-    patch.accepted_by_waiter_id = waiterId;
-    patch.accepted_by_waiter_name = String(waiterName || "").trim();
-    patch.accepted_at = now;
-  }
-  const { data, error } = await db
+  const patch = {
+    accepted_at: now,
+    accepted_by_waiter_id: waiterId,
+    accepted_by_waiter_name: String(waiterName || "").trim(),
+  };
+  let { data, error } = await db
     .from("sales_orders")
     .update(patch)
     .eq("client_id", clientId)
     .eq("status", "ordered")
+    .is("accepted_at", null)
     .in("id", ids)
     .select("id");
 
   if (error && /accepted_by/i.test(String(error.message || ""))) {
-    delete patch.accepted_by_waiter_id;
-    delete patch.accepted_by_waiter_name;
-    delete patch.accepted_at;
     ({ data, error } = await db
       .from("sales_orders")
-      .update(patch)
+      .update({ accepted_at: now })
       .eq("client_id", clientId)
       .eq("status", "ordered")
+      .is("accepted_at", null)
       .in("id", ids)
       .select("id"));
   }
@@ -223,7 +241,7 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
   if (error) throw error;
   const acked = (data || []).map(row => row.id);
   if (acked.length) {
-    notifyKitchenUpdate(clientId, { order_ids: acked, status: "ready" });
+    notifyKitchenUpdate(clientId, { order_ids: acked, status: "accepted", accepted_by: patch.accepted_by_waiter_name || waiterName });
   }
   return { count: acked.length, ids: acked };
 }
@@ -262,6 +280,7 @@ module.exports = {
   fetchOrderedSales,
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
+  acceptBarOrder,
   markKitchenOrderReady,
   acknowledgeBarOrders,
   isBanakOrder,
