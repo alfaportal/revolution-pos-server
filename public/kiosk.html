@@ -64,33 +64,6 @@
     #screen-order.kiosk-screen .menu-photo-grid-inner {
       padding-bottom: 1rem;
     }
-    .cancel-order-bar {
-      padding: 0.75rem;
-      margin-bottom: 0.65rem;
-      border-radius: 12px;
-      background: rgba(34, 197, 94, 0.12);
-      border: 2px solid var(--ok);
-      text-align: center;
-    }
-    .cancel-order-bar.hidden { display: none; }
-    .cancel-order-bar p { margin: 0 0 0.5rem; font-weight: 700; }
-    .cancel-order-bar .btn-cancel-order {
-      width: 100%;
-      min-height: 48px;
-      border: none;
-      border-radius: 10px;
-      background: #991b1b;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 800;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    .cancel-order-bar .cancel-countdown {
-      margin: 0.45rem 0 0;
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
   </style>
 </head>
 <body class="kiosk-body">
@@ -120,11 +93,6 @@
       </div>
     </div>
     <div id="cart-bar" class="cart-bar">
-      <div id="cancel-order-bar" class="cancel-order-bar hidden">
-        <p id="cancel-order-msg">Porosia u dërgua.</p>
-        <button type="button" class="btn-cancel-order" id="btn-cancel-order">Anullo Porosinë</button>
-        <p class="cancel-countdown" id="cancel-countdown"></p>
-      </div>
       <div id="cart-lines" class="cart-lines"></div>
       <div class="cart-total">
         <span>Totali</span>
@@ -138,6 +106,6 @@
 
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=1"></script>
-  <script src="/js/kiosk.js?v=7"></script>
+  <script src="/js/kiosk.js?v=8"></script>
 </body>
 </html>

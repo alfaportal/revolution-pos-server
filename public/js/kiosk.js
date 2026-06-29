@@ -15,8 +15,6 @@
   let cart = [];
   let menuGroupFilter = "pije";
   let groupBarBound = false;
-  let pendingCancel = null;
-  let cancelCountdownTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -88,68 +86,8 @@
     }
   }
 
-  function clearPendingCancel() {
-    pendingCancel = null;
-    if (cancelCountdownTimer) {
-      clearInterval(cancelCountdownTimer);
-      cancelCountdownTimer = null;
-    }
-    $("cancel-order-bar")?.classList.add("hidden");
-    scheduleKioskLayout();
-  }
-
-  function showPendingCancel(tableNum) {
-    clearPendingCancel();
-    const cancelUntil = Date.now() + 3 * 60 * 1000;
-    pendingCancel = { tableNumber: tableNum, cancelUntil };
-    const bar = $("cancel-order-bar");
-    const msg = $("cancel-order-msg");
-    const countdownEl = $("cancel-countdown");
-    if (msg) msg.textContent = `Porosia u dërgua te banaku për T${tableNum}!`;
-    bar?.classList.remove("hidden");
-    scheduleKioskLayout();
-    const tick = () => {
-      if (!pendingCancel) return;
-      const left = Math.max(0, pendingCancel.cancelUntil - Date.now());
-      const sec = Math.ceil(left / 1000);
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      if (countdownEl) {
-        countdownEl.textContent = `Mund të anulloni edhe ${m}:${String(s).padStart(2, "0")}`;
-      }
-      if (left <= 0) clearPendingCancel();
-      scheduleKioskLayout();
-    };
-    tick();
-    cancelCountdownTimer = setInterval(tick, 1000);
-  }
-
   function apiPath(suffix) {
     return `/api/${apiChannel}/${encodeURIComponent(slug)}${suffix}${apiQuery()}`;
-  }
-
-  async function cancelPendingOrder() {
-    if (!pendingCancel) return;
-    if (!confirm(`Anulloni porosinë për T${pendingCancel.tableNumber}?`)) return;
-    const btn = $("btn-cancel-order");
-    if (btn) btn.disabled = true;
-    try {
-      await api(apiPath("/order/cancel"), {
-        method: "POST",
-        body: JSON.stringify({ table_number: pendingCancel.tableNumber }),
-      });
-      clearPendingCancel();
-      alert("Porosia u anullua");
-      renderCart();
-    } catch (e) {
-      showErr($("order-err"), e.message);
-    } finally {
-      if (btn) btn.disabled = false;
-    }
-  }
-
-  function bindCancelBar() {
-    $("btn-cancel-order")?.addEventListener("click", cancelPendingOrder);
   }
 
   function kitchenPhotoUrl(item) {
@@ -283,7 +221,8 @@
       });
       cart = [];
       renderCart();
-      showPendingCancel(tableNumber);
+      showErr($("order-err"), `✅ Porosia u dërgua te banaku për T${tableNumber}!`);
+      setTimeout(() => showErr($("order-err"), ""), 4000);
     } catch (e) {
       showErr(err, e.message);
     } finally {
@@ -305,7 +244,6 @@
   }
 
   loadBootstrap().catch(e => showErr($("order-err"), e.message));
-  bindCancelBar();
   window.addEventListener("resize", scheduleKioskLayout);
   window.addEventListener("orientationchange", scheduleKioskLayout);
   setInterval(refreshMenu, 15000);
