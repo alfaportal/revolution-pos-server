@@ -7,7 +7,7 @@ const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinS
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
-const { listBarOrders } = require("../services/kdsService");
+const { listBarOrders, acknowledgeBarOrders } = require("../services/kdsService");
 
 const router = express.Router();
 
@@ -377,6 +377,39 @@ router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
       has_pending: orders.length > 0,
       orders,
     });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/online-orders/acknowledge — shëno porositë e banakut si të marra (ndalon alarmin)
+ */
+router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, app_type, hostname, order_ids, order_id } = req.body;
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+
+    const licenseResult = await validateLicense({
+      celesi: key,
+      device_id,
+      app_type,
+      hostname,
+      client_ip: clientIp(req),
+    });
+    if (!licenseResult.valid) {
+      return res.status(403).json({
+        ok: false,
+        gabim: licenseResult.message || "Liçenca nuk është aktive.",
+      });
+    }
+
+    const rawIds = Array.isArray(order_ids) ? order_ids : (order_id ? [order_id] : []);
+    const result = await acknowledgeBarOrders(licenseResult.client_id, rawIds);
+    res.json({ ok: true, acknowledged: result.count, order_ids: result.ids });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
   }

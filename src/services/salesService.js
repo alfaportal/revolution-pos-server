@@ -71,7 +71,9 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   if (existing?.status === "closed" && status === "ordered") {
     finalStatus = "closed";
   } else if (existing?.status === "ready" && status === "ordered") {
-    finalStatus = "ordered";
+    const prevItems = JSON.stringify(normalizeItems(existing.items_json));
+    const nextItems = JSON.stringify(items);
+    finalStatus = prevItems === nextItems ? "ready" : "ordered";
   }
 
   const row = {

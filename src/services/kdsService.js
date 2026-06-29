@@ -2,8 +2,12 @@ const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName } = require("../lib/orderSource");
+const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const categoryCache = new Map();
+const CATEGORY_CACHE_MS = 60_000;
 
 async function fetchOrderedSales(clientId) {
   const db = getSupabase();
@@ -33,6 +37,74 @@ function isBanakOrder(order) {
   return !device.startsWith("WEB-");
 }
 
+async function loadCategoryLookup(clientId) {
+  const key = String(clientId);
+  const cached = categoryCache.get(key);
+  if (cached && Date.now() - cached.at < CATEGORY_CACHE_MS) {
+    return cached.lookup;
+  }
+
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("pos_menu_items")
+    .select("name, local_id, category")
+    .eq("client_id", clientId);
+  if (error) throw error;
+
+  const byName = new Map();
+  const byLocalId = new Map();
+  for (const row of data || []) {
+    const name = String(row.name || "").trim().toLowerCase();
+    const cat = String(row.category || "").trim();
+    if (name && cat) byName.set(name, cat);
+    if (row.local_id != null && cat) byLocalId.set(String(row.local_id), cat);
+  }
+
+  const lookup = { byName, byLocalId };
+  categoryCache.set(key, { at: Date.now(), lookup });
+  return lookup;
+}
+
+function resolveItemCategory(item, lookup) {
+  const inline = String(item.category || item.kategoria || "").trim();
+  if (inline) return inline;
+  const name = String(item.name || "").trim().toLowerCase();
+  if (name && lookup.byName.has(name)) return lookup.byName.get(name);
+  const menuId = item.menu_id ?? item.menu_item_id ?? item.local_id ?? item.id;
+  if (menuId != null && lookup.byLocalId.has(String(menuId))) {
+    return lookup.byLocalId.get(String(menuId));
+  }
+  return "";
+}
+
+function isKitchenItem(item, lookup) {
+  const cat = resolveItemCategory(item, lookup);
+  if (cat) return isFoodCategory(cat);
+  return false;
+}
+
+function isBarItem(item, lookup) {
+  const cat = resolveItemCategory(item, lookup);
+  if (cat) return isDrinkCategory(cat);
+  return true;
+}
+
+function itemsTotal(items) {
+  return (items || []).reduce(
+    (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0),
+    0,
+  );
+}
+
+function mapOrderWithItems(order, items) {
+  if (!items.length) return null;
+  return {
+    ...order,
+    items_json: items,
+    total: itemsTotal(items),
+  };
+}
+
 async function getClientForKitchen(clientId) {
   const id = String(clientId || "").trim();
   if (!UUID_RE.test(id)) throw new Error("ID klienti nuk është i vlefshëm.");
@@ -44,13 +116,32 @@ async function getClientForKitchen(clientId) {
 /** Banak — porosi QR, kamarier, online, POS (rruga /kitchen/ në link) */
 async function listBarOrders(clientId) {
   const orders = await fetchOrderedSales(clientId);
-  return orders.filter(isBanakOrder);
+  const lookup = await loadCategoryLookup(clientId);
+  const result = [];
+
+  for (const order of orders) {
+    if (!isBanakOrder(order)) continue;
+    const items = normalizeItems(order.items_json).filter(it => isBarItem(it, lookup));
+    const mapped = mapOrderWithItems(order, items.length ? items : normalizeItems(order.items_json));
+    if (mapped) result.push(mapped);
+  }
+
+  return result;
 }
 
-/** Kuzhina — vetëm porosi ushqimi (rruga /bar/ në link) */
+/** Kuzhina KDS — vetëm artikuj ushqimi (rruga /bar/ në link) */
 async function listKitchenOrders(clientId) {
   const orders = await fetchOrderedSales(clientId);
-  return orders.filter(o => !isBanakOrder(o));
+  const lookup = await loadCategoryLookup(clientId);
+  const result = [];
+
+  for (const order of orders) {
+    const items = normalizeItems(order.items_json).filter(it => isKitchenItem(it, lookup));
+    const mapped = mapOrderWithItems(order, items);
+    if (mapped) result.push(mapped);
+  }
+
+  return result;
 }
 
 async function markKitchenOrderReady(clientId, orderId) {
@@ -69,6 +160,28 @@ async function markKitchenOrderReady(clientId, orderId) {
   if (!data) throw new Error("Porosia nuk u gjet ose është përfunduar.");
   notifyKitchenUpdate(clientId, { order_id: orderId, status: "ready" });
   return data;
+}
+
+async function acknowledgeBarOrders(clientId, orderIds) {
+  const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+  if (!ids.length) return { count: 0, ids: [] };
+
+  const db = getSupabase();
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("sales_orders")
+    .update({ status: "ready", ready_at: now })
+    .eq("client_id", clientId)
+    .eq("status", "ordered")
+    .in("id", ids)
+    .select("id");
+
+  if (error) throw error;
+  const acked = (data || []).map(row => row.id);
+  if (acked.length) {
+    notifyKitchenUpdate(clientId, { order_ids: acked, status: "ready" });
+  }
+  return { count: acked.length, ids: acked };
 }
 
 async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
@@ -105,5 +218,6 @@ module.exports = {
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
   markKitchenOrderReady,
+  acknowledgeBarOrders,
   isBanakOrder,
 };

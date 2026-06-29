@@ -199,12 +199,7 @@
         btn.textContent = "Gati ✅";
         return;
       }
-      const card = gridEl.querySelector(`[data-id="${orderId}"]`);
-      if (card) card.remove();
-      knownIds.delete(orderId);
-      const remaining = gridEl.querySelectorAll(".order-ticket").length;
-      countEl.textContent = `${remaining} porosi`;
-      if (!remaining) emptyEl.classList.remove("hidden");
+      await fetchOrders();
     } catch (e) {
       alert(e.message || "Gabim.");
       btn.disabled = false;
