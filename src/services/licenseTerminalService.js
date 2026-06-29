@@ -180,24 +180,23 @@ async function resolveTerminalAccess(license, deviceId, hostname, ip) {
     await touchTerminal(license.id, id, { hostname, ip });
     terminals = await listTerminalsOrdered(license.id);
     slotIndex = terminals.findIndex(t => t.device_id === id);
+    if (terminals.length <= maxTerminals) await clearTerminalLimitGrace(license.id);
 
-    if (slotIndex < maxTerminals) {
-      if (terminals.length <= maxTerminals) await clearTerminalLimitGrace(license.id);
-      return {
-        allowed: true,
-        active_count: terminals.length,
-        max_terminals: maxTerminals,
-        slot: slotIndex + 1,
-      };
-    }
-
-    const graceStart = await startTerminalLimitGrace(license.id);
-    license.terminal_limit_grace_at = graceStart;
-    const grace = getGraceState(license);
-    if (grace.withinGrace) {
-      return graceSuccessResult(license, terminals.length, maxTerminals, grace.graceUntil);
-    }
-    return blockedResult(terminals.length, maxTerminals);
+    const overSlot = slotIndex >= maxTerminals;
+    return {
+      allowed: true,
+      active_count: terminals.length,
+      max_terminals: maxTerminals,
+      slot: slotIndex + 1,
+      ...(overSlot
+        ? {
+            warning: true,
+            code: "TERMINAL_OVERFLOW",
+            message:
+              "Terminali juaj është i regjistruar. Kontaktoni Revolution Invest nëse duhen më shumë pajisje.",
+          }
+        : {}),
+    };
   }
 
   if (terminals.length < maxTerminals) {
