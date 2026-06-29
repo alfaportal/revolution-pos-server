@@ -26,6 +26,44 @@
       margin: 0.5rem 0 0;
       line-height: 1.4;
     }
+    /* Scroll i plotë i menusë në telefon — shporta fikse poshtë */
+    body.kiosk-body {
+      height: 100dvh;
+      overflow: hidden;
+    }
+    #screen-order.kiosk-screen {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+    #screen-order.kiosk-screen .waiter-main.order-main {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: var(--kiosk-cart-height, 12rem);
+    }
+    #screen-order.kiosk-screen .menu-pos-wrap {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #screen-order.kiosk-screen .menu-photo-grid {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      touch-action: pan-y;
+    }
+    #screen-order.kiosk-screen .menu-photo-grid-inner {
+      padding-bottom: 1rem;
+    }
     .cancel-order-bar {
       padding: 0.75rem;
       margin-bottom: 0.65rem;
@@ -55,8 +93,8 @@
     }
   </style>
 </head>
-<body>
-  <div id="screen-order" class="screen active">
+<body class="kiosk-body">
+  <div id="screen-order" class="screen active kiosk-screen">
     <div class="staff-app-bar">
       <img src="/logo-source.png" width="28" height="28" alt="Revolution Invest POS">
       <span>Revolution Invest POS</span>
@@ -71,7 +109,7 @@
       </div>
       <p class="kiosk-hint" id="sync-hint">Porosia shkon te banaku — jo faturë.</p>
     </div>
-    <div class="waiter-main" style="padding-bottom:0">
+    <div class="waiter-main order-main">
       <div id="order-err" class="err hidden"></div>
       <div class="order-layout menu-pos-wrap">
         <div class="menu-group-bar" id="menu-group-bar">
@@ -81,7 +119,7 @@
         <div id="menu-grid" class="menu-photo-grid"></div>
       </div>
     </div>
-    <div class="cart-bar">
+    <div id="cart-bar" class="cart-bar">
       <div id="cancel-order-bar" class="cancel-order-bar hidden">
         <p id="cancel-order-msg">Porosia u dërgua.</p>
         <button type="button" class="btn-cancel-order" id="btn-cancel-order">Anullo Porosinë</button>
@@ -100,6 +138,6 @@
 
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=1"></script>
-  <script src="/js/kiosk.js?v=6"></script>
+  <script src="/js/kiosk.js?v=7"></script>
 </body>
 </html>

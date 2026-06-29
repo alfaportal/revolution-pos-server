@@ -20,6 +20,22 @@
 
   const $ = id => document.getElementById(id);
 
+  function syncKioskLayout() {
+    const screen = $("screen-order");
+    const bar = $("cart-bar");
+    if (!screen || !bar) return;
+    const h = Math.ceil(bar.getBoundingClientRect().height);
+    screen.style.setProperty("--kiosk-cart-height", `${h}px`);
+    screen.style.setProperty("--cart-bar-height", `${h}px`);
+  }
+
+  function scheduleKioskLayout() {
+    requestAnimationFrame(() => {
+      syncKioskLayout();
+      requestAnimationFrame(syncKioskLayout);
+    });
+  }
+
   function showErr(el, msg) {
     if (!msg) {
       el.classList.add("hidden");
@@ -79,6 +95,7 @@
       cancelCountdownTimer = null;
     }
     $("cancel-order-bar")?.classList.add("hidden");
+    scheduleKioskLayout();
   }
 
   function showPendingCancel(tableNum) {
@@ -90,6 +107,7 @@
     const countdownEl = $("cancel-countdown");
     if (msg) msg.textContent = `Porosia u dërgua te banaku për T${tableNum}!`;
     bar?.classList.remove("hidden");
+    scheduleKioskLayout();
     const tick = () => {
       if (!pendingCancel) return;
       const left = Math.max(0, pendingCancel.cancelUntil - Date.now());
@@ -100,6 +118,7 @@
         countdownEl.textContent = `Mund të anulloni edhe ${m}:${String(s).padStart(2, "0")}`;
       }
       if (left <= 0) clearPendingCancel();
+      scheduleKioskLayout();
     };
     tick();
     cancelCountdownTimer = setInterval(tick, 1000);
@@ -237,6 +256,7 @@
     }
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     $("cart-total").textContent = formatEuro(total);
+    scheduleKioskLayout();
   }
 
   $("btn-send").addEventListener("click", async () => {
@@ -286,5 +306,7 @@
 
   loadBootstrap().catch(e => showErr($("order-err"), e.message));
   bindCancelBar();
+  window.addEventListener("resize", scheduleKioskLayout);
+  window.addEventListener("orientationchange", scheduleKioskLayout);
   setInterval(refreshMenu, 15000);
 })();
