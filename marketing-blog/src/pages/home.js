@@ -42,6 +42,7 @@ function packageFeaturesHtml(plan, { keys } = {}) {
 function packageCard(plan) {
   const prefix = `packages.${plan}`;
   const tagline = t(`${prefix}.tagline`);
+  const name = t(`${prefix}.name`);
   return `
     <article
       class="package-card"
@@ -49,13 +50,16 @@ function packageCard(plan) {
       role="button"
       tabindex="0"
       aria-pressed="false"
-      aria-label="${t(`${prefix}.name`)}"
+      aria-label="${name}"
     >
+      <div class="package-card-thumb" aria-hidden="true">${name.charAt(0)}</div>
       <span class="package-badge">${t("packages.badge")}</span>
-      <h3 class="package-name">${t(`${prefix}.name`)}</h3>
-      ${tagline ? `<p class="package-tagline">${tagline}</p>` : ""}
-      <ul class="package-list">${packageFeaturesHtml(plan, { keys: PACKAGE_CARD_KEYS[plan] })}</ul>
-      <span class="btn btn-ghost package-select-btn">${t("cta.choosePackage")}</span>
+      <div class="package-card-body">
+        <h3 class="package-name">${name}</h3>
+        ${tagline ? `<p class="package-tagline">${tagline}</p>` : ""}
+        <ul class="package-list">${packageFeaturesHtml(plan, { keys: PACKAGE_CARD_KEYS[plan] })}</ul>
+        <span class="btn btn-ghost package-select-btn">${t("cta.choosePackage")}</span>
+      </div>
     </article>
   `;
 }
@@ -67,11 +71,13 @@ function howCard(imagePath, titleKey, descKey, manualHref) {
       <div class="how-card-photo">
         <img src="${assetPath(imagePath)}" alt="${title}" loading="lazy" />
       </div>
-      <h3>${title}</h3>
-      <div class="how-card-desc-wrap">
-        <p class="how-card-desc">${t(descKey)}</p>
+      <div class="how-card-body">
+        <h3>${title}</h3>
+        <div class="how-card-desc-wrap">
+          <p class="how-card-desc">${t(descKey)}</p>
+        </div>
+        <a class="how-card-link" href="${manualHref}">${t("how.readManual")}</a>
       </div>
-      <a class="how-card-link" href="${manualHref}">${t("how.readManual")}</a>
     </article>
   `;
 }

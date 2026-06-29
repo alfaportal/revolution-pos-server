@@ -172,20 +172,6 @@ export const articlesMeta = [
     },
   },
   {
-    slug: "librat-kontabel-atk",
-    variant: "brand",
-    sq: {
-      category: "KONTABILITET",
-      title: "Librat Kontabël për ATK: Si i Gjeneron Revolution Automatikisht",
-      date: "27 mars 2026",
-    },
-    en: {
-      category: "ACCOUNTING",
-      title: "Accounting Books for Tax Authorities: How Revolution Generates Them Automatically",
-      date: "27 March 2026",
-    },
-  },
-  {
     slug: "raportet-e-restorantit",
     variant: "dashboard",
     sq: {
@@ -196,20 +182,6 @@ export const articlesMeta = [
     en: {
       category: "MANAGEMENT",
       title: "Restaurant Reports: Understand Your Business by the Numbers",
-      date: "27 March 2026",
-    },
-  },
-  {
-    slug: "split-bill",
-    variant: "pos",
-    sq: {
-      category: "UDHËZUES",
-      title: "Split Bill: Si të Ndash Faturën pa Konfuzion",
-      date: "27 mars 2026",
-    },
-    en: {
-      category: "GUIDE",
-      title: "Split Bill: Divide the Check Without Confusion",
       date: "27 March 2026",
     },
   },
