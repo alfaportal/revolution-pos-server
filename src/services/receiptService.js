@@ -82,7 +82,7 @@ function buildReceiptPayload(clientId, business, body) {
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
   const closedAt = body.closed_at || body.printed_at || new Date().toISOString();
   const { date, time } = formatReceiptDateTime(closedAt);
-  const printed = formatReceiptDateTime(body.printed_at || new Date().toISOString());
+  const printed = formatReceiptDateTime(body.printed_at || closedAt);
   const slipKind = String(body.slip_kind || body.slipKind || "").trim().toLowerCase() === "final"
     ? "final"
     : "order";
@@ -155,9 +155,11 @@ function buildReceiptLines(receipt) {
   if (biz.tvsh_nr) lines.push(pad(`TVSH: ${biz.tvsh_nr}`, w, "center"));
 
   lines.push(divider(w));
-  if (receipt.slip_title) lines.push(pad(receipt.slip_title, w, "center"));
-  if (receipt.slip_note) lines.push(pad(receipt.slip_note, w, "center"));
-  if (receipt.receipt_number) lines.push(`Nr. Faturës: ${receipt.receipt_number}`);
+  if (receipt.slip_kind === "order" && receipt.order_number) {
+    lines.push(`Nr. Porosia: ${receipt.order_number}`);
+  } else if (receipt.receipt_number) {
+    lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
+  }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
   if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
@@ -190,9 +192,11 @@ function buildMarkedReceiptLines(receipt) {
   if (biz.tvsh_nr) lines.push(`^CTVSH Nr.: ${biz.tvsh_nr}`);
 
   lines.push(divider(w));
-  if (receipt.slip_title) lines.push(pad(receipt.slip_title, w, "center"));
-  if (receipt.slip_note) lines.push(pad(receipt.slip_note, w, "center"));
-  if (receipt.receipt_number) lines.push(`Nr. Faturës: ${receipt.receipt_number}`);
+  if (receipt.slip_kind === "order" && receipt.order_number) {
+    lines.push(`Nr. Porosia: ${receipt.order_number}`);
+  } else if (receipt.receipt_number) {
+    lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
+  }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
   if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
@@ -261,9 +265,11 @@ function formatReceiptHtml(receipt) {
   ].filter(Boolean).join("");
 
   const orderMeta = [
-    receipt.slip_title ? `<div class="rc-slip-title">${escapeHtml(receipt.slip_title)}</div>` : "",
-    receipt.slip_note ? `<div class="rc-slip-note">${escapeHtml(receipt.slip_note)}</div>` : "",
-    receipt.receipt_number ? `<div><span class="rc-meta-label">Fatura</span> ${escapeHtml(receipt.receipt_number)}</div>` : "",
+    receipt.slip_kind === "order" && receipt.order_number
+      ? `<div><span class="rc-meta-label">Nr. Porosia</span> ${escapeHtml(receipt.order_number)}</div>`
+      : receipt.receipt_number
+        ? `<div><span class="rc-meta-label">Nr. Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>`
+        : "",
     receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : "",
     receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
     receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
