@@ -2,6 +2,7 @@ const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
 const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady } = require("../services/kdsService");
+const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
 
@@ -9,6 +10,15 @@ const router = express.Router();
 
 router.get("/:slug/events", resolveKitchenClient, requirePackageFeature("kds"), (req, res) => {
   subscribe(req.kitchenClient.id, res);
+});
+
+router.get("/:slug/bar/tables/live", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
+  try {
+    const live = await getLiveTablesForOwner(req.kitchenClient.id);
+    res.json({ ok: true, ...live });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
 });
 
 router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {

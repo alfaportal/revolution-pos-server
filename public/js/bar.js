@@ -10,9 +10,59 @@
   const errorEl = document.getElementById("error-box");
   const countEl = document.getElementById("order-count");
   const syncEl = document.getElementById("last-sync");
+  const tablesGridEl = document.getElementById("bar-tables-grid");
+  const tablesUpdatedEl = document.getElementById("bar-tables-updated");
 
   let knownIds = new Set();
   let eventSource = null;
+
+  function renderLiveTableCard(t) {
+    if (t.status === "free") {
+      return `<div class="bar-table-card free">
+        <div class="bar-table-num">${escapeHtml(t.label)}</div>
+        <div class="bar-table-status">E lirë</div>
+      </div>`;
+    }
+    const o = t.order || {};
+    const isQr = o.source_code === "table";
+    const ready = o.order_status === "ready";
+    const classes = ["bar-table-card", "occupied", isQr ? "qr" : "", ready ? "ready" : ""].filter(Boolean).join(" ");
+    let status = isQr ? "🪑 QR" : "E zënë";
+    if (ready) status = isQr ? "QR · Gati" : "Gati";
+    const meta = o.accepted_by
+      ? escapeHtml(o.accepted_by)
+      : (isQr ? "Në pritje" : escapeHtml(o.waiter_name || "—"));
+    return `<div class="${classes}">
+      <div class="bar-table-num">${escapeHtml(t.label)}</div>
+      <div class="bar-table-status">${status}</div>
+      <div class="bar-table-total">${formatEuro(o.total)}</div>
+      <div class="bar-table-meta" title="${meta}">${meta}</div>
+    </div>`;
+  }
+
+  async function fetchLiveTables() {
+    if (!slug || !kitchenKey || !tablesGridEl) return;
+    try {
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/tables/live${apiQuery()}`, {
+        headers: apiHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) return;
+      const tables = data.tables || [];
+      tablesGridEl.innerHTML = tables.length
+        ? tables.map(renderLiveTableCard).join("")
+        : '<p class="bar-tables-hint">Nuk ka tavolina të konfiguruara.</p>';
+      if (tablesUpdatedEl && data.updated_at) {
+        tablesUpdatedEl.textContent = `Përditësuar: ${formatTime(data.updated_at)}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function refreshAll() {
+    await Promise.all([fetchLiveTables(), fetchOrders()]);
+  }
 
   function apiQuery() {
     return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
@@ -185,7 +235,7 @@
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`, {
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();
@@ -234,7 +284,7 @@
         return;
       }
       if (data.accepted_by) alert(`Porosia u pranua nga ${data.accepted_by}`);
-      await fetchOrders();
+      await refreshAll();
     } catch (e) {
       alert(e.message || "Gabim.");
       btn.disabled = false;
@@ -246,14 +296,14 @@
     if (!slug || !kitchenKey || typeof EventSource === "undefined") return;
     const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
     eventSource = new EventSource(url);
-    eventSource.addEventListener("kitchen", () => fetchOrders());
+    eventSource.addEventListener("kitchen", () => refreshAll());
     eventSource.onerror = () => {
       if (eventSource) eventSource.close();
       setTimeout(connectSse, 5000);
     };
   }
 
-  fetchOrders();
+  refreshAll();
   connectSse();
-  setInterval(fetchOrders, 5000);
+  setInterval(refreshAll, 5000);
 })();
