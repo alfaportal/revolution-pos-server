@@ -117,16 +117,20 @@ function spotlightVisual(variant) {
     </div>`;
 }
 
-function spotlightCard({ variant, categoryKey, titleKey, descKey, linkKey, href, imageSlug = "" }) {
+function spotlightCard({ variant, categoryKey, titleKey, descKey, linkKey, href, imageSlug = "", hidePhoto = false }) {
   const imgBlock = imageSlug
     ? `<div class="spotlight-photo-fallback">${renderArticleImage(imageSlug, { className: "spotlight-img" })}</div>`
     : "";
-  return `
-    <a class="spotlight-card spotlight-card-${variant}" href="${href}" data-navigate>
+  const photoBlock = hidePhoto
+    ? ""
+    : `
       <div class="spotlight-photo">
         ${spotlightVisual(variant)}
         ${imgBlock}
-      </div>
+      </div>`;
+  return `
+    <a class="spotlight-card spotlight-card-${variant}${hidePhoto ? " spotlight-card--no-photo" : ""}" href="${href}" data-navigate>
+      ${photoBlock}
       <div class="spotlight-body">
         <div class="spotlight-category">${t(categoryKey)}</div>
         <h3 class="spotlight-title">${t(titleKey)}</h3>
@@ -326,7 +330,7 @@ export function renderHome() {
               descKey: "spotlight.card1.desc",
               linkKey: "spotlight.card1.link",
               href: blogArticlePath("stoku-faturat-dhe-skanimi-me-ai"),
-              imageSlug: "stoku-faturat-dhe-skanimi-me-ai",
+              hidePhoto: true,
             })}
             ${spotlightCard({
               variant: "platform",
@@ -415,24 +419,7 @@ export function renderHome() {
             <h2>${t("contact.title")}</h2>
             <p>${t("contact.subtitle")}</p>
           </div>
-          <div class="contact-grid">
-            <div class="contact-card">
-              <h3>${t("contact.direct")}</h3>
-              <div class="contact-links">
-                <a class="contact-link whatsapp" id="contact-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
-                  <span aria-hidden="true">💬</span>
-                  <span id="contact-whatsapp-label">WhatsApp</span>
-                </a>
-                <a class="contact-link" id="contact-tel" href="#">
-                  <span aria-hidden="true">📞</span>
-                  <span id="contact-tel-label">+383 44 123 456</span>
-                </a>
-                <a class="contact-link" href="mailto:${t("contact.email")}">
-                  <span aria-hidden="true">✉️</span>
-                  <span>${t("contact.email")}</span>
-                </a>
-              </div>
-            </div>
+          <div class="contact-grid contact-grid--form-only">
             <div class="contact-card">
               <h3>${t("contact.sendMessage")}</h3>
               <form class="contact-form" id="contact-form">

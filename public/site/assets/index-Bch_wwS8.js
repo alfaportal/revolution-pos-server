@@ -1338,12 +1338,13 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${d}`,"_blank","noo
           <div class="sm-grid-mini sm-grid-shop"><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
       </div>
-    </div>`}function W({variant:e,categoryKey:t,titleKey:a,descKey:o,linkKey:n,href:r,imageSlug:s=""}){const h=s?`<div class="spotlight-photo-fallback">${N(s,{className:"spotlight-img"})}</div>`:"";return`
-    <a class="spotlight-card spotlight-card-${e}" href="${r}" data-navigate>
+    </div>`}function W({variant:e,categoryKey:t,titleKey:a,descKey:o,linkKey:n,href:r,imageSlug:s="",hidePhoto:h=!1}){const m=s?`<div class="spotlight-photo-fallback">${N(s,{className:"spotlight-img"})}</div>`:"",l=h?"":`
       <div class="spotlight-photo">
         ${ce(e)}
-        ${h}
-      </div>
+        ${m}
+      </div>`;return`
+    <a class="spotlight-card spotlight-card-${e}${h?" spotlight-card--no-photo":""}" href="${r}" data-navigate>
+      ${l}
       <div class="spotlight-body">
         <div class="spotlight-category">${i(t)}</div>
         <h3 class="spotlight-title">${i(a)}</h3>
@@ -1384,7 +1385,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${d}`,"_blank","noo
             <p>${i("spotlight.subtitle")}</p>
           </div>
           <div class="spotlight-grid">
-            ${W({variant:"ai",categoryKey:"spotlight.card1.category",titleKey:"spotlight.card1.title",descKey:"spotlight.card1.desc",linkKey:"spotlight.card1.link",href:C("stoku-faturat-dhe-skanimi-me-ai"),imageSlug:"stoku-faturat-dhe-skanimi-me-ai"})}
+            ${W({variant:"ai",categoryKey:"spotlight.card1.category",titleKey:"spotlight.card1.title",descKey:"spotlight.card1.desc",linkKey:"spotlight.card1.link",href:C("stoku-faturat-dhe-skanimi-me-ai"),hidePhoto:!0})}
             ${W({variant:"platform",categoryKey:"spotlight.card2.category",titleKey:"spotlight.card2.title",descKey:"spotlight.card2.desc",linkKey:"spotlight.card2.link",href:"#pakot"})}
           </div>
         </div>
@@ -1461,24 +1462,7 @@ ${i("wa.formSuffix")}`);window.open(`https://wa.me/${a}?text=${d}`,"_blank","noo
             <h2>${i("contact.title")}</h2>
             <p>${i("contact.subtitle")}</p>
           </div>
-          <div class="contact-grid">
-            <div class="contact-card">
-              <h3>${i("contact.direct")}</h3>
-              <div class="contact-links">
-                <a class="contact-link whatsapp" id="contact-whatsapp" href="#" target="_blank" rel="noopener noreferrer">
-                  <span aria-hidden="true">💬</span>
-                  <span id="contact-whatsapp-label">WhatsApp</span>
-                </a>
-                <a class="contact-link" id="contact-tel" href="#">
-                  <span aria-hidden="true">📞</span>
-                  <span id="contact-tel-label">+383 44 123 456</span>
-                </a>
-                <a class="contact-link" href="mailto:${i("contact.email")}">
-                  <span aria-hidden="true">✉️</span>
-                  <span>${i("contact.email")}</span>
-                </a>
-              </div>
-            </div>
+          <div class="contact-grid contact-grid--form-only">
             <div class="contact-card">
               <h3>${i("contact.sendMessage")}</h3>
               <form class="contact-form" id="contact-form">
