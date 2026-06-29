@@ -266,23 +266,52 @@ async function updateActiveSaleFromPos(body) {
   return upsertSaleFromPos({ ...body, status }, { defaultStatus: "ordered" });
 }
 
+async function fetchOwnerActiveOrders(clientId) {
+  const db = getSupabase();
+  const fullSelect =
+    "table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at";
+  const baseSelect =
+    "table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id";
+
+  let result = await db
+    .from("sales_orders")
+    .select(fullSelect)
+    .eq("client_id", clientId)
+    .in("status", ["ordered", "ready"])
+    .order("ordered_at", { ascending: false });
+
+  if (result.error && /accepted_by|accepted_at/i.test(String(result.error.message || ""))) {
+    result = await db
+      .from("sales_orders")
+      .select(baseSelect)
+      .eq("client_id", clientId)
+      .in("status", ["ordered", "ready"])
+      .order("ordered_at", { ascending: false });
+  }
+
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
 async function getLiveTablesForOwner(clientId) {
   const db = getSupabase();
   const { loadAreasForClient } = require("./venueService");
   const { buildTablesFromAreas } = require("../lib/tableLayout");
 
-  const [{ data: settings }, { data: activeOrders, error }, areas] = await Promise.all([
-    db.from("pos_settings").select("table_count, restaurant_name").eq("client_id", clientId).maybeSingle(),
-    db
-      .from("sales_orders")
-      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at")
-      .eq("client_id", clientId)
-      .in("status", ["ordered", "ready"])
-      .order("ordered_at", { ascending: false }),
-    loadAreasForClient(clientId),
-  ]);
+  const activeOrders = await fetchOwnerActiveOrders(clientId);
 
-  if (error) throw error;
+  const { data: settings } = await db
+    .from("pos_settings")
+    .select("table_count, restaurant_name")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  let areas = [];
+  try {
+    areas = await loadAreasForClient(clientId);
+  } catch (err) {
+    console.warn("[getLiveTablesForOwner] areas:", err.message);
+  }
 
   const { orderSourceLabel } = require("../lib/orderSource");
   const metaByTable = new Map();

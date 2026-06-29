@@ -1,5 +1,52 @@
 let token = localStorage.getItem("owner_token") || "";
 
+function showBootError(msg) {
+  const el = document.getElementById("panel-boot-error");
+  if (!el) return;
+  if (!msg) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+function showBootInfo(msg) {
+  const el = document.getElementById("panel-boot-info");
+  if (!el) return;
+  if (!msg) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+
+async function verifyOwnerSession() {
+  const res = await fetch("/api/auth/owner/me", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: "include",
+  });
+  if (!res.ok) return false;
+  return true;
+}
+
+function redirectOwnerLogin() {
+  localStorage.removeItem("owner_token");
+  location.href = "/owner/login";
+}
+
+async function runBootStep(label, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.warn(`Panel boot [${label}]:`, err.message);
+    showBootError(`Disa të dhëna nuk u ngarkuan (${label}). ${err.message || "Provoni rifreskimin."}`);
+  }
+}
+
 const PWA_BANNER_KEY = "ri_pos_pwa_banner_dismissed";
 
 function isStandalonePwa() {
@@ -232,8 +279,9 @@ async function loadLiveTables() {
 }
 
 function connectOwnerLiveEvents() {
-  if (!token || typeof EventSource === "undefined") return;
-  const url = `/api/owner/tables/events?token=${encodeURIComponent(token)}`;
+  if (typeof EventSource === "undefined") return;
+  const q = token ? `?token=${encodeURIComponent(token)}` : "";
+  const url = `/api/owner/tables/events${q}`;
   let es;
   const connect = () => {
     es = new EventSource(url);
@@ -2610,26 +2658,37 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
     OfflineQueue.initConnectionStatus(document.getElementById("conn-status-owner"));
   }
 
-  if (!token) {
-    location.href = "/owner/login";
+  const newLicenseKey = sessionStorage.getItem("owner_new_license_key");
+  if (newLicenseKey) {
+    sessionStorage.removeItem("owner_new_license_key");
+    showBootInfo(`U krijua llogaria! Çelësi i licencës për POS: ${newLicenseKey} — ruajeni tani.`);
+  }
+
+  const authed = await verifyOwnerSession();
+  if (!authed) {
+    redirectOwnerLogin();
     return;
   }
-  try {
-    await api("/api/auth/owner/me");
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 6);
-    document.getElementById("raport-nga").value = weekAgo.toISOString().slice(0, 10);
-    document.getElementById("raport-deri").value = today;
-    const zDate = document.getElementById("zreport-date");
-    if (zDate) zDate.value = today;
-    await loadClient();
-    await loadStats();
-    await loadLiveTables();
-    connectOwnerLiveEvents();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  document.getElementById("raport-nga").value = weekAgo.toISOString().slice(0, 10);
+  document.getElementById("raport-deri").value = today;
+  const zDate = document.getElementById("zreport-date");
+  if (zDate) zDate.value = today;
+
+  await runBootStep("klienti", loadClient);
+  await runBootStep("statistikat", loadStats);
+  await runBootStep("tavolinat", loadLiveTables);
+  connectOwnerLiveEvents();
+  await runBootStep("porositë", async () => {
     await loadOrderFilters();
     await loadOrders();
-    setInterval(async () => {
+  });
+
+  setInterval(async () => {
+    try {
       await loadStats();
       if (!document.getElementById("panel-tavolinat").classList.contains("hidden")) {
         await loadLiveTables();
@@ -2638,9 +2697,8 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
         await loadOrderFilters();
         await loadOrders();
       }
-    }, 3000);
-  } catch {
-    localStorage.removeItem("owner_token");
-    location.href = "/owner/login";
-  }
+    } catch {
+      /* poll — mos nxirr jashtë */
+    }
+  }, 3000);
 })();

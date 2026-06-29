@@ -113,12 +113,9 @@
         if (!res.ok) throw new Error(data.gabim || "Gabim");
         localStorage.setItem("owner_token", data.token);
         if (data.license_key) {
-          infoEl.textContent = `U krijua! Çelësi i licencës: ${data.license_key} — ruajeni për POS.`;
-          infoEl.classList.remove("hidden");
-          setTimeout(() => { location.href = "/owner/panel"; }, 3500);
-        } else {
-          location.href = "/owner/panel";
+          sessionStorage.setItem("owner_new_license_key", data.license_key);
         }
+        location.href = "/owner/panel";
       } catch (err) {
         showErr(err.message);
       } finally {

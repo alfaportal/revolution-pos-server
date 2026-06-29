@@ -1,5 +1,5 @@
 /* PWA vetëm për pronarët — scope /owner/ */
-const CACHE_NAME = "ri-pos-owner-v6";
+const CACHE_NAME = "ri-pos-owner-v7";
 const PRECACHE = [
   "/owner/panel",
   "/owner/login",
