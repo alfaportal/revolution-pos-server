@@ -165,7 +165,7 @@
           </div>
           <div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
-          <button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>
+          <button type="button" class="btn-ready" data-ready="${o.id}">Prano me PIN 🔐</button>
         </article>`;
     }).join("");
 
@@ -208,25 +208,37 @@
   }
 
   async function markReady(orderId, btn) {
+    const pin = prompt("PIN i kamarierit që e pranon porosinë (4 shifra):");
+    if (!pin) return;
+    const pinTrim = String(pin).trim();
+    if (!/^\d{4}$/.test(pinTrim)) {
+      alert("PIN duhet të jetë 4 shifra.");
+      return;
+    }
     btn.disabled = true;
     btn.textContent = "Duke u përpunuar...";
     try {
       const res = await fetch(
         `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/ready${apiQuery()}`,
-        { method: "POST", headers: apiHeaders() },
+        {
+          method: "POST",
+          headers: { ...apiHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: pinTrim }),
+        },
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
         alert(data.gabim || "Nuk u shënua si gati.");
         btn.disabled = false;
-        btn.textContent = "Gati ✅";
+        btn.textContent = "Prano me PIN 🔐";
         return;
       }
+      if (data.accepted_by) alert(`Porosia u pranua nga ${data.accepted_by}`);
       await fetchOrders();
     } catch (e) {
       alert(e.message || "Gabim.");
       btn.disabled = false;
-      btn.textContent = "Gati ✅";
+      btn.textContent = "Prano me PIN 🔐";
     }
   }
 

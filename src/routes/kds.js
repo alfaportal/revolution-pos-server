@@ -52,8 +52,22 @@ router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), 
 router.post("/:slug/orders/:orderId/ready", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    const order = await markKitchenOrderReady(client.id, req.params.orderId);
-    res.json({ ok: true, order });
+    const pin = String(req.body?.pin || req.body?.waiter_pin || "").trim();
+    let handler = null;
+    if (pin) {
+      const { verifyWaiterPin } = require("../services/waiterPinService");
+      handler = await verifyWaiterPin(client.id, pin);
+    } else {
+      return res.status(400).json({
+        ok: false,
+        gabim: "Vendosni PIN-in e kamarierit që e pranon porosinë.",
+      });
+    }
+    const order = await markKitchenOrderReady(client.id, req.params.orderId, {
+      waiterId: handler.id,
+      waiterName: handler.name,
+    });
+    res.json({ ok: true, order, accepted_by: handler.name });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

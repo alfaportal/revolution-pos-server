@@ -7,7 +7,8 @@ const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinS
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
-const { listBarOrders, acknowledgeBarOrders } = require("../services/kdsService");
+const { listBarOrders, acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
+const { isBarMobileOrder } = require("../lib/orderSource");
 
 const router = express.Router();
 
@@ -157,12 +158,13 @@ async function countPendingOnlineOrders(clientId) {
 
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
-  const rows = await listBarOrders(clientId);
-  return rows.map(formatOrderForPos);
+  const rows = await fetchOrderedSales(clientId);
+  return rows.filter(isBarMobileOrder).map(formatOrderForPos);
 }
 
 function formatOrderForPos(row) {
   const src = orderSourceLabel(row);
+  const handler = String(row.accepted_by_waiter_name || "").trim();
   return {
     id: row.id,
     table_number: Number(row.table_number) || 0,
@@ -170,10 +172,14 @@ function formatOrderForPos(row) {
     source: src.code,
     source_label: src.label,
     source_icon: src.icon,
+    device_id: row.device_id || "",
     items: normalizeItems(row.items_json),
     total: Number(row.total) || 0,
     ordered_at: row.ordered_at,
     status: row.status || "ordered",
+    accepted_by: handler,
+    accepted_at: row.accepted_at || null,
+    handler_label: handler || null,
   };
 }
 
@@ -408,8 +414,28 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
     }
 
     const rawIds = Array.isArray(order_ids) ? order_ids : (order_id ? [order_id] : []);
-    const result = await acknowledgeBarOrders(licenseResult.client_id, rawIds);
-    res.json({ ok: true, acknowledged: result.count, order_ids: result.ids });
+    const pin = String(req.body.pin || req.body.waiter_pin || "").trim();
+
+    let handler = null;
+    if (pin) {
+      handler = await verifyWaiterPin(licenseResult.client_id, pin);
+    } else {
+      return res.status(400).json({
+        ok: false,
+        gabim: "Vendosni PIN-in e kamarierit që e pranon porosinë.",
+      });
+    }
+
+    const result = await acknowledgeBarOrders(licenseResult.client_id, rawIds, {
+      waiterId: handler.id,
+      waiterName: handler.name,
+    });
+    res.json({
+      ok: true,
+      acknowledged: result.count,
+      order_ids: result.ids,
+      accepted_by: handler.name,
+    });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
   }

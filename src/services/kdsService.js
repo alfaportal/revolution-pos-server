@@ -14,7 +14,7 @@ async function fetchOrderedSales(clientId) {
   const { data, error } = await db
     .from("sales_orders")
     .select(
-      "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id",
+      "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at",
     )
     .eq("client_id", clientId)
     .eq("status", "ordered")
@@ -144,17 +144,37 @@ async function listKitchenOrders(clientId) {
   return result;
 }
 
-async function markKitchenOrderReady(clientId, orderId) {
+async function markKitchenOrderReady(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
   const db = getSupabase();
   const now = new Date().toISOString();
-  const { data, error } = await db
+  const patch = { status: "ready", ready_at: now };
+  if (waiterId) {
+    patch.accepted_by_waiter_id = waiterId;
+    patch.accepted_by_waiter_name = String(waiterName || "").trim();
+    patch.accepted_at = now;
+  }
+  let { data, error } = await db
     .from("sales_orders")
-    .update({ status: "ready", ready_at: now })
+    .update(patch)
     .eq("id", orderId)
     .eq("client_id", clientId)
     .eq("status", "ordered")
     .select()
     .single();
+
+  if (error && /accepted_by/i.test(String(error.message || ""))) {
+    delete patch.accepted_by_waiter_id;
+    delete patch.accepted_by_waiter_name;
+    delete patch.accepted_at;
+    ({ data, error } = await db
+      .from("sales_orders")
+      .update(patch)
+      .eq("id", orderId)
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .select()
+      .single());
+  }
 
   if (error) throw error;
   if (!data) throw new Error("Porosia nuk u gjet ose është përfunduar.");
@@ -162,19 +182,38 @@ async function markKitchenOrderReady(clientId, orderId) {
   return data;
 }
 
-async function acknowledgeBarOrders(clientId, orderIds) {
+async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waiterName = "" } = {}) {
   const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
   if (!ids.length) return { count: 0, ids: [] };
 
   const db = getSupabase();
   const now = new Date().toISOString();
+  const patch = { status: "ready", ready_at: now };
+  if (waiterId) {
+    patch.accepted_by_waiter_id = waiterId;
+    patch.accepted_by_waiter_name = String(waiterName || "").trim();
+    patch.accepted_at = now;
+  }
   const { data, error } = await db
     .from("sales_orders")
-    .update({ status: "ready", ready_at: now })
+    .update(patch)
     .eq("client_id", clientId)
     .eq("status", "ordered")
     .in("id", ids)
     .select("id");
+
+  if (error && /accepted_by/i.test(String(error.message || ""))) {
+    delete patch.accepted_by_waiter_id;
+    delete patch.accepted_by_waiter_name;
+    delete patch.accepted_at;
+    ({ data, error } = await db
+      .from("sales_orders")
+      .update(patch)
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .in("id", ids)
+      .select("id"));
+  }
 
   if (error) throw error;
   const acked = (data || []).map(row => row.id);
@@ -215,6 +254,7 @@ module.exports = {
   getClientForKitchen,
   listKitchenOrders,
   listBarOrders,
+  fetchOrderedSales,
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
   markKitchenOrderReady,

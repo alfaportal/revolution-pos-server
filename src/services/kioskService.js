@@ -7,7 +7,7 @@ const { getClientMenuCatalog } = require("./menuCatalogService");
 const KIOSK_DEVICE = WEB_KIOSK;
 
 function tableWaiterLabel(tableNumber) {
-  return `Tavolinë T${tableNumber}`;
+  return `QR · T${tableNumber}`;
 }
 
 async function getKioskMenu(clientId, { kitchenSlug = "", channel = "kiosk" } = {}) {
@@ -49,7 +49,7 @@ async function submitKioskOrder(client, body) {
     items,
     total,
     status: "ordered",
-    ordered_at: now,
+    ordered_at: existing?.ordered_at || now,
   });
 
   try {

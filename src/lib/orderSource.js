@@ -4,7 +4,7 @@ const WEB_PUBLIC = "WEB-PUBLIC";
 
 function isKioskWaiterName(name) {
   const n = String(name || "").trim().toLowerCase();
-  return n === "kiosk" || n.startsWith("tavolin");
+  return n === "kiosk" || n.startsWith("tavolin") || n.startsWith("qr");
 }
 
 function publicOrderWaiterLabel(orderType, name, phone, deliveryAddress) {

@@ -275,7 +275,7 @@ async function getLiveTablesForOwner(clientId) {
     db.from("pos_settings").select("table_count, restaurant_name").eq("client_id", clientId).maybeSingle(),
     db
       .from("sales_orders")
-      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status")
+      .select("table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at")
       .eq("client_id", clientId)
       .in("status", ["ordered", "ready"])
       .order("ordered_at", { ascending: false }),
@@ -284,15 +284,23 @@ async function getLiveTablesForOwner(clientId) {
 
   if (error) throw error;
 
+  const { orderSourceLabel } = require("../lib/orderSource");
   const metaByTable = new Map();
   const activeByTable = new Map();
   for (const o of activeOrders || []) {
     const num = Number(o.table_number) || 0;
     if (num < 1 || metaByTable.has(num)) continue;
+    const src = orderSourceLabel(o);
     metaByTable.set(num, {
       ordered_at: o.ordered_at,
       local_order_id: o.local_order_id,
       order_status: o.status || "ordered",
+      device_id: o.device_id || "",
+      source_code: src.code,
+      source_label: src.label,
+      source_icon: src.icon,
+      accepted_by: String(o.accepted_by_waiter_name || "").trim(),
+      accepted_at: o.accepted_at || null,
     });
     activeByTable.set(num, {
       waiter_name: o.waiter_name || "",
@@ -315,6 +323,12 @@ async function getLiveTablesForOwner(clientId) {
           ordered_at: meta?.ordered_at || null,
           local_order_id: meta?.local_order_id || null,
           order_status: meta?.order_status || "ordered",
+          device_id: meta?.device_id || "",
+          source_code: meta?.source_code || "pos",
+          source_label: meta?.source_label || "",
+          source_icon: meta?.source_icon || "",
+          accepted_by: meta?.accepted_by || "",
+          accepted_at: meta?.accepted_at || null,
         }
       : null;
     return {
@@ -354,17 +368,42 @@ async function sumSales(clientId, fromDate, toDate) {
   };
 }
 
+async function countChannelOrders(clientId, deviceId, fromDate, toDate) {
+  const db = getSupabase();
+  let q = db
+    .from("sales_orders")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("device_id", deviceId);
+  if (fromDate) q = q.gte("ordered_at", `${fromDate}T00:00:00.000Z`);
+  if (toDate) q = q.lte("ordered_at", `${toDate}T23:59:59.999Z`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).length;
+}
+
 async function getOwnerStats(clientId) {
   const r = dateRanges();
-  const [today, week, month] = await Promise.all([
+  const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
+  const [today, week, month, qrSot, webSot, qrJava, webJava] = await Promise.all([
     sumSales(clientId, r.today, r.today),
     sumSales(clientId, r.week_from, r.today),
     sumSales(clientId, r.month_from, r.today),
+    countChannelOrders(clientId, WEB_KIOSK, r.today, r.today),
+    countChannelOrders(clientId, WEB_PUBLIC, r.today, r.today),
+    countChannelOrders(clientId, WEB_KIOSK, r.week_from, r.today),
+    countChannelOrders(clientId, WEB_PUBLIC, r.week_from, r.today),
   ]);
   return {
     sot: today,
     java: week,
     muaj: month,
+    channels: {
+      qr_sot: qrSot,
+      web_sot: webSot,
+      qr_java: qrJava,
+      web_java: webJava,
+    },
   };
 }
 
@@ -373,7 +412,7 @@ async function listOwnerOrders(clientId, opts = {}) {
   const db = getSupabase();
   let q = db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status")
+    .select("id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status, device_id, accepted_by_waiter_name, accepted_at")
     .eq("client_id", clientId)
     .eq("status", "closed")
     .order("closed_at", { ascending: false })
@@ -386,9 +425,12 @@ async function listOwnerOrders(clientId, opts = {}) {
 
   const { data, error } = await q;
   if (error) throw error;
+  const { orderSourceLabel } = require("../lib/orderSource");
   return (data || []).map(o => ({
     ...o,
     items_json: normalizeItems(o.items_json),
+    source: orderSourceLabel(o),
+    accepted_by: String(o.accepted_by_waiter_name || "").trim(),
   }));
 }
 

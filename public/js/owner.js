@@ -99,27 +99,29 @@ function renderLiveTableCard(t) {
         return `<li><span>${qty}× ${it.name}</span><span>${euro(price)}</span></li>`;
       }).join("")}</ul>`
     : "";
-  return `<div class="live-table-card occupied${o.order_status === "ready" ? " ready" : ""}">
+  return `<div class="live-table-card occupied${o.order_status === "ready" ? " ready" : ""}${o.source_code === "table" ? " qr-order" : ""}">
     <div class="live-table-title">${t.label}</div>
-    <div class="live-table-status">${o.order_status === "ready" ? "Gati · tavolinë aktive" : "E zënë"}</div>
-    <div class="live-table-meta">👤 ${o.waiter_name || "—"}<br>🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
+    <div class="live-table-status">${o.source_code === "table" ? "🪑 QR · " : ""}${o.order_status === "ready" ? "Gati · tavolinë aktive" : "E zënë"}</div>
+    <div class="live-table-meta">${o.source_code === "table" ? `<span>📱 Porosi QR</span><br>` : ""}${o.accepted_by ? `✅ Pranuar: ${o.accepted_by}<br>` : "⏳ Në pritje pranimi<br>"}🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
     ${itemsHtml}
     <div class="live-table-total">${euro(o.total)}</div>
   </div>`;
 }
 
 function renderOrderCard(o) {
-  const waiterLabel = o.waiter_name
-    ? `${o.waiter_name}${o.waiter_id ? ` <small style="color:var(--muted)">#${String(o.waiter_id).slice(0, 8)}</small>` : ""}`
-    : "—";
+  const src = o.source || {};
+  const waiterLabel = o.accepted_by
+    ? `Pranuar: ${o.accepted_by}`
+    : (o.waiter_name || "—");
   return `<div class="order-card">
     <div class="order-card-head">
-      <span class="order-card-title">Tavolina ${o.table_number || "—"}</span>
+      <span class="order-card-title">${src.icon || ""} ${o.table_number ? `Tavolina ${o.table_number}` : (src.label || "Porosi")}</span>
       <span class="order-card-total">${euro(o.total)}</span>
     </div>
     <div class="order-card-meta">
       <span>🕐 ${fmtTime(o.closed_at)}</span>
       <span>👤 ${waiterLabel}</span>
+      ${src.label ? `<span>${src.icon || ""} ${src.label}</span>` : ""}
       ${o.receipt_number ? `<span>🧾 ${o.receipt_number}</span>` : ""}
     </div>
     ${renderItemsTable(o.items_json)}
@@ -195,10 +197,13 @@ document.getElementById("btn-owner-copy-public")?.addEventListener("click", func
 
 async function loadStats() {
   const s = await api("/api/owner/stats");
+  const ch = s.channels || {};
   document.getElementById("stats").innerHTML = `
     <div class="stat owner-stat"><div class="val">${euro(s.sot.total)}</div><div class="lbl">Sot (${s.sot.count})</div></div>
     <div class="stat owner-stat"><div class="val">${euro(s.java.total)}</div><div class="lbl">Kjo javë (${s.java.count})</div></div>
-    <div class="stat owner-stat"><div class="val">${euro(s.muaj.total)}</div><div class="lbl">Ky muaj (${s.muaj.count})</div></div>`;
+    <div class="stat owner-stat"><div class="val">${euro(s.muaj.total)}</div><div class="lbl">Ky muaj (${s.muaj.count})</div></div>
+    <div class="stat owner-stat"><div class="val">${Number(ch.qr_sot) || 0}</div><div class="lbl">QR tavolinë sot</div></div>
+    <div class="stat owner-stat"><div class="val">${Number(ch.web_sot) || 0}</div><div class="lbl">Web faqe sot</div></div>`;
 }
 
 async function loadOrderFilters() {
