@@ -38,18 +38,10 @@ function packageFeaturesHtml(plan, { keys } = {}) {
     .join("");
 }
 
-const PACKAGE_IMAGES = {
-  p1: "images/modules/pos-kasa.jpg",
-  p2: "images/modules/kamarieri.jpg",
-  p3: "images/modules/kds-kuzhina.jpg",
-  p4: "images/modules/pronari.jpg",
-};
-
 function packageCard(plan) {
   const prefix = `packages.${plan}`;
   const tagline = t(`${prefix}.tagline`);
   const name = t(`${prefix}.name`);
-  const imagePath = PACKAGE_IMAGES[plan];
   return `
     <article
       class="package-card"
@@ -59,9 +51,7 @@ function packageCard(plan) {
       aria-pressed="false"
       aria-label="${name}"
     >
-      <div class="package-card-photo">
-        <img src="${assetPath(imagePath)}" alt="${name}" loading="lazy" />
-      </div>
+      <div class="package-card-thumb" aria-hidden="true">${name.charAt(0)}</div>
       <span class="package-badge">${t("packages.badge")}</span>
       <div class="package-card-body">
         <h3 class="package-name">${name}</h3>
