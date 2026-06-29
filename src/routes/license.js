@@ -7,7 +7,7 @@ const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinS
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const { orderSourceLabel } = require("../lib/orderSource");
 const { normalizeItems } = require("../services/salesService");
-const { listBarOrders, acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
+const { acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
 const { isBarMobileOrder } = require("../lib/orderSource");
 
 const router = express.Router();
@@ -16,6 +16,31 @@ function clientIp(req) {
   const forwarded = req.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return req.socket?.remoteAddress || req.ip || "";
+}
+
+/** Licencë pa kontroll app_type — porositë online janë për klientin, jo për modulin POS. */
+async function resolveLicenseClient(req) {
+  const { celesi, license_key, device_id, hostname } = req.body;
+  const key = celesi || license_key;
+  if (!key) {
+    return { error: { status: 400, body: { ok: false, gabim: "Mungon çelësi i licencës." } } };
+  }
+
+  const licenseResult = await validateLicense({
+    celesi: key,
+    device_id,
+    hostname,
+    client_ip: clientIp(req),
+  });
+  if (!licenseResult.valid) {
+    return {
+      error: {
+        status: 403,
+        body: { ok: false, gabim: licenseResult.message || "Liçenca nuk është aktive." },
+      },
+    };
+  }
+  return { clientId: licenseResult.client_id };
 }
 
 /**
@@ -152,7 +177,7 @@ router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
 
 async function countPendingOnlineOrders(clientId) {
   if (!clientId) return 0;
-  const orders = await listBarOrders(clientId);
+  const orders = await listPendingOnlineOrders(clientId);
   return orders.length;
 }
 
@@ -324,27 +349,12 @@ router.post("/waiter-login", licenseApiKeyOptional, async (req, res) => {
  */
 router.post("/pending-online-orders", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname } = req.body;
-    const key = celesi || license_key;
-    if (!key) {
-      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
     }
 
-    const licenseResult = await validateLicense({
-      celesi: key,
-      device_id,
-      app_type,
-      hostname,
-      client_ip: clientIp(req),
-    });
-    if (!licenseResult.valid) {
-      return res.status(403).json({
-        ok: false,
-        gabim: licenseResult.message || "Liçenca nuk është aktive.",
-      });
-    }
-
-    const pending = await countPendingOnlineOrders(licenseResult.client_id);
+    const pending = await countPendingOnlineOrders(resolved.clientId);
     res.json({ ok: true, pending, has_pending: pending > 0 });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
@@ -356,27 +366,12 @@ router.post("/pending-online-orders", licenseApiKeyOptional, async (req, res) =>
  */
 router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname } = req.body;
-    const key = celesi || license_key;
-    if (!key) {
-      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
     }
 
-    const licenseResult = await validateLicense({
-      celesi: key,
-      device_id,
-      app_type,
-      hostname,
-      client_ip: clientIp(req),
-    });
-    if (!licenseResult.valid) {
-      return res.status(403).json({
-        ok: false,
-        gabim: licenseResult.message || "Liçenca nuk është aktive.",
-      });
-    }
-
-    const orders = await listPendingOnlineOrders(licenseResult.client_id);
+    const orders = await listPendingOnlineOrders(resolved.clientId);
     res.json({
       ok: true,
       pending: orders.length,
@@ -393,32 +388,19 @@ router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
  */
 router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname, order_ids, order_id } = req.body;
-    const key = celesi || license_key;
-    if (!key) {
-      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
     }
 
-    const licenseResult = await validateLicense({
-      celesi: key,
-      device_id,
-      app_type,
-      hostname,
-      client_ip: clientIp(req),
-    });
-    if (!licenseResult.valid) {
-      return res.status(403).json({
-        ok: false,
-        gabim: licenseResult.message || "Liçenca nuk është aktive.",
-      });
-    }
-
-    const rawIds = Array.isArray(order_ids) ? order_ids : (order_id ? [order_id] : []);
+    const rawIds = Array.isArray(req.body.order_ids)
+      ? req.body.order_ids
+      : (req.body.order_id ? [req.body.order_id] : []);
     const pin = String(req.body.pin || req.body.waiter_pin || "").trim();
 
     let handler = null;
     if (pin) {
-      handler = await verifyWaiterPin(licenseResult.client_id, pin);
+      handler = await verifyWaiterPin(resolved.clientId, pin);
     } else {
       return res.status(400).json({
         ok: false,
@@ -426,7 +408,7 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
       });
     }
 
-    const result = await acknowledgeBarOrders(licenseResult.client_id, rawIds, {
+    const result = await acknowledgeBarOrders(resolved.clientId, rawIds, {
       waiterId: handler.id,
       waiterName: handler.name,
     });
