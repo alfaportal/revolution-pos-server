@@ -16,6 +16,8 @@ export const siteStrings = {
     "cta.choosePackage": "Zgjidh Pakon",
     "cta.contactUs": "Na Kontaktoni",
     "cta.sendRequest": "Dërgo kërkesën",
+    "expand.more": "Lexo më shumë",
+    "expand.less": "Më pak",
     "hero.badge": "Provë Falas 1 Muaj",
     "hero.title": "Kontrollo çdo Porosi. Çdo Tavolinë. Çdo Ditë.",
     "hero.subtitle":
@@ -158,6 +160,8 @@ export const siteStrings = {
     "cta.choosePackage": "Choose Plan",
     "cta.contactUs": "Contact Us",
     "cta.sendRequest": "Send request",
+    "expand.more": "Read more",
+    "expand.less": "Show less",
     "hero.badge": "1 Month Free Trial",
     "hero.title": "Control Every Order. Every Table. Every Day.",
     "hero.subtitle":

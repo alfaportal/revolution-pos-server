@@ -20,6 +20,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -29,6 +30,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
 }
 
 img {
@@ -778,16 +780,13 @@ a.article-card {
 }
 
 @media (max-width: 960px) {
-  .nav-desktop {
-    display: none;
-  }
-
+  .nav-desktop,
   .header-cta-desktop {
-    display: none;
+    display: none !important;
   }
 
   .menu-toggle {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
   .article-grid,
@@ -811,16 +810,27 @@ a.article-card {
   }
 
   .header-inner {
-    min-height: 64px;
-    gap: 0.5rem;
+    min-height: 56px;
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .brand {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 0.95rem;
+    gap: 0.45rem;
   }
 
   .brand-text {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .brand-text small {
-    font-size: 0.62rem;
+    display: none;
   }
 
   .brand-mark {
@@ -933,14 +943,127 @@ a.article-card {
     padding: 0.5rem;
   }
 
-  .article-grid,
+  .article-grid {
+    grid-template-columns: 1fr;
+  }
+
   .how-grid,
   .packages-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .how-card,
+  .package-card {
+    padding: 0.7rem;
+    min-width: 0;
+  }
+
+  .how-card-photo {
+    aspect-ratio: 4 / 3;
+    margin-bottom: 0.45rem;
+    border-radius: 10px;
+  }
+
+  .how-card h3 {
+    font-size: 0.8rem;
+    line-height: 1.25;
+    margin-bottom: 0.35rem;
+  }
+
+  .how-card-desc-wrap:not(.is-expanded) .how-card-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  .how-card-desc {
+    font-size: 0.7rem;
+    line-height: 1.4;
+  }
+
+  .how-card-link {
+    font-size: 0.68rem;
+    margin-top: 0.4rem;
+  }
+
+  .package-card {
+    gap: 0.45rem;
+    padding-top: 1.85rem;
+  }
+
+  .package-badge {
+    top: 0.45rem;
+    right: 0.45rem;
+    font-size: 0.52rem;
+    padding: 0.18rem 0.38rem;
+  }
+
+  .package-name {
+    font-size: 0.82rem;
+    line-height: 1.2;
+  }
+
+  .package-tagline {
+    display: none;
+  }
+
+  .package-list {
+    gap: 0.22rem;
+  }
+
+  .package-list li {
+    font-size: 0.64rem;
+    line-height: 1.3;
+    gap: 0.3rem;
+  }
+
+  .package-list--foldable:not(.is-expanded) li:nth-child(n + 4) {
+    display: none;
+  }
+
+  .package-select-btn {
+    font-size: 0.68rem;
+    padding: 0.45rem 0.55rem;
+    min-height: 2.25rem;
+  }
+
+  .card-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .card-toggle[hidden] {
+    display: none !important;
+  }
+
+  .header-actions {
+    flex-shrink: 0;
+  }
+
+  .lang-switch {
+    padding: 0.25rem 0.35rem;
+    font-size: 0.72rem;
   }
 
   .package-detail-list {
     grid-template-columns: 1fr;
+  }
+
+  .packages-hint {
+    font-size: 0.8rem;
   }
 }
 
@@ -991,7 +1114,17 @@ a.article-card {
 }
 
 .nav-desktop {
-  display: flex;
+  display: none;
+}
+
+@media (min-width: 961px) {
+  .nav-desktop {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: none !important;
+  }
 }
 
 .menu-toggle {
@@ -1004,14 +1137,16 @@ a.article-card {
   border-radius: 10px;
   background: #fff;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .nav-mobile {
   display: none;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0 0 1rem;
+  padding: 0 1rem 1rem;
   border-top: 1px solid var(--border);
+  background: rgba(245, 246, 248, 0.98);
 }
 
 .nav-mobile.open {
@@ -1078,7 +1213,7 @@ a.article-card {
 .packages-grid {
   display: grid;
   gap: 1.15rem;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .how-card,
@@ -1120,9 +1255,14 @@ a.article-card {
   margin: 0 0 0.5rem;
 }
 
-.how-card p {
+.how-card p,
+.how-card-desc {
   margin: 0;
   color: var(--text-muted);
+}
+
+.card-toggle {
+  display: none;
 }
 
 .how-card-link {

@@ -68,7 +68,9 @@ function howCard(imagePath, titleKey, descKey, manualHref) {
         <img src="${assetPath(imagePath)}" alt="${title}" loading="lazy" />
       </div>
       <h3>${title}</h3>
-      <p>${t(descKey)}</p>
+      <div class="how-card-desc-wrap">
+        <p class="how-card-desc">${t(descKey)}</p>
+      </div>
       <a class="how-card-link" href="${manualHref}">${t("how.readManual")}</a>
     </article>
   `;
@@ -127,6 +129,84 @@ function spotlightCard({ variant, categoryKey, titleKey, descKey, linkKey, href,
       </div>
     </a>
   `;
+}
+
+function bindCollapsibleCards() {
+  const mq = window.matchMedia("(max-width: 640px)");
+
+  document.querySelectorAll(".how-card").forEach((card) => {
+    const wrap = card.querySelector(".how-card-desc-wrap");
+    const desc = card.querySelector(".how-card-desc");
+    if (!wrap || !desc) return;
+
+    let btn = card.querySelector(".card-toggle[data-how-toggle]");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "card-toggle";
+      btn.dataset.howToggle = "1";
+      wrap.insertAdjacentElement("afterend", btn);
+    }
+
+    const sync = () => {
+      const expanded = wrap.classList.contains("is-expanded");
+      const needsToggle =
+        mq.matches &&
+        (expanded || desc.textContent.trim().length > 85);
+      btn.hidden = !needsToggle;
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      btn.textContent = expanded ? t("expand.less") : t("expand.more");
+      if (!mq.matches) {
+        wrap.classList.remove("is-expanded");
+      }
+    };
+
+    btn.addEventListener("click", () => {
+      wrap.classList.toggle("is-expanded");
+      sync();
+    });
+
+    sync();
+    mq.addEventListener("change", sync);
+    window.addEventListener("resize", sync, { passive: true });
+  });
+
+  document.querySelectorAll(".package-card[data-package]").forEach((card) => {
+    const list = card.querySelector(".package-list");
+    if (!list) return;
+    list.classList.add("package-list--foldable");
+
+    let btn = card.querySelector(".card-toggle[data-package-toggle]");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "card-toggle";
+      btn.dataset.packageToggle = "1";
+      list.insertAdjacentElement("afterend", btn);
+    }
+
+    const sync = () => {
+      const items = list.querySelectorAll("li");
+      const expanded = list.classList.contains("is-expanded");
+      const needsToggle = mq.matches && items.length > 3;
+      btn.hidden = !needsToggle;
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      btn.textContent = expanded ? t("expand.less") : t("expand.more");
+      if (!mq.matches) {
+        list.classList.remove("is-expanded");
+      }
+    };
+
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      list.classList.toggle("is-expanded");
+      sync();
+    });
+
+    sync();
+    mq.addEventListener("change", sync);
+  });
 }
 
 function bindPackageCards() {
@@ -381,6 +461,7 @@ export function renderHome() {
   bindContactForm();
   bindFooterContact();
   bindPackageCards();
+  bindCollapsibleCards();
 
   if (window.location.hash) {
     requestAnimationFrame(() => {
