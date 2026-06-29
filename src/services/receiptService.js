@@ -83,10 +83,18 @@ function buildReceiptPayload(clientId, business, body) {
   const closedAt = body.closed_at || body.printed_at || new Date().toISOString();
   const { date, time } = formatReceiptDateTime(closedAt);
   const printed = formatReceiptDateTime(body.printed_at || new Date().toISOString());
+  const slipKind = String(body.slip_kind || body.slipKind || "").trim().toLowerCase() === "final"
+    ? "final"
+    : "order";
+  const slipTitle = String(body.slip_title || body.slipTitle || "").trim();
+  const slipNote = String(body.slip_note || body.slipNote || "").trim();
 
   return {
     business,
-    receipt_number: String(body.receipt_number || body.order_number || "").trim(),
+    slip_kind: slipKind,
+    slip_title: slipTitle,
+    slip_note: slipNote,
+    receipt_number: slipKind === "final" ? String(body.receipt_number || body.order_number || "").trim() : "",
     order_number: String(body.order_number || body.local_order_id || body.receipt_number || "").trim(),
     table_number: Number(body.table_number) || 0,
     waiter_name: String(body.waiter_name || "").trim(),
@@ -102,8 +110,10 @@ function buildReceiptPayload(clientId, business, body) {
     paper_width_mm: [58, 80].includes(Number(body.receipt_width_mm))
       ? Number(body.receipt_width_mm)
       : business.receipt_width_mm,
-    payment_method: String(body.payment_method || "cash").trim().toLowerCase() === "karte" ? "karte" : "cash",
-    payment_label: paymentMethodLabel(body.payment_method),
+    payment_method: slipKind === "final"
+      ? (String(body.payment_method || "cash").trim().toLowerCase() === "karte" ? "karte" : "cash")
+      : "",
+    payment_label: slipKind === "final" ? paymentMethodLabel(body.payment_method) : "",
   };
 }
 
@@ -145,7 +155,9 @@ function buildReceiptLines(receipt) {
   if (biz.tvsh_nr) lines.push(pad(`TVSH: ${biz.tvsh_nr}`, w, "center"));
 
   lines.push(divider(w));
-  if (receipt.receipt_number) lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
+  if (receipt.slip_title) lines.push(pad(receipt.slip_title, w, "center"));
+  if (receipt.slip_note) lines.push(pad(receipt.slip_note, w, "center"));
+  if (receipt.receipt_number) lines.push(`Nr. Faturës: ${receipt.receipt_number}`);
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
   if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
@@ -178,7 +190,9 @@ function buildMarkedReceiptLines(receipt) {
   if (biz.tvsh_nr) lines.push(`^CTVSH Nr.: ${biz.tvsh_nr}`);
 
   lines.push(divider(w));
-  if (receipt.receipt_number) lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
+  if (receipt.slip_title) lines.push(pad(receipt.slip_title, w, "center"));
+  if (receipt.slip_note) lines.push(pad(receipt.slip_note, w, "center"));
+  if (receipt.receipt_number) lines.push(`Nr. Faturës: ${receipt.receipt_number}`);
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
   if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
@@ -247,7 +261,9 @@ function formatReceiptHtml(receipt) {
   ].filter(Boolean).join("");
 
   const orderMeta = [
-    receipt.receipt_number ? `<div><span class="rc-meta-label">Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>` : "",
+    receipt.slip_title ? `<div class="rc-slip-title">${escapeHtml(receipt.slip_title)}</div>` : "",
+    receipt.slip_note ? `<div class="rc-slip-note">${escapeHtml(receipt.slip_note)}</div>` : "",
+    receipt.receipt_number ? `<div><span class="rc-meta-label">Fatura</span> ${escapeHtml(receipt.receipt_number)}</div>` : "",
     receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : "",
     receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
     receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
