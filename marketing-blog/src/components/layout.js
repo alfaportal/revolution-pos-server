@@ -95,7 +95,7 @@ export function renderFooter() {
           </ul>
         </div>
 
-        <div class="footer-col">
+        <div class="footer-col" id="kontakt">
           <h4>${t("footer.col.support")}</h4>
           <ul>
             ${footerSectionLink("kontakt", t("footer.link.contact"))}

@@ -5,7 +5,6 @@ import {
   bindBackToTop,
   bindLangSwitch,
   bindMobileNav,
-  bindContactForm,
   bindFooterContact,
 } from "../components/layout.js";
 import { getAllArticles } from "../data/articles.js";
@@ -39,10 +38,18 @@ function packageFeaturesHtml(plan, { keys } = {}) {
     .join("");
 }
 
+const PACKAGE_IMAGES = {
+  p1: "images/modules/pos-kasa.jpg",
+  p2: "images/modules/kamarieri.jpg",
+  p3: "images/modules/kds-kuzhina.jpg",
+  p4: "images/modules/pronari.jpg",
+};
+
 function packageCard(plan) {
   const prefix = `packages.${plan}`;
   const tagline = t(`${prefix}.tagline`);
   const name = t(`${prefix}.name`);
+  const imagePath = PACKAGE_IMAGES[plan];
   return `
     <article
       class="package-card"
@@ -52,7 +59,9 @@ function packageCard(plan) {
       aria-pressed="false"
       aria-label="${name}"
     >
-      <div class="package-card-thumb" aria-hidden="true">${name.charAt(0)}</div>
+      <div class="package-card-photo">
+        <img src="${assetPath(imagePath)}" alt="${name}" loading="lazy" />
+      </div>
       <span class="package-badge">${t("packages.badge")}</span>
       <div class="package-card-body">
         <h3 class="package-name">${name}</h3>
@@ -270,8 +279,10 @@ function bindPackageCards() {
   });
 
   document.getElementById("package-detail-cta")?.addEventListener("click", () => {
-    document.getElementById("kontakt")?.scrollIntoView({ behavior: "smooth" });
-    document.getElementById("contact-message")?.focus();
+    const pkg = document.getElementById("contact-package")?.value.trim();
+    const subject = encodeURIComponent("Revolution Invest POS — provë falas");
+    const body = encodeURIComponent(pkg ? `Pako: ${pkg}\n\n` : "");
+    window.location.href = `mailto:${t("contact.email")}?subject=${subject}&body=${body}`;
   });
 
   const saved = sessionStorage.getItem("selectedPackage");
@@ -322,16 +333,7 @@ export function renderHome() {
             <h2>${t("spotlight.title")}</h2>
             <p>${t("spotlight.subtitle")}</p>
           </div>
-          <div class="spotlight-grid">
-            ${spotlightCard({
-              variant: "ai",
-              categoryKey: "spotlight.card1.category",
-              titleKey: "spotlight.card1.title",
-              descKey: "spotlight.card1.desc",
-              linkKey: "spotlight.card1.link",
-              href: blogArticlePath("stoku-faturat-dhe-skanimi-me-ai"),
-              hidePhoto: true,
-            })}
+          <div class="spotlight-grid spotlight-grid--single">
             ${spotlightCard({
               variant: "platform",
               categoryKey: "spotlight.card2.category",
@@ -408,38 +410,8 @@ export function renderHome() {
             <p class="package-detail-summary" id="package-detail-summary" hidden></p>
             <p class="package-detail-label">${t("packages.includes")}</p>
             <ul class="package-detail-list" id="package-detail-list"></ul>
+            <input type="hidden" id="contact-package" value="">
             <button class="btn btn-primary" type="button" id="package-detail-cta">${t("cta.choosePackage")}</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="site-section" id="kontakt">
-        <div class="container">
-          <div class="section-head">
-            <h2>${t("contact.title")}</h2>
-            <p>${t("contact.subtitle")}</p>
-          </div>
-          <div class="contact-grid contact-grid--form-only">
-            <div class="contact-card">
-              <h3>${t("contact.sendMessage")}</h3>
-              <form class="contact-form" id="contact-form">
-                <input type="hidden" id="contact-package" name="package" value="">
-                <div class="field">
-                  <label for="contact-name">${t("form.name")}</label>
-                  <input type="text" id="contact-name" name="name" required placeholder="${t("form.namePlaceholder")}">
-                </div>
-                <div class="field">
-                  <label for="contact-phone">${t("form.phone")}</label>
-                  <input type="tel" id="contact-phone" name="phone" required placeholder="+383 44 123 456">
-                </div>
-                <div class="field">
-                  <label for="contact-message">${t("form.message")}</label>
-                  <textarea id="contact-message" name="message" required placeholder="${t("form.messagePlaceholder")}"></textarea>
-                </div>
-                <button class="btn btn-primary" type="submit">${t("cta.sendRequest")}</button>
-                <p class="form-msg" id="form-msg" role="status"></p>
-              </form>
-            </div>
           </div>
         </div>
       </section>
@@ -451,7 +423,6 @@ export function renderHome() {
   bindBackToTop();
   bindLangSwitch();
   bindMobileNav();
-  bindContactForm();
   bindFooterContact();
   bindPackageCards();
   bindCollapsibleCards();
