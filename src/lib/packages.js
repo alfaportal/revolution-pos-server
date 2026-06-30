@@ -52,10 +52,10 @@ const TIER_FEATURES = {
 };
 
 const TIER_LABELS = {
-  pako_1: "Pako 1 — POS, panel, faqe publike, raporte",
-  pako_2: "Pako 2 — + KDS, kiosk, kamarier",
-  pako_3: "Pako 3 — + mobile, cloud",
-  pako_4: "Pako 4 — + porosi online",
+  pako_1: "Legacy — vetëm POS, panel & faqe (pa KDS)",
+  pako_2: "Pako 1 — KDS, kiosk, kamarier",
+  pako_3: "Pako 2 — Mobile & cloud",
+  pako_4: "Pako 3 — Porosi online & premium",
 };
 
 function normalizePackageTier(tier) {

@@ -369,39 +369,124 @@ function normalizeTierId(tier) {
   return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_1";
 }
 
+/** Tier order shown in admin — main sellable tiers first. */
+const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4"];
+const TIER_SHORT_LABELS = {
+  pako_1: "Legacy",
+  pako_2: "Pako 1",
+  pako_3: "Pako 2",
+  pako_4: "Pako 3",
+};
+
+function adminTierIdsForPicker(currentTier) {
+  const current = normalizeTierId(currentTier);
+  const ids = [...ADMIN_TIER_ORDER];
+  if (current === "pako_1" && !ids.includes("pako_1")) ids.unshift("pako_1");
+  return ids;
+}
+
+function packageTierPickerHtml(selected, { fieldName = "package_tier", fieldId = "", compact = false } = {}) {
+  const sel = normalizeTierId(selected || "pako_2");
+  const ids = adminTierIdsForPicker(sel);
+  const hiddenId = fieldId ? ` id="${escAttr(fieldId)}"` : "";
+  const buttons = ids.map(id => {
+    const label = packageTierLabel(id);
+    const short = compact ? (TIER_SHORT_LABELS[id] || label) : label;
+    return `<button type="button" class="package-tier-btn${id === sel ? " active" : ""}" data-tier-id="${escAttr(id)}" aria-pressed="${id === sel ? "true" : "false"}">${esc(short)}</button>`;
+  }).join("");
+  return `
+    <input type="hidden" name="${escAttr(fieldName)}" value="${escAttr(sel)}"${hiddenId}>
+    <div class="package-tier-btns${compact ? " package-tier-btns--compact" : ""}" role="group" aria-label="Pakoja">${buttons}</div>`;
+}
+
+function mountPackageTierPicker(container, selected, options = {}) {
+  if (!container) return;
+  container.innerHTML = packageTierPickerHtml(selected, {
+    fieldName: options.fieldName || "package_tier",
+    fieldId: options.fieldId || container.dataset.tierField || "",
+    compact: Boolean(options.compact),
+  });
+  bindPackageTierPicker(container);
+}
+
+function bindPackageTierPicker(container) {
+  if (!container || container.dataset.tierBound === "1") return;
+  container.dataset.tierBound = "1";
+  container.addEventListener("click", e => {
+    const btn = e.target.closest(".package-tier-btn");
+    if (!btn || !container.contains(btn)) return;
+    const tierId = normalizeTierId(btn.dataset.tierId);
+    const hidden = container.querySelector('input[type="hidden"][name="package_tier"]');
+    if (hidden) hidden.value = tierId;
+    container.querySelectorAll(".package-tier-btn").forEach(b => {
+      const active = normalizeTierId(b.dataset.tierId) === tierId;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    if (container.dataset.clientId) {
+      saveClientPackageTier(container.dataset.clientId, tierId, container).catch(err => {
+        alert(err.message || String(err));
+        mountPackageTierPicker(container, container.dataset.currentTier || tierId, { compact: true });
+      });
+    }
+  });
+}
+
+function readPackageTierValue(containerOrId) {
+  const el = typeof containerOrId === "string"
+    ? document.getElementById(containerOrId)
+    : containerOrId;
+  if (!el) return "pako_2";
+  const hidden = el.matches('input[type="hidden"]')
+    ? el
+    : el.querySelector('input[type="hidden"][name="package_tier"]');
+  return normalizeTierId(hidden?.value || "pako_2");
+}
+
+async function saveClientPackageTier(clientId, tierId, container) {
+  const prev = normalizeTierId(container?.dataset.currentTier);
+  const next = normalizeTierId(tierId);
+  if (prev === next) return;
+  container?.querySelectorAll(".package-tier-btn").forEach(b => { b.disabled = true; });
+  try {
+    const { client: updatedClient } = await api(`/api/admin/clients/${clientId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ package_tier: next }),
+    });
+    mergeClientIntoCache(updatedClient);
+    if (container) {
+      container.dataset.currentTier = next;
+      mountPackageTierPicker(container, next, { compact: true });
+    }
+    if (hubClientId === clientId) fillHubLinks(clientId);
+  } finally {
+    container?.querySelectorAll(".package-tier-btn").forEach(b => { b.disabled = false; });
+  }
+}
+
 async function loadPackageTiers() {
   const { tiers } = await api("/api/admin/package-tiers");
   packageTiersCache = tiers || [];
-  populatePackageTierSelect(document.getElementById("c-package-tier"), "pako_1");
+  mountPackageTierPicker(document.getElementById("c-package-tier"), "pako_2");
 }
 
 function packageTierLabel(id) {
   const tierId = normalizeTierId(id);
   const tier = packageTiersCache.find(t => t.id === tierId);
-  return tier?.label || tierId || "pako_1";
-}
-
-function packageTierOptionsHtml(selected) {
-  const sel = normalizeTierId(selected || "pako_1");
-  if (!packageTiersCache.length) {
-    return ["pako_1", "pako_2", "pako_3", "pako_4"]
-      .map(id => `<option value="${id}"${id === sel ? " selected" : ""}>${id}</option>`)
-      .join("");
-  }
-  return packageTiersCache
-    .map(t => `<option value="${esc(t.id)}"${t.id === sel ? " selected" : ""}>${esc(t.label)}</option>`)
-    .join("");
+  return tier?.label || tierId || "pako_2";
 }
 
 function populatePackageTierSelect(el, selected) {
   if (!el) return;
-  el.innerHTML = packageTierOptionsHtml(selected);
+  mountPackageTierPicker(el, selected);
 }
 
 function readModalPackageTier(fd) {
+  const wrap = document.getElementById("modal-package-tier-wrap");
+  if (wrap) return readPackageTierValue(wrap);
   const el = document.getElementById("modal-package-tier");
   const value = (el?.value || fd.get("package_tier") || "").trim();
-  return normalizeTierId(value || "pako_1");
+  return normalizeTierId(value || "pako_2");
 }
 
 function mergeClientIntoCache(updatedClient) {
@@ -500,7 +585,7 @@ function openEditClient(id) {
       <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
     </select>
     <label>Pakoja</label>
-    <select name="package_tier" id="modal-package-tier"></select>
+    <div id="modal-package-tier-wrap" class="package-tier-picker"></div>
     <label>Telefoni</label>
     <input name="telefoni" value="${esc(c.telefoni)}">
     <label>Email (kontakt biznesi)</label>
@@ -608,9 +693,9 @@ function openEditClient(id) {
     })
     .catch(() => {});
 
-  populatePackageTierSelect(
-    document.getElementById("modal-package-tier"),
-    normalizeTierId(c.package_tier || "pako_1"),
+  mountPackageTierPicker(
+    document.getElementById("modal-package-tier-wrap"),
+    normalizeTierId(c.package_tier || "pako_2"),
   );
 }
 
@@ -1379,7 +1464,14 @@ async function loadClients() {
     ? clientsCache.map(c => `<tr>
         <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}${stockBadgeHtml(c.id)}</td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
-        <td data-label="Pakoja">${esc(packageTierLabel(c.package_tier))}</td>
+        <td data-label="Pakoja">
+          <div
+            class="package-tier-picker package-tier-picker--inline"
+            data-client-id="${esc(c.id)}"
+            data-current-tier="${esc(c.package_tier)}"
+            data-tier-field=""
+          ></div>
+        </td>
         <td data-label="Telefoni">${esc(c.telefoni) || "—"}</td>
         <td data-label="Email">${esc(c.email) || "—"}</td>
         <td data-label="Adresa">${esc(c.adresa) || "—"}</td>
@@ -1401,6 +1493,9 @@ async function loadClients() {
         </td>
       </tr>`).join("")
     : '<tr><td colspan="10" style="color:var(--muted)">Nuk ka klientë</td></tr>';
+  tbl.querySelectorAll(".package-tier-picker--inline").forEach(el => {
+    mountPackageTierPicker(el, el.dataset.currentTier || "pako_2", { compact: true });
+  });
   bindTableActions(tbl);
   tbl.querySelectorAll("[data-copy-kitchen]").forEach(btn => {
     btn.addEventListener("click", () => copyKitchenLink(btn.dataset.copyKitchen, btn));
@@ -2142,7 +2237,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
       body: JSON.stringify({
         emri: document.getElementById("c-emri").value,
         tipi,
-        package_tier: normalizeTierId(document.getElementById("c-package-tier").value),
+        package_tier: readPackageTierValue("c-package-tier"),
         telefoni: document.getElementById("c-telefoni").value,
         email: document.getElementById("c-email").value,
         adresa: document.getElementById("c-adresa").value,
@@ -2163,7 +2258,7 @@ document.getElementById("form-client").addEventListener("submit", async e => {
       true,
     );
     e.target.reset();
-    populatePackageTierSelect(document.getElementById("c-package-tier"), "pako_1");
+    mountPackageTierPicker(document.getElementById("c-package-tier"), "pako_2");
     const muajEl = document.getElementById("c-muaj");
     if (muajEl) muajEl.value = "12";
     setupOwnerLoginUrl();
