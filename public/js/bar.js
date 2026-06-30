@@ -5,6 +5,7 @@
 
   const titleEl = document.getElementById("bar-title");
   const subEl = document.getElementById("bar-sub");
+  const headerEl = document.querySelector(".bar-header");
   const gridEl = document.getElementById("orders-grid");
   const emptyEl = document.getElementById("empty-state");
   const errorEl = document.getElementById("error-box");
@@ -13,8 +14,23 @@
   const tablesGridEl = document.getElementById("bar-tables-grid");
   const tablesUpdatedEl = document.getElementById("bar-tables-updated");
 
+  const toastEl = document.getElementById("order-toast");
+
   let knownIds = new Set();
   let eventSource = null;
+  let alarmTimer = null;
+  let toastTimer = null;
+
+  function showToast(msg, kind = "info") {
+    if (!toastEl || !msg) return;
+    toastEl.textContent = msg;
+    toastEl.className = `order-toast ${kind}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.className = "order-toast hidden";
+      toastEl.textContent = "";
+    }, kind === "error" ? 5000 : 3500);
+  }
 
   function renderLiveTableCard(t) {
     if (t.status === "free") {
@@ -150,18 +166,34 @@
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       const ctx = new Ctx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 880;
-      gain.gain.value = 0.001;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.stop(ctx.currentTime + 0.35);
+      const playBeep = (freq, start, dur) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.value = 0.001;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        gain.gain.exponentialRampToValueAtTime(0.22, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+        osc.stop(start + dur);
+      };
+      playBeep(880, ctx.currentTime, 0.18);
+      playBeep(1100, ctx.currentTime + 0.22, 0.22);
     } catch { /* */ }
+  }
+
+  function updateAlarmState(orders) {
+    const pending = (orders || []).filter(o => !(o.accepted_at || o.accepted_by_waiter_name));
+    const active = pending.length > 0;
+    headerEl?.classList.toggle("alarm-pulse", active);
+    if (active && !alarmTimer) {
+      alarmTimer = setInterval(() => playNewOrderSound(), 12000);
+    } else if (!active && alarmTimer) {
+      clearInterval(alarmTimer);
+      alarmTimer = null;
+    }
   }
 
   function renderOrders(orders, cancelledOrders) {
@@ -172,7 +204,11 @@
     for (const o of active) {
       if (!knownIds.has(o.id)) hasNew = true;
     }
-    if (hasNew && knownIds.size) playNewOrderSound();
+    if (hasNew && knownIds.size) {
+      playNewOrderSound();
+      showToast("Porosi e re — pranoni me PIN", "info");
+    }
+    updateAlarmState(active);
     countEl.textContent = `${active.length} porosi`;
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
@@ -305,11 +341,13 @@ hr{border:none;border-top:1px dashed #000;margin:8px 0}
   }
 
   async function acceptOrder(orderId, btn) {
-    const pin = prompt("PIN i kamarierit që e pranon porosinë (4 shifra):");
-    if (!pin) return;
-    const pinTrim = String(pin).trim();
-    if (!/^\d{4}$/.test(pinTrim)) {
-      alert("PIN duhet të jetë 4 shifra.");
+    const pinTrim = await OrderPinModal.request({
+      title: "Prano porosinë",
+      hint: "Shkruani PIN-in 4-shifror të kamarierit që e pranon porosinë",
+    });
+    if (!pinTrim) return;
+    if (!/^\d{4}$/.test(String(pinTrim).trim())) {
+      showToast("PIN duhet të jetë 4 shifra.", "error");
       return;
     }
     btn.disabled = true;
@@ -320,22 +358,25 @@ hr{border:none;border-top:1px dashed #000;margin:8px 0}
         {
           method: "POST",
           headers: { ...apiHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ pin: pinTrim }),
+          body: JSON.stringify({ pin: String(pinTrim).trim() }),
         },
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        alert(data.gabim || "Nuk u pranua porosia.");
+        showToast(data.gabim || "Nuk u pranua porosia.", "error");
         btn.disabled = false;
         btn.textContent = "Prano me PIN 🔐";
         return;
       }
       const acceptedBy = data.accepted_by || "";
       if (data.order) printBarSlip(data.order, acceptedBy);
-      if (acceptedBy) alert(`Porosia u pranua nga ${acceptedBy} — fletë porosie u printua.`);
+      showToast(
+        acceptedBy ? `Porosia u pranua nga ${acceptedBy}` : "Porosia u pranua.",
+        "success",
+      );
       await refreshAll();
     } catch (e) {
-      alert(e.message || "Gabim.");
+      showToast(e.message || "Gabim.", "error");
       btn.disabled = false;
       btn.textContent = "Prano me PIN 🔐";
     }

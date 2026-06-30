@@ -8,6 +8,7 @@
   <title>Banak — Revolution Invest POS</title>
   <link rel="stylesheet" href="/css/staff-brand.css">
   <link rel="stylesheet" href="/css/bar.css">
+  <link rel="stylesheet" href="/css/pin-modal.css">
 </head>
 <body>
   <div class="staff-app-bar">
@@ -44,6 +45,37 @@
     </div>
   </main>
 
+  <div id="order-toast" class="order-toast hidden" role="status" aria-live="polite"></div>
+
+  <div id="pin-modal-overlay" class="pin-modal-overlay hidden" hidden>
+    <div class="pin-modal-backdrop"></div>
+    <div class="pin-modal-box" role="dialog" aria-labelledby="pin-modal-title">
+      <h2 id="pin-modal-title">PIN kamarieri</h2>
+      <p class="pin-modal-hint" id="pin-modal-hint">Shkruani PIN-in 4-shifror të kamarierit që e pranon porosinë</p>
+      <div id="pin-modal-display" class="pin-modal-display" aria-live="polite">○ ○ ○ ○</div>
+      <div id="pin-modal-error" class="pin-modal-error" hidden></div>
+      <div class="pin-modal-keypad" id="pin-modal-keypad">
+        <button type="button" class="pin-modal-key" data-pin-digit="1">1</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="2">2</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="3">3</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="4">4</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="5">5</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="6">6</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="7">7</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="8">8</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="9">9</button>
+        <button type="button" class="pin-modal-key pin-modal-key-muted" data-pin-action="clear">C</button>
+        <button type="button" class="pin-modal-key" data-pin-digit="0">0</button>
+        <button type="button" class="pin-modal-key pin-modal-key-muted" data-pin-action="back">⌫</button>
+      </div>
+      <div class="pin-modal-actions">
+        <button type="button" class="pin-modal-btn pin-modal-btn-cancel" id="pin-modal-cancel">Anulo</button>
+        <button type="button" class="pin-modal-btn pin-modal-btn-confirm" id="pin-modal-confirm">Prano</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/pin-modal.js"></script>
   <script src="/js/bar.js"></script>
 </body>
 </html>
