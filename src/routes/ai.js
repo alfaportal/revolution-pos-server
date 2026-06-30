@@ -1,5 +1,6 @@
 const express = require("express");
 const { asyncHandler } = require("../lib/asyncHandler");
+const { isAiPaused, isAiEnabled } = require("../lib/aiConfig");
 const { aiStaffAuth, licenseApiKeyOptional } = require("../middleware/aiAuth");
 const { handleMenuScanUpload } = require("../middleware/menuScanUpload");
 const { extractMenuScanImage } = require("../lib/menuScanImage");
@@ -9,11 +10,23 @@ const { scanMenuFromImage } = require("../services/aiMenuScanService");
 
 const router = express.Router();
 
+const AI_PAUSED_MSG = "AI është i ndalur për momentin. Provoni përsëri më vonë.";
+
+router.get("/status", (_req, res) => {
+  res.json({
+    enabled: isAiEnabled(),
+    paused: isAiPaused(),
+  });
+});
+
 router.post(
   "/chat",
   licenseApiKeyOptional,
   aiStaffAuth,
   asyncHandler(async (req, res) => {
+    if (isAiPaused()) {
+      return res.status(503).json({ ok: false, gabim: AI_PAUSED_MSG });
+    }
     const restaurantId = resolveRestaurantId(req);
     if (!restaurantId) {
       return res.status(403).json({ ok: false, gabim: "Restoranti nuk u identifikua." });
@@ -42,6 +55,9 @@ router.post(
   handleMenuScanUpload,
   aiStaffAuth,
   asyncHandler(async (req, res) => {
+    if (isAiPaused()) {
+      return res.status(503).json({ ok: false, gabim: AI_PAUSED_MSG });
+    }
     const restaurantId = resolveRestaurantId(req);
     if (!restaurantId) {
       return res.status(403).json({ ok: false, gabim: "Restoranti nuk u identifikua." });

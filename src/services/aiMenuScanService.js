@@ -1,4 +1,5 @@
 const { getAnthropicVisionConfig } = require("../lib/aiVisionConfig");
+const { isAiPaused } = require("../lib/aiConfig");
 
 const SCAN_PROMPT =
   "Analizo këtë foto të menusë së restorantit/kafenesë. " +
@@ -60,6 +61,9 @@ function extractJsonPayload(text) {
 }
 
 async function scanMenuFromImage({ mime, base64 }) {
+  if (isAiPaused()) {
+    throw new Error("AI është i ndalur për momentin. Provoni përsëri më vonë.");
+  }
   const config = getAnthropicVisionConfig();
   if (!config.ready) {
     throw new Error("Skanimi i menusë kërkon ANTHROPIC_API_KEY në environment.");

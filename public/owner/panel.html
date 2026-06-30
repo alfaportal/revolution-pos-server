@@ -85,7 +85,6 @@
       <button class="tab" data-tab="menuja">Menuja</button>
       <button class="tab" data-tab="stoku">Stoku <span id="tab-stoku-badge" class="tab-badge hidden"></span></button>
       <button class="tab" data-tab="katalogu">Katalogu</button>
-      <button class="tab" data-tab="qr-tavolinat">Tavolinat &amp; QR Kodet</button>
       <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab" data-tab="rezervime">Rezervime</button>
       <button class="tab" data-tab="lokal">Lokal &amp; Stafi</button>
@@ -133,7 +132,7 @@
       <div class="card">
         <div class="card-title-row">
           <div class="card-title" style="margin:0">Shto artikull</div>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-menu-scan-ai">Skano Meny me AI</button>
+          <button type="button" class="btn btn-ghost btn-sm ai-feature-hidden" id="btn-menu-scan-ai" hidden>Skano Meny me AI</button>
         </div>
         <div class="filter-row menu-add-row">
           <div>
@@ -245,37 +244,6 @@
         </div>
         <div id="catalog-categories" class="catalog-categories">
           <p class="links-hint">Duke ngarkuar katalogun…</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="panel-qr-tavolinat" class="panel-section hidden">
-      <div class="card" id="table-qr-card">
-        <div class="card-title card-title-row">
-          <span>Tavolinat &amp; QR Kodet</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-print-all-table-qrs">Printo të gjitha (PDF)</button>
-        </div>
-        <p class="links-hint">
-          Çdo tavolinë ka QR unik që çon te
-          <code>/menu/[slug-lokali]/[nr-tavolines]</code>.
-          Slug-u i lokalit tuaj (<strong id="table-qr-slug">—</strong>) garanton që QR-et nuk ngatërrohen me lokale të tjera.
-          Printoni dhe vendosni QR-në në tavolinë.
-        </p>
-        <div id="table-qr-msg" class="owner-license-msg"></div>
-        <div class="table-wrap">
-          <table class="menu-owner-table table-qr-table">
-            <thead>
-              <tr>
-                <th>Tavolina</th>
-                <th>URL</th>
-                <th>QR</th>
-                <th class="col-actions">Veprime</th>
-              </tr>
-            </thead>
-            <tbody id="table-qr-body">
-              <tr><td colspan="4" class="links-hint">Duke ngarkuar tavolinat…</td></tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -782,7 +750,7 @@
     </div>
   </div>
 
-  <div id="ai-chat-root" class="ai-chat-root">
+  <div id="ai-chat-root" class="ai-chat-root hidden">
     <div id="ai-chat-panel" class="ai-chat-panel hidden" role="dialog" aria-label="AI Asistent">
       <div class="ai-chat-header">
         <div>

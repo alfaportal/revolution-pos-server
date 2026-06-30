@@ -1185,156 +1185,6 @@ async function loadOwnerVenue() {
   updateVenueSyncHint(data.synced_at, data.table_count);
 }
 
-const tableQrCache = new Map();
-
-function setTableQrMsg(text, ok) {
-  const msg = document.getElementById("table-qr-msg");
-  if (!msg) return;
-  msg.textContent = text || "";
-  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
-}
-
-function renderTableQrPreview(table, dataUrl) {
-  const cell = document.querySelector(`[data-qr-preview="${table}"]`);
-  if (!cell) return;
-  if (dataUrl) {
-    cell.innerHTML = `<img src="${dataUrl}" alt="QR T${table}" class="table-qr-preview-img">`;
-  } else {
-    cell.innerHTML = '<span class="links-hint">—</span>';
-  }
-}
-
-async function generateTableQr(table, btn) {
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Duke gjeneruar…";
-  }
-  try {
-    setTableQrMsg("");
-    const data = await api(`/api/owner/kiosk/qrs/${table}`);
-    tableQrCache.set(table, data);
-    renderTableQrPreview(table, data.data_url);
-    setTableQrMsg(`QR për T${table} u gjenerua.`, true);
-  } catch (err) {
-    setTableQrMsg(err.message, false);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "Gjenero QR Code";
-    }
-  }
-}
-
-function bindTableQrActions() {
-  document.querySelectorAll("[data-generate-qr]").forEach(btn => {
-    btn.addEventListener("click", () => generateTableQr(Number(btn.dataset.generateQr), btn));
-  });
-  document.querySelectorAll("[data-download-qr]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const table = btn.dataset.downloadQr;
-      try {
-        setTableQrMsg("");
-        const headers = {};
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const res = await fetch(`/api/owner/kiosk/qrs/${table}/png`, {
-          headers,
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.gabim || "Shkarkimi dështoi.");
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `qr-tavolina-${table}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        setTableQrMsg(`QR për T${table} u shkarkua (PNG).`, true);
-      } catch (err) {
-        setTableQrMsg(err.message, false);
-      }
-    });
-  });
-  document.querySelectorAll("[data-print-qr]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const table = btn.dataset.printQr;
-      window.open(`/api/owner/kiosk/qrs/${table}/print`, "_blank", "noopener");
-    });
-  });
-  document.querySelectorAll("[data-copy-qr-url]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const url = btn.dataset.copyQrUrl;
-      if (!url) return;
-      try {
-        await navigator.clipboard.writeText(url);
-        setTableQrMsg("URL u kopjua.", true);
-      } catch {
-        setTableQrMsg("Nuk u kopjua URL.", false);
-      }
-    });
-  });
-}
-
-async function loadTableQrPanel() {
-  const body = document.getElementById("table-qr-body");
-  const card = document.getElementById("table-qr-card");
-  const slugEl = document.getElementById("table-qr-slug");
-  if (!body || !card) return;
-
-  body.innerHTML = '<tr><td colspan="4" class="links-hint">Duke ngarkuar tavolinat…</td></tr>';
-  setTableQrMsg("");
-  tableQrCache.clear();
-  card.hidden = false;
-
-  try {
-    const data = await api("/api/owner/kiosk/qrs");
-    if (slugEl) slugEl.textContent = data.slug || "—";
-
-    if (!data.tables?.length) {
-      body.innerHTML = '<tr><td colspan="4" class="links-hint">Nuk ka tavolina. Shtoni hapësira te skeda Lokal &amp; Stafi ose rritni numrin e tavolinave.</td></tr>';
-      return;
-    }
-
-    data.tables.forEach(t => tableQrCache.set(t.table, t));
-
-    body.innerHTML = data.tables.map(t => `
-      <tr data-table="${t.table}">
-        <td><strong>T${t.table}</strong></td>
-        <td>
-          <code class="table-qr-url">${escAttr(t.url)}</code>
-          <button type="button" class="btn btn-ghost btn-sm" data-copy-qr-url="${escAttr(t.url)}">Kopjo</button>
-        </td>
-        <td data-qr-preview="${t.table}">
-          <img src="${escAttr(t.data_url)}" alt="QR T${t.table}" class="table-qr-preview-img" width="96" height="96">
-        </td>
-        <td class="col-actions table-qr-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-download-qr="${t.table}">Shkarko QR</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-print-qr="${t.table}">Printo</button>
-        </td>
-      </tr>`).join("");
-
-    bindTableQrActions();
-    setTableQrMsg(`${data.count} QR kode për lokalin tuaj (slug: ${data.slug || "—"}).`, true);
-  } catch (err) {
-    body.innerHTML = "";
-    const needsUpgrade = /paketa|kiosk/i.test(err.message || "");
-    setTableQrMsg(
-      needsUpgrade
-        ? "QR kiosk kërkon Pako 2 ose më lart. Kontaktoni administratorin për upgrade."
-        : (err.message || "QR nuk u ngarkuan."),
-      false,
-    );
-  }
-}
-
-document.getElementById("btn-print-all-table-qrs")?.addEventListener("click", () => {
-  window.open("/api/owner/kiosk/qrs/print", "_blank", "noopener");
-});
-
 async function saveAreaRow(row) {
   if (!row) return;
   const id = row.dataset.id;
@@ -1355,7 +1205,6 @@ async function saveAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at, ownerVenueCache.table_count);
     setVenueMsg("Hapësira u ruajt.", true);
-    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1376,7 +1225,6 @@ async function toggleAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg(updated.active ? "Hapësira u aktivizua." : "Hapësira u fsheh.", true);
-    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -1394,7 +1242,6 @@ async function deleteAreaRow(row) {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u fshi.", true);
-    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -2228,7 +2075,6 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
     if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "rezervime") loadReservations();
-    if (tab.dataset.tab === "qr-tavolinat") loadTableQrPanel();
     if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
@@ -2557,6 +2403,23 @@ async function importScannedMenuItems() {
   }
 }
 
+async function applyAiUiState() {
+  const root = document.getElementById("ai-chat-root");
+  const scanBtn = document.getElementById("btn-menu-scan-ai");
+  try {
+    const data = await api("/api/ai/status");
+    const paused = !data.enabled;
+    root?.classList.toggle("hidden", paused);
+    if (scanBtn) {
+      if (paused) scanBtn.setAttribute("hidden", "");
+      else scanBtn.removeAttribute("hidden");
+    }
+  } catch {
+    root?.classList.add("hidden");
+    scanBtn?.setAttribute("hidden", "");
+  }
+}
+
 document.getElementById("ai-chat-fab")?.addEventListener("click", () => {
   const panel = document.getElementById("ai-chat-panel");
   setAiChatOpen(panel?.classList.contains("hidden"));
@@ -2621,7 +2484,6 @@ document.getElementById("btn-area-add")?.addEventListener("click", async () => {
     renderVenueAreas();
     updateVenueSyncHint(synced_at);
     setVenueMsg("Hapësira u shtua.", true);
-    await loadTableQrPanel();
   } catch (err) {
     setVenueMsg(err.message, false);
   }
@@ -2679,6 +2541,7 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
   if (zDate) zDate.value = today;
 
   await runBootStep("klienti", loadClient);
+  await runBootStep("ai-status", applyAiUiState);
   await runBootStep("statistikat", loadStats);
   await runBootStep("tavolinat", loadLiveTables);
   connectOwnerLiveEvents();

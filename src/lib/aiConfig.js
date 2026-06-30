@@ -9,6 +9,19 @@ function pickProvider() {
   return "";
 }
 
+/** AI i ndalur përkohësisht — vendos AI_PAUSED=0 në .env për ta riaktivizuar. */
+function isAiPaused() {
+  const v = trimEnv("AI_PAUSED");
+  if (v === "0" || v.toLowerCase() === "false") return false;
+  if (v === "1" || v.toLowerCase() === "true") return true;
+  return true;
+}
+
+function isAiEnabled() {
+  if (isAiPaused()) return false;
+  return getAiConfig().ready;
+}
+
 function getAiConfig() {
   const provider = pickProvider();
   const openaiKey = trimEnv("OPENAI_API_KEY");
@@ -37,4 +50,4 @@ function getAiConfig() {
   return { provider: "", ready: false, apiKey: "", model: "", maxTokens: 1024 };
 }
 
-module.exports = { getAiConfig, pickProvider };
+module.exports = { getAiConfig, pickProvider, isAiPaused, isAiEnabled };

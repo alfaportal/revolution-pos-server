@@ -1,4 +1,4 @@
-const { getAiConfig } = require("../lib/aiConfig");
+const { getAiConfig, isAiPaused } = require("../lib/aiConfig");
 
 const SYSTEM_PROMPT =
   "Je asistent i Revolution Invest POS për restorante dhe kafene në shqip. " +
@@ -101,6 +101,9 @@ async function anthropicChat(config, message, history) {
 }
 
 async function sendStaffChat({ message, history = [] }) {
+  if (isAiPaused()) {
+    throw new Error("AI është i ndalur për momentin. Provoni përsëri më vonë.");
+  }
   const config = getAiConfig();
   if (!config.ready) {
     throw new Error(
