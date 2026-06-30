@@ -5,10 +5,15 @@ const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMast
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { createKasaSessionToken } = require("../lib/kasaSession");
-const { orderSourceLabel } = require("../lib/orderSource");
+const {
+  listOwnerReservations,
+  createOwnerReservation,
+  updateOwnerReservationStatus,
+  getMaxTableNumber,
+} = require("../services/reservationService");
 const { normalizeItems } = require("../services/salesService");
 const { acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
-const { isCustomerBarOrder } = require("../lib/orderSource");
+const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
 
 const router = express.Router();
 
@@ -431,6 +436,52 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/reservations/list", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+    const { date, from, to } = req.body || {};
+    const reservations = await listOwnerReservations(resolved.clientId, { date, from, to });
+    const table_count = await getMaxTableNumber(resolved.clientId);
+    res.json({ ok: true, reservations, table_count });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/reservations/create", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+    const reservation = await createOwnerReservation(resolved.clientId, req.body);
+    res.status(201).json({ ok: true, reservation });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/reservations/update", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+    const id = req.body?.reservation_id || req.body?.id;
+    const reservation = await updateOwnerReservationStatus(
+      resolved.clientId,
+      id,
+      req.body?.status,
+    );
+    res.json({ ok: true, reservation });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 

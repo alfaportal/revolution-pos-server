@@ -2067,18 +2067,8 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
-    if (tab.dataset.tab === "menuja") loadOwnerMenu();
-    if (tab.dataset.tab === "stoku") {
-      if (typeof loadOwnerInventory === "function") loadOwnerInventory();
-      if (typeof loadOwnerStock === "function") loadOwnerStock();
-    }
-    if (tab.dataset.tab === "katalogu" && typeof loadOwnerCatalog === "function") loadOwnerCatalog();
-    if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
-    if (tab.dataset.tab === "rezervime") loadReservations();
-    if (tab.dataset.tab === "lokal") loadOwnerVenue();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
-    if (tab.dataset.tab === "fiskale") loadFiscalSettings();
     if (tab.dataset.tab === "licenca") loadLicense();
   });
 });
