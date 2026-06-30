@@ -100,6 +100,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   assertLicenseUsable(license);
 
   const deviceId = String(body.device_id || license.device_id || "").trim().toUpperCase();
+  const { WEB_KIOSK } = require("../lib/orderSource");
   const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
   const items = normalizeItems(rawItems);
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -130,7 +131,8 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   const tableNum = Number(body.table_number) || 0;
   const keepKey = { local_order_id: localOrderId, device_id: deviceId };
-  if (tableNum >= 1 && ["ordered", "ready", "closed", "cancelled"].includes(finalStatus)) {
+  const skipSiblingCancel = deviceId === WEB_KIOSK;
+  if (tableNum >= 1 && ["ordered", "ready", "closed", "cancelled"].includes(finalStatus) && !skipSiblingCancel) {
     await cancelOtherActiveOrdersForTable(license.client_id, tableNum, keepKey);
   }
 

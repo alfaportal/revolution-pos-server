@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
-const { normalizeItems, mergeOrderItems, updateActiveSaleFromPos } = require("./salesService");
-const { getActiveTableOrders, getLicenseForClient, cancelTableOrder } = require("./waiterService");
-const { WEB_KIOSK, isKioskWaiterName } = require("../lib/orderSource");
+const { normalizeItems, updateActiveSaleFromPos } = require("./salesService");
+const { getLicenseForClient, cancelTableOrder } = require("./waiterService");
+const { WEB_KIOSK } = require("../lib/orderSource");
 const { getClientMenuCatalog } = require("./menuCatalogService");
 
 const KIOSK_DEVICE = WEB_KIOSK;
@@ -27,29 +27,22 @@ async function submitKioskOrder(client, body) {
   const newItems = normalizeItems(body.items);
   if (!newItems.length) throw new Error("Shtoni të paktën një artikull.");
 
-  const active = await getActiveTableOrders(client.id);
-  const existing = active.get(tableNumber);
-  const items = existing
-    ? mergeOrderItems(existing.items_json, newItems)
-    : newItems;
-  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const total = newItems.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
   const license = await getLicenseForClient(client.id);
-  const localOrderId = existing?.local_order_id || `kiosk-${uuidv4()}`;
-  const waiterName = existing?.waiter_name && !isKioskWaiterName(existing.waiter_name)
-    ? existing.waiter_name
-    : tableWaiterLabel(tableNumber);
+  const localOrderId = `kiosk-${uuidv4()}`;
+  const waiterName = tableWaiterLabel(tableNumber);
 
   const sale = await updateActiveSaleFromPos({
     celesi: license.celesi,
-    device_id: existing?.device_id || KIOSK_DEVICE,
+    device_id: KIOSK_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
     waiter_name: waiterName,
-    items,
+    items: newItems,
     total,
     status: "ordered",
-    ordered_at: existing?.ordered_at || now,
+    ordered_at: now,
   });
 
   try {
@@ -80,6 +73,7 @@ async function cancelKioskOrder(client, body) {
   if (!tableNumber || tableNumber < 1) {
     throw new Error("Mungon numri i tavolinës.");
   }
+  const { getActiveTableOrders } = require("./waiterService");
   const active = await getActiveTableOrders(client.id);
   const existing = active.get(tableNumber);
   const sale = await cancelTableOrder(client.id, { tableNumber, existing });
