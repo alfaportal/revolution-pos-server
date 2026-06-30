@@ -188,10 +188,13 @@ async function countPendingOnlineOrders(clientId) {
 
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
+  const { isOrderAccepted } = require("../lib/salesOrderSelect");
+  const { loadStaffIdSet } = require("../services/orderAcceptance");
   const rows = await fetchOrderedSales(clientId);
+  const staffIds = await loadStaffIdSet(clientId);
   return rows
     .filter(isCustomerBarOrder)
-    .filter(row => !row.accepted_at)
+    .filter(row => !isOrderAccepted(row, staffIds))
     .map(formatOrderForPos);
 }
 
@@ -386,7 +389,7 @@ router.post("/online-orders", licenseApiKeyOptional, async (req, res) => {
     }
 
     const allOrders = await listBarMobileOrderedForPos(resolved.clientId);
-    const orders = allOrders.filter(o => !o.accepted_at);
+    const orders = await listPendingOnlineOrders(resolved.clientId);
     res.json({
       ok: true,
       pending: orders.length,
@@ -428,6 +431,15 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
       waiterId: handler.id,
       waiterName: handler.name,
     });
+    if (!result.count) {
+      return res.json({
+        ok: false,
+        acknowledged: 0,
+        order_ids: [],
+        accepted_by: handler.name,
+        gabim: "Porosia nuk u shënua në cloud — provoni përsëri ose kontrolloni migrimin e bazës.",
+      });
+    }
     res.json({
       ok: true,
       acknowledged: result.count,

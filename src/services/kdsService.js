@@ -3,7 +3,7 @@ const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName } = require("../lib/orderSource");
 const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
-const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
+const { selectWithAcceptanceFallback, updateOrdersAcceptance } = require("../lib/salesOrderSelect");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -151,40 +151,24 @@ async function listKitchenOrders(clientId) {
 
 async function acceptBarOrder(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
   const db = getSupabase();
-  const now = new Date().toISOString();
-  const patch = {
-    accepted_at: now,
-    accepted_by_waiter_id: waiterId,
-    accepted_by_waiter_name: String(waiterName || "").trim(),
-  };
+  const name = String(waiterName || "").trim();
+  const { ids } = await updateOrdersAcceptance(db, {
+    clientId,
+    orderIds: [orderId],
+    waiterId,
+    waiterName: name,
+  });
+  if (!ids.length) throw new Error("Porosia nuk u gjet, është pranuar tashmë, ose është mbyllur.");
 
-  let { data, error } = await db
+  const { data, error } = await db
     .from("sales_orders")
-    .update(patch)
+    .select("*")
     .eq("id", orderId)
     .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .is("accepted_at", null)
-    .select()
-    .single();
-
-  if (error && /accepted_by/i.test(String(error.message || ""))) {
-    delete patch.accepted_by_waiter_id;
-    delete patch.accepted_by_waiter_name;
-    ({ data, error } = await db
-      .from("sales_orders")
-      .update({ accepted_at: now })
-      .eq("id", orderId)
-      .eq("client_id", clientId)
-      .eq("status", "ordered")
-      .is("accepted_at", null)
-      .select()
-      .single());
-  }
-
+    .maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error("Porosia nuk u gjet, është pranuar tashmë, ose është mbyllur.");
-  notifyKitchenUpdate(clientId, { order_id: orderId, status: "accepted", accepted_by: patch.accepted_by_waiter_name || waiterName });
+  if (!data) throw new Error("Porosia nuk u gjet.");
+  notifyKitchenUpdate(clientId, { order_id: orderId, status: "accepted", accepted_by: name });
   return data;
 }
 
@@ -208,40 +192,16 @@ async function markKitchenOrderReady(clientId, orderId) {
 }
 
 async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waiterName = "" } = {}) {
-  const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
-  if (!ids.length) return { count: 0, ids: [] };
-
   const db = getSupabase();
-  const now = new Date().toISOString();
-  const patch = {
-    accepted_at: now,
-    accepted_by_waiter_id: waiterId,
-    accepted_by_waiter_name: String(waiterName || "").trim(),
-  };
-  let { data, error } = await db
-    .from("sales_orders")
-    .update(patch)
-    .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .is("accepted_at", null)
-    .in("id", ids)
-    .select("id");
-
-  if (error && /accepted_by/i.test(String(error.message || ""))) {
-    ({ data, error } = await db
-      .from("sales_orders")
-      .update({ accepted_at: now })
-      .eq("client_id", clientId)
-      .eq("status", "ordered")
-      .is("accepted_at", null)
-      .in("id", ids)
-      .select("id"));
-  }
-
-  if (error) throw error;
-  const acked = (data || []).map(row => row.id);
+  const name = String(waiterName || "").trim();
+  const { ids: acked } = await updateOrdersAcceptance(db, {
+    clientId,
+    orderIds,
+    waiterId,
+    waiterName: name,
+  });
   if (acked.length) {
-    notifyKitchenUpdate(clientId, { order_ids: acked, status: "accepted", accepted_by: patch.accepted_by_waiter_name || waiterName });
+    notifyKitchenUpdate(clientId, { order_ids: acked, status: "accepted", accepted_by: name });
   }
   return { count: acked.length, ids: acked };
 }
