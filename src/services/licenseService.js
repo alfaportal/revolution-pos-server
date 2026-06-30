@@ -509,8 +509,25 @@ async function updateClient(id, body) {
   return normalizeClientRow(data);
 }
 
+/** Fshin rreshta që mund të bllokojnë DELETE te clients (FK pa CASCADE në prod). */
+async function deleteClientDependentRows(db, clientId) {
+  const targets = [
+    ["ai_usage_logs", "restaurant_id"],
+    ["ingredients", "restaurant_id"],
+    ["reservations", "restaurant_id"],
+  ];
+  for (const [table, column] of targets) {
+    const { error } = await db.from(table).delete().eq(column, clientId);
+    if (!error) continue;
+    const msg = String(error.message || "");
+    const missingTable = error.code === "42P01" || /does not exist/i.test(msg);
+    if (!missingTable) throw error;
+  }
+}
+
 async function deleteClient(id) {
   const db = getSupabase();
+  await deleteClientDependentRows(db, id);
   await db.from("users").delete().eq("client_id", id).eq("roli", "client_admin");
   const { error } = await db.from("clients").delete().eq("id", id);
   if (error) throw error;
