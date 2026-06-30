@@ -24,7 +24,7 @@ async function fetchOrderedSales(clientId) {
       .eq("client_id", clientId)
       .eq("status", "ordered")
       .order("ordered_at", { ascending: true, nullsFirst: false })
-      .limit(80);
+      .limit(200);
   });
 
   return rows.map(o => ({
@@ -206,6 +206,28 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
   return { count: acked.length, ids: acked };
 }
 
+async function cancelBarOrders(clientId, orderIds) {
+  const db = getSupabase();
+  const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+  if (!ids.length) return { count: 0, ids: [] };
+
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("sales_orders")
+    .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+    .eq("client_id", clientId)
+    .eq("status", "ordered")
+    .in("id", ids)
+    .select("id");
+
+  if (error) throw error;
+  const cancelled = (data || []).map(row => row.id).filter(Boolean);
+  if (cancelled.length) {
+    notifyKitchenUpdate(clientId, { order_ids: cancelled, status: "cancelled" });
+  }
+  return { count: cancelled.length, ids: cancelled };
+}
+
 async function listRecentlyCancelledOrders(clientId, windowSec = 30) {
   const db = getSupabase();
   const since = new Date(Date.now() - windowSec * 1000).toISOString();
@@ -243,5 +265,6 @@ module.exports = {
   acceptBarOrder,
   markKitchenOrderReady,
   acknowledgeBarOrders,
+  cancelBarOrders,
   isBanakOrder,
 };

@@ -12,7 +12,7 @@ const {
   getMaxTableNumber,
 } = require("../services/reservationService");
 const { normalizeItems } = require("../services/salesService");
-const { acknowledgeBarOrders, fetchOrderedSales } = require("../services/kdsService");
+const { acknowledgeBarOrders, cancelBarOrders, fetchOrderedSales } = require("../services/kdsService");
 const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
 
 const router = express.Router();
@@ -189,12 +189,10 @@ async function countPendingOnlineOrders(clientId) {
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
   const { isOrderAccepted } = require("../lib/salesOrderSelect");
-  const { loadStaffIdSet } = require("../services/orderAcceptance");
   const rows = await fetchOrderedSales(clientId);
-  const staffIds = await loadStaffIdSet(clientId);
   return rows
     .filter(isCustomerBarOrder)
-    .filter(row => !isOrderAccepted(row, staffIds))
+    .filter(row => !isOrderAccepted(row))
     .map(formatOrderForPos);
 }
 
@@ -205,8 +203,10 @@ async function listBarMobileOrderedForPos(clientId) {
 }
 
 function formatOrderForPos(row) {
+  const { isOrderAccepted } = require("../lib/salesOrderSelect");
   const src = orderSourceLabel(row);
   const handler = String(row.accepted_by_waiter_name || "").trim();
+  const accepted = isOrderAccepted(row);
   return {
     id: row.id,
     table_number: Number(row.table_number) || 0,
@@ -219,6 +219,7 @@ function formatOrderForPos(row) {
     total: Number(row.total) || 0,
     ordered_at: row.ordered_at,
     status: row.status || "ordered",
+    pending: !accepted,
     accepted_by: handler,
     accepted_at: row.accepted_at || null,
     handler_label: handler || null,
@@ -445,6 +446,39 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
       acknowledged: result.count,
       order_ids: result.ids,
       accepted_by: handler.name,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/online-orders/cancel — anulo porosi në pritje (pa pranuar / pa faturë)
+ */
+router.post("/online-orders/cancel", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+
+    const rawIds = Array.isArray(req.body.order_ids)
+      ? req.body.order_ids
+      : (req.body.order_id ? [req.body.order_id] : []);
+
+    const result = await cancelBarOrders(resolved.clientId, rawIds);
+    if (!result.count) {
+      return res.json({
+        ok: false,
+        cancelled: 0,
+        order_ids: [],
+        gabim: "Porosia nuk u anulua në cloud — provoni përsëri.",
+      });
+    }
+    res.json({
+      ok: true,
+      cancelled: result.count,
+      order_ids: result.ids,
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });

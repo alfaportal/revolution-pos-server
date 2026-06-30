@@ -44,6 +44,10 @@ function mergeOrderItems(existingItems, newItems) {
 async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = null) {
   const num = Number(tableNumber);
   if (!num || num < 1) return 0;
+  const { isCustomerChannelDevice, isPosDesktopDevice } = require("../lib/orderSource");
+  const exceptDevice = except ? String(except.device_id || "").trim().toUpperCase() : "";
+  const preserveCustomerBatches = !!(except && isPosDesktopDevice(exceptDevice));
+
   const db = getSupabase();
   const { data: rows, error } = await db
     .from("sales_orders")
@@ -61,6 +65,9 @@ async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = n
       String(row.local_order_id) === String(except.local_order_id) &&
       String(row.device_id).toUpperCase() === String(except.device_id).toUpperCase()
     ) {
+      continue;
+    }
+    if (preserveCustomerBatches && isCustomerChannelDevice(row.device_id)) {
       continue;
     }
     const { error: updErr } = await db
@@ -100,7 +107,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   assertLicenseUsable(license);
 
   const deviceId = String(body.device_id || license.device_id || "").trim().toUpperCase();
-  const { WEB_KIOSK } = require("../lib/orderSource");
+  const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
   const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
   const items = normalizeItems(rawItems);
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -131,7 +138,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   const tableNum = Number(body.table_number) || 0;
   const keepKey = { local_order_id: localOrderId, device_id: deviceId };
-  const skipSiblingCancel = deviceId === WEB_KIOSK;
+  const skipSiblingCancel = deviceId === WEB_KIOSK || deviceId === WEB_PUBLIC;
   if (tableNum >= 1 && ["ordered", "ready", "closed", "cancelled"].includes(finalStatus) && !skipSiblingCancel) {
     await cancelOtherActiveOrdersForTable(license.client_id, tableNum, keepKey);
   }

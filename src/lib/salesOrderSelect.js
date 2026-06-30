@@ -79,13 +79,11 @@ async function updateOrdersAcceptance(db, { clientId, orderIds, waiterId = null,
   throw lastError || new Error("Nuk u shënuan porositë si të pranuara.");
 }
 
-function isOrderAccepted(row, staffIdSet = null) {
+function isOrderAccepted(row) {
   if (!row) return false;
   if (row.accepted_at) return true;
   if (String(row.accepted_by_waiter_name || "").trim()) return true;
   if (row.accepted_by_waiter_id) return true;
-  const wid = row.waiter_id;
-  if (wid && staffIdSet && staffIdSet.has(String(wid))) return true;
   return false;
 }
 

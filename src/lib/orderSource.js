@@ -64,6 +64,19 @@ function isBarMobileOrder(order) {
   return false;
 }
 
+/** QR / web klient — batch-e të veçanta që nuk duhen anuluar nga sinkronizimi POS */
+function isCustomerChannelDevice(deviceId) {
+  const d = String(deviceId || "").trim().toUpperCase();
+  return d === WEB_KIOSK || d === WEB_PUBLIC;
+}
+
+/** Terminali lokal Electron — jo WEB-WAITER/KIOSK/PUBLIC */
+function isPosDesktopDevice(deviceId) {
+  const d = String(deviceId || "").trim().toUpperCase();
+  if (!d) return true;
+  return !d.startsWith("WEB-");
+}
+
 module.exports = {
   WEB_WAITER,
   WEB_KIOSK,
@@ -76,4 +89,6 @@ module.exports = {
   isStaffWaiterOrder,
   isCustomerBarOrder,
   isBarMobileOrder,
+  isCustomerChannelDevice,
+  isPosDesktopDevice,
 };

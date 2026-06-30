@@ -289,7 +289,7 @@ window.MANUAL_EN_SECTIONS = {
 
   faqja: `<span class="section-num">Section 7</span>
         <h2>PUBLIC PAGE</h2>
-        <p>Every customer with a package that includes the public page has a website at <code>/r/[slug]</code> — with menu, logo, hours, and info. Online takeaway/delivery ordering is available on <strong>Plan 4</strong> only.</p>
+        <p>Every customer with a package that includes the public page has a website at <code>/r/[slug]</code> — with menu, logo, hours, and info. Online takeaway/delivery ordering is available on <strong>Plan 3</strong> only.</p>
 
         <h3>How to upload a logo</h3>
         <ol class="steps">
@@ -318,7 +318,7 @@ window.MANUAL_EN_SECTIONS = {
 
         <h3>How to enable online delivery</h3>
         <ol class="steps">
-          <li>Make sure your package is <strong>Plan 4</strong> (online takeaway &amp; delivery orders).</li>
+          <li>Make sure your package is <strong>Plan 3</strong> (online takeaway &amp; delivery orders).</li>
           <li>On the <strong>Public page</strong> tab, enable the checkbox <strong>«Public page is active»</strong>.</li>
           <li>Fill in the business <strong>address</strong> and <strong>phone</strong> (taken from venue settings or Super Admin).</li>
           <li>Add active items on the <strong>Menu</strong> tab — the public menu is read from the same list.</li>
