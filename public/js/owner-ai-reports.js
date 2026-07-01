@@ -88,18 +88,6 @@
       renderHistoryTable();
 
       let todayReport = reportsCache.find(r => r.report_date === data.today);
-      if (!todayReport) {
-        try {
-          const todayData = await api("/api/owner/ai-reports/today");
-          todayReport = todayData.report;
-          if (todayReport && !reportsCache.some(r => r.report_date === todayReport.report_date)) {
-            reportsCache.unshift(todayReport);
-            renderHistoryTable();
-          }
-        } catch {
-          /* sot mund të mos ketë ende */
-        }
-      }
       renderTodayReport(todayReport, data.today);
       setAiReportMsg("", true);
     } catch (err) {
@@ -129,6 +117,37 @@
 
   window.applyAiReportsTab = applyAiReportsTab;
 
+  async function generateTodayReport(force = false) {
+    const btn = document.getElementById("btn-ai-report-generate");
+    if (btn) btn.disabled = true;
+    setAiReportMsg("Duke gjeneruar raportin AI…", true);
+    try {
+      const data = await api("/api/owner/ai-reports/generate", {
+        method: "POST",
+        body: JSON.stringify({ force }),
+      });
+      const report = data.report;
+      if (report) {
+        const idx = reportsCache.findIndex(r => r.report_date === report.report_date);
+        if (idx >= 0) reportsCache[idx] = report;
+        else reportsCache.unshift(report);
+        renderHistoryTable();
+        renderTodayReport(report, report.report_date);
+      }
+      setAiReportMsg(
+        data.skipped ? "Raporti për sot ekziston tashmë." : "Raporti AI u gjenerua me sukses.",
+        true,
+      );
+    } catch (err) {
+      setAiReportMsg(err.message, false);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.getElementById("btn-ai-report-generate")?.addEventListener("click", () => {
+    generateTodayReport(false).catch(err => setAiReportMsg(err.message, false));
+  });
   document.getElementById("btn-ai-report-refresh")?.addEventListener("click", () => {
     loadOwnerAiReports().catch(err => setAiReportMsg(err.message, false));
   });

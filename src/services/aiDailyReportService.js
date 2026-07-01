@@ -333,10 +333,10 @@ async function saveDailyReport({ clientId, reportDate, reportJson, summaryText, 
   return data;
 }
 
-async function generateDailyReportForClient(client, reportDate, { sendEmail = true } = {}) {
+async function generateDailyReportForClient(client, reportDate, { sendEmail = true, force = false } = {}) {
   const clientId = client.id;
   const existing = await getReportByDate(clientId, reportDate);
-  if (existing?.summary_text) {
+  if (existing?.summary_text && !force) {
     return { skipped: true, reason: "exists", report: existing };
   }
 
@@ -407,16 +407,9 @@ async function processAiDailyReports(reportDate) {
   return { generated, skipped, eligible: clients.length, date };
 }
 
-async function getOrGenerateTodayReport(clientId, clientRow) {
+async function getTodayReport(clientId) {
   const today = getZonedParts().date;
-  let report = await getReportByDate(clientId, today);
-  if (report) return report;
-  const result = await generateDailyReportForClient(
-    { id: clientId, emri: clientRow?.emri, email: clientRow?.email },
-    today,
-    { sendEmail: false },
-  );
-  return result.report;
+  return getReportByDate(clientId, today);
 }
 
 module.exports = {
@@ -426,7 +419,7 @@ module.exports = {
   listEligibleClients,
   listReportsForClient,
   getReportByDate,
+  getTodayReport,
   generateDailyReportForClient,
   processAiDailyReports,
-  getOrGenerateTodayReport,
 };

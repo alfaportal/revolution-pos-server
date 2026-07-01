@@ -80,7 +80,7 @@ const { requireAiPackage } = require("../middleware/requireAiPackage");
 const {
   listReportsForClient,
   getReportByDate,
-  getOrGenerateTodayReport,
+  getTodayReport,
   generateDailyReportForClient,
   getZonedParts,
 } = require("../services/aiDailyReportService");
@@ -463,8 +463,10 @@ router.get("/ai-reports", requireAiPackage, async (req, res) => {
 
 router.get("/ai-reports/today", requireAiPackage, async (req, res) => {
   try {
-    const client = await getClientById(req.user.client_id);
-    const report = await getOrGenerateTodayReport(req.user.client_id, client);
+    const report = await getTodayReport(req.user.client_id);
+    if (!report) {
+      return res.status(404).json({ ok: false, gabim: "Ende nuk ka raport për sot." });
+    }
     res.json({ ok: true, report });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
@@ -491,7 +493,9 @@ router.post("/ai-reports/generate", requireAiPackage, async (req, res) => {
   try {
     const client = await getClientById(req.user.client_id);
     const date = String(req.body?.date || getZonedParts().date).slice(0, 10);
-    const result = await generateDailyReportForClient(client, date, { sendEmail: false });
+    const force = !!req.body?.force;
+    const sendEmail = req.body?.send_email !== false;
+    const result = await generateDailyReportForClient(client, date, { sendEmail, force });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
