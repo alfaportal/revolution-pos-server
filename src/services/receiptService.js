@@ -148,12 +148,13 @@ function buildReceiptLines(receipt) {
   const w = paperChars(receipt.paper_width_mm);
   const lines = [];
   const biz = receipt.business;
+  const isFinal = receipt.slip_kind === "final";
 
   if (biz.business_name) lines.push(pad(biz.business_name, w, "center"));
   if (biz.address) lines.push(pad(biz.address, w, "center"));
   if (biz.phone) lines.push(pad(`Tel: ${biz.phone}`, w, "center"));
-  if (biz.nui) lines.push(pad(`NUI: ${biz.nui}`, w, "center"));
-  if (biz.tvsh_nr) lines.push(pad(`TVSH: ${biz.tvsh_nr}`, w, "center"));
+  if (isFinal && biz.nui) lines.push(pad(`NUI: ${biz.nui}`, w, "center"));
+  if (isFinal && biz.tvsh_nr) lines.push(pad(`TVSH: ${biz.tvsh_nr}`, w, "center"));
 
   lines.push(divider(w));
   if (receipt.slip_kind === "order" && receipt.order_number) {
@@ -162,7 +163,7 @@ function buildReceiptLines(receipt) {
     lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
   }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
-  if (receipt.waiter_name) lines.push(`Klienti: ${receipt.waiter_name}`);
+  if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.accepted_by) lines.push(`Pranuar nga: ${receipt.accepted_by}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
   if (receipt.cashier_name) lines.push(`Operatori: ${receipt.cashier_name}`);
@@ -174,10 +175,7 @@ function buildReceiptLines(receipt) {
 
   lines.push(formatTotalLine(receipt.total, w));
   if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
-
-  lines.push(divider(w));
   lines.push(pad("Faleminderit!", w, "center"));
-  lines.push(pad(`${receipt.printed_date}  ${receipt.printed_time}`, w, "center"));
 
   return lines;
 }
@@ -186,12 +184,13 @@ function buildMarkedReceiptLines(receipt) {
   const w = paperChars(receipt.paper_width_mm);
   const lines = [];
   const biz = receipt.business;
+  const isFinal = receipt.slip_kind === "final";
 
   if (biz.business_name) lines.push(`^C^B${biz.business_name}`);
   if (biz.address) lines.push(`^C${biz.address}`);
   if (biz.phone) lines.push(`^CTel: ${biz.phone}`);
-  if (biz.nui) lines.push(`^CNUI: ${biz.nui}`);
-  if (biz.tvsh_nr) lines.push(`^CTVSH Nr.: ${biz.tvsh_nr}`);
+  if (isFinal && biz.nui) lines.push(`^CNUI: ${biz.nui}`);
+  if (isFinal && biz.tvsh_nr) lines.push(`^CTVSH Nr.: ${biz.tvsh_nr}`);
 
   lines.push(divider(w));
   if (receipt.slip_kind === "order" && receipt.order_number) {
@@ -200,7 +199,7 @@ function buildMarkedReceiptLines(receipt) {
     lines.push(`Nr. Porosia: ${receipt.receipt_number}`);
   }
   if (receipt.table_number) lines.push(`Tavolina: T${receipt.table_number}`);
-  if (receipt.waiter_name) lines.push(`Klienti: ${receipt.waiter_name}`);
+  if (receipt.waiter_name) lines.push(`Kamarieri: ${receipt.waiter_name}`);
   if (receipt.accepted_by) lines.push(`Pranuar nga: ${receipt.accepted_by}`);
   if (receipt.register_name) lines.push(`Arka: ${receipt.register_name}`);
   if (receipt.cashier_name) lines.push(`Operatori: ${receipt.cashier_name}`);
@@ -212,10 +211,7 @@ function buildMarkedReceiptLines(receipt) {
 
   lines.push(`^R^B${formatTotalLine(receipt.total, w)}`);
   if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
-
-  lines.push(divider(w));
   lines.push("^CFaleminderit!");
-  lines.push(`^C${receipt.printed_date}  ${receipt.printed_time}`);
 
   return lines;
 }
@@ -238,83 +234,62 @@ function escapeHtml(s) {
 
 function formatReceiptHtml(receipt) {
   const w = receipt.paper_width_mm;
-  const narrow = Number(w) <= 58;
   const biz = receipt.business;
+  const isFinal = receipt.slip_kind === "final";
 
-  const itemRows = receipt.items.map(i => {
-    const unit = formatMoney(i.price);
-    const lineTotal = formatMoney(i.price * i.quantity);
-    if (narrow) {
-      return `<tr class="rc-item-row">
-        <td class="rc-name" colspan="4">
-          <div class="rc-item-name">${escapeHtml(i.name)}</div>
-          <div class="rc-item-sub"><span>${i.quantity} × ${unit}</span><span class="rc-item-line-total">${lineTotal} €</span></div>
-        </td>
-      </tr>`;
-    }
-    return `<tr class="rc-item-row">
-      <td class="rc-name">${escapeHtml(i.name)}</td>
-      <td class="rc-qty">${i.quantity}</td>
-      <td class="rc-price">${unit}</td>
-      <td class="rc-value">${lineTotal}</td>
-    </tr>`;
-  }).join("");
+  const itemLines = receipt.items
+    .map(i => {
+      const qty = Number(i.quantity) || 1;
+      const unit = formatMoney(i.price);
+      const lineTotal = formatMoney(i.price * qty);
+      return `<div class="rc-item-line">
+        <span class="rc-item-name">${escapeHtml(i.name)}</span>
+        <span class="rc-item-calc">${qty}x ${unit} = ${lineTotal}</span>
+      </div>`;
+    })
+    .join("");
 
-  const headerMeta = [
-    biz.address ? `<div class="rc-meta-line">${escapeHtml(biz.address)}</div>` : "",
-    biz.phone ? `<div class="rc-meta-line">Tel: ${escapeHtml(biz.phone)}</div>` : "",
-    biz.nui ? `<div class="rc-meta-line">NUI: ${escapeHtml(biz.nui)}</div>` : "",
-    biz.tvsh_nr ? `<div class="rc-meta-line">TVSH: ${escapeHtml(biz.tvsh_nr)}</div>` : "",
-  ].filter(Boolean).join("");
+  const metaLines = [];
+  if (receipt.slip_kind === "order" && receipt.order_number) {
+    metaLines.push(`Nr. Porosia: ${escapeHtml(receipt.order_number)}`);
+  } else if (receipt.receipt_number) {
+    metaLines.push(`Nr. Porosia: ${escapeHtml(receipt.receipt_number)}`);
+  }
+  if (receipt.table_number) metaLines.push(`Tavolina: T${receipt.table_number}`);
+  if (receipt.waiter_name) metaLines.push(`Kamarieri: ${escapeHtml(receipt.waiter_name)}`);
+  if (receipt.accepted_by) metaLines.push(`Pranuar nga: ${escapeHtml(receipt.accepted_by)}`);
+  if (receipt.register_name) metaLines.push(`Arka: ${escapeHtml(receipt.register_name)}`);
+  if (receipt.cashier_name) metaLines.push(`Operatori: ${escapeHtml(receipt.cashier_name)}`);
+  metaLines.push(`Data: ${receipt.date} &nbsp; Ora: ${receipt.time}`);
 
-  const orderMeta = [
-    receipt.slip_kind === "order" && receipt.order_number
-      ? `<div><span class="rc-meta-label">Nr. Porosia</span> ${escapeHtml(receipt.order_number)}</div>`
-      : receipt.receipt_number
-        ? `<div><span class="rc-meta-label">Nr. Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>`
-        : "",
-    receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : "",
-    receipt.waiter_name ? `<div><span class="rc-meta-label">Klienti</span> ${escapeHtml(receipt.waiter_name)}</div>` : "",
-    receipt.accepted_by ? `<div><span class="rc-meta-label">Pranuar nga</span> ${escapeHtml(receipt.accepted_by)}</div>` : "",
-    receipt.register_name ? `<div><span class="rc-meta-label">Arka</span> ${escapeHtml(receipt.register_name)}</div>` : "",
-    receipt.cashier_name ? `<div><span class="rc-meta-label">Operatori</span> ${escapeHtml(receipt.cashier_name)}</div>` : "",
-    `<div><span class="rc-meta-label">Data</span> ${receipt.date} &nbsp; ${receipt.time}</div>`,
-    receipt.payment_label ? `<div><span class="rc-meta-label">Pagesa</span> ${escapeHtml(receipt.payment_label)}</div>` : "",
-  ].filter(Boolean).join("");
-
-  const tableHead = narrow
-    ? ""
-    : `<thead>
-        <tr>
-          <th class="rc-name">Artikulli</th>
-          <th class="rc-qty">Sasi</th>
-          <th class="rc-price">Çmim</th>
-          <th class="rc-value">Total</th>
-        </tr>
-      </thead>`;
+  const taxMeta = isFinal
+    ? [
+        biz.nui ? `<div class="rc-meta-line">NUI: ${escapeHtml(biz.nui)}</div>` : "",
+        biz.tvsh_nr ? `<div class="rc-meta-line">TVSH: ${escapeHtml(biz.tvsh_nr)}</div>` : "",
+      ]
+        .filter(Boolean)
+        .join("")
+    : "";
 
   return `<div class="receipt-thermal" data-width-mm="${w}">
     <div class="rc-header">
       <div class="rc-business-name">${escapeHtml(biz.business_name || "Faturë")}</div>
-      ${headerMeta ? `<div class="rc-business-meta">${headerMeta}</div>` : ""}
+      ${biz.address ? `<div class="rc-meta-line">${escapeHtml(biz.address)}</div>` : ""}
+      ${biz.phone ? `<div class="rc-meta-line">Tel: ${escapeHtml(biz.phone)}</div>` : ""}
+      ${taxMeta}
     </div>
-    <div class="rc-divider rc-divider-strong"></div>
-    <div class="rc-order-meta">${orderMeta}</div>
     <div class="rc-divider"></div>
-    <table class="rc-items${narrow ? " rc-items-narrow" : ""}">
-      ${tableHead}
-      <tbody>${itemRows || `<tr><td colspan="4" class="rc-empty">—</td></tr>`}</tbody>
-    </table>
-    <div class="rc-divider rc-divider-strong"></div>
+    <div class="rc-order-meta">${metaLines.map(line => `<div>${line}</div>`).join("")}</div>
+    <div class="rc-divider"></div>
+    <div class="rc-items-compact">${itemLines || '<div class="rc-empty">—</div>'}</div>
+    <div class="rc-divider"></div>
     <div class="rc-total">
-      <span class="rc-total-label">GJITHSEJ</span>
-      <span class="rc-total-value">${formatMoney(receipt.total)} €</span>
+      <span class="rc-total-label">TOTALI:</span>
+      <span class="rc-total-value">${formatMoney(receipt.total)} EUR</span>
     </div>
+    ${receipt.payment_label ? `<div class="rc-payment">Pagesa: ${escapeHtml(receipt.payment_label)}</div>` : ""}
     <div class="rc-divider"></div>
-    <div class="rc-footer">
-      <div class="rc-thanks">Faleminderit!</div>
-      <div class="rc-printed">${receipt.printed_date} &nbsp; ${receipt.printed_time}</div>
-    </div>
+    <div class="rc-thanks">Faleminderit!</div>
   </div>`;
 }
 

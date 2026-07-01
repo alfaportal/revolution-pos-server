@@ -734,31 +734,24 @@
     const mm = receipt.paper_width_mm || 80;
     const biz = receipt.business || {};
     const items = receipt.items || [];
-    const narrow = Number(mm) <= 58;
     const fmt = n => Number(n).toFixed(2);
-    const printed = receipt.printed_date && receipt.printed_time
-      ? `${receipt.printed_date} &nbsp; ${receipt.printed_time}`
-      : new Date().toLocaleString("sq-AL");
 
-    const itemRows = items.map(i => {
-      const lineTotal = fmt(Number(i.price) * Number(i.quantity));
-      if (narrow) {
-        return `<tr class="rc-item-row"><td class="rc-name" colspan="4">
-          <div class="rc-item-name">${escapeHtml(i.name)}</div>
-          <div class="rc-item-sub"><span>${i.quantity} × ${fmt(i.price)}</span><span class="rc-item-line-total">${lineTotal} €</span></div>
-        </td></tr>`;
-      }
-      return `<tr class="rc-item-row">
-        <td class="rc-name">${escapeHtml(i.name)}</td>
-        <td class="rc-qty">${i.quantity}</td>
-        <td class="rc-price">${fmt(i.price)}</td>
-        <td class="rc-value">${lineTotal}</td>
-      </tr>`;
+    const itemLines = items.map(i => {
+      const qty = Number(i.quantity) || 1;
+      const unit = fmt(i.price);
+      const lineTotal = fmt(Number(i.price) * qty);
+      return `<div class="rc-item-line">
+        <span class="rc-item-name">${escapeHtml(i.name)}</span>
+        <span class="rc-item-calc">${qty}x ${unit} = ${lineTotal}</span>
+      </div>`;
     }).join("");
 
-    const tableHead = narrow ? "" : `<thead><tr>
-      <th class="rc-name">Artikulli</th><th class="rc-qty">Sasi</th>
-      <th class="rc-price">Çmim</th><th class="rc-value">Total</th></tr></thead>`;
+    const meta = [
+      receipt.receipt_number ? `Nr. Porosia: ${escapeHtml(receipt.receipt_number)}` : "",
+      receipt.table_number ? `Tavolina: T${receipt.table_number}` : "",
+      receipt.waiter_name ? `Kamarieri: ${escapeHtml(receipt.waiter_name)}` : "",
+      receipt.date && receipt.time ? `Data: ${receipt.date} &nbsp; Ora: ${receipt.time}` : "",
+    ].filter(Boolean);
 
     return `<div class="receipt-thermal" data-width-mm="${mm}">
       <div class="rc-header">
@@ -766,18 +759,15 @@
         ${biz.address ? `<div class="rc-meta-line">${escapeHtml(biz.address)}</div>` : ""}
         ${biz.phone ? `<div class="rc-meta-line">Tel: ${escapeHtml(biz.phone)}</div>` : ""}
       </div>
-      <div class="rc-divider rc-divider-strong"></div>
-      <div class="rc-order-meta">
-        ${receipt.receipt_number ? `<div><span class="rc-meta-label">Porosia</span> ${escapeHtml(receipt.receipt_number)}</div>` : ""}
-        ${receipt.table_number ? `<div><span class="rc-meta-label">Tavolina</span> T${receipt.table_number}</div>` : ""}
-        ${receipt.waiter_name ? `<div><span class="rc-meta-label">Kamarieri</span> ${escapeHtml(receipt.waiter_name)}</div>` : ""}
-      </div>
       <div class="rc-divider"></div>
-      <table class="rc-items${narrow ? " rc-items-narrow" : ""}">${tableHead}<tbody>${itemRows}</tbody></table>
-      <div class="rc-divider rc-divider-strong"></div>
-      <div class="rc-total"><span class="rc-total-label">GJITHSEJ</span><span class="rc-total-value">${fmt(receipt.total || 0)} €</span></div>
+      <div class="rc-order-meta">${meta.map(line => `<div>${line}</div>`).join("")}</div>
       <div class="rc-divider"></div>
-      <div class="rc-footer"><div class="rc-thanks">Faleminderit!</div><div class="rc-printed">${printed}</div></div>
+      <div class="rc-items-compact">${itemLines || '<div class="rc-empty">—</div>'}</div>
+      <div class="rc-divider"></div>
+      <div class="rc-total"><span class="rc-total-label">TOTALI:</span><span class="rc-total-value">${fmt(receipt.total || 0)} EUR</span></div>
+      ${receipt.payment_label ? `<div class="rc-payment">Pagesa: ${escapeHtml(receipt.payment_label)}</div>` : ""}
+      <div class="rc-divider"></div>
+      <div class="rc-thanks">Faleminderit!</div>
     </div>`;
   }
 

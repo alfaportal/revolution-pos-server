@@ -232,6 +232,8 @@ async function buildSaleReceipt(sale, body = {}) {
   if (!sale || sale.status !== "closed") return null;
   const { formatReceiptBundle } = require("./receiptService");
   return formatReceiptBundle(sale.client_id, {
+    slip_kind: "final",
+    payment_method: body.payment_method || sale.payment_method || "cash",
     receipt_number: sale.receipt_number || body.receipt_number,
     order_number: sale.local_order_id || body.local_order_id,
     table_number: sale.table_number ?? body.table_number,
