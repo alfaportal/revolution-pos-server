@@ -148,6 +148,20 @@ function renderItemsTable(items) {
   </table>`;
 }
 
+function liveTableSourceLabel(o, t) {
+  const direct = String(o?.source_label || "").trim();
+  if (direct) return direct;
+  const code = String(o?.source_code || "").trim();
+  if (code === "table") return "Tavolinë";
+  if (code === "takeaway") return "Takeaway";
+  if (code === "delivery") return "Delivery";
+  if (code === "waiter") return "Kamarier";
+  const area = String(t?.area_name || "").trim().toLowerCase();
+  if (/online|porosi/.test(area)) return "Online tavolin";
+  if (code === "pos" && Number(o?.table_number || t?.number) > 0) return "Tavolinë";
+  return "";
+}
+
 function renderLiveTableCard(t) {
   if (t.status === "free") {
     return `<div class="live-table-card free">
@@ -164,12 +178,17 @@ function renderLiveTableCard(t) {
         return `<li><span>${qty}× ${it.name}</span><span>${euro(price)}</span></li>`;
       }).join("")}</ul>`
     : "";
+  const srcLabel = liveTableSourceLabel(o, t);
+  const srcHtml = srcLabel
+    ? `<div class="live-table-source">${escapeHtml(srcLabel)}</div>`
+    : "";
   return `<div class="live-table-card occupied${o.order_status === "ready" ? " ready" : ""}${o.source_code === "table" ? " qr-order" : ""}">
     <div class="live-table-title">${t.label}</div>
-    <div class="live-table-status">${o.source_code === "table" ? "🪑 QR · " : ""}${o.order_status === "ready" ? "Gati · tavolinë aktive" : "E zënë"}</div>
-    <div class="live-table-meta">${o.source_code === "table" ? `<span>📱 Porosi QR</span><br>` : ""}${o.accepted_by ? `✅ Pranuar: ${o.accepted_by}<br>` : "⏳ Në pritje pranimi<br>"}🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
+    <div class="live-table-status">${o.order_status === "ready" ? "Gati · tavolinë aktive" : "E zënë"}</div>
+    <div class="live-table-meta">${o.accepted_by ? `✅ Pranuar: ${o.accepted_by}<br>` : "⏳ Në pritje pranimi<br>"}🕐 ${o.ordered_at ? fmtTime(o.ordered_at) : "—"}</div>
     ${itemsHtml}
     <div class="live-table-total">${euro(o.total)}</div>
+    ${srcHtml}
   </div>`;
 }
 

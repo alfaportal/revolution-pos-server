@@ -874,6 +874,14 @@
   text-align: right;
 }
 
+.live-table-source {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--muted);
+  text-align: center;
+}
+
 @media (max-width: 640px) {
   .live-tables-grid {
     grid-template-columns: repeat(2, 1fr);
