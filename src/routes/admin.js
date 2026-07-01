@@ -22,7 +22,18 @@ const {
   generateDeviceId,
   provisionLicenseDevice,
 } = require("../services/licenseService");
-const { PACKAGE_TIERS, TIER_LABELS, featuresForTier } = require("../lib/packages");
+const {
+  ADMIN_PACKAGE_TIERS,
+  TIER_LABELS,
+  featuresForTier,
+  normalizePackageTier,
+} = require("../lib/packages");
+
+function withNormalizedPackageTier(body) {
+  if (!body || typeof body !== "object") return body;
+  if (!Object.prototype.hasOwnProperty.call(body, "package_tier")) return body;
+  return { ...body, package_tier: normalizePackageTier(body.package_tier) };
+}
 const { getFiscalSettings, updateFiscalSettings } = require("../services/fiscalService");
 const {
   listOwnerMenu,
@@ -114,7 +125,7 @@ router.get("/trial-alerts", asyncHandler(async (req, res) => {
 router.get("/package-tiers", (_req, res) => {
   res.json({
     ok: true,
-    tiers: PACKAGE_TIERS.map(id => ({
+    tiers: ADMIN_PACKAGE_TIERS.map(id => ({
       id,
       label: TIER_LABELS[id] || id,
       features: featuresForTier(id),
@@ -155,9 +166,14 @@ router.get("/clients", asyncHandler(async (_req, res) => {
 }));
 
 router.post("/clients", asyncHandler(async (req, res) => {
-  console.log("[admin] POST /clients", { emri: req.body?.emri, tipi: req.body?.tipi });
+  const body = withNormalizedPackageTier(req.body);
+  console.log("[admin] POST /clients", {
+    emri: body?.emri,
+    tipi: body?.tipi,
+    package_tier: body?.package_tier,
+  });
   try {
-    const client = await createClient(req.body);
+    const client = await createClient(body);
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_create",
@@ -174,9 +190,14 @@ router.post("/clients", asyncHandler(async (req, res) => {
 }));
 
 router.post("/clients/onboard", asyncHandler(async (req, res) => {
-  console.log("[admin] POST /clients/onboard", { emri: req.body?.emri, tipi: req.body?.tipi });
+  const body = withNormalizedPackageTier(req.body);
+  console.log("[admin] POST /clients/onboard", {
+    emri: body?.emri,
+    tipi: body?.tipi,
+    package_tier: body?.package_tier,
+  });
   try {
-    const { client, license, owner } = await createClientOnboard(req.body, requestBaseUrl(req));
+    const { client, license, owner } = await createClientOnboard(body, requestBaseUrl(req));
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_onboard",
@@ -202,7 +223,7 @@ router.post("/clients/onboard", asyncHandler(async (req, res) => {
 
 router.patch("/clients/:id", asyncHandler(async (req, res) => {
   try {
-    const client = await updateClient(req.params.id, req.body);
+    const client = await updateClient(req.params.id, withNormalizedPackageTier(req.body));
     res.json({ ok: true, client });
   } catch (e) {
     const msg = logRouteError("admin:PATCH /clients", e);

@@ -459,6 +459,11 @@ async function createClient(body) {
   const { data, error } = await db.from("clients").insert(row).select().single();
   if (error) {
     logRouteError("createClient", error, { row });
+    if (String(error.message || "").includes("clients_package_tier_check")) {
+      throw new Error(
+        "Pakoja e zgjedhur nuk lejohet në DB. Ekzekutoni supabase/migrations/036_fix_clients_package_tier_check.sql.",
+      );
+    }
     throw error;
   }
   try {
@@ -511,6 +516,11 @@ async function updateClient(id, body) {
 
   const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
   if (error) {
+    if (String(error.message || "").includes("clients_package_tier_check")) {
+      throw new Error(
+        "Pakoja e zgjedhur nuk lejohet në DB. Ekzekutoni supabase/migrations/036_fix_clients_package_tier_check.sql.",
+      );
+    }
     if (String(error.message || "").includes("package_tier")) {
       throw new Error(
         "Kolona package_tier mungon në DB. Ekzekutoni migrimin supabase/migrations/009_saas_features.sql.",

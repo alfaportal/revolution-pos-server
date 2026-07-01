@@ -2,10 +2,22 @@
 
 const PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_4", "pako_5"];
 
+/** Tier që shfaqen në Super Admin (Pako 4 marketing = pako_5). */
+const ADMIN_PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_5"];
+
 /** Tier të vjetër → tier i ri (para migrimit DB). */
 const LEGACY_TIER_MAP = {
+  legacy: "pako_1",
   pako_1_1: "pako_3",
   pako_2_1: "pako_4",
+};
+
+/** Emra/alias marketing → id backend. */
+const PACKAGE_TIER_ALIASES = {
+  "pako 4": "pako_5",
+  "pako 4 ai profesionale": "pako_5",
+  "pako 4 — ai profesionale": "pako_5",
+  "pako 4 - ai profesionale": "pako_5",
 };
 
 const TIER_FEATURES = {
@@ -72,8 +84,10 @@ const TIER_LABELS = {
 };
 
 function normalizePackageTier(tier) {
-  const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
-  const mapped = LEGACY_TIER_MAP[t] || t;
+  const raw = String(tier || "pako_1").trim().toLowerCase();
+  const t = raw.replace(/\./g, "_").replace(/\s+/g, " ");
+  const alias = PACKAGE_TIER_ALIASES[t] || PACKAGE_TIER_ALIASES[raw.replace(/_/g, " ")] || null;
+  const mapped = alias || LEGACY_TIER_MAP[t] || t;
   return PACKAGE_TIERS.includes(mapped) ? mapped : "pako_1";
 }
 
@@ -105,7 +119,9 @@ function packageUpgradeMessage(feature) {
 
 module.exports = {
   PACKAGE_TIERS,
+  ADMIN_PACKAGE_TIERS,
   LEGACY_TIER_MAP,
+  PACKAGE_TIER_ALIASES,
   TIER_FEATURES,
   TIER_LABELS,
   normalizePackageTier,
