@@ -570,7 +570,7 @@ function buildServiceWorkerScript(slug) {
   const encSlug = encodeURIComponent(slug);
   const scope = `/r/${encSlug}/`;
   return `/* PWA — ${scope} */
-const CACHE = "ri-restaurant-${encSlug}-v5";
+const CACHE = "ri-restaurant-${encSlug}-v6";
 const PRECACHE = [
   "/r/${encSlug}",
   "/r/${encSlug}/order",
@@ -604,6 +604,11 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(req).catch(() => caches.match(req)),
     );
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/r/")) {
+    e.respondWith(fetch(req));
     return;
   }
 

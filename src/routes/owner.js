@@ -848,10 +848,21 @@ router.get("/waiters", async (req, res) => {
   }
 });
 
+async function enrichWaiterForOwner(clientId, waiter) {
+  let client = await getClientById(clientId);
+  if (client) client = await ensureKitchenCredentials(client);
+  const base = getPublicAppOrigin();
+  return {
+    ...waiter,
+    waiter_url: client && waiter.web_token ? buildWaiterUrl(base, client, waiter.web_token) : "",
+  };
+}
+
 router.post("/waiters", async (req, res) => {
   try {
     const result = await addWaiterWithPin(req.user.client_id, req.body);
-    res.status(201).json({ ok: true, ...result });
+    const waiter = await enrichWaiterForOwner(req.user.client_id, result.waiter);
+    res.status(201).json({ ok: true, waiter, synced_at: result.synced_at });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }
@@ -860,7 +871,8 @@ router.post("/waiters", async (req, res) => {
 router.patch("/waiters/:id", async (req, res) => {
   try {
     const result = await updateWaiterWithPin(req.user.client_id, req.params.id, req.body);
-    res.json({ ok: true, ...result });
+    const waiter = await enrichWaiterForOwner(req.user.client_id, result.waiter);
+    res.json({ ok: true, waiter, synced_at: result.synced_at });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }

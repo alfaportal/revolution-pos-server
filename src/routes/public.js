@@ -33,6 +33,7 @@ router.get("/:slug", resolvePublicClient, asyncHandler(async (req, res) => {
     if (!page) {
       return res.status(404).json({ ok: false, gabim: "Faqja publike nuk është e aktivizuar ose nuk u gjet." });
     }
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.json({ ok: true, ...page });
   } catch (e) {
     if (e.code === "PACKAGE") {

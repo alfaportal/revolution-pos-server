@@ -1074,7 +1074,7 @@ async function saveWaiterRow(row) {
       body: JSON.stringify({ name }),
     });
     const idx = ownerWaitersCache.findIndex(w => w.id === id);
-    if (idx >= 0) ownerWaitersCache[idx] = waiter;
+    if (idx >= 0) ownerWaitersCache[idx] = { ...ownerWaitersCache[idx], ...waiter };
     renderWaitersTable();
     updateWaitersSyncHint(synced_at);
     setWaitersMsg("Kamarieri u ruajt.", true);
@@ -1095,10 +1095,13 @@ async function resetWaiterPin(row) {
   }
   try {
     setWaitersMsg("");
-    const { synced_at } = await api(`/api/owner/waiters/${id}`, {
+    const { waiter, synced_at } = await api(`/api/owner/waiters/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ pin: String(pin).trim() }),
     });
+    const idx = ownerWaitersCache.findIndex(w => w.id === id);
+    if (idx >= 0 && waiter) ownerWaitersCache[idx] = { ...ownerWaitersCache[idx], ...waiter };
+    renderWaitersTable();
     updateWaitersSyncHint(synced_at);
     setWaitersMsg("PIN u rivendos.", true);
   } catch (err) {

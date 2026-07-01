@@ -16,7 +16,7 @@ const { getWaiterById } = require("../services/waiterPinService");
 const router = express.Router();
 
 function extractWaiterToken(req) {
-  return String(req.query.w || req.body?.web_token || "").trim();
+  return String(req.query.w || req.body?.web_token || "").trim().toLowerCase();
 }
 
 router.get("/:slug/menu/:itemId/photo", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {

@@ -605,7 +605,10 @@
       if (!bootstrap) await loadBootstrap();
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/login${apiQuery()}`, {
         method: "POST",
-        body: JSON.stringify({ pin: pinDigits.join("") }),
+        body: JSON.stringify({
+          pin: pinDigits.join(""),
+          web_token: waiterToken || undefined,
+        }),
       });
       clearPin();
       enterWaiterSession(data.waiter);

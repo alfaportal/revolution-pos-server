@@ -184,6 +184,11 @@ async function addStaff(clientId, body) {
   const name = String(body.name || "").trim();
   if (!name) throw new Error("Shkruani emrin e stafit.");
   const role = normalizeRole(body.role);
+  if (role === "waiter") {
+    throw new Error(
+      "Kamarierët me PIN dhe link tablet shtohen te paneli → Kamarierët (jo te Venue → Stafi)."
+    );
+  }
   const db = getSupabase();
 
   const { data: last } = await db

@@ -100,7 +100,8 @@ async function syncStaffFromPos(db, clientId, staff) {
     const existing = byName.get(normStaffName(s.name));
     if (existing) {
       const patch = { active: s.active };
-      if (s.pin) {
+      const maySetPin = s.pin && !(existing.pin_hash && existing.source === "owner");
+      if (maySetPin) {
         patch.pin_hash = await hashPin(s.pin);
         if (!existing.web_token) patch.web_token = generateWebToken();
       }
@@ -156,7 +157,8 @@ async function syncStaffFromPosPg(client, clientId, staff) {
   for (const s of incoming) {
     const existing = byName.get(normStaffName(s.name));
     if (existing) {
-      if (s.pin) {
+      const maySetPin = s.pin && !(existing.pin_hash && existing.source === "owner");
+      if (maySetPin) {
         const pin_hash = await hashPin(s.pin);
         const web_token = existing.web_token || generateWebToken();
         await client.query(

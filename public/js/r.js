@@ -474,7 +474,7 @@
     initPwaBanner();
 
     try {
-      const res = await fetch(`/api/r/${encodeURIComponent(slug)}`);
+      const res = await fetch(`/api/r/${encodeURIComponent(slug)}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         document.getElementById("error-msg").textContent = data.gabim || "Restoranti nuk u gjet.";

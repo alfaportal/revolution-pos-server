@@ -48,8 +48,12 @@ async function ensureAllWaiterWebTokens(clientId) {
   await Promise.all(rows.map(w => ensureWaiterWebToken(clientId, w.id)));
 }
 
+function normalizeWebToken(raw) {
+  return String(raw || "").trim().toLowerCase();
+}
+
 async function getWaiterByWebToken(clientId, webToken) {
-  const token = String(webToken || "").trim().toLowerCase();
+  const token = normalizeWebToken(webToken);
   if (!token) return null;
   const db = getSupabase();
   const { data, error } = await db
@@ -138,7 +142,7 @@ async function countWaitersWithoutPin(clientId) {
 
 async function verifyWaiterPin(clientId, pin, webToken = null) {
   const normalized = assertPin(pin);
-  const token = String(webToken || "").trim();
+  const token = normalizeWebToken(webToken);
   if (token) {
     const w = await getWaiterByWebToken(clientId, token);
     if (!w) throw new Error("Linku i kamarierit nuk është i vlefshëm. Kopjoni linkun nga paneli.");
@@ -268,12 +272,20 @@ async function updateWaiterWithPin(clientId, waiterId, body) {
     .update(patch)
     .eq("id", waiterId)
     .eq("client_id", clientId)
-    .select("id, name, active, pin_hash")
+    .select("id, name, active, pin_hash, web_token")
     .single();
   if (error) throw error;
 
+  await ensureWaiterWebToken(clientId, waiterId);
+  const { data: refreshed } = await db
+    .from("pos_staff")
+    .select("id, name, active, pin_hash, web_token")
+    .eq("id", waiterId)
+    .eq("client_id", clientId)
+    .single();
+
   const synced_at = await touchMenuSync(clientId);
-  return { waiter: mapWaiterPublic(data), synced_at };
+  return { waiter: mapWaiterPublic(refreshed || data), synced_at };
 }
 
 async function deleteWaiterWithPin(clientId, waiterId) {
