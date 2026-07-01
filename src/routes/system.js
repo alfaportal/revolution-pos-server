@@ -2,6 +2,7 @@ const express = require("express");
 const { trimEnv } = require("../lib/env");
 const { validateLicense } = require("../services/licenseService");
 const { isTelegramConfigured, sendTelegramMessage } = require("../services/telegramService");
+const { appendSystemFailure } = require("../services/systemFailureLog");
 
 const router = express.Router();
 
@@ -72,6 +73,12 @@ router.post("/outage-alert", async (req, res) => {
         tried ? `Serverët e provuar:\n${tried}` : "",
         `Koha: ${new Date().toISOString()}`,
       ].filter(Boolean);
+      appendSystemFailure({
+        source: "kafene",
+        event: event || "outage",
+        message: `${clientLabel} — ${event || "outage"}`,
+        detail: { device_id, active_server, servers_tried },
+      });
       await notifySuperAdmin(lines.join("\n"));
     }
 

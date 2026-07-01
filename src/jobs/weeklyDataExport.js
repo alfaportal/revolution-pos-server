@@ -19,7 +19,7 @@ function rowsToCsv(headers, rows) {
   return lines.join("\n");
 }
 
-async function exportWeeklyDataCsv() {
+async function buildDataExportBundle() {
   const db = getSupabase();
 
   const { data: clients, error: cErr } = await db
@@ -45,7 +45,7 @@ async function exportWeeklyDataCsv() {
 
   const now = new Date().toISOString();
   const body = [
-    "Export javor Revolution POS — Supabase backup CSV.",
+    "Export Revolution POS — Supabase backup CSV.",
     "",
     `Klientë: ${(clients || []).length}`,
     `Licenca: ${(licenses || []).length}`,
@@ -58,16 +58,34 @@ async function exportWeeklyDataCsv() {
     licenseCsv,
   ].join("\n");
 
+  return {
+    now,
+    clients: clients || [],
+    licenses: licenses || [],
+    body,
+  };
+}
+
+async function sendDataExportEmail(bundle) {
   const to = resolveAdminNotifyEmail();
   await deliverEmail({
     to,
-    subject: `Revolution POS — export javor CSV (${now.slice(0, 10)})`,
-    text: body,
-    html: `<pre style="font-family:monospace;font-size:12px;white-space:pre-wrap">${body.replace(/</g, "&lt;")}</pre>`,
+    subject: `Revolution POS — export CSV (${bundle.now.slice(0, 10)})`,
+    text: bundle.body,
+    html: `<pre style="font-family:monospace;font-size:12px;white-space:pre-wrap">${bundle.body.replace(/</g, "&lt;")}</pre>`,
   });
+  return {
+    to,
+    clients: bundle.clients.length,
+    licenses: bundle.licenses.length,
+  };
+}
 
-  console.log(`[cron] weeklyDataExport: dërguar te ${to}`);
-  return { clients: (clients || []).length, licenses: (licenses || []).length };
+async function exportWeeklyDataCsv() {
+  const bundle = await buildDataExportBundle();
+  const result = await sendDataExportEmail(bundle);
+  console.log(`[cron] weeklyDataExport: dërguar te ${result.to}`);
+  return result;
 }
 
 function startWeeklyDataExportCron() {
@@ -95,6 +113,8 @@ function startWeeklyDataExportCron() {
 }
 
 module.exports = {
+  buildDataExportBundle,
+  sendDataExportEmail,
   exportWeeklyDataCsv,
   startWeeklyDataExportCron,
 };

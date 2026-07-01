@@ -42,6 +42,7 @@ const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
 const { startNotificationDailyCron } = require("./jobs/notificationDailyReports");
 const { startCloudHealthMonitor } = require("./jobs/cloudHealthMonitor");
 const { startWeeklyDataExportCron } = require("./jobs/weeklyDataExport");
+const { startTelegramBotPoll } = require("./jobs/telegramBotPoll");
 const systemRoutes = require("./routes/system");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
@@ -278,6 +279,7 @@ async function start() {
   startNotificationDailyCron();
   startCloudHealthMonitor();
   startWeeklyDataExportCron();
+  startTelegramBotPoll();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);

@@ -1,5 +1,6 @@
 const { testSupabaseConnection } = require("../db");
 const { notifySuperAdmin, shouldSendAlert } = require("../routes/system");
+const { appendSystemFailure } = require("../services/systemFailureLog");
 
 let lastDbOk = null;
 
@@ -31,6 +32,11 @@ async function runCloudHealthCheck() {
           "Railway vazhdon me cache lokal ku është e mundur.",
           `Koha: ${new Date().toISOString()}`,
         ].join("\n");
+    appendSystemFailure({
+      source: "health",
+      event: ok ? "supabase_recovered" : "supabase_down",
+      message: ok ? "Supabase u rikthye" : (result.error || result.gabim || "Supabase down"),
+    });
     await notifySuperAdmin(text).catch(err => {
       console.error("[health] Telegram:", err.message || err);
     });
