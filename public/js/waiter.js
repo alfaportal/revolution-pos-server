@@ -6,7 +6,7 @@
   const waiterToken = urlParams.get("w") || "";
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
-  const WAITER_IDLE_MS = 10000;
+  const WAITER_IDLE_MS = 30000;
   const WAITER_SESSION_KEY = slug ? `waiter_session_${slug}` : "waiter_session";
 
   function registerServiceWorker() {
