@@ -84,8 +84,82 @@
     const list = document.getElementById("hours-list");
     if (!list) return;
     list.innerHTML = (hoursDisplay || []).map(row => `
-      <li><span class="day">${row.label}</span><span class="time">${row.text}</span></li>
+      <li>
+        <span class="day">${escapeHtml(row.label)}</span>
+        <span class="time">${escapeHtml(row.text)}</span>
+      </li>
     `).join("");
+  }
+
+  const CATEGORY_EMOJI = [
+    [/nxeht|kafe|çaj|caj|coffee|tea/, "☕"],
+    [/ftoht|pije|drink|beverage/, "🥤"],
+    [/ëmbël|embels|dessert|akullore|cake/, "🍰"],
+    [/snack|chips|perime/, "🍿"],
+    [/alkool|birra|wine|ver[eë]/, "🍺"],
+    [/pizza/, "🍕"],
+    [/burger|sandwich/, "🍔"],
+    [/salat|salad/, "🥗"],
+    [/mish|grill|qebap|steak/, "🥩"],
+    [/pasta|makaron/, "🍝"],
+    [/ushqim|pjat|main/, "🍽️"],
+  ];
+
+  function categoryEmoji(name) {
+    const n = String(name || "").trim().toLowerCase();
+    for (const [re, emoji] of CATEGORY_EMOJI) {
+      if (re.test(n)) return emoji;
+    }
+    return "📋";
+  }
+
+  function menuItemEmoji(item) {
+    if (global.MenuPosUI?.itemEmoji) return global.MenuPosUI.itemEmoji(item);
+    return categoryEmoji(item?.category) || "🍽️";
+  }
+
+  let activeMenuCategory = "";
+
+  function renderMenuCards(menu, category) {
+    const wrap = document.getElementById("menu-sections");
+    if (!wrap) return;
+
+    const items = (menu || []).filter(i => i.category === category);
+    if (!items.length) {
+      wrap.innerHTML = '<p class="pub-menu-empty">Nuk ka artikuj në këtë kategori.</p>';
+      return;
+    }
+
+    wrap.innerHTML = `<div class="pub-menu-grid">${items.map(it => {
+      const price = Number(it.price || 0);
+      const gold = price >= 5;
+      const media = it.photo_url
+        ? `<button type="button" class="pub-menu-media pub-menu-photo-btn menu-item-photo-btn" data-photo="${escapeAttr(it.photo_url)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
+            <img src="${escapeAttr(it.photo_url)}" alt="" loading="lazy" width="120" height="120">
+          </button>`
+        : `<div class="pub-menu-media pub-menu-emoji" aria-hidden="true">${menuItemEmoji(it)}</div>`;
+      return `
+        <article class="pub-menu-card">
+          ${media}
+          <div class="pub-menu-body">
+            <h3 class="pub-menu-name">${escapeHtml(it.name)}</h3>
+            <span class="pub-menu-price${gold ? " is-gold" : ""}">${euro(it.price)}</span>
+          </div>
+        </article>`;
+    }).join("")}</div>`;
+
+    bindMenuPhotoLightbox();
+    observeReveal(wrap.querySelectorAll(".pub-menu-card"));
+  }
+
+  function updateCatNavIndicator(activeBtn) {
+    const indicator = document.getElementById("cat-nav-indicator");
+    const nav = document.getElementById("cat-nav");
+    if (!indicator || !nav || !activeBtn) return;
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    indicator.style.width = `${btnRect.width}px`;
+    indicator.style.transform = `translateX(${btnRect.left - navRect.left + nav.scrollLeft}px)`;
   }
 
   function renderMenu(categories, menu) {
@@ -98,48 +172,45 @@
       : [...new Set((menu || []).map(i => i.category).filter(Boolean))];
 
     if (!cats.length) {
-      wrap.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem 0">Menuja do të publikohet së shpejti.</p>';
+      nav.innerHTML = "";
+      wrap.innerHTML = '<p class="pub-menu-empty">Menuja do të publikohet së shpejti.</p>';
       return;
     }
 
-    nav.innerHTML = cats.map((cat, idx) =>
-      `<button type="button" data-cat="${encodeURIComponent(cat)}" class="${idx === 0 ? "active" : ""}">${cat}</button>`,
-    ).join("");
+    if (!activeMenuCategory || !cats.includes(activeMenuCategory)) {
+      activeMenuCategory = cats[0];
+    }
 
-    wrap.innerHTML = cats.map(cat => {
-      const items = (menu || []).filter(i => i.category === cat);
-      const rows = items.map(it => {
-        const thumb = it.photo_url
-          ? `<button type="button" class="menu-item-photo-btn" data-photo="${escapeAttr(it.photo_url)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
-              <img class="menu-item-photo" src="${escapeAttr(it.photo_url)}" alt="" loading="lazy" width="80" height="80">
-            </button>`
-          : "";
-        return `
-        <div class="menu-item${it.photo_url ? " has-photo" : ""}">
-          ${thumb}
-          <div class="menu-item-body">
-            <div class="menu-item-name">${escapeHtml(it.name)}</div>
-            <div class="menu-item-price">${euro(it.price)}</div>
-          </div>
-        </div>`;
-      }).join("");
-      return `
-        <div class="menu-cat-block" id="cat-${encodeURIComponent(cat)}">
-          <h3 class="menu-cat-title">${escapeHtml(cat)}</h3>
-          ${rows || '<p style="color:var(--muted)">Nuk ka artikuj.</p>'}
-        </div>`;
+    nav.innerHTML = cats.map(cat => {
+      const enc = encodeURIComponent(cat);
+      const active = cat === activeMenuCategory ? " active" : "";
+      return `<button type="button" data-cat="${enc}" class="cat-tab${active}">
+        <span class="cat-tab-icon" aria-hidden="true">${categoryEmoji(cat)}</span>
+        <span class="cat-tab-label">${escapeHtml(cat)}</span>
+      </button>`;
     }).join("");
 
-    nav.querySelectorAll("button").forEach(btn => {
+    renderMenuCards(menu, activeMenuCategory);
+
+    const buttons = [...nav.querySelectorAll(".cat-tab")];
+    buttons.forEach(btn => {
       btn.addEventListener("click", () => {
-        nav.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const id = `cat-${btn.dataset.cat}`;
-        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        activeMenuCategory = decodeURIComponent(btn.dataset.cat || "");
+        buttons.forEach(b => b.classList.toggle("active", b === btn));
+        renderMenuCards(menu, activeMenuCategory);
+        updateCatNavIndicator(btn);
+        btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
       });
     });
 
-    bindMenuPhotoLightbox();
+    const activeBtn = nav.querySelector(".cat-tab.active") || buttons[0];
+    requestAnimationFrame(() => updateCatNavIndicator(activeBtn));
+    if (!nav.dataset.indicatorBound) {
+      nav.dataset.indicatorBound = "1";
+      nav.addEventListener("scroll", () => {
+        updateCatNavIndicator(nav.querySelector(".cat-tab.active"));
+      }, { passive: true });
+    }
   }
 
   function escapeAttr(s) {
@@ -280,7 +351,7 @@
       document.body.classList.remove("menu-lightbox-open");
     };
 
-    document.querySelectorAll(".menu-item-photo-btn").forEach(btn => {
+    document.querySelectorAll(".menu-item-photo-btn, .pub-menu-photo-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         openPhotoLightbox(btn.getAttribute("data-photo") || "", btn.getAttribute("data-name") || "");
       });
@@ -394,6 +465,50 @@
     );
   }
 
+  function observeReveal(nodes) {
+    if (!nodes?.length) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      nodes.forEach(el => el.classList.add("is-visible"));
+      return;
+    }
+    const io = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        obs.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    nodes.forEach((el, i) => {
+      el.style.transitionDelay = `${Math.min(i, 8) * 45}ms`;
+      io.observe(el);
+    });
+  }
+
+  function initScrollReveal() {
+    observeReveal(document.querySelectorAll(".reveal"));
+  }
+
+  function bindOrderLinks(orderUrl) {
+    const orderBar = document.getElementById("order-bar");
+    const orderBtn = document.getElementById("btn-order");
+    const heroBtn = document.getElementById("hero-order-btn");
+    if (!orderBar || !orderBtn) return;
+
+    if (orderUrl) {
+      orderBtn.href = orderUrl;
+      orderBar.hidden = false;
+      if (heroBtn) {
+        heroBtn.href = orderUrl;
+        heroBtn.classList.remove("hidden");
+      }
+    } else {
+      orderBtn.removeAttribute("href");
+      orderBar.hidden = true;
+      heroBtn?.classList.add("hidden");
+    }
+  }
+
   function renderPage(data) {
     pageData = data;
     document.title = data.name || "Restorant";
@@ -445,19 +560,8 @@
     renderReviews(data.reviews);
     renderContactActions(data);
     renderMenu(data.categories, data.menu);
-
-    const orderBar = document.getElementById("order-bar");
-    const orderBtn = document.getElementById("btn-order");
-    if (orderBar && orderBtn) {
-      if (data.order_url) {
-        orderBtn.href = data.order_url;
-        orderBar.hidden = false;
-      } else {
-        orderBtn.removeAttribute("href");
-        orderBar.hidden = true;
-      }
-    }
-
+    bindOrderLinks(data.order_url || "");
+    initScrollReveal();
     showScreen("screen-main");
   }
 

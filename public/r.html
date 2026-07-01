@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#c2410c">
+  <meta name="theme-color" content="#4a1515">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Restorant</title>
-  <link rel="stylesheet" href="/css/r.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/r.css?v=9">
   <link rel="apple-touch-icon" id="apple-icon" href="/icons/icon-192.png">
   <script>
     (function () {
@@ -51,6 +54,7 @@
         </div>
         <h1 id="biz-name">Restorant</h1>
         <p class="hero-desc" id="biz-desc" hidden></p>
+        <a class="hero-cta hidden" id="hero-order-btn" href="#">Porosit tani</a>
       </div>
     </header>
 
@@ -59,7 +63,7 @@
       <span id="daily-offer-text"></span>
     </div>
 
-    <section class="info-section">
+    <section class="info-section reveal">
       <div class="info-grid">
         <div class="info-card" id="info-address" hidden>
           <span class="info-icon" aria-hidden="true">📍</span>
@@ -92,22 +96,23 @@
       </div>
     </section>
 
-    <section class="gallery-section hidden" id="gallery-section">
+    <section class="gallery-section hidden reveal" id="gallery-section">
       <h2 class="section-title">Galeria</h2>
       <div class="gallery-grid" id="gallery-grid"></div>
     </section>
 
-    <section class="reviews-section hidden" id="reviews-section">
+    <section class="reviews-section hidden reveal" id="reviews-section">
       <h2 class="section-title">Vlerësimet e klientëve</h2>
       <div class="reviews-list" id="reviews-list"></div>
     </section>
 
-    <section class="menu-section">
+    <section class="menu-section reveal">
       <h2 class="section-title">Menuja</h2>
       <div class="cat-nav-wrap">
-        <nav class="cat-nav" id="cat-nav"></nav>
+        <nav class="cat-nav" id="cat-nav" aria-label="Kategoritë e menusë"></nav>
+        <span class="cat-nav-indicator" id="cat-nav-indicator" aria-hidden="true"></span>
       </div>
-      <div id="menu-sections"></div>
+      <div id="menu-sections" class="pub-menu-wrap"></div>
     </section>
 
     <footer class="site-footer">
@@ -125,6 +130,7 @@
     <div id="menu-photo-lightbox-caption" class="menu-photo-lightbox-caption"></div>
   </div>
 
-  <script src="/js/r.js?v=8"></script>
+  <script src="/js/menu-pos.js?v=3"></script>
+  <script src="/js/r.js?v=9"></script>
 </body>
 </html>
