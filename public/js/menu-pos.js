@@ -1,5 +1,5 @@
 /** UI e menusë mobile — kamarier + QR tavolinë. Grid foto-first, Pije / Ushqim. */
-(function (global) {
+(function (root) {
   function normCat(name) {
     return String(name || "").trim().toLowerCase();
   }
@@ -150,12 +150,17 @@
     const grid = document.createElement("div");
     grid.className = "menu-photo-grid-inner";
     for (const it of items) {
-      grid.appendChild(createMenuItemButton(it, {
-        onSelect: onSelectItem,
-        disabled,
-        formatEuro,
-        getPhotoUrl,
-      }));
+      try {
+        const btn = createMenuItemButton(it, {
+          onSelect: onSelectItem,
+          disabled,
+          formatEuro,
+          getPhotoUrl,
+        });
+        if (btn) grid.appendChild(btn);
+      } catch (err) {
+        console.error("[menu-pos] render item:", err);
+      }
     }
     container.appendChild(grid);
   }
@@ -202,7 +207,7 @@
     activate(initial);
   }
 
-  global.MenuPosUI = {
+  root.MenuPosUI = {
     categoryMatchesGroup,
     isDrinkCategory,
     itemEmoji,
@@ -215,4 +220,4 @@
       setTimeout(() => btn.classList.remove("menu-item-flash"), 400);
     },
   };
-})(window);
+})(typeof globalThis !== "undefined" ? globalThis : window);

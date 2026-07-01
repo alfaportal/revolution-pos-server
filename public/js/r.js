@@ -17,7 +17,33 @@
   }
 
   function euro(n) {
-    return Number(n || 0).toFixed(2) + " €";
+    const num = Number(n);
+    return (Number.isFinite(num) ? num : 0).toFixed(2) + " €";
+  }
+
+  function safeCall(label, fn) {
+    try {
+      return fn();
+    } catch (err) {
+      console.error(`[public-page] ${label}:`, err);
+      return undefined;
+    }
+  }
+
+  function friendlyError(err) {
+    const msg = String(err?.message || err || "").trim();
+    if (!msg || /is not defined|cannot read propert|undefined|null|syntax/i.test(msg)) {
+      return "Faqja nuk u ngarkua. Rifreskoni faqen ose provoni përsëri pas pak.";
+    }
+    return msg;
+  }
+
+  function safeDecode(value) {
+    try {
+      return decodeURIComponent(String(value || ""));
+    } catch {
+      return String(value || "");
+    }
   }
 
   function isStandalone() {
@@ -91,6 +117,30 @@
     `).join("");
   }
 
+  const ITEM_EMOJI = [
+    [/coca|cola|pepsi|fanta|sprite|schweppes|mirinda/, "🥤"],
+    [/red\s*bull|monster|energj/i, "⚡"],
+    [/kafe|espresso|cappuccino|latte|macchiato|moka|americano/, "☕"],
+    [/çaj|caj|tea|ice\s*tea|icetea/, "🍵"],
+    [/ujë|uje|water|mineral/, "💧"],
+    [/lëng|leng|juice|smoothie|frut/, "🧃"],
+    [/birr|beer|ver[eë]|wine|whisk|rak[ij]|alkool|cocktail|mojito|spritz/, "🍺"],
+    [/pizza/, "🍕"],
+    [/burger|hamburger/, "🍔"],
+    [/sandwich|toast|bagel/, "🥪"],
+    [/pasta|spaghetti|lasagn|makaron/, "🍝"],
+    [/salat|salad/, "🥗"],
+    [/sup[eë]|soup|corb/, "🍲"],
+    [/embelsir|dessert|akullore|ice\s*cream|tort|cake|krempit|ëmbël|embels/, "🍰"],
+    [/mish|steak|qebap|kebab|grill|zgar/, "🥩"],
+    [/pule|chicken|nuggets/, "🍗"],
+    [/peshk|fish|salmon/, "🐟"],
+    [/omlet|veze|egg/, "🍳"],
+    [/patate|fries|chips/, "🍟"],
+    [/sushi/, "🍣"],
+    [/taco|burrito|mex/, "🌮"],
+  ];
+
   const CATEGORY_EMOJI = [
     [/nxeht|kafe|çaj|caj|coffee|tea/, "☕"],
     [/ftoht|pije|drink|beverage/, "🥤"],
@@ -114,7 +164,10 @@
   }
 
   function menuItemEmoji(item) {
-    if (window.MenuPosUI?.itemEmoji) return window.MenuPosUI.itemEmoji(item);
+    const name = String(item?.name || "").trim().toLowerCase();
+    for (const [re, emoji] of ITEM_EMOJI) {
+      if (re.test(name)) return emoji;
+    }
     return categoryEmoji(item?.category) || "🍽️";
   }
 
@@ -124,31 +177,48 @@
     const wrap = document.getElementById("menu-sections");
     if (!wrap) return;
 
-    const items = (menu || []).filter(i => i.category === category);
+    const items = (menu || []).filter(i => i && i.category === category && i.name);
     if (!items.length) {
       wrap.innerHTML = '<p class="pub-menu-empty">Nuk ka artikuj në këtë kategori.</p>';
       return;
     }
 
     wrap.innerHTML = `<div class="pub-menu-grid">${items.map(it => {
-      const price = Number(it.price || 0);
-      const gold = price >= 5;
-      const media = it.photo_url
-        ? `<button type="button" class="pub-menu-media pub-menu-photo-btn menu-item-photo-btn" data-photo="${escapeAttr(it.photo_url)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
-            <img src="${escapeAttr(it.photo_url)}" alt="" loading="lazy" width="120" height="120">
-          </button>`
-        : `<div class="pub-menu-media pub-menu-emoji" aria-hidden="true">${menuItemEmoji(it)}</div>`;
-      return `
-        <article class="pub-menu-card">
-          ${media}
-          <div class="pub-menu-body">
-            <h3 class="pub-menu-name">${escapeHtml(it.name)}</h3>
-            <span class="pub-menu-price${gold ? " is-gold" : ""}">${euro(it.price)}</span>
-          </div>
-        </article>`;
-    }).join("")}</div>`;
+      try {
+        const price = Number(it.price);
+        const safePrice = Number.isFinite(price) ? price : 0;
+        const gold = safePrice >= 5;
+        const photoUrl = String(it.photo_url || "").trim();
+        const media = photoUrl
+          ? `<button type="button" class="pub-menu-media pub-menu-photo-btn menu-item-photo-btn" data-photo="${escapeAttr(photoUrl)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
+              <img src="${escapeAttr(photoUrl)}" alt="" loading="lazy" width="120" height="120">
+            </button>`
+          : `<div class="pub-menu-media pub-menu-emoji" aria-hidden="true">${menuItemEmoji(it)}</div>`;
+        return `
+          <article class="pub-menu-card">
+            ${media}
+            <div class="pub-menu-body">
+              <h3 class="pub-menu-name">${escapeHtml(it.name)}</h3>
+              <span class="pub-menu-price${gold ? " is-gold" : ""}">${euro(safePrice)}</span>
+            </div>
+          </article>`;
+      } catch {
+        return "";
+      }
+    }).filter(Boolean).join("")}</div>`;
 
     bindMenuPhotoLightbox();
+    wrap.querySelectorAll(".pub-menu-photo-btn img").forEach(img => {
+      img.addEventListener("error", () => {
+        const btn = img.closest(".pub-menu-photo-btn");
+        const name = btn?.getAttribute("data-name") || "";
+        const ph = document.createElement("div");
+        ph.className = "pub-menu-media pub-menu-emoji";
+        ph.setAttribute("aria-hidden", "true");
+        ph.textContent = menuItemEmoji({ name });
+        btn?.replaceWith(ph);
+      }, { once: true });
+    });
     observeReveal(wrap.querySelectorAll(".pub-menu-card"));
   }
 
@@ -167,9 +237,10 @@
     const wrap = document.getElementById("menu-sections");
     if (!nav || !wrap) return;
 
+    const list = Array.isArray(menu) ? menu : [];
     const cats = categories?.length
-      ? categories
-      : [...new Set((menu || []).map(i => i.category).filter(Boolean))];
+      ? categories.filter(Boolean)
+      : [...new Set(list.map(i => i?.category).filter(Boolean))];
 
     if (!cats.length) {
       nav.innerHTML = "";
@@ -190,25 +261,28 @@
       </button>`;
     }).join("");
 
-    renderMenuCards(menu, activeMenuCategory);
+    renderMenuCards(list, activeMenuCategory);
 
     const buttons = [...nav.querySelectorAll(".cat-tab")];
     buttons.forEach(btn => {
       btn.addEventListener("click", () => {
-        activeMenuCategory = decodeURIComponent(btn.dataset.cat || "");
+        activeMenuCategory = safeDecode(btn.dataset.cat);
+        if (!cats.includes(activeMenuCategory)) activeMenuCategory = cats[0];
         buttons.forEach(b => b.classList.toggle("active", b === btn));
-        renderMenuCards(menu, activeMenuCategory);
+        renderMenuCards(list, activeMenuCategory);
         updateCatNavIndicator(btn);
         btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
       });
     });
 
     const activeBtn = nav.querySelector(".cat-tab.active") || buttons[0];
-    requestAnimationFrame(() => updateCatNavIndicator(activeBtn));
+    requestAnimationFrame(() => safeCall("cat-nav-indicator", () => updateCatNavIndicator(activeBtn)));
     if (!nav.dataset.indicatorBound) {
       nav.dataset.indicatorBound = "1";
       nav.addEventListener("scroll", () => {
-        updateCatNavIndicator(nav.querySelector(".cat-tab.active"));
+        safeCall("cat-nav-indicator-scroll", () => {
+          updateCatNavIndicator(nav.querySelector(".cat-tab.active"));
+        });
       }, { passive: true });
     }
   }
@@ -468,21 +542,25 @@
   function observeReveal(nodes) {
     if (!nodes?.length) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
+    if (reduced || typeof IntersectionObserver !== "function") {
       nodes.forEach(el => el.classList.add("is-visible"));
       return;
     }
-    const io = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-visible");
-        obs.unobserve(entry.target);
+    try {
+      const io = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+      nodes.forEach((el, i) => {
+        el.style.transitionDelay = `${Math.min(i, 8) * 45}ms`;
+        io.observe(el);
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
-    nodes.forEach((el, i) => {
-      el.style.transitionDelay = `${Math.min(i, 8) * 45}ms`;
-      io.observe(el);
-    });
+    } catch {
+      nodes.forEach(el => el.classList.add("is-visible"));
+    }
   }
 
   function initScrollReveal() {
@@ -510,13 +588,19 @@
   }
 
   function renderPage(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("Të dhënat e faqes mungojnë");
+    }
+
     pageData = data;
     document.title = data.name || "Restorant";
     const appleIcon = document.getElementById("apple-icon");
     if (appleIcon && data.logo_url) appleIcon.href = data.logo_url;
 
     applyTheme(data.theme_color);
-    document.getElementById("biz-name").textContent = data.name || "Restorant";
+
+    const bizName = document.getElementById("biz-name");
+    if (bizName) bizName.textContent = data.name || "Restorant";
 
     const hero = document.getElementById("hero");
     const coverImg = document.getElementById("hero-cover");
@@ -531,37 +615,49 @@
     }
 
     const descEl = document.getElementById("biz-desc");
-    if (data.description) {
-      descEl.textContent = data.description;
-      descEl.hidden = false;
+    if (descEl) {
+      if (data.description) {
+        descEl.textContent = data.description;
+        descEl.hidden = false;
+      } else {
+        descEl.textContent = "";
+        descEl.hidden = true;
+      }
     }
 
     const logoWrap = document.getElementById("hero-logo-wrap");
     const logoImg = document.getElementById("hero-logo");
-    if (data.logo_url && logoImg) {
-      logoImg.src = data.logo_url;
-      logoImg.alt = data.name;
-      logoWrap.hidden = false;
+    if (logoWrap && logoImg) {
+      if (data.logo_url) {
+        logoImg.src = data.logo_url;
+        logoImg.alt = data.name || "";
+        logoWrap.hidden = false;
+      } else {
+        logoWrap.hidden = true;
+      }
     }
 
-    renderAddress(data);
+    safeCall("address", () => renderAddress(data));
 
-    if (data.phone) {
-      document.getElementById("info-phone").hidden = false;
-      const phoneEl = document.getElementById("val-phone");
-      const tel = data.phone.replace(/\s/g, "");
+    const phoneCard = document.getElementById("info-phone");
+    const phoneEl = document.getElementById("val-phone");
+    if (data.phone && phoneCard && phoneEl) {
+      phoneCard.hidden = false;
+      const tel = String(data.phone).replace(/\s/g, "");
       phoneEl.href = `tel:${tel}`;
       phoneEl.textContent = data.phone;
+    } else if (phoneCard) {
+      phoneCard.hidden = true;
     }
 
-    renderHours(data.hours_display);
-    renderDailyOffer(data.daily_offer);
-    renderGallery(data.gallery_urls);
-    renderReviews(data.reviews);
-    renderContactActions(data);
-    renderMenu(data.categories, data.menu);
-    bindOrderLinks(data.order_url || "");
-    initScrollReveal();
+    safeCall("hours", () => renderHours(data.hours_display));
+    safeCall("daily-offer", () => renderDailyOffer(data.daily_offer));
+    safeCall("gallery", () => renderGallery(data.gallery_urls));
+    safeCall("reviews", () => renderReviews(data.reviews));
+    safeCall("contact", () => renderContactActions(data));
+    safeCall("menu", () => renderMenu(data.categories, data.menu));
+    safeCall("order-links", () => bindOrderLinks(data.order_url || ""));
+    safeCall("reveal", () => initScrollReveal());
     showScreen("screen-main");
   }
 
@@ -587,7 +683,8 @@
       }
       renderPage(data);
     } catch (err) {
-      document.getElementById("error-msg").textContent = err.message || "Gabim rrjeti.";
+      console.error("[public-page] load failed:", err);
+      document.getElementById("error-msg").textContent = friendlyError(err);
       showScreen("screen-error");
     }
   }
