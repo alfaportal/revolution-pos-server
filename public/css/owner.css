@@ -1639,6 +1639,63 @@
   min-width: 0;
 }
 
+.ai-assistant-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+}
+
+.ai-assistant-messages {
+  flex: 1;
+  min-height: 320px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ai-assistant-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+.ai-assistant-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-assistant-mic {
+  min-width: 2.5rem;
+  font-size: 1.1rem;
+}
+
+.ai-assistant-mic-active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  animation: ai-mic-pulse 1.2s ease-in-out infinite;
+}
+
+.ai-assistant-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+@keyframes ai-mic-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
 /* Menu scan modal */
 .owner-modal {
   position: fixed;

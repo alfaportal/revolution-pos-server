@@ -90,6 +90,14 @@ const {
   generateForClient,
   sendSupplierEmail,
 } = require("../services/supplySuggestionService");
+const { sendOwnerChat } = require("../services/aiChatService");
+const { buildOwnerChatContext } = require("../services/aiChatContextService");
+const {
+  listChatHistory,
+  appendChatMessage,
+  clearChatHistory,
+} = require("../services/aiChatHistoryService");
+const { trackAiUsage } = require("../middleware/trackAiUsage");
 const {
   listLocationsForUser,
   buildOwnerAuthContext,
@@ -627,6 +635,63 @@ router.post("/supply-suggestions/send-email", requireAiPackage, async (req, res)
       to: req.body?.to || req.body?.email || "",
     });
     res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-assistant/history", requireAiPackage, async (req, res) => {
+  try {
+    const messages = await listChatHistory(req.user.client_id, { limit: 40 });
+    res.json({ ok: true, messages });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.delete("/ai-assistant/history", requireAiPackage, async (req, res) => {
+  try {
+    await clearChatHistory(req.user.client_id);
+    res.json({ ok: true, cleared: true });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-assistant/chat", requireAiPackage, async (req, res) => {
+  try {
+    const message = String(req.body?.message || "").trim();
+    if (!message) {
+      return res.status(400).json({ ok: false, gabim: "Mungon mesazhi." });
+    }
+
+    const clientId = req.user.client_id;
+    const [historyRows, context] = await Promise.all([
+      listChatHistory(clientId, { limit: 20 }),
+      buildOwnerChatContext(clientId),
+    ]);
+
+    const history = historyRows.map(row => ({
+      role: row.role,
+      content: row.content,
+    }));
+
+    await appendChatMessage(clientId, "user", message, 0);
+
+    const result = await sendOwnerChat({ message, history, context });
+
+    await appendChatMessage(clientId, "assistant", result.reply, result.tokensUsed);
+    await trackAiUsage(clientId, "chat", result.tokensUsed);
+
+    res.json({
+      ok: true,
+      reply: result.reply,
+      usage: {
+        tokens_used: result.tokensUsed,
+        provider: result.provider,
+        model: result.model,
+      },
+    });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

@@ -91,6 +91,7 @@
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="stoku">Stoku</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
+      <button class="tab ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>Asistent AI</button>
       <button class="tab" data-tab="raportet">Raportet</button>
     </div>
 
@@ -630,6 +631,41 @@
       </div>
     </div>
 
+    <div id="panel-ai-asistent" class="panel-section hidden">
+      <div class="card ai-assistant-card">
+        <div class="card-title card-title-row">
+          <span>Asistent AI</span>
+          <div class="card-title-actions">
+            <label class="ai-assistant-toggle">
+              <input type="checkbox" id="ai-assistant-tts" checked>
+              <span>Lexo me zë</span>
+            </label>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-assistant-clear">Pastro bisedën</button>
+          </div>
+        </div>
+        <p class="links-hint">
+          Bisedoni me AI në shqip — di shitjet e sotme, stokun dhe raportet e lokalit.
+          Përdorni mikrofonin për pyetje me zë; përgjigja lexohet automatikisht (Text-to-Speech).
+          Vetëm <strong>Pako 5</strong>.
+        </p>
+        <div id="ai-assistant-messages" class="ai-assistant-messages">
+          <div class="ai-chat-bubble ai-chat-bubble-assistant">
+            Përshëndetje! Jam asistenti juaj — pyetni për shitjet, stokun ose raportet e sotme.
+          </div>
+        </div>
+        <div id="ai-assistant-loading" class="ai-chat-loading hidden" aria-live="polite">
+          <span class="ai-chat-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+          Duke menduar…
+        </div>
+        <div id="ai-assistant-msg" class="owner-license-msg"></div>
+        <form id="ai-assistant-form" class="ai-assistant-form">
+          <button type="button" class="btn btn-ghost btn-sm ai-assistant-mic" id="btn-ai-assistant-mic" title="Mikrofon — flisni pyetjen" aria-label="Mikrofon">🎤</button>
+          <input type="text" id="ai-assistant-input" placeholder="Shkruani ose flisni pyetjen…" autocomplete="off" maxlength="4000">
+          <button type="submit" class="btn btn-primary btn-sm" id="btn-ai-assistant-send">Dërgo</button>
+        </form>
+      </div>
+    </div>
+
     <div id="panel-raportet" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Të ardhurat</div>
@@ -872,7 +908,7 @@
   </div>
 
   <div id="ai-chat-root" class="ai-chat-root hidden">
-    <div id="ai-chat-panel" class="ai-chat-panel hidden" role="dialog" aria-label="AI Asistent">
+    <div id="ai-chat-panel" class="ai-chat-panel hidden" role="dialog" aria-label="AI Asistent" hidden>
       <div class="ai-chat-header">
         <div>
           <strong>AI Asistent</strong>
@@ -909,5 +945,6 @@
   <script src="/js/owner-invoice-scan.js?v=1"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
+  <script src="/js/owner-ai-assistant.js?v=1"></script>
 </body>
 </html>

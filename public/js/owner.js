@@ -2106,6 +2106,7 @@ document.querySelectorAll(".tab").forEach(tab => {
       loadOwnerSupplySuggestions?.();
     }
     if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
+    if (tab.dataset.tab === "ai-asistent") loadOwnerAiAssistant?.();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
     if (tab.dataset.tab === "licenca") loadLicense();
@@ -2241,62 +2242,8 @@ document.getElementById("btn-waiter-add")?.addEventListener("click", async () =>
   }
 });
 
-const aiChatHistory = [];
 let menuScanItems = [];
 let menuScanPreviewUrl = null;
-
-function appendAiChatBubble(text, role) {
-  const box = document.getElementById("ai-chat-messages");
-  if (!box) return;
-  const bubble = document.createElement("div");
-  bubble.className = `ai-chat-bubble ai-chat-bubble-${role === "user" ? "user" : "assistant"}`;
-  bubble.textContent = text;
-  box.appendChild(bubble);
-  box.scrollTop = box.scrollHeight;
-}
-
-function setAiChatOpen(open) {
-  const panel = document.getElementById("ai-chat-panel");
-  const fab = document.getElementById("ai-chat-fab");
-  if (!panel || !fab) return;
-  panel.classList.toggle("hidden", !open);
-  fab.setAttribute("aria-expanded", open ? "true" : "false");
-  if (open) document.getElementById("ai-chat-input")?.focus();
-}
-
-function setAiChatLoading(loading) {
-  document.getElementById("ai-chat-loading")?.classList.toggle("hidden", !loading);
-  const sendBtn = document.getElementById("ai-chat-send");
-  const input = document.getElementById("ai-chat-input");
-  if (sendBtn) sendBtn.disabled = loading;
-  if (input) input.disabled = loading;
-}
-
-async function sendAiChatMessage(message) {
-  const text = String(message || "").trim();
-  if (!text) return;
-
-  appendAiChatBubble(text, "user");
-  aiChatHistory.push({ role: "user", content: text });
-  setAiChatLoading(true);
-
-  try {
-    const data = await api("/api/ai/chat", {
-      method: "POST",
-      body: JSON.stringify({
-        message: text,
-        history: aiChatHistory.slice(0, -1).slice(-12),
-      }),
-    });
-    const reply = String(data.reply || "").trim() || "Nuk u mor përgjigje.";
-    appendAiChatBubble(reply, "assistant");
-    aiChatHistory.push({ role: "assistant", content: reply });
-  } catch (err) {
-    appendAiChatBubble(err.message || "Gabim gjatë komunikimit me AI.", "assistant");
-  } finally {
-    setAiChatLoading(false);
-  }
-}
 
 function setMenuScanStatus(text, ok) {
   const el = document.getElementById("menu-scan-status");
@@ -2459,28 +2406,18 @@ async function applyAiUiState() {
     window.applyInvoiceScanAiButton?.(data);
     window.applyAiReportsTab?.(data);
     window.applySupplySuggestionsSection?.(data);
+    window.applyAiAssistantTab?.(data);
   } catch {
     root?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
     document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-reports")?.setAttribute("hidden", "");
+    document.getElementById("tab-ai-assistant")?.setAttribute("hidden", "");
   }
 }
 
 document.getElementById("ai-chat-fab")?.addEventListener("click", () => {
-  const panel = document.getElementById("ai-chat-panel");
-  setAiChatOpen(panel?.classList.contains("hidden"));
-});
-
-document.getElementById("ai-chat-close")?.addEventListener("click", () => setAiChatOpen(false));
-
-document.getElementById("ai-chat-form")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  const input = document.getElementById("ai-chat-input");
-  const message = input?.value?.trim();
-  if (!message) return;
-  input.value = "";
-  await sendAiChatMessage(message);
+  window.openOwnerAiAssistantTab?.();
 });
 
 document.getElementById("btn-menu-scan-ai")?.addEventListener("click", openMenuScanModal);
