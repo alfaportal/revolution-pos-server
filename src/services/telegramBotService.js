@@ -235,9 +235,16 @@ async function handleTelegramCommand(chatId, text) {
   }
 }
 
+async function processTelegramUpdate(update) {
+  const msg = update?.message;
+  if (!msg?.text || msg.chat?.id == null) return;
+  await handleTelegramCommand(msg.chat.id, msg.text);
+}
+
 module.exports = {
   getSuperAdminIds,
   isSuperAdmin,
   handleTelegramCommand,
+  processTelegramUpdate,
   buildStatusMessage,
 };

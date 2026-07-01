@@ -42,7 +42,8 @@ const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
 const { startNotificationDailyCron } = require("./jobs/notificationDailyReports");
 const { startCloudHealthMonitor } = require("./jobs/cloudHealthMonitor");
 const { startWeeklyDataExportCron } = require("./jobs/weeklyDataExport");
-const { startTelegramBotPoll } = require("./jobs/telegramBotPoll");
+const { startTelegramBotWebhook } = require("./jobs/telegramBotWebhook");
+const telegramRoutes = require("./routes/telegram");
 const systemRoutes = require("./routes/system");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
@@ -91,6 +92,7 @@ app.use("/api/v1/pos", posRoutes);
 app.use("/api/v1/receipt", receiptRoutes);
 app.use("/api/v1/fiscal", fiscalRoutes);
 app.use("/api/v1/system", systemRoutes.router);
+app.use("/api/telegram", telegramRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/super", superRoutes);
 app.use("/api/owner", ownerRoutes);
@@ -279,7 +281,7 @@ async function start() {
   startNotificationDailyCron();
   startCloudHealthMonitor();
   startWeeklyDataExportCron();
-  startTelegramBotPoll();
+  startTelegramBotWebhook();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);
