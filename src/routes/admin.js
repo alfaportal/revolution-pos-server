@@ -65,6 +65,15 @@ const {
   qrPrintHtml,
   singleQrPrintHtml,
 } = require("../services/kioskQrService");
+const { getSupabase } = require("../db");
+const {
+  listOwnerGroups,
+  createOwnerGroup,
+  linkClientsToGroup,
+  linkClientToOwnerUser,
+  getOwnerGroupDetails,
+  findOwnerUserIdForClient,
+} = require("../services/ownerGroupService");
 
 function requestBaseUrl(_req) {
   return getPublicAppOrigin();
@@ -631,6 +640,80 @@ router.patch("/owners/:id/status", asyncHandler(async (req, res) => {
   }
   const owner = await setOwnerActive(req.params.id, aktiv);
   res.json({ ok: true, owner });
+}));
+
+router.get("/owner-groups", asyncHandler(async (_req, res) => {
+  const groups = await listOwnerGroups();
+  const db = getSupabase();
+  const enriched = await Promise.all(
+    groups.map(async g => {
+      const { count, error } = await db
+        .from("clients")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_group_id", g.id);
+      if (error) throw error;
+      return { ...g, client_count: count || 0 };
+    }),
+  );
+  res.json({ ok: true, groups: enriched });
+}));
+
+router.post("/owner-groups", asyncHandler(async (req, res) => {
+  const group = await createOwnerGroup(req.body?.emri);
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: "owner_group_create",
+    targetType: "owner_group",
+    targetId: group.id,
+    targetLabel: group.emri,
+  });
+  res.status(201).json({ ok: true, group });
+}));
+
+router.get("/owner-groups/:id", asyncHandler(async (req, res) => {
+  const group = await getOwnerGroupDetails(req.params.id);
+  if (!group) return res.status(404).json({ gabim: "Grupi nuk u gjet." });
+  res.json({ ok: true, group });
+}));
+
+router.post("/owner-groups/:id/link-clients", asyncHandler(async (req, res) => {
+  const clientIds = req.body?.client_ids || req.body?.clientIds || [];
+  const ownerUserId = req.body?.owner_user_id || req.body?.ownerUserId || null;
+  const result = await linkClientsToGroup(req.params.id, clientIds, { ownerUserId });
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: "owner_group_link_clients",
+    targetType: "owner_group",
+    targetId: req.params.id,
+    targetLabel: `${clientIds.length} lokale`,
+  });
+  res.json({ ok: true, ...result });
+}));
+
+router.post("/clients/:id/link-owner", asyncHandler(async (req, res) => {
+  const clientId = req.params.id;
+  let ownerUserId = req.body?.owner_user_id || req.body?.ownerUserId || null;
+  const ownerClientId = req.body?.owner_client_id || req.body?.ownerClientId || null;
+
+  if (!ownerUserId && ownerClientId) {
+    ownerUserId = await findOwnerUserIdForClient(ownerClientId);
+    if (!ownerUserId) {
+      return res.status(400).json({ gabim: "Lokali i zgjedhur nuk ka pronar të regjistruar." });
+    }
+  }
+  if (!ownerUserId) {
+    return res.status(400).json({ gabim: "Specifikoni pronarin ose lokalin kryesor." });
+  }
+
+  const result = await linkClientToOwnerUser(clientId, ownerUserId);
+  await logAdminActivity({
+    ...activityFromReq(req),
+    action: "client_link_owner_group",
+    targetType: "client",
+    targetId: clientId,
+    targetLabel: result.owner_group_id,
+  });
+  res.json({ ok: true, ...result });
 }));
 
 module.exports = router;

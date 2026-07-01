@@ -2,6 +2,7 @@ const express = require("express");
 const { authOwner, ownerOnly } = require("../middleware/auth");
 const {
   getOwnerStats,
+  getOwnerStatsForGroup,
   listOwnerOrders,
   getOwnerOrderFilters,
   getOwnerReport,
@@ -84,6 +85,13 @@ const {
   generateDailyReportForClient,
   getZonedParts,
 } = require("../services/aiDailyReportService");
+const {
+  listLocationsForUser,
+  buildOwnerAuthContext,
+  listGroupClientIds,
+  getUserRow,
+} = require("../services/ownerGroupService");
+const { issueOwnerSession } = require("../lib/ownerSession");
 
 const router = express.Router();
 
@@ -110,8 +118,74 @@ router.get("/tables/events", (req, res) => {
 
 router.use(authOwner, ownerOnly);
 
+router.get("/locations", async (req, res) => {
+  try {
+    const data = await listLocationsForUser(req.user.sub, req.user.client_id);
+    res.json({
+      ok: true,
+      ...data,
+      view_all: !!req.user.view_all,
+    });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/switch-location", async (req, res) => {
+  try {
+    const user = await getUserRow(req.user.sub);
+    if (!user) {
+      return res.status(403).json({ gabim: "Llogaria e pronarit nuk u gjet." });
+    }
+
+    const viewAll = req.body?.view_all === true;
+    const rawClientId = req.body?.client_id;
+    const clientId =
+      rawClientId != null && String(rawClientId).trim()
+        ? String(rawClientId).trim()
+        : req.user.client_id;
+
+    const authPayload = await buildOwnerAuthContext(user, { clientId, viewAll });
+    const token = issueOwnerSession(res, authPayload);
+    const loc = await listLocationsForUser(user.id, authPayload.client_id);
+
+    res.json({
+      ok: true,
+      token,
+      user: authPayload,
+      ...loc,
+      view_all: authPayload.view_all,
+    });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
 router.get("/client", async (req, res) => {
   try {
+    if (req.user.view_all && req.user.owner_group_id) {
+      const loc = await listLocationsForUser(req.user.sub, req.user.client_id);
+      const count = loc.locations?.length || 0;
+      const primary = loc.locations?.[0];
+      const features = featuresForTier(primary?.package_tier);
+      return res.json({
+        ok: true,
+        view_all: true,
+        location_count: count,
+        locations: loc.locations,
+        client: {
+          emri: count > 1 ? `Të gjitha lokalet (${count})` : primary?.emri || "Paneli i pronarit",
+          tipi: primary?.tipi || "",
+          adresa: "",
+        },
+        features,
+        links: {},
+        waiter_url: null,
+        kitchen_url: null,
+        bar_url: null,
+      });
+    }
+
     let client = await getClientById(req.user.client_id);
     if (client) {
       client = await ensureKitchenCredentials(client);
@@ -128,6 +202,7 @@ router.get("/client", async (req, res) => {
     };
     res.json({
       ok: true,
+      view_all: false,
       client: client
         ? {
             emri: client.emri,
@@ -151,7 +226,13 @@ router.get("/client", async (req, res) => {
 
 router.get("/stats", async (req, res) => {
   try {
-    const stats = await getOwnerStats(req.user.client_id);
+    let stats;
+    if (req.user.view_all && req.user.owner_group_id) {
+      const ids = await listGroupClientIds(req.user.owner_group_id);
+      stats = await getOwnerStatsForGroup(ids);
+    } else {
+      stats = await getOwnerStats(req.user.client_id);
+    }
     res.json({ ok: true, ...stats });
   } catch (e) {
     res.status(500).json({ gabim: e.message });

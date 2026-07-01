@@ -398,12 +398,51 @@ async function sumSales(clientId, fromDate, toDate) {
   };
 }
 
+async function sumSalesForClients(clientIds, fromDate, toDate) {
+  const ids = [...new Set((clientIds || []).filter(Boolean))];
+  if (!ids.length) return { total: 0, count: 0 };
+
+  const db = getSupabase();
+  let q = db
+    .from("sales_orders")
+    .select("total, closed_at")
+    .in("client_id", ids)
+    .eq("status", "closed");
+
+  if (fromDate) q = q.gte("closed_at", `${fromDate}T00:00:00.000Z`);
+  if (toDate) q = q.lte("closed_at", `${toDate}T23:59:59.999Z`);
+
+  const { data, error } = await q;
+  if (error) throw error;
+  const rows = data || [];
+  return {
+    total: rows.reduce((s, r) => s + Number(r.total), 0),
+    count: rows.length,
+  };
+}
+
 async function countChannelOrders(clientId, deviceId, fromDate, toDate) {
   const db = getSupabase();
   let q = db
     .from("sales_orders")
     .select("id")
     .eq("client_id", clientId)
+    .eq("device_id", deviceId);
+  if (fromDate) q = q.gte("ordered_at", `${fromDate}T00:00:00.000Z`);
+  if (toDate) q = q.lte("ordered_at", `${toDate}T23:59:59.999Z`);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).length;
+}
+
+async function countChannelOrdersForClients(clientIds, deviceId, fromDate, toDate) {
+  const ids = [...new Set((clientIds || []).filter(Boolean))];
+  if (!ids.length) return 0;
+  const db = getSupabase();
+  let q = db
+    .from("sales_orders")
+    .select("id")
+    .in("client_id", ids)
     .eq("device_id", deviceId);
   if (fromDate) q = q.gte("ordered_at", `${fromDate}T00:00:00.000Z`);
   if (toDate) q = q.lte("ordered_at", `${toDate}T23:59:59.999Z`);
@@ -528,6 +567,34 @@ async function getOwnerReport(clientId, from, to) {
   };
 }
 
+async function getOwnerStatsForGroup(clientIds) {
+  const ids = [...new Set((clientIds || []).filter(Boolean))];
+  const r = dateRanges();
+  const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
+  const [today, week, month, qrSot, webSot, qrJava, webJava] = await Promise.all([
+    sumSalesForClients(ids, r.today, r.today),
+    sumSalesForClients(ids, r.week_from, r.today),
+    sumSalesForClients(ids, r.month_from, r.today),
+    countChannelOrdersForClients(ids, WEB_KIOSK, r.today, r.today),
+    countChannelOrdersForClients(ids, WEB_PUBLIC, r.today, r.today),
+    countChannelOrdersForClients(ids, WEB_KIOSK, r.week_from, r.today),
+    countChannelOrdersForClients(ids, WEB_PUBLIC, r.week_from, r.today),
+  ]);
+  return {
+    sot: today,
+    java: week,
+    muaj: month,
+    channels: {
+      qr_sot: qrSot,
+      web_sot: webSot,
+      qr_java: qrJava,
+      web_java: webJava,
+    },
+    aggregate: true,
+    location_count: ids.length,
+  };
+}
+
 async function getClientById(clientId) {
   const db = getSupabase();
   const { data, error } = await db.from("clients").select("*").eq("id", clientId).maybeSingle();
@@ -544,6 +611,7 @@ module.exports = {
   freeTableFromPos,
   getLiveTablesForOwner,
   getOwnerStats,
+  getOwnerStatsForGroup,
   listOwnerOrders,
   getOwnerOrderFilters,
   getOwnerReport,

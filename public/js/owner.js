@@ -96,6 +96,24 @@ async function api(path, opts = {}) {
 
 window.ownerApi = api;
 
+window.setOwnerToken = (t) => {
+  token = t || "";
+  if (token) localStorage.setItem("owner_token", token);
+  else localStorage.removeItem("owner_token");
+};
+
+window.getOwnerToken = () => token;
+
+window.reloadOwnerDashboard = async () => {
+  await runBootStep("klienti", loadClient);
+  await runBootStep("statistikat", loadStats);
+  await runBootStep("tavolinat", loadLiveTables);
+  await runBootStep("porositë", async () => {
+    await loadOrderFilters();
+    await loadOrders();
+  });
+};
+
 function euro(n) {
   return Number(n || 0).toFixed(2) + " €";
 }
@@ -179,7 +197,7 @@ let ownerPackageFeatures = {};
 
 async function loadClient() {
   const data = await api("/api/owner/client");
-  const { client, links = {}, features = {} } = data;
+  const { client, links = {}, features = {}, view_all: viewAll } = data;
   ownerPackageFeatures = features || {};
   if (client) {
     document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
@@ -189,12 +207,19 @@ async function loadClient() {
         ? "Restorant"
         : client.tipi === "dyqan"
           ? "Dyqan"
-          : "Lokali";
+          : viewAll
+            ? "Të gjitha"
+            : "Lokali";
     document.getElementById("biz-sub").textContent =
-      typeLbl + (client.adresa ? ` · ${client.adresa}` : "");
+      viewAll
+        ? `Përmbledhje e ${data.location_count || 0} lokaleve`
+        : typeLbl + (client.adresa ? ` · ${client.adresa}` : "");
   } else {
     document.getElementById("biz-sub").textContent = "Shitjet dhe raportet e lokalit tuaj";
   }
+
+  const linksCard = document.getElementById("owner-links-card");
+  if (linksCard) linksCard.classList.toggle("hidden", !!viewAll);
 
   const rows = [
     ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar || data.bar_url],
@@ -248,7 +273,11 @@ document.getElementById("btn-owner-copy-public")?.addEventListener("click", func
 async function loadStats() {
   const s = await api("/api/owner/stats");
   const ch = s.channels || {};
+  const aggNote = s.aggregate
+    ? `<p class="stats-aggregate-note">Të gjitha lokalet (${s.location_count || "?"}) — vetëm statistikat e përmbledhura</p>`
+    : "";
   document.getElementById("stats").innerHTML = `
+    ${aggNote}
     <div class="stat owner-stat"><div class="val">${euro(s.sot.total)}</div><div class="lbl">Sot (${s.sot.count})</div></div>
     <div class="stat owner-stat"><div class="val">${euro(s.java.total)}</div><div class="lbl">Kjo javë (${s.java.count})</div></div>
     <div class="stat owner-stat"><div class="val">${euro(s.muaj.total)}</div><div class="lbl">Ky muaj (${s.muaj.count})</div></div>
@@ -2557,6 +2586,9 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
   if (zDate) zDate.value = today;
 
   await runBootStep("klienti", loadClient);
+  if (typeof window.initOwnerLocationSwitcher === "function") {
+    await runBootStep("lokalet", window.initOwnerLocationSwitcher);
+  }
   await runBootStep("ai-status", applyAiUiState);
   await runBootStep("statistikat", loadStats);
   await runBootStep("tavolinat", loadLiveTables);

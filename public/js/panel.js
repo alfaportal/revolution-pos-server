@@ -623,25 +623,52 @@ function openEditClient(id) {
     >
     <p class="field-hint">${ownerPwHint}</p>
     ${owner ? `<p class="field-hint" style="margin-top:0.35rem">Llogaria: <strong>${owner.account_status === "aktiv" ? "aktive" : "në pritje"}</strong></p>` : ""}
+    <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+    <p class="field-hint license-device-hint" style="margin-bottom:0.75rem">
+      <strong>Multi-lokale</strong> — lidh disa lokale me të njëjtin pronar (switcher në panelin e pronarit).
+    </p>
+    <label>Grupi i lokaleve</label>
+    <select name="owner_group_id" id="modal-owner-group-id">
+      <option value="">— auto (grup i vet)</option>
+    </select>
+    <label>Lidh me pronarin e lokales</label>
+    <select name="link_owner_client_id" id="modal-link-owner-client">
+      <option value="">— mos ndrysho</option>
+    </select>
+    <p class="field-hint">Zgjidhni një lokal tjetër që ka pronar — ky lokal shtohet në grupin e tij.</p>
   `, async fd => {
     const emri = String(fd.get("emri") ?? "").trim();
     const ownerEmailVal = String(fd.get("owner_email") ?? "").trim().toLowerCase();
     const ownerPassword = String(fd.get("owner_password") ?? "").trim();
     const package_tier = readModalPackageTier(fd);
+    const linkOwnerClient = String(fd.get("link_owner_client_id") ?? "").trim();
+    const ownerGroupId = String(fd.get("owner_group_id") ?? "").trim();
+
+    const clientPatch = {
+      emri: fd.get("emri"),
+      tipi: fd.get("tipi"),
+      package_tier,
+      telefoni: fd.get("telefoni"),
+      email: fd.get("email"),
+      adresa: fd.get("adresa"),
+    };
+    if (!linkOwnerClient) {
+      clientPatch.owner_group_id = ownerGroupId || null;
+    }
 
     const { client: updatedClient } = await api(`/api/admin/clients/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        emri: fd.get("emri"),
-        tipi: fd.get("tipi"),
-        package_tier,
-        telefoni: fd.get("telefoni"),
-        email: fd.get("email"),
-        adresa: fd.get("adresa"),
-      }),
+      body: JSON.stringify(clientPatch),
     });
     mergeClientIntoCache(updatedClient);
     if (hubClientId === id) fillHubLinks(id);
+
+    if (linkOwnerClient) {
+      await api(`/api/admin/clients/${id}/link-owner`, {
+        method: "POST",
+        body: JSON.stringify({ owner_client_id: linkOwnerClient }),
+      });
+    }
 
     const fiscalBody = {
       fiscal_nr: String(fd.get("fiscal_nr") ?? "").trim(),
@@ -699,6 +726,37 @@ function openEditClient(id) {
     document.getElementById("modal-package-tier-wrap"),
     normalizeTierId(c.package_tier || "pako_2"),
   );
+
+  api("/api/admin/owner-groups")
+    .then(({ groups }) => {
+      const sel = document.getElementById("modal-owner-group-id");
+      if (!sel) return;
+      for (const g of groups || []) {
+        const opt = document.createElement("option");
+        opt.value = g.id;
+        opt.textContent = `${g.emri} (${g.client_count || 0} lokale)`;
+        if (c.owner_group_id === g.id) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      if (c.owner_group_id && ![...sel.options].some(o => o.value === c.owner_group_id)) {
+        const opt = document.createElement("option");
+        opt.value = c.owner_group_id;
+        opt.textContent = `Grupi aktual (${String(c.owner_group_id).slice(0, 8)}…)`;
+        opt.selected = true;
+        sel.appendChild(opt);
+      }
+    })
+    .catch(() => {});
+
+  const linkSel = document.getElementById("modal-link-owner-client");
+  if (linkSel) {
+    for (const other of clientsCache.filter(x => x.id !== id && findOwnerForClient(x.id))) {
+      const opt = document.createElement("option");
+      opt.value = other.id;
+      opt.textContent = other.emri;
+      linkSel.appendChild(opt);
+    }
+  }
 }
 
 function clientAccessLink(client, kind, extraQuery = "") {

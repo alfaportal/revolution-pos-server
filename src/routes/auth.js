@@ -20,6 +20,8 @@ const {
   completeOwnerPasswordReset,
   MIN_PASSWORD,
 } = require("../services/ownerPasswordReset");
+const { buildOwnerAuthContext } = require("../services/ownerGroupService");
+const { issueOwnerSession } = require("../lib/ownerSession");
 
 const router = express.Router();
 
@@ -143,20 +145,8 @@ router.post("/owner/login", async (req, res) => {
 
     clearFailCount(email);
 
-    const token = signToken({
-      sub: user.id,
-      email: user.email,
-      emri: user.emri,
-      roli: user.roli,
-      client_id: user.client_id,
-    });
-
-    res.cookie("owner_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 12 * 60 * 60 * 1000,
-    });
+    const authPayload = await buildOwnerAuthContext(user, { clientId: user.client_id });
+    const token = issueOwnerSession(res, authPayload);
 
     res.json({
       ok: true,
@@ -166,7 +156,9 @@ router.post("/owner/login", async (req, res) => {
         emri: user.emri,
         email: user.email,
         roli: user.roli,
-        client_id: user.client_id,
+        client_id: authPayload.client_id,
+        owner_group_id: authPayload.owner_group_id,
+        view_all: authPayload.view_all,
       },
     });
   } catch (e) {
@@ -234,20 +226,8 @@ router.post("/owner/register", async (req, res) => {
       return res.status(500).json({ gabim: "Llogaria u krijua por hyrja dështoi. Provoni /owner/login." });
     }
 
-    const token = signToken({
-      sub: user.id,
-      email: user.email,
-      emri: user.emri,
-      roli: user.roli,
-      client_id: user.client_id,
-    });
-
-    res.cookie("owner_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 12 * 60 * 60 * 1000,
-    });
+    const authPayload = await buildOwnerAuthContext(user, { clientId: user.client_id });
+    const token = issueOwnerSession(res, authPayload);
 
     res.status(201).json({
       ok: true,
@@ -259,8 +239,10 @@ router.post("/owner/register", async (req, res) => {
         emri: user.emri,
         email: user.email,
         roli: user.roli,
-        client_id: user.client_id,
+        client_id: authPayload.client_id,
         client_name: client?.emri || "",
+        owner_group_id: authPayload.owner_group_id,
+        view_all: authPayload.view_all,
       },
     });
   } catch (e) {

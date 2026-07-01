@@ -487,6 +487,10 @@ async function updateClient(id, body) {
   if (Object.prototype.hasOwnProperty.call(body, "package_tier")) {
     patch.package_tier = normalizePackageTier(body.package_tier);
   }
+  if (Object.prototype.hasOwnProperty.call(body, "owner_group_id")) {
+    const gid = body.owner_group_id;
+    patch.owner_group_id = gid ? String(gid).trim() : null;
+  }
 
   if (!Object.keys(patch).length) {
     throw new Error("Nuk ka fusha për përditësim.");

@@ -239,6 +239,50 @@
   align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.owner-location-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.owner-location-switcher.hidden {
+  display: none;
+}
+
+.owner-location-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.owner-location-select {
+  min-width: 10rem;
+  max-width: min(16rem, 42vw);
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.owner-location-select:focus {
+  outline: 2px solid rgba(56, 189, 248, 0.55);
+  outline-offset: 1px;
+}
+
+.stats-aggregate-note {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: -0.25rem 0 0.35rem;
 }
 
 .owner-header .conn-status {
