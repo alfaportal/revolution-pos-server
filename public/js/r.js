@@ -114,7 +114,7 @@
   }
 
   function menuItemEmoji(item) {
-    if (global.MenuPosUI?.itemEmoji) return global.MenuPosUI.itemEmoji(item);
+    if (window.MenuPosUI?.itemEmoji) return window.MenuPosUI.itemEmoji(item);
     return categoryEmoji(item?.category) || "🍽️";
   }
 
