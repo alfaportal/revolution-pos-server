@@ -49,4 +49,33 @@ async function aiStaffAuth(req, res, next) {
   }
 }
 
-module.exports = { aiStaffAuth, licenseApiKeyOptional };
+/** Ngarkon kontekstin e klientit nëse ka token/çelës — pa kërkuar autentifikim. */
+async function optionalAiStaffAuth(req, _res, next) {
+  const ownerToken = extractOwnerToken(req);
+  if (ownerToken) {
+    try {
+      const user = verifyToken(ownerToken);
+      if (user.roli === "client_admin" && user.client_id) {
+        req.user = user;
+        req.license = { client_id: user.client_id };
+        return next();
+      }
+    } catch {
+      /* provo licence key */
+    }
+  }
+
+  const celesi = normalizeKey(extractLicenseKey(req));
+  if (celesi) {
+    try {
+      const license = await findLicenseByKey(celesi);
+      assertLicenseUsable(license);
+      req.license = license;
+    } catch {
+      /* status pa licencë të vlefshme */
+    }
+  }
+  return next();
+}
+
+module.exports = { aiStaffAuth, optionalAiStaffAuth, licenseApiKeyOptional };

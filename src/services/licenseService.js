@@ -345,6 +345,7 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
       kitchen_slug: kitchenSlug,
       kitchen_key: kitchenKey,
     }, normalizePackageTier(license.clients?.package_tier)),
+    features: featuresForTier(normalizePackageTier(license.clients?.package_tier)),
   };
 }
 

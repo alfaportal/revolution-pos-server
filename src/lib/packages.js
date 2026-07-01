@@ -1,6 +1,6 @@
 /** Pakot e softuerit dhe funksionet e lejuara. */
 
-const PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_4"];
+const PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_4", "pako_5"];
 
 /** Tier të vjetër → tier i ri (para migrimit DB). */
 const LEGACY_TIER_MAP = {
@@ -48,6 +48,18 @@ const TIER_FEATURES = {
     kiosk: true,
     waiter: true,
     online_orders: true,
+    ai: false,
+  },
+  pako_5: {
+    pos: true,
+    owner_panel: true,
+    website: true,
+    mobile: true,
+    kds: true,
+    kiosk: true,
+    waiter: true,
+    online_orders: true,
+    ai: true,
   },
 };
 
@@ -56,6 +68,7 @@ const TIER_LABELS = {
   pako_2: "Pako 1 — KDS, kiosk, kamarier",
   pako_3: "Pako 2 — Mobile & cloud",
   pako_4: "Pako 3 — Porosi online & premium",
+  pako_5: "Pako 4 — AI Profesionale",
 };
 
 function normalizePackageTier(tier) {
@@ -82,6 +95,7 @@ function packageUpgradeMessage(feature) {
     mobile: "Aplikacioni mobile",
     website: "Website",
     online_orders: "Porosi online (takeaway & delivery)",
+    ai: "AI (skanim menu & asistent)",
   };
   const name = labels[feature] || feature;
   return `${name} nuk përfshihet në paketën tuaj. Kontaktoni administratorin për upgrade.`;

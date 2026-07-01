@@ -85,6 +85,7 @@
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
       <button class="tab" data-tab="licenca">Licenca</button>
       <button class="tab" data-tab="porosite">Porositë</button>
+      <button class="tab" data-tab="stoku">Stoku</button>
       <button class="tab" data-tab="raportet">Raportet</button>
     </div>
 
@@ -166,7 +167,10 @@
       <div class="card">
         <div class="card-title card-title-row">
           <span>Përbërësit (inventari)</span>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-ingredient-add">Shto përbërës</button>
+          <div class="card-title-actions">
+            <button type="button" class="btn btn-ghost btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>Skano Faturë</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-ingredient-add">Shto përbërës</button>
+          </div>
         </div>
         <p class="links-hint">
           Menaxhoni përbërësit e kuzhinës (miell, vaj, pije…). Kur konfirmohet porosi, stoku zbritet automatikisht
@@ -743,6 +747,54 @@
     </div>
   </div>
 
+  <div id="invoice-scan-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="invoice-scan-title">
+    <div class="owner-modal-backdrop" id="invoice-scan-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="invoice-scan-title">Skano faturën e furnizuesit</h2>
+        <button type="button" class="owner-modal-close" id="invoice-scan-close" aria-label="Mbyll">×</button>
+      </div>
+      <p class="links-hint">Ngarkoni foto të faturës së blerjes. AI nxjerr artikujt (emër, sasi, njësi, çmim) — pas konfirmimit stoku përditësohet në cloud.</p>
+      <div class="menu-scan-upload">
+        <label class="btn btn-ghost btn-sm" for="invoice-scan-file">Zgjidh foto</label>
+        <input type="file" id="invoice-scan-file" accept="image/png,image/jpeg,image/jpg,image/webp" hidden>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-invoice-scan-run" disabled>Skano</button>
+      </div>
+      <div id="invoice-scan-preview-wrap" class="menu-scan-preview-wrap hidden">
+        <img id="invoice-scan-preview" alt="Parapamje fature">
+      </div>
+      <div id="invoice-scan-status" class="owner-license-msg"></div>
+      <div id="invoice-scan-loading" class="menu-scan-loading hidden">Duke skanuar faturën…</div>
+      <div id="invoice-scan-results" class="menu-scan-results hidden">
+        <div class="filter-row menu-add-row" style="margin-top:0.75rem">
+          <div>
+            <label for="invoice-scan-supplier">Furnizuesi</label>
+            <input type="text" id="invoice-scan-supplier" placeholder="p.sh. Metro, Lidl…">
+          </div>
+          <div>
+            <label for="invoice-scan-number">Nr. faturës</label>
+            <input type="text" id="invoice-scan-number" placeholder="p.sh. BL-2026-001">
+          </div>
+        </div>
+        <div class="overflow-x">
+          <table class="menu-owner-table">
+            <thead>
+              <tr>
+                <th>Emri</th>
+                <th>Sasia</th>
+                <th>Njësia</th>
+                <th>Çmimi/njësi (€)</th>
+                <th>Përbërësi ekzistues</th>
+              </tr>
+            </thead>
+            <tbody id="invoice-scan-items-body"></tbody>
+          </table>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-invoice-scan-apply" style="margin-top:0.75rem">Konfirmo dhe përditëso stokun</button>
+      </div>
+    </div>
+  </div>
+
   <div id="ai-chat-root" class="ai-chat-root hidden">
     <div id="ai-chat-panel" class="ai-chat-panel hidden" role="dialog" aria-label="AI Asistent">
       <div class="ai-chat-header">
@@ -773,9 +825,10 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=25"></script>
+  <script src="/js/owner.js?v=26"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
-  <script src="/js/owner-inventory.js?v=1"></script>
+  <script src="/js/owner-inventory.js?v=2"></script>
+  <script src="/js/owner-invoice-scan.js?v=1"></script>
 </body>
 </html>

@@ -359,7 +359,8 @@ const TIER_FEATURES = {
   pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false, online_orders: false },
   pako_2: { pos: true, owner_panel: true, website: true, mobile: false, kds: true, kiosk: true, waiter: true, online_orders: false },
   pako_3: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: false },
-  pako_4: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true },
+  pako_4: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true, ai: false },
+  pako_5: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true, ai: true },
 };
 
 function normalizeTierId(tier) {
@@ -370,12 +371,13 @@ function normalizeTierId(tier) {
 }
 
 /** Tier order shown in admin — main sellable tiers first. */
-const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4"];
+const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4", "pako_5"];
 const TIER_SHORT_LABELS = {
   pako_1: "Legacy",
   pako_2: "Pako 1",
   pako_3: "Pako 2",
   pako_4: "Pako 3",
+  pako_5: "Pako 4",
 };
 
 function adminTierIdsForPicker(currentTier) {

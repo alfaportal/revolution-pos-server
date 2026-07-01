@@ -291,6 +291,7 @@ async function start() {
     console.log(`  📋 Z-Report:    GET /api/owner/z-report`);
     console.log(`  🤖 AI chat:     POST /api/ai/chat`);
     console.log(`  📷 AI menu:     POST /api/ai/scan-menu`);
+    console.log(`  🧾 AI invoice:  POST /api/ai/scan-invoice`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }

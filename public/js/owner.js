@@ -175,9 +175,12 @@ function renderOrderCard(o) {
   </div>`;
 }
 
+let ownerPackageFeatures = {};
+
 async function loadClient() {
   const data = await api("/api/owner/client");
   const { client, links = {}, features = {} } = data;
+  ownerPackageFeatures = features || {};
   if (client) {
     document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
     const typeLbl = client.tipi === "kafene"
@@ -2067,6 +2070,11 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") loadReport();
     if (tab.dataset.tab === "porosite") loadOrders();
+    if (tab.dataset.tab === "stoku") {
+      loadOwnerInventory?.();
+      loadOwnerStock?.();
+      applyAiUiState();
+    }
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
     if (tab.dataset.tab === "licenca") loadLicense();
@@ -2398,15 +2406,30 @@ async function applyAiUiState() {
   const scanBtn = document.getElementById("btn-menu-scan-ai");
   try {
     const data = await api("/api/ai/status");
-    const paused = !data.enabled;
-    root?.classList.toggle("hidden", paused);
+    const active = !!data.enabled;
+    const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
+    root?.classList.toggle("hidden", !active);
     if (scanBtn) {
-      if (paused) scanBtn.setAttribute("hidden", "");
-      else scanBtn.removeAttribute("hidden");
+      if (active) {
+        scanBtn.removeAttribute("hidden");
+        scanBtn.disabled = false;
+        scanBtn.removeAttribute("title");
+      } else {
+        scanBtn.setAttribute("hidden", "");
+        if (needsUpgrade) {
+          scanBtn.removeAttribute("hidden");
+          scanBtn.disabled = true;
+          scanBtn.title = "Kërkon Pako 4 — AI Profesionale. Kontaktoni administratorin.";
+        } else {
+          scanBtn.disabled = false;
+        }
+      }
     }
+    window.applyInvoiceScanAiButton?.(data);
   } catch {
     root?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
+    document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
   }
 }
 

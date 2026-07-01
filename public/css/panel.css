@@ -1279,7 +1279,7 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
   }
 
   .package-tier-picker--inline .package-tier-btns--compact {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

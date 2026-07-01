@@ -14,16 +14,18 @@ import { siteStrings } from "../data/siteStrings.js";
 import { getLang } from "../lib/i18n.js";
 import { assetPath, blogArticlePath } from "../lib/base.js";
 
-const PACKAGE_PLANS = ["p1", "p2", "p3"];
+const PACKAGE_PLANS = ["p1", "p2", "p3", "p4"];
 const PACKAGE_DETAIL_KEYS = {
   p1: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
   p2: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
   p3: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
+  p4: ["incl", "f1", "f2", "f3", "f4", "f5", "f6"],
 };
 const PACKAGE_CARD_KEYS = {
   p1: ["incl", "f1", "f2", "f3", "f4"],
   p2: ["incl", "f1", "f2", "f3", "f4"],
   p3: ["incl", "f1", "f2", "f3", "f4"],
+  p4: ["incl", "f1", "f2", "f3", "f4"],
 };
 
 function packageFeaturesHtml(plan, { keys } = {}) {
@@ -388,6 +390,7 @@ export function renderHome() {
             ${packageCard("p1")}
             ${packageCard("p2")}
             ${packageCard("p3")}
+            ${packageCard("p4")}
           </div>
           <div class="package-detail-panel" id="package-detail" hidden>
             <div class="package-detail-head">

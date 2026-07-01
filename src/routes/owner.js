@@ -74,6 +74,7 @@ const {
   listInventoryAlerts,
   createIngredient,
   updateIngredient,
+  applyInvoiceScanItems,
 } = require("../services/inventoryService");
 
 const router = express.Router();
@@ -430,6 +431,15 @@ router.get("/inventory/alerts", async (req, res) => {
     res.json({ ok: true, alerts, count: alerts.length });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.post("/inventory/apply-invoice-scan", async (req, res) => {
+  try {
+    const result = await applyInvoiceScanItems(req.user.client_id, req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
   }
 });
 

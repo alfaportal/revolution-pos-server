@@ -33,6 +33,38 @@ function validateUnit(unit) {
   return u;
 }
 
+function normalizeScanUnit(unit) {
+  const u = String(unit || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  if (/^(kg|kilogram|kilogramë|kilo|g|gr|gram)$/.test(u)) return "kg";
+  if (/^(l|lt|liter|litër|litra|ml)$/.test(u)) return "l";
+  return "copë";
+}
+
+function normalizeIngredientName(name) {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
+function findIngredientByName(ingredients, name) {
+  const target = normalizeIngredientName(name);
+  if (!target) return null;
+  const exact = ingredients.find(i => normalizeIngredientName(i.name) === target);
+  if (exact) return exact;
+  return (
+    ingredients.find(i => {
+      const n = normalizeIngredientName(i.name);
+      return n.includes(target) || target.includes(n);
+    }) || null
+  );
+}
+
 async function ensureInventoryReady() {
   await ensureInventorySchema();
 }
@@ -255,11 +287,88 @@ async function deductIngredientsForOrder(clientId, orderItems) {
   });
 }
 
+async function applyInvoiceScanItems(clientId, body) {
+  const list = Array.isArray(body?.items) ? body.items : [];
+  if (!list.length) throw new Error("Nuk ka artikuj për import.");
+
+  await ensureInventoryReady();
+  let ingredients = await listIngredients(clientId);
+  const applied = [];
+  const created = [];
+  const updated = [];
+
+  for (const raw of list) {
+    const name = String(raw?.name || "").trim();
+    const quantity = roundQty(Math.max(0, Number(raw?.quantity) || 0));
+    const unit = validateUnit(normalizeScanUnit(raw?.unit));
+    const unit_price = roundQty(
+      Math.max(0, Number(raw?.unit_price ?? raw?.price ?? raw?.cost_per_unit) || 0),
+    );
+    const createIfMissing = raw?.create_if_missing !== false;
+
+    if (!name || quantity <= 0) continue;
+
+    let ingredient = null;
+    const ingredientId = String(raw?.ingredient_id || "").trim();
+    if (UUID_RE.test(ingredientId)) {
+      ingredient = ingredients.find(i => i.id === ingredientId) || null;
+    }
+    if (!ingredient) {
+      ingredient = findIngredientByName(ingredients, name);
+    }
+
+    if (!ingredient && createIfMissing) {
+      ingredient = await createIngredient(clientId, {
+        name,
+        unit,
+        quantity,
+        min_quantity: 0,
+        cost_per_unit: unit_price,
+      });
+      ingredients.push(ingredient);
+      created.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
+    } else if (ingredient) {
+      const patch = { add_quantity: quantity };
+      if (unit_price > 0) patch.cost_per_unit = unit_price;
+      ingredient = await updateIngredient(clientId, ingredient.id, patch);
+      const idx = ingredients.findIndex(i => i.id === ingredient.id);
+      if (idx >= 0) ingredients[idx] = ingredient;
+      updated.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
+    }
+
+    if (ingredient) {
+      applied.push({
+        ingredient_id: ingredient.id,
+        name: ingredient.name,
+        quantity,
+        unit,
+        unit_price,
+      });
+    }
+  }
+
+  if (!applied.length) {
+    throw new Error("Asnjë artikull nuk u importua — kontrolloni emrat dhe sasitë.");
+  }
+
+  return {
+    supplier: String(body?.supplier || "").trim(),
+    invoice_number: String(body?.invoice_number || "").trim(),
+    applied_count: applied.length,
+    created_count: created.length,
+    updated_count: updated.length,
+    applied,
+    created,
+    updated,
+  };
+}
+
 module.exports = {
   listIngredients,
   listInventoryAlerts,
   createIngredient,
   updateIngredient,
   deductIngredientsForOrder,
+  applyInvoiceScanItems,
   mapIngredient,
 };
