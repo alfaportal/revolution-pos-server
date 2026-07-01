@@ -201,6 +201,40 @@
         </div>
       </div>
 
+      <div id="supply-suggestions-section" class="card ai-feature-hidden" style="margin-top:1rem" hidden>
+        <div class="card-title card-title-row">
+          <span>Sugjerime Furnizimi</span>
+          <div class="card-title-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-supply-generate">Gjenero sot</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-supply-refresh">Rifresko</button>
+          </div>
+        </div>
+        <p class="links-hint">
+          AI analizon përbërësit ku sasia ≤ minimumi dhe propozon listën e furnizimit.
+          Gjenerohet automatikisht çdo ditë në <strong>08:00</strong> (vetëm Pako 5).
+        </p>
+        <div id="supply-suggestions-summary" class="ai-report-summary"></div>
+        <div id="supply-suggestions-meta" class="links-hint" style="margin-top:0"></div>
+        <div id="supply-suggestions-msg" class="owner-license-msg"></div>
+        <div class="overflow-x">
+          <table class="menu-owner-table">
+            <thead>
+              <tr>
+                <th>Përbërësi</th>
+                <th>Stoku</th>
+                <th>Minimum</th>
+                <th>Porosit</th>
+                <th>Furnizuesi i fundit</th>
+                <th class="col-actions">Email</th>
+              </tr>
+            </thead>
+            <tbody id="supply-suggestions-body">
+              <tr><td colspan="6" style="color:var(--muted)">Duke ngarkuar…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card" style="margin-top:1rem">
         <div class="card-title">Stoku i artikujve të menusë</div>
         <p class="links-hint">
@@ -874,5 +908,6 @@
   <script src="/js/owner-inventory.js?v=2"></script>
   <script src="/js/owner-invoice-scan.js?v=1"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
+  <script src="/js/owner-supply-suggestions.js?v=1"></script>
 </body>
 </html>

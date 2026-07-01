@@ -86,6 +86,11 @@ const {
   getZonedParts,
 } = require("../services/aiDailyReportService");
 const {
+  getSuggestionsByDate,
+  generateForClient,
+  sendSupplierEmail,
+} = require("../services/supplySuggestionService");
+const {
   listLocationsForUser,
   buildOwnerAuthContext,
   listGroupClientIds,
@@ -577,6 +582,50 @@ router.post("/ai-reports/generate", requireAiPackage, async (req, res) => {
     const force = !!req.body?.force;
     const sendEmail = req.body?.send_email !== false;
     const result = await generateDailyReportForClient(client, date, { sendEmail, force });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/supply-suggestions", requireAiPackage, async (req, res) => {
+  try {
+    const date = String(req.query.date || getZonedParts().date).slice(0, 10);
+    const suggestions = await getSuggestionsByDate(req.user.client_id, date);
+    const aiSummary = suggestions.find(s => s.ai_summary)?.ai_summary || "";
+    res.json({
+      ok: true,
+      suggestions,
+      date,
+      today: getZonedParts().date,
+      ai_summary: aiSummary,
+      email_sent: suggestions.some(s => s.email_sent_at),
+    });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/supply-suggestions/generate", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const date = String(req.body?.date || getZonedParts().date).slice(0, 10);
+    const force = !!req.body?.force;
+    const result = await generateForClient(client, date, { force });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/supply-suggestions/send-email", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const result = await sendSupplierEmail(client.id, client, {
+      suggestionDate: String(req.body?.date || getZonedParts().date).slice(0, 10),
+      supplierName: req.body?.supplier_name || req.body?.supplier || "",
+      to: req.body?.to || req.body?.email || "",
+    });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });

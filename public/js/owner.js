@@ -2103,6 +2103,7 @@ document.querySelectorAll(".tab").forEach(tab => {
       loadOwnerInventory?.();
       loadOwnerStock?.();
       applyAiUiState();
+      loadOwnerSupplySuggestions?.();
     }
     if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
     if (tab.dataset.tab === "faqja") loadPublicPage();
@@ -2457,6 +2458,7 @@ async function applyAiUiState() {
     }
     window.applyInvoiceScanAiButton?.(data);
     window.applyAiReportsTab?.(data);
+    window.applySupplySuggestionsSection?.(data);
   } catch {
     root?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");

@@ -38,6 +38,7 @@ const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
+const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 
@@ -268,6 +269,7 @@ async function start() {
   startLicenseExpiryCron();
   startTrialNotificationCron();
   startAiDailyReportCron();
+  startSupplySuggestionCron();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);

@@ -20,8 +20,11 @@ function mapIngredient(row) {
     quantity,
     min_quantity,
     cost_per_unit: roundQty(row.cost_per_unit),
+    last_supplier: String(row.last_supplier || "").trim(),
+    last_supplier_email: String(row.last_supplier_email || "").trim(),
     created_at: row.created_at,
     below_minimum: quantity < min_quantity,
+    at_or_below_minimum: quantity <= min_quantity,
   };
 }
 
@@ -180,6 +183,12 @@ async function updateIngredient(clientId, ingredientId, body) {
       if (add <= 0) throw new Error("Sasia e furnizimit duhet të jetë pozitive.");
       patch.quantity = roundQty(Math.max(0, Number(existing.quantity) + add));
     }
+    if (body?.last_supplier != null) {
+      patch.last_supplier = String(body.last_supplier).trim().slice(0, 200) || null;
+    }
+    if (body?.last_supplier_email != null) {
+      patch.last_supplier_email = String(body.last_supplier_email).trim().slice(0, 200) || null;
+    }
 
     if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
 
@@ -296,6 +305,8 @@ async function applyInvoiceScanItems(clientId, body) {
   const applied = [];
   const created = [];
   const updated = [];
+  const supplier = String(body?.supplier || "").trim();
+  const supplierEmail = String(body?.supplier_email || body?.supplierEmail || "").trim();
 
   for (const raw of list) {
     const name = String(raw?.name || "").trim();
@@ -330,6 +341,8 @@ async function applyInvoiceScanItems(clientId, body) {
     } else if (ingredient) {
       const patch = { add_quantity: quantity };
       if (unit_price > 0) patch.cost_per_unit = unit_price;
+      if (supplier) patch.last_supplier = supplier;
+      if (supplierEmail) patch.last_supplier_email = supplierEmail;
       ingredient = await updateIngredient(clientId, ingredient.id, patch);
       const idx = ingredients.findIndex(i => i.id === ingredient.id);
       if (idx >= 0) ingredients[idx] = ingredient;
@@ -352,7 +365,8 @@ async function applyInvoiceScanItems(clientId, body) {
   }
 
   return {
-    supplier: String(body?.supplier || "").trim(),
+    supplier,
+    supplier_email: supplierEmail,
     invoice_number: String(body?.invoice_number || "").trim(),
     applied_count: applied.length,
     created_count: created.length,

@@ -273,6 +273,61 @@ async function sendDailyAiReportEmail({ to, clientName, reportDate, summaryText,
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendSupplySuggestionEmail({
+  to,
+  clientName,
+  supplierName,
+  suggestionDate,
+  summaryText,
+  items,
+}) {
+  const subject = `Porosi furnizimi — ${suggestionDate} — ${clientName || "Revolution POS"}`;
+  const lines = (items || []).map(
+    i =>
+      `- ${i.name}: ${Number(i.order_quantity).toFixed(3).replace(/\.?0+$/, "")} ${i.unit} (stoku: ${Number(i.current_quantity).toFixed(3)} / min: ${Number(i.min_quantity).toFixed(3)})`,
+  );
+
+  const text = [
+    supplierName ? `Përshëndetje ${supplierName},` : "Përshëndetje,",
+    "",
+    clientName
+      ? `${clientName} ju dërgon listën e përbërësve për furnizim (${suggestionDate}):`
+      : `Listë furnizimi (${suggestionDate}):`,
+    "",
+    summaryText || "",
+    "",
+    ...lines,
+    "",
+    "Ju lutemi konfirmoni porosinë dhe afatin e dorëzimit.",
+    "",
+    "Revolution POS — ketujemi.com",
+  ].join("\n");
+
+  const htmlItems = (items || [])
+    .map(
+      i => `<tr>
+        <td>${String(i.name).replace(/</g, "&lt;")}</td>
+        <td style="text-align:right">${Number(i.order_quantity).toFixed(2)} ${i.unit}</td>
+        <td style="text-align:right">${Number(i.current_quantity).toFixed(2)}</td>
+        <td style="text-align:right">${Number(i.min_quantity).toFixed(2)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const html = `
+    <p>${supplierName ? `Përshëndetje <strong>${supplierName}</strong>,` : "Përshëndetje,"}</p>
+    <p>${clientName ? `<strong>${clientName}</strong> kërkon furnizim për datën <strong>${suggestionDate}</strong>:` : `Porosi furnizimi për ${suggestionDate}:`}</p>
+    ${summaryText ? `<p style="margin:12px 0">${summaryText.replace(/</g, "&lt;")}</p>` : ""}
+    <table cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse;font-size:14px">
+      <thead><tr><th>Përbërësi</th><th>Porosit</th><th>Stoku</th><th>Minimum</th></tr></thead>
+      <tbody>${htmlItems}</tbody>
+    </table>
+    <p style="margin-top:16px">Ju lutemi konfirmoni porosinë dhe afatin e dorëzimit.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   resolveSupportPhone,
@@ -285,4 +340,5 @@ module.exports = {
   sendAdminTrialExpiryAlertEmail,
   sendStockLowAlertEmail,
   sendDailyAiReportEmail,
+  sendSupplySuggestionEmail,
 };
