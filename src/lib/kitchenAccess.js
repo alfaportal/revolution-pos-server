@@ -51,7 +51,11 @@ async function getClientBySlugOrId(identifier) {
     return data;
   }
 
-  const { data, error } = await db.from("clients").select("*").eq("kitchen_slug", id).maybeSingle();
+  let { data, error } = await db.from("clients").select("*").eq("kitchen_slug", id).maybeSingle();
+  if (error) throw error;
+  if (data) return data;
+
+  ({ data, error } = await db.from("clients").select("*").ilike("kitchen_slug", id).maybeSingle());
   if (error) throw error;
   return data;
 }
@@ -95,7 +99,7 @@ function buildKitchenUrl(baseUrl, client, kind) {
 /** URL publike për skanim QR tavoline — pa key në link */
 function buildTableMenuUrl(baseUrl, client, tableNumber) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
-  const slug = client.kitchen_slug || client.id;
+  const slug = client.id || client.kitchen_slug;
   const table = Math.max(1, Number(tableNumber) || 1);
   return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
 }

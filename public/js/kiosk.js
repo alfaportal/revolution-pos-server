@@ -71,7 +71,13 @@
     let data = {};
     try { data = await res.json(); } catch { /* */ }
     if (!res.ok || data.ok === false) {
-      throw new Error(data.gabim || `Gabim HTTP ${res.status}`);
+      const msg = data.gabim || `Gabim HTTP ${res.status}`;
+      if (res.status === 404 && /lokali nuk u gjet/i.test(msg)) {
+        throw new Error(
+          `Lokali nuk u gjet (slug: ${slug}). QR i vjetër ose POS offline — Admin → Cloud → Sinkronizo, pastaj printo QR të ri.`,
+        );
+      }
+      throw new Error(msg);
     }
     return data;
   }
