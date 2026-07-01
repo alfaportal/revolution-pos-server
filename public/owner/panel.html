@@ -92,6 +92,7 @@
       <button class="tab" data-tab="stoku">Stoku</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>Asistent AI</button>
+      <button class="tab ai-feature-tab hidden" data-tab="njoftimet" id="tab-notifications" hidden>Njoftimet</button>
       <button class="tab" data-tab="raportet">Raportet</button>
     </div>
 
@@ -680,6 +681,44 @@
       </div>
     </div>
 
+    <div id="panel-njoftimet" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Njoftimet</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-notify-test">Dërgo test</button>
+        </div>
+        <p class="links-hint">
+          Telegram dhe/ose SMS kur stoku bie nën minimum, plus raport ditor në <strong>08:00</strong>
+          për ditën e kaluar. Vetëm <strong>Pako 5</strong>.
+        </p>
+        <div id="notify-capabilities" class="links-hint" style="margin-top:0"></div>
+        <div id="notify-msg" class="owner-license-msg"></div>
+        <div class="hub-form-grid" style="margin-top:0.75rem">
+          <label>
+            Telegram Chat ID
+            <input type="text" id="notify-telegram-id" placeholder="123456789" autocomplete="off">
+          </label>
+          <label>
+            Numri SMS (Vonage)
+            <input type="text" id="notify-sms-number" placeholder="+38344123456" autocomplete="off">
+          </label>
+        </div>
+        <div class="hub-fiscal-actions" style="margin-top:0.75rem">
+          <label class="hub-check hub-fiscal-check">
+            <input type="checkbox" id="notify-low-stock" checked>
+            <span>Njofto kur stoku i përbërësit bie nën minimumin</span>
+          </label>
+          <label class="hub-check hub-fiscal-check">
+            <input type="checkbox" id="notify-daily-report" checked>
+            <span>Raport ditor në mëngjes (08:00)</span>
+          </label>
+        </div>
+        <div class="hub-fiscal-actions">
+          <button type="button" class="btn btn-primary" id="btn-notify-save">Ruaj njoftimet</button>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-raportet" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Të ardhurat</div>
@@ -960,5 +999,6 @@
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
   <script src="/js/owner-ai-assistant.js?v=1"></script>
+  <script src="/js/owner-notifications.js?v=1"></script>
 </body>
 </html>

@@ -100,6 +100,12 @@ const {
 } = require("../services/aiChatHistoryService");
 const { trackAiUsage } = require("../middleware/trackAiUsage");
 const {
+  getNotificationSettings,
+  saveNotificationSettings,
+  getNotificationCapabilities,
+} = require("../services/notificationSettingsService");
+const { sendTestNotification } = require("../services/pushNotificationService");
+const {
   listLocationsForUser,
   buildOwnerAuthContext,
   listGroupClientIds,
@@ -724,6 +730,33 @@ router.post("/ai-assistant/chat", requireAiPackage, async (req, res) => {
         model: result.model,
       },
     });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/notification-settings", requireAiPackage, async (req, res) => {
+  try {
+    const settings = await getNotificationSettings(req.user.client_id);
+    res.json({ ok: true, settings, capabilities: getNotificationCapabilities() });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.put("/notification-settings", requireAiPackage, async (req, res) => {
+  try {
+    const settings = await saveNotificationSettings(req.user.client_id, req.body || {});
+    res.json({ ok: true, settings, capabilities: getNotificationCapabilities() });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/notification-settings/test", requireAiPackage, async (req, res) => {
+  try {
+    const result = await sendTestNotification(req.user.client_id);
+    res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

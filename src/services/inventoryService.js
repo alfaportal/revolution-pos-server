@@ -200,7 +200,14 @@ async function updateIngredient(clientId, ingredientId, body) {
       .select("*")
       .single();
     if (error) throw error;
-    return mapIngredient(data);
+    const mapped = mapIngredient(data);
+    if (mapped.at_or_below_minimum && mapped.min_quantity > 0) {
+      const { maybeNotifyIngredientLowStock } = require("./pushNotificationService");
+      maybeNotifyIngredientLowStock(clientId, mapped).catch(err =>
+        console.warn("[inventory] notify:", err.message),
+      );
+    }
+    return mapped;
   });
 }
 
@@ -257,7 +264,7 @@ async function deductIngredientsForOrder(clientId, orderItems) {
     const ingredientIds = [...deductMap.keys()];
     const { data: ingredients, error: ingErr } = await db
       .from("ingredients")
-      .select("id, name, quantity, unit")
+      .select("id, name, quantity, unit, min_quantity")
       .eq("restaurant_id", clientId)
       .in("id", ingredientIds);
     if (ingErr) throw ingErr;
@@ -284,6 +291,17 @@ async function deductIngredientsForOrder(clientId, orderItems) {
         quantity: deductQty,
         remaining: next,
       });
+
+      if (roundQty(next) <= roundQty(ing.min_quantity) && roundQty(ing.min_quantity) > 0) {
+        const { maybeNotifyIngredientLowStock } = require("./pushNotificationService");
+        maybeNotifyIngredientLowStock(clientId, {
+          id: ing.id,
+          name: ing.name,
+          unit: ing.unit,
+          quantity: next,
+          min_quantity: ing.min_quantity,
+        }).catch(err => console.warn("[inventory] notify:", err.message));
+      }
     }
 
     return { deducted };

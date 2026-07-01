@@ -39,6 +39,7 @@ const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
 const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
+const { startNotificationDailyCron } = require("./jobs/notificationDailyReports");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 
@@ -270,6 +271,7 @@ async function start() {
   startTrialNotificationCron();
   startAiDailyReportCron();
   startSupplySuggestionCron();
+  startNotificationDailyCron();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);

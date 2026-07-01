@@ -2107,6 +2107,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     }
     if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
     if (tab.dataset.tab === "ai-asistent") loadOwnerAiAssistant?.();
+    if (tab.dataset.tab === "njoftimet") loadOwnerNotifications?.();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
     if (tab.dataset.tab === "licenca") loadLicense();
@@ -2407,12 +2408,14 @@ async function applyAiUiState() {
     window.applyAiReportsTab?.(data);
     window.applySupplySuggestionsSection?.(data);
     window.applyAiAssistantTab?.(data);
+    window.applyNotificationsTab?.(data);
   } catch {
     root?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
     document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-reports")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-assistant")?.setAttribute("hidden", "");
+    document.getElementById("tab-notifications")?.setAttribute("hidden", "");
   }
 }
 
