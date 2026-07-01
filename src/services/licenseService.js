@@ -867,22 +867,50 @@ async function listLicensesForClient(clientId) {
   return data || [];
 }
 
-async function getOwnerLicenseView(clientId) {
-  const licenses = await listLicensesForClient(clientId);
-  const primary = licenses.find(l => l.statusi === "aktive") || licenses[0] || null;
-  if (!primary) {
-    return {
-      activated: false,
-      machine_id: "",
-      has_license: false,
-      license_key: "",
-      message: "Nuk ka licencë për lokalin tuaj. Kontaktoni administratorin.",
-      terminals: [],
-      active_terminal_count: 0,
-      max_terminals: 1,
-    };
-  }
+async function collectOwnerLicenseClientIds(clientId, userId) {
+  const ids = [];
+  const push = id => {
+    const v = String(id || "").trim();
+    if (v && !ids.includes(v)) ids.push(v);
+  };
+  push(clientId);
+  if (!userId) return ids;
 
+  try {
+    const { listLocationsForUser, getUserRow } = require("./ownerGroupService");
+    const { locations } = await listLocationsForUser(userId, clientId);
+    for (const loc of locations || []) push(loc.id);
+
+    const user = await getUserRow(userId);
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (email) {
+      const db = getSupabase();
+      const { data: byEmail } = await db
+        .from("clients")
+        .select("id")
+        .eq("email", email);
+      for (const row of byEmail || []) push(row.id);
+    }
+  } catch {
+    /* ignore */
+  }
+  return ids;
+}
+
+function emptyOwnerLicenseView(message) {
+  return {
+    activated: false,
+    machine_id: "",
+    has_license: false,
+    license_key: "",
+    message: message || "Nuk ka licencë për lokalin tuaj. Kontaktoni administratorin.",
+    terminals: [],
+    active_terminal_count: 0,
+    max_terminals: 1,
+  };
+}
+
+async function buildOwnerLicenseViewFromPrimary(primary, licenseClientId) {
   const fullLicense = await findLicenseByKey(primary.celesi);
   const terminalSummary = fullLicense
     ? await getTerminalSummaryForLicense(fullLicense)
@@ -921,6 +949,7 @@ async function getOwnerLicenseView(clientId) {
     machine_id: deviceId,
     has_license: true,
     license_key: primary.celesi,
+    license_client_id: licenseClientId,
     statusi: primary.statusi,
     app_type: primary.app_type,
     valid_until: primary.data_skadimit,
@@ -939,13 +968,32 @@ async function getOwnerLicenseView(clientId) {
   };
 }
 
-async function verifyOwnerLicenseKey(clientId, licenseKey) {
+async function getOwnerLicenseView(clientId, { userId } = {}) {
+  const candidateIds = await collectOwnerLicenseClientIds(clientId, userId);
+
+  for (const cid of candidateIds) {
+    const licenses = await listLicensesForClient(cid);
+    const primary = licenses.find(l => l.statusi === "aktive") || licenses[0];
+    if (primary) {
+      return buildOwnerLicenseViewFromPrimary(primary, cid);
+    }
+  }
+
+  return emptyOwnerLicenseView();
+}
+
+async function verifyOwnerLicenseKey(clientId, licenseKey, { userId } = {}) {
   const normalized = normalizeKey(licenseKey);
   if (!normalized) throw new Error("Shkruani çelësin e licencës.");
   const license = await findLicenseByKey(normalized);
   if (!license) throw new Error("Çelësi i licencës nuk u gjet.");
-  if (license.client_id !== clientId) throw new Error("Ky çelës nuk i përket lokalit tuaj.");
-  return getOwnerLicenseView(clientId);
+
+  const candidateIds = await collectOwnerLicenseClientIds(clientId, userId);
+  if (!candidateIds.includes(license.client_id)) {
+    throw new Error("Ky çelës nuk i përket lokalit tuaj.");
+  }
+
+  return getOwnerLicenseView(license.client_id, { userId });
 }
 
 async function getDashboardStats() {

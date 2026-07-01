@@ -697,28 +697,23 @@ function openEditClient(id) {
     }
 
     const existingOwner = findOwnerForClient(id);
-    if (!existingOwner) {
-      if (!ownerPassword) {
-        throw new Error("Vendosni fjalëkalimin e pronarit (min. 6 karaktere) për të krijuar llogarinë e hyrjes.");
-      }
-      await api("/api/admin/owners", {
+    if (ownerEmailVal) {
+      await api(`/api/admin/clients/${id}/ensure-owner`, {
         method: "POST",
         body: JSON.stringify({
-          client_id: id,
           emri,
           email: ownerEmailVal,
-          password: ownerPassword,
+          password: ownerPassword || undefined,
         }),
       });
-      return;
+    } else if (existingOwner) {
+      const ownerBody = { emri };
+      if (ownerPassword) ownerBody.password = ownerPassword;
+      await api(`/api/admin/owners/${existingOwner.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(ownerBody),
+      });
     }
-
-    const ownerBody = { emri, email: ownerEmailVal };
-    if (ownerPassword) ownerBody.password = ownerPassword;
-    await api(`/api/admin/owners/${existingOwner.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(ownerBody),
-    });
   });
 
   api(`/api/admin/clients/${id}/fiscal`)

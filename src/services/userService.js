@@ -366,9 +366,59 @@ async function adminResetOwnerPassword(id, baseUrl) {
   return sanitizeOwnerForAdmin(owner, baseUrl);
 }
 
+async function ensureOwnerForClient({ client_id, emri, email, password }, baseUrl) {
+  if (!client_id) throw new Error("Mungon client_id.");
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) throw new Error("Email i pronarit mungon.");
+
+  const db = getSupabase();
+  const { data: client, error: cErr } = await db
+    .from("clients")
+    .select("id, emri")
+    .eq("id", client_id)
+    .maybeSingle();
+  if (cErr) throw cErr;
+  if (!client) throw new Error("Klienti nuk u gjet.");
+
+  const { data: existing, error: uErr } = await db
+    .from("users")
+    .select("id, emri, email, client_id")
+    .eq("email", normalizedEmail)
+    .eq("roli", "client_admin")
+    .maybeSingle();
+  if (uErr) throw uErr;
+
+  if (existing) {
+    if (existing.client_id === client_id) {
+      const { data } = await db.from("users").select(OWNER_SELECT).eq("id", existing.id).single();
+      return sanitizeOwnerForAdmin(data, baseUrl);
+    }
+    const { linkClientToOwnerUser } = require("./ownerGroupService");
+    await linkClientToOwnerUser(client_id, existing.id);
+    const { data } = await db.from("users").select(OWNER_SELECT).eq("id", existing.id).single();
+    return sanitizeOwnerForAdmin(data, baseUrl);
+  }
+
+  const pw = password != null ? String(password).trim() : "";
+  if (!pw || pw.length < 6) {
+    throw new Error("Për email të ri vendosni fjalëkalim min. 6 karaktere.");
+  }
+
+  return createOwner(
+    {
+      client_id,
+      emri: String(emri || client.emri || "Pronar").trim(),
+      email: normalizedEmail,
+      password: pw,
+    },
+    baseUrl,
+  );
+}
+
 module.exports = {
   listOwners,
   createOwner,
+  ensureOwnerForClient,
   regenerateOwnerInvite,
   findOwnerByInviteToken,
   getOwnerLoginBranding,

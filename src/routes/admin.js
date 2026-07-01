@@ -59,6 +59,7 @@ const {
 const {
   listOwners,
   createOwner,
+  ensureOwnerForClient,
   updateOwner,
   deleteOwner,
   setOwnerActive,
@@ -227,6 +228,24 @@ router.patch("/clients/:id", asyncHandler(async (req, res) => {
     res.json({ ok: true, client });
   } catch (e) {
     const msg = logRouteError("admin:PATCH /clients", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+router.post("/clients/:id/ensure-owner", asyncHandler(async (req, res) => {
+  try {
+    const owner = await ensureOwnerForClient(
+      {
+        client_id: req.params.id,
+        emri: req.body?.emri,
+        email: req.body?.email || req.body?.owner_email,
+        password: req.body?.password || req.body?.owner_password,
+      },
+      requestBaseUrl(req),
+    );
+    res.json({ ok: true, owner, info: "Pronari u lidh me lokalin." });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /clients/:id/ensure-owner", e);
     res.status(400).json({ gabim: msg });
   }
 }));

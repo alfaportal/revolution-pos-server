@@ -305,7 +305,10 @@ router.get("/reports", async (req, res) => {
 
 router.get("/license", async (req, res) => {
   try {
-    res.json({ ok: true, ...(await getOwnerLicenseView(req.user.client_id)) });
+    res.json({
+      ok: true,
+      ...(await getOwnerLicenseView(req.user.client_id, { userId: req.user.sub })),
+    });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
   }
@@ -314,7 +317,9 @@ router.get("/license", async (req, res) => {
 router.put("/license", async (req, res) => {
   try {
     const { license_key } = req.body || {};
-    const view = await verifyOwnerLicenseKey(req.user.client_id, license_key);
+    const view = await verifyOwnerLicenseKey(req.user.client_id, license_key, {
+      userId: req.user.sub,
+    });
     res.json({
       ok: true,
       ...view,
