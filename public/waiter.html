@@ -9,6 +9,7 @@
   <title>Kamarieri — Revolution Invest POS</title>
   <link rel="stylesheet" href="/css/staff-brand.css">
   <link rel="stylesheet" href="/css/waiter.css">
+  <link rel="stylesheet" href="/css/menu-pos.css?v=3">
 </head>
 <body>
   <script>
@@ -107,8 +108,14 @@
       <div id="order-err" class="err hidden"></div>
       <div class="order-layout menu-pos-wrap">
         <div class="menu-group-bar" id="menu-group-bar">
-          <button type="button" class="menu-group-btn active" data-group="pije">Pije 🥤</button>
-          <button type="button" class="menu-group-btn" data-group="ushqim">Ushqim 🍽️</button>
+          <button type="button" class="menu-group-btn active" data-group="pije">
+            <span class="menu-tab-icon" aria-hidden="true">🥤</span>
+            <span class="menu-tab-label">Pije</span>
+          </button>
+          <button type="button" class="menu-group-btn" data-group="ushqim">
+            <span class="menu-tab-icon" aria-hidden="true">🍽️</span>
+            <span class="menu-tab-label">Ushqim</span>
+          </button>
         </div>
         <div id="menu-grid" class="menu-photo-grid"></div>
       </div>
@@ -143,7 +150,7 @@
 
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/menuCatalog.js?v=1"></script>
-  <script src="/js/menu-pos.js?v=1"></script>
+  <script src="/js/menu-pos.js?v=3"></script>
   <script src="/js/waiter.js?v=20"></script>
 </body>
 </html>

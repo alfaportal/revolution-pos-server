@@ -322,144 +322,7 @@ html, body {
   justify-content: center;
 }
 
-.menu-group-bar {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  padding-bottom: 0.5rem;
-  flex-shrink: 0;
-}
-
-.menu-group-btn {
-  min-height: 56px;
-  padding: 0.65rem 0.5rem;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.menu-group-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.menu-photo-grid {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  -webkit-overflow-scrolling: touch;
-}
-
-.menu-photo-grid-inner {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.85rem;
-  padding-bottom: 0.5rem;
-}
-
-.menu-empty-msg {
-  text-align: center;
-  color: var(--muted);
-  padding: 2rem 1rem;
-}
-
-.menu-item-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  touch-action: manipulation;
-  font-family: inherit;
-  color: inherit;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  text-align: center;
-}
-
-.menu-item-photo-wrap {
-  aspect-ratio: 1;
-  width: 100%;
-  border-radius: 14px;
-  overflow: hidden;
-  background: var(--bg);
-  border: 2px solid var(--border);
-  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
-}
-
-.menu-item-photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.menu-item-letter-ph {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-size: 2.75rem;
-  font-weight: 800;
-  color: #fff;
-}
-
-.menu-item-btn .emri,
-.menu-item-btn .cmimi,
-.menu-item-photo-wrap,
-.menu-item-photo,
-.menu-item-letter-ph {
-  pointer-events: none;
-}
-
-.menu-item-btn:active .menu-item-photo-wrap,
-.menu-item-btn.menu-item-flash .menu-item-photo-wrap {
-  transform: scale(0.96);
-  border-color: var(--ok);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
-}
-
-.menu-item-btn .emri {
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.25;
-  padding: 0 0.1rem;
-}
-
-.menu-item-btn .cmimi {
-  font-size: 0.92rem;
-  color: var(--ok);
-  font-weight: 800;
-  padding-bottom: 0.15rem;
-}
-
-.menu-item-btn.is-sold-out,
-.menu-item-btn.menu-item-sold-out-btn {
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
-.menu-item-btn.is-sold-out .cmimi {
-  color: #f87171;
-}
-
-@media (max-width: 520px) {
-  .menu-photo-grid-inner {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-  .menu-group-btn { min-height: 52px; font-size: 0.95rem; }
-  .menu-item-btn .emri { font-size: 0.85rem; }
-}
+/* Menu POS — shiko public/css/menu-pos.css */
 
 .menu-pos-wrap {
   display: flex;
@@ -468,6 +331,28 @@ html, body {
   height: 100%;
   min-height: 0;
 }
+
+.menu-empty-msg {
+  text-align: center;
+  color: var(--muted);
+}
+
+.menu-item-btn .emri,
+.menu-item-btn .cmimi,
+.menu-item-btn .cmimi-badge,
+.menu-item-photo-wrap,
+.menu-item-photo,
+.menu-item-letter-ph,
+.menu-item-emoji-ph {
+  pointer-events: none;
+}
+
+.menu-item-btn.is-sold-out,
+.menu-item-btn.menu-item-sold-out-btn {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
 
 .cat-tabs {
   display: flex;

@@ -5,6 +5,7 @@ const PRECACHE_URLS = [
   "/logo-source.png",
   "/css/staff-brand.css",
   "/css/waiter.css",
+  "/css/menu-pos.css",
   "/js/offlineQueue.js",
   "/js/menuCatalog.js",
   "/js/menu-pos.js",
