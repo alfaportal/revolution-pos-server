@@ -1,6 +1,7 @@
-/** Owner panel — Raporte AI ditore */
+/** Owner panel — Raporte AI ditore + Parashikim Fitimi */
 (function () {
   let reportsCache = [];
+  let profitForecastCache = null;
 
   function esc(s) {
     return String(s || "")
@@ -16,11 +17,101 @@
     return `${v.toFixed(2)} €`;
   }
 
+  function pctLabel(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "—";
+    const sign = v > 0 ? "+" : "";
+    return `${sign}${v.toFixed(1)}%`;
+  }
+
+  function deltaClass(n) {
+    const v = Number(n);
+    if (v > 0) return "up";
+    if (v < 0) return "down";
+    return "flat";
+  }
+
   function setAiReportMsg(text, ok) {
     const el = document.getElementById("ai-report-msg");
     if (!el) return;
     el.textContent = text || "";
     el.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+  }
+
+  function renderProfitForecast(forecast) {
+    profitForecastCache = forecast || null;
+    const summaryEl = document.getElementById("profit-forecast-summary");
+    const chartEl = document.getElementById("profit-forecast-chart");
+    const compareEl = document.getElementById("profit-forecast-compare");
+    const forecastEl = document.getElementById("profit-forecast-forecast");
+    if (!summaryEl || !chartEl) return;
+
+    if (!forecast || !forecast.daily_series?.length) {
+      summaryEl.textContent = "Ende nuk ka të dhëna për parashikim — gjeneroni raportin AI ose rifreskoni.";
+      chartEl.innerHTML = "";
+      if (compareEl) compareEl.innerHTML = "";
+      if (forecastEl) forecastEl.innerHTML = "";
+      return;
+    }
+
+    summaryEl.textContent = forecast.ai_summary || "—";
+
+    const series = forecast.daily_series;
+    const maxProfit = Math.max(...series.map(d => Number(d.profit) || 0), 1);
+    chartEl.innerHTML = series
+      .map(d => {
+        const h = Math.max(4, Math.round(((Number(d.profit) || 0) / maxProfit) * 100));
+        const tip = `${d.date}: ${euro(d.profit)}`;
+        return `<div class="profit-forecast-bar" style="height:${h}%" data-tip="${esc(tip)}" title="${esc(tip)}"></div>`;
+      })
+      .join("");
+
+    const cmp = forecast.comparison || {};
+    const tw = cmp.this_week || {};
+    const pw = cmp.prev_week || {};
+    const tm = cmp.this_month || {};
+    const pm = cmp.prev_month || {};
+
+    if (compareEl) {
+      compareEl.innerHTML = `
+        <div class="profit-forecast-box">
+          <div class="title">Këtë javë (fitim)</div>
+          <div class="val">${euro(tw.profit)}</div>
+          <div class="delta ${deltaClass(pw.profit_change_pct)}">vs java e kaluar: ${pctLabel(pw.profit_change_pct)}</div>
+        </div>
+        <div class="profit-forecast-box">
+          <div class="title">Java e kaluar (fitim)</div>
+          <div class="val">${euro(pw.profit)}</div>
+          <div class="delta flat">${Number(pw.orders || 0)} porosi</div>
+        </div>
+        <div class="profit-forecast-box">
+          <div class="title">Këtë muaj (fitim)</div>
+          <div class="val">${euro(tm.profit)}</div>
+          <div class="delta ${deltaClass(pm.profit_change_pct)}">vs muaji i kaluar: ${pctLabel(pm.profit_change_pct)}</div>
+        </div>
+        <div class="profit-forecast-box">
+          <div class="title">Muaji i kaluar (fitim)</div>
+          <div class="val">${euro(pm.profit)}</div>
+          <div class="delta flat">${Number(pm.orders || 0)} porosi</div>
+        </div>`;
+    }
+
+    const fc = forecast.forecast || {};
+    const nw = fc.next_week || {};
+    const nm = fc.next_month || {};
+    if (forecastEl) {
+      forecastEl.innerHTML = `
+        <div class="profit-forecast-box">
+          <div class="title">Parashikim — java e ardhshme</div>
+          <div class="val">${euro(nw.profit)}</div>
+          <div class="delta flat">Shitje ~${euro(nw.revenue)}</div>
+        </div>
+        <div class="profit-forecast-box">
+          <div class="title">Parashikim — muaji i ardhshëm</div>
+          <div class="val">${euro(nm.profit)}</div>
+          <div class="delta flat">Shitje ~${euro(nm.revenue)}</div>
+        </div>`;
+    }
   }
 
   function renderTodayReport(report, today) {
@@ -33,6 +124,7 @@
       metaEl.textContent = today ? `Data: ${today}` : "";
       summaryEl.textContent = "Ende nuk ka raport për sot. Raporti gjenerohet automatikisht në 23:59.";
       detailsEl.innerHTML = "";
+      renderProfitForecast(null);
       return;
     }
 
@@ -46,6 +138,10 @@
       <div class="ai-report-stat"><div class="val">${Number(sales.order_count || 0)}</div><div class="lbl">Porosi</div></div>
       <div class="ai-report-stat"><div class="val">${euro(profit.profit ?? sales.total_revenue)}</div><div class="lbl">Fitim i vlerësuar</div></div>
       <div class="ai-report-stat"><div class="val">${(json.top_items || []).length}</div><div class="lbl">Top artikuj</div></div>`;
+
+    if (report.profit_forecast && Object.keys(report.profit_forecast).length) {
+      renderProfitForecast(report.profit_forecast);
+    }
   }
 
   function renderHistoryTable() {
@@ -74,10 +170,43 @@
     body.querySelectorAll(".btn-ai-report-view").forEach(btn => {
       btn.addEventListener("click", () => {
         const report = reportsCache.find(r => r.report_date === btn.dataset.date);
-        if (report) renderTodayReport(report, report.report_date);
+        if (report) {
+          renderTodayReport(report, report.report_date);
+          if (report.profit_forecast && Object.keys(report.profit_forecast).length) {
+            renderProfitForecast(report.profit_forecast);
+          }
+        }
         setAiReportMsg(`U shfaq raporti për ${btn.dataset.date}.`, true);
       });
     });
+  }
+
+  async function loadProfitForecast() {
+    try {
+      const data = await api("/api/owner/ai-reports/profit-forecast");
+      renderProfitForecast(data.profit_forecast);
+    } catch (err) {
+      renderProfitForecast(null);
+      setAiReportMsg(err.message, false);
+    }
+  }
+
+  async function refreshProfitForecast() {
+    const btn = document.getElementById("btn-profit-forecast-refresh");
+    if (btn) btn.disabled = true;
+    setAiReportMsg("Duke llogaritur parashikimin…", true);
+    try {
+      const data = await api("/api/owner/ai-reports/profit-forecast/refresh", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      renderProfitForecast(data.profit_forecast);
+      setAiReportMsg("Parashikimi u përditësua.", true);
+    } catch (err) {
+      setAiReportMsg(err.message, false);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   async function loadOwnerAiReports() {
@@ -87,8 +216,14 @@
       reportsCache = data.reports || [];
       renderHistoryTable();
 
-      let todayReport = reportsCache.find(r => r.report_date === data.today);
+      const todayReport = reportsCache.find(r => r.report_date === data.today);
       renderTodayReport(todayReport, data.today);
+
+      if (todayReport?.profit_forecast && Object.keys(todayReport.profit_forecast).length) {
+        renderProfitForecast(todayReport.profit_forecast);
+      } else {
+        await loadProfitForecast();
+      }
       setAiReportMsg("", true);
     } catch (err) {
       setAiReportMsg(err.message, false);
@@ -133,6 +268,7 @@
         else reportsCache.unshift(report);
         renderHistoryTable();
         renderTodayReport(report, report.report_date);
+        if (report.profit_forecast) renderProfitForecast(report.profit_forecast);
       }
       setAiReportMsg(
         data.skipped ? "Raporti për sot ekziston tashmë." : "Raporti AI u gjenerua me sukses.",
@@ -150,5 +286,8 @@
   });
   document.getElementById("btn-ai-report-refresh")?.addEventListener("click", () => {
     loadOwnerAiReports().catch(err => setAiReportMsg(err.message, false));
+  });
+  document.getElementById("btn-profit-forecast-refresh")?.addEventListener("click", () => {
+    refreshProfitForecast().catch(err => setAiReportMsg(err.message, false));
   });
 })();

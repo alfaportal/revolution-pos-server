@@ -84,6 +84,7 @@ const {
   getTodayReport,
   generateDailyReportForClient,
   getZonedParts,
+  getProfitForecastForClient,
 } = require("../services/aiDailyReportService");
 const {
   getSuggestionsByDate,
@@ -550,6 +551,37 @@ router.get("/ai-reports", requireAiPackage, async (req, res) => {
     const limit = Math.min(90, Number(req.query.limit) || 30);
     const reports = await listReportsForClient(req.user.client_id, { limit });
     res.json({ ok: true, reports, today: getZonedParts().date });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-reports/profit-forecast", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const forecast = await getProfitForecastForClient(req.user.client_id, client?.emri || "");
+    res.json({ ok: true, profit_forecast: forecast, today: getZonedParts().date });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-reports/profit-forecast/refresh", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const { buildProfitForecast } = require("../services/profitForecastService");
+    const forecast = await buildProfitForecast(req.user.client_id, client?.emri || "");
+    const today = getZonedParts().date;
+    const existing = await getReportByDate(req.user.client_id, today);
+    if (existing) {
+      const db = require("../db").getSupabase();
+      await db
+        .from("ai_daily_reports")
+        .update({ profit_forecast: forecast })
+        .eq("restaurant_id", req.user.client_id)
+        .eq("report_date", today);
+    }
+    res.json({ ok: true, profit_forecast: forecast });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

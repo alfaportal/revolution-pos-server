@@ -465,6 +465,76 @@
   margin-top: 0.15rem;
 }
 
+.profit-forecast-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  padding: 0.75rem 0.25rem 0;
+  margin: 0.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.profit-forecast-bar {
+  flex: 1 0 8px;
+  min-width: 8px;
+  max-width: 14px;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+}
+
+.profit-forecast-bar:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.profit-forecast-compare,
+.profit-forecast-forecast {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.profit-forecast-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.profit-forecast-box .title {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.profit-forecast-box .val {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.profit-forecast-box .delta {
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+}
+
+.profit-forecast-box .delta.up { color: #15803d; }
+.profit-forecast-box .delta.down { color: #b91c1c; }
+.profit-forecast-box .delta.flat { color: var(--muted); }
+
 .tab.ai-feature-tab.hidden {
   display: none;
 }

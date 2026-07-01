@@ -3,6 +3,8 @@ const { getAiConfig, isAiPaused } = require("../lib/aiConfig");
 const { clientHasFeature } = require("../lib/packages");
 const { getOwnerReport, normalizeItems } = require("./salesService");
 const { getStockSummary, listStockForOwner, resolveOwnerEmail } = require("./stockService");
+const { listInventoryAlerts } = require("./inventoryService");
+const { insertAiUsageLog } = require("./aiUsageService");
 const { isEmailConfigured, sendDailyAiReportEmail } = require("./emailService");
 
 const REPORT_TZ = process.env.REPORT_CRON_TZ || "Europe/Belgrade";
@@ -306,7 +308,7 @@ async function listReportsForClient(clientId, { limit = 30 } = {}) {
   const db = getSupabase();
   const { data, error } = await db
     .from("ai_daily_reports")
-    .select("id, report_date, summary_text, report_json, email_sent_at, tokens_used, created_at")
+    .select("id, report_date, summary_text, report_json, profit_forecast, email_sent_at, tokens_used, created_at")
     .eq("restaurant_id", clientId)
     .order("report_date", { ascending: false })
     .limit(Math.min(90, Math.max(1, Number(limit) || 30)));
@@ -314,7 +316,15 @@ async function listReportsForClient(clientId, { limit = 30 } = {}) {
   return data || [];
 }
 
-async function saveDailyReport({ clientId, reportDate, reportJson, summaryText, tokensUsed, emailSentAt }) {
+async function saveDailyReport({
+  clientId,
+  reportDate,
+  reportJson,
+  summaryText,
+  tokensUsed,
+  emailSentAt,
+  profitForecast,
+}) {
   const db = getSupabase();
   const row = {
     restaurant_id: clientId,
@@ -323,6 +333,7 @@ async function saveDailyReport({ clientId, reportDate, reportJson, summaryText, 
     summary_text: summaryText,
     tokens_used: Math.max(0, Number(tokensUsed) || 0),
     email_sent_at: emailSentAt || null,
+    profit_forecast: profitForecast && typeof profitForecast === "object" ? profitForecast : {},
   };
   const { data, error } = await db
     .from("ai_daily_reports")
@@ -342,6 +353,16 @@ async function generateDailyReportForClient(client, reportDate, { sendEmail = tr
 
   const payload = await buildDailyReportPayload(clientId, reportDate);
   const { summary, tokensUsed } = await generateAiSummary(client.emri, payload);
+
+  let profitForecast = {};
+  let forecastTokens = 0;
+  try {
+    const { buildProfitForecast } = require("./profitForecastService");
+    profitForecast = await buildProfitForecast(clientId, client.emri);
+    forecastTokens = Number(profitForecast.tokens_used) || 0;
+  } catch (err) {
+    console.warn(`[aiDailyReport] profit forecast ${clientId}:`, err.message);
+  }
 
   let emailSentAt = null;
   if (sendEmail && isEmailConfigured()) {
@@ -367,14 +388,15 @@ async function generateDailyReportForClient(client, reportDate, { sendEmail = tr
     reportDate,
     reportJson: payload,
     summaryText: summary,
-    tokensUsed,
+    tokensUsed: tokensUsed + forecastTokens,
     emailSentAt,
+    profitForecast,
   });
 
   insertAiUsageLog({
     restaurantId: clientId,
     featureType: "chat",
-    tokensUsed,
+    tokensUsed: tokensUsed + forecastTokens,
   }).catch(err => console.warn("[aiDailyReport] usage log:", err.message));
 
   return { skipped: false, report };
@@ -412,14 +434,26 @@ async function getTodayReport(clientId) {
   return getReportByDate(clientId, today);
 }
 
+async function getProfitForecastForClient(clientId, clientName) {
+  const today = getZonedParts().date;
+  const existing = await getReportByDate(clientId, today);
+  if (existing?.profit_forecast && Object.keys(existing.profit_forecast).length) {
+    return existing.profit_forecast;
+  }
+  const { buildProfitForecast } = require("./profitForecastService");
+  return buildProfitForecast(clientId, clientName);
+}
+
 module.exports = {
   REPORT_TZ,
   getZonedParts,
   buildDailyReportPayload,
+  estimateDailyProfit,
   listEligibleClients,
   listReportsForClient,
   getReportByDate,
   getTodayReport,
+  getProfitForecastForClient,
   generateDailyReportForClient,
   processAiDailyReports,
 };
