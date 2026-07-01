@@ -2075,6 +2075,7 @@ document.querySelectorAll(".tab").forEach(tab => {
       loadOwnerStock?.();
       applyAiUiState();
     }
+    if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
     if (tab.dataset.tab === "licenca") loadLicense();
@@ -2426,10 +2427,12 @@ async function applyAiUiState() {
       }
     }
     window.applyInvoiceScanAiButton?.(data);
+    window.applyAiReportsTab?.(data);
   } catch {
     root?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
     document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
+    document.getElementById("tab-ai-reports")?.setAttribute("hidden", "");
   }
 }
 

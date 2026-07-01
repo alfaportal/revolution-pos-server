@@ -76,6 +76,14 @@ const {
   updateIngredient,
   applyInvoiceScanItems,
 } = require("../services/inventoryService");
+const { requireAiPackage } = require("../middleware/requireAiPackage");
+const {
+  listReportsForClient,
+  getReportByDate,
+  getOrGenerateTodayReport,
+  generateDailyReportForClient,
+  getZonedParts,
+} = require("../services/aiDailyReportService");
 
 const router = express.Router();
 
@@ -437,6 +445,53 @@ router.get("/inventory/alerts", async (req, res) => {
 router.post("/inventory/apply-invoice-scan", async (req, res) => {
   try {
     const result = await applyInvoiceScanItems(req.user.client_id, req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-reports", requireAiPackage, async (req, res) => {
+  try {
+    const limit = Math.min(90, Number(req.query.limit) || 30);
+    const reports = await listReportsForClient(req.user.client_id, { limit });
+    res.json({ ok: true, reports, today: getZonedParts().date });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-reports/today", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const report = await getOrGenerateTodayReport(req.user.client_id, client);
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-reports/:date", requireAiPackage, async (req, res) => {
+  try {
+    const date = String(req.params.date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ ok: false, gabim: "Data e pavlefshme." });
+    }
+    const report = await getReportByDate(req.user.client_id, date);
+    if (!report) {
+      return res.status(404).json({ ok: false, gabim: "Nuk ka raport për këtë datë." });
+    }
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-reports/generate", requireAiPackage, async (req, res) => {
+  try {
+    const client = await getClientById(req.user.client_id);
+    const date = String(req.body?.date || getZonedParts().date).slice(0, 10);
+    const result = await generateDailyReportForClient(client, date, { sendEmail: false });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });

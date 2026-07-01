@@ -236,6 +236,43 @@ async function sendStockLowAlertEmail({ to, clientName, itemName, quantity, thre
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendDailyAiReportEmail({ to, clientName, reportDate, summaryText, payload }) {
+  const revenue = Number(payload?.sales?.total_revenue || 0);
+  const orders = Number(payload?.sales?.order_count || 0);
+  const profit = Number(payload?.profit?.profit ?? revenue);
+  const subject = `Raporti AI ditor — ${reportDate} — Revolution POS`;
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Raporti AI për ${reportDate}:`,
+    "",
+    summaryText || "—",
+    "",
+    `Shitje: ${revenue.toFixed(2)} € (${orders} porosi)`,
+    `Fitim i vlerësuar: ${profit.toFixed(2)} €`,
+    "",
+    "Hapni panelin e pronarit → Raporte AI për detaje.",
+  ].join("\n");
+
+  const topItems = (payload?.top_items || [])
+    .map(i => `<li>${escapeHtmlEmail(i.name)} — ${Number(i.quantity)} copë, ${Number(i.revenue).toFixed(2)} €</li>`)
+    .join("");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p><strong>Raporti AI ditor — ${escapeHtmlEmail(reportDate)}</strong></p>
+    <p style="white-space:pre-wrap;line-height:1.5">${escapeHtmlEmail(summaryText || "—")}</p>
+    <p style="margin-top:16px">
+      <strong>Shitje:</strong> ${revenue.toFixed(2)} € · ${orders} porosi<br>
+      <strong>Fitim i vlerësuar:</strong> ${profit.toFixed(2)} €
+    </p>
+    ${topItems ? `<ul style="margin-top:12px">${topItems}</ul>` : ""}
+    <p style="margin-top:16px;color:#666;font-size:13px">Hapni panelin e pronarit → Raporte AI për historikun e plotë.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   resolveSupportPhone,
@@ -247,4 +284,5 @@ module.exports = {
   sendTrialExpiredEmail,
   sendAdminTrialExpiryAlertEmail,
   sendStockLowAlertEmail,
+  sendDailyAiReportEmail,
 };

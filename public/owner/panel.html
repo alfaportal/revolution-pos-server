@@ -86,6 +86,7 @@
       <button class="tab" data-tab="licenca">Licenca</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="stoku">Stoku</button>
+      <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
       <button class="tab" data-tab="raportet">Raportet</button>
     </div>
 
@@ -554,6 +555,42 @@
       </div>
     </div>
 
+    <div id="panel-ai-raporte" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Raporti AI i sotëm</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-report-refresh">Rifresko</button>
+        </div>
+        <p class="links-hint">
+          Çdo ditë në <strong>23:59</strong> AI analizon shitjet, artikujt më të shitur, stokun e ulët dhe fitimin.
+          Përmbledhja dërgohet me email te adresa e pronarit (nëse Resend është aktiv).
+        </p>
+        <div id="ai-report-today-meta" class="links-hint" style="margin-top:0"></div>
+        <div id="ai-report-today-summary" class="ai-report-summary"></div>
+        <div id="ai-report-today-details" class="ai-report-details"></div>
+        <div id="ai-report-msg" class="owner-license-msg"></div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Historiku i raporteve</div>
+        <div class="overflow-x">
+          <table class="menu-owner-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Shitje</th>
+                <th>Porosi</th>
+                <th>Fitim</th>
+                <th class="col-actions">Veprime</th>
+              </tr>
+            </thead>
+            <tbody id="ai-reports-history-body">
+              <tr><td colspan="5" style="color:var(--muted)">Duke ngarkuar…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="panel-raportet" class="panel-section hidden">
       <div class="card">
         <div class="card-title">Të ardhurat</div>
@@ -830,5 +867,6 @@
   <script src="/js/owner-stock.js?v=2"></script>
   <script src="/js/owner-inventory.js?v=2"></script>
   <script src="/js/owner-invoice-scan.js?v=1"></script>
+  <script src="/js/owner-ai-reports.js?v=1"></script>
 </body>
 </html>

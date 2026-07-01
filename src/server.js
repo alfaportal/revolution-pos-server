@@ -37,6 +37,7 @@ const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
+const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 
@@ -266,6 +267,7 @@ async function start() {
 
   startLicenseExpiryCron();
   startTrialNotificationCron();
+  startAiDailyReportCron();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);
@@ -292,6 +294,7 @@ async function start() {
     console.log(`  🤖 AI chat:     POST /api/ai/chat`);
     console.log(`  📷 AI menu:     POST /api/ai/scan-menu`);
     console.log(`  🧾 AI invoice:  POST /api/ai/scan-invoice`);
+    console.log(`  📊 AI reports:  GET /api/owner/ai-reports`);
     console.log(`  🩺 Health DB:   GET /health/db\n`);
   });
 }

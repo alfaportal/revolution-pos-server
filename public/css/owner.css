@@ -386,6 +386,45 @@
   align-items: center;
 }
 
+.ai-report-summary {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  margin: 0.75rem 0;
+}
+
+.ai-report-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-report-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.ai-report-stat .val {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.ai-report-stat .lbl {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.tab.ai-feature-tab.hidden {
+  display: none;
+}
+
 .zreport-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

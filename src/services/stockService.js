@@ -360,4 +360,5 @@ module.exports = {
   listStockAlertsForAdmin,
   countStockAlertClients,
   matchMenuItemForOrder,
+  resolveOwnerEmail,
 };
