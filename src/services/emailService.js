@@ -330,6 +330,7 @@ async function sendSupplySuggestionEmail({
 
 module.exports = {
   isEmailConfigured,
+  deliverEmail,
   resolveSupportPhone,
   resolveAdminNotifyEmail,
   sendOwnerPasswordResetEmail,

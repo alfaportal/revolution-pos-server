@@ -1,0 +1,23 @@
+name: Cloud keep-alive
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Primary — /health
+        run: curl -fsS --max-time 30 https://revolution-pos.com/health
+
+      - name: Primary — /health/db
+        run: curl -fsS --max-time 30 https://revolution-pos.com/health/db
+
+      - name: Backup1 — /health
+        run: curl -fsS --max-time 30 https://backup1.revolution-pos.com/health || echo "backup1 health failed"
+
+      - name: Backup legacy — /health
+        run: curl -fsS --max-time 30 https://backup.revolution-pos.com/health || echo "backup legacy health failed"

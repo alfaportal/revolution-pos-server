@@ -40,6 +40,9 @@ const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
 const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
 const { startNotificationDailyCron } = require("./jobs/notificationDailyReports");
+const { startCloudHealthMonitor } = require("./jobs/cloudHealthMonitor");
+const { startWeeklyDataExportCron } = require("./jobs/weeklyDataExport");
+const systemRoutes = require("./routes/system");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 
@@ -86,6 +89,7 @@ app.use("/api/v1/sales", salesRoutes);
 app.use("/api/v1/pos", posRoutes);
 app.use("/api/v1/receipt", receiptRoutes);
 app.use("/api/v1/fiscal", fiscalRoutes);
+app.use("/api/v1/system", systemRoutes.router);
 app.use("/api/admin", adminRoutes);
 app.use("/api/super", superRoutes);
 app.use("/api/owner", ownerRoutes);
@@ -272,6 +276,8 @@ async function start() {
   startAiDailyReportCron();
   startSupplySuggestionCron();
   startNotificationDailyCron();
+  startCloudHealthMonitor();
+  startWeeklyDataExportCron();
 
   const publicOrigin = getPublicAppOrigin();
   console.log(`  🌐 Public URL:  ${publicOrigin}`);
