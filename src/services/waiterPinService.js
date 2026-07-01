@@ -123,6 +123,19 @@ async function listWaitersForOwner(clientId) {
   return rows.map(mapWaiterPublic);
 }
 
+async function countWaitersWithoutPin(clientId) {
+  const db = getSupabase();
+  const { count, error } = await db
+    .from("pos_staff")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientId)
+    .eq("role", "waiter")
+    .eq("active", true)
+    .is("pin_hash", null);
+  if (error) throw error;
+  return count || 0;
+}
+
 async function verifyWaiterPin(clientId, pin, webToken = null) {
   const normalized = assertPin(pin);
   const token = String(webToken || "").trim();
@@ -137,6 +150,13 @@ async function verifyWaiterPin(clientId, pin, webToken = null) {
   }
   const waiters = await loadPinWaiters(clientId, { activeOnly: true });
   if (!waiters.length) {
+    const withoutPin = await countWaitersWithoutPin(clientId);
+    if (withoutPin > 0) {
+      throw new Error(
+        "Kamarierët janë sinkronizuar nga POS por nuk kanë PIN për kyçje web. " +
+          "Vendoseni PIN te paneli i pronarit (Kamarierët) ose dërgoni PIN në sync nga POS (staff[].pin)."
+      );
+    }
     throw new Error("Nuk ka kamarierë me PIN. Pronari i shton te Kamarierët.");
   }
   for (const w of waiters) {
@@ -280,4 +300,6 @@ module.exports = {
   getWaiterByWebToken,
   ensureWaiterWebToken,
   ensureAllWaiterWebTokens,
+  hashPin,
+  generateWebToken,
 };
