@@ -543,7 +543,7 @@ router.get("/inventory/alerts", async (req, res) => {
   }
 });
 
-router.post("/inventory/apply-invoice-scan", async (req, res) => {
+router.post("/inventory/apply-invoice-scan", requireAiPackage, async (req, res) => {
   try {
     const result = await applyInvoiceScanItems(req.user.client_id, req.body || {});
     res.json({ ok: true, ...result });
@@ -578,6 +578,9 @@ router.post("/ai-reports/profit-forecast/refresh", requireAiPackage, async (req,
     const { buildProfitForecast } = require("../services/profitForecastService");
     const forecast = await buildProfitForecast(req.user.client_id, client?.emri || "");
     const today = getZonedParts().date;
+    if (forecast.tokens_used > 0) {
+      await trackAiUsage(req.user.client_id, "profit_forecast", forecast.tokens_used);
+    }
     const existing = await getReportByDate(req.user.client_id, today);
     if (existing) {
       const db = require("../db").getSupabase();

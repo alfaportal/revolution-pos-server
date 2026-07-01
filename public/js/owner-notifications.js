@@ -69,21 +69,7 @@
   }
 
   function applyNotificationsTab(data) {
-    const tab = document.getElementById("tab-notifications");
-    if (!tab || !data) return;
-    const active = !!data.enabled;
-    const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
-    if (active) {
-      tab.removeAttribute("hidden");
-      tab.classList.remove("hidden");
-    } else if (needsUpgrade) {
-      tab.removeAttribute("hidden");
-      tab.classList.remove("hidden");
-      tab.title = "Kërkon Pako 5 — AI Profesionale";
-    } else {
-      tab.setAttribute("hidden", "");
-      tab.classList.add("hidden");
-    }
+    window.applyAiFeatureLock?.(document.getElementById("tab-notifications"), data);
   }
 
   window.loadOwnerNotifications = loadOwnerNotifications;

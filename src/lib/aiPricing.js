@@ -1,17 +1,53 @@
-const FEATURE_TYPES = new Set(["chat", "ocr"]);
+/** Çmimet e vlerësuara AI (EUR / 1 000 tokenë — Anthropic Claude Haiku blended). */
 
-/** USD për 1 000 tokenë — mbishkruhet me env (AI_COST_USD_PER_1K_CHAT / _OCR). */
-const COST_PER_1K_TOKENS_USD = {
-  chat: Number(process.env.AI_COST_USD_PER_1K_CHAT) || 0.00015,
-  ocr: Number(process.env.AI_COST_USD_PER_1K_OCR) || 0.0025,
+const AI_FEATURES = [
+  "scan_menu",
+  "scan_invoice",
+  "daily_report",
+  "chat",
+  "supply_suggestion",
+  "profit_forecast",
+];
+
+const LEGACY_FEATURE_MAP = {
+  ocr: "scan_menu",
+  chat: "chat",
 };
 
-function normalizeFeatureType(featureType) {
-  const type = String(featureType || "").trim().toLowerCase();
-  if (!FEATURE_TYPES.has(type)) {
-    throw new Error(`feature_type i pavlefshëm: ${featureType}. Lejohen: chat, ocr.`);
+const FEATURE_LABELS = {
+  scan_menu: "Skanim menu",
+  scan_invoice: "Skanim fature",
+  daily_report: "Raport ditor AI",
+  chat: "Chat / asistent",
+  supply_suggestion: "Sugjerime furnizimi",
+  profit_forecast: "Parashikim fitimi",
+};
+
+/** EUR për 1 000 tokenë — mbishkruhet me env. */
+const COST_EUR_PER_1K = {
+  scan_menu: Number(process.env.AI_COST_EUR_PER_1K_SCAN) || 0.0023,
+  scan_invoice: Number(process.env.AI_COST_EUR_PER_1K_SCAN) || 0.0023,
+  chat: Number(process.env.AI_COST_EUR_PER_1K_CHAT) || 0.00025,
+  daily_report: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+  supply_suggestion: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+  profit_forecast: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+};
+
+const USD_TO_EUR = Number(process.env.AI_USD_TO_EUR) || 0.92;
+
+function normalizeFeature(feature) {
+  const raw = String(feature || "").trim().toLowerCase();
+  const mapped = LEGACY_FEATURE_MAP[raw] || raw;
+  if (!AI_FEATURES.includes(mapped)) {
+    throw new Error(`feature i pavlefshëm: ${feature}. Lejohen: ${AI_FEATURES.join(", ")}.`);
   }
-  return type;
+  return mapped;
+}
+
+/** Mbështetje për kolonën legacy feature_type (chat | ocr). */
+function legacyFeatureType(feature) {
+  const f = normalizeFeature(feature);
+  return f === "scan_menu" || f === "scan_invoice" ? "ocr" : "chat";
 }
 
 function normalizeTokens(tokensUsed) {
@@ -22,18 +58,44 @@ function normalizeTokens(tokensUsed) {
   return n;
 }
 
-function estimateCostUsd(featureType, tokensUsed) {
-  const type = normalizeFeatureType(featureType);
+function roundMoney(value) {
+  return Math.round(Number(value || 0) * 1_000_000) / 1_000_000;
+}
+
+function estimateCostEur(feature, tokensUsed) {
+  const f = normalizeFeature(feature);
   const tokens = normalizeTokens(tokensUsed);
-  const rate = COST_PER_1K_TOKENS_USD[type] ?? COST_PER_1K_TOKENS_USD.chat;
-  const cost = (tokens / 1000) * rate;
-  return Math.round(cost * 1_000_000) / 1_000_000;
+  const rate = COST_EUR_PER_1K[f] ?? COST_EUR_PER_1K.chat;
+  return roundMoney((tokens / 1000) * rate);
+}
+
+function estimateCostUsd(feature, tokensUsed) {
+  const eur = estimateCostEur(feature, tokensUsed);
+  return roundMoney(eur / USD_TO_EUR);
+}
+
+/** @deprecated Përdorni normalizeFeature — mbetet për kompatibilitet. */
+function normalizeFeatureType(featureType) {
+  return normalizeFeature(featureType);
+}
+
+/** @deprecated Përdorni estimateCostEur */
+function estimateCostUsdLegacy(featureType, tokensUsed) {
+  return estimateCostUsd(featureType, tokensUsed);
 }
 
 module.exports = {
-  FEATURE_TYPES,
-  COST_PER_1K_TOKENS_USD,
+  AI_FEATURES,
+  FEATURE_LABELS,
+  LEGACY_FEATURE_MAP,
+  COST_EUR_PER_1K,
+  USD_TO_EUR,
+  normalizeFeature,
   normalizeFeatureType,
+  legacyFeatureType,
   normalizeTokens,
+  estimateCostEur,
   estimateCostUsd,
+  estimateCostUsdLegacy,
+  roundMoney,
 };

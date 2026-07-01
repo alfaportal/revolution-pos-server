@@ -233,21 +233,7 @@
   window.loadOwnerAiReports = loadOwnerAiReports;
 
   function applyAiReportsTab(data) {
-    const tab = document.getElementById("tab-ai-reports");
-    if (!tab || !data) return;
-    const active = !!data.enabled;
-    const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
-    if (active) {
-      tab.removeAttribute("hidden");
-      tab.classList.remove("hidden");
-    } else if (needsUpgrade) {
-      tab.removeAttribute("hidden");
-      tab.classList.remove("hidden");
-      tab.title = "Kërkon Pako 4 — AI Profesionale";
-    } else {
-      tab.setAttribute("hidden", "");
-      tab.classList.add("hidden");
-    }
+    window.applyAiFeatureLock?.(document.getElementById("tab-ai-reports"), data);
   }
 
   window.applyAiReportsTab = applyAiReportsTab;

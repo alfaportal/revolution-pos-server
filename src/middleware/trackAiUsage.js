@@ -20,13 +20,11 @@ function isValidRestaurantId(restaurantId) {
 
 /**
  * Regjistron një thirrje AI në ai_usage_logs (mos e ndal operacionin nëse dështon logu).
- * @param {string} restaurantId - UUID i restorantit (clients.id)
- * @param {'chat'|'ocr'} featureType
+ * @param {string} restaurantId
+ * @param {import('../lib/aiPricing').AI_FEATURES[number]|'chat'|'ocr'} feature
  * @param {number} tokensUsed
- * @param {{ costUsd?: number }} [options]
- * @returns {Promise<object|null>}
  */
-async function trackAiUsage(restaurantId, featureType, tokensUsed, options = {}) {
+async function trackAiUsage(restaurantId, feature, tokensUsed, options = {}) {
   if (!isValidRestaurantId(restaurantId)) {
     console.warn("[ai-usage] restaurant_id mungon ose është i pavlefshëm");
     return null;
@@ -35,9 +33,10 @@ async function trackAiUsage(restaurantId, featureType, tokensUsed, options = {})
   try {
     return await insertAiUsageLog({
       restaurantId: restaurantId.trim(),
-      featureType,
+      feature: options.feature || feature,
       tokensUsed,
       costUsd: options.costUsd,
+      costEur: options.costEur,
     });
   } catch (err) {
     console.warn("[ai-usage]", err.message);
@@ -45,10 +44,9 @@ async function trackAiUsage(restaurantId, featureType, tokensUsed, options = {})
   }
 }
 
-/** E njëjta si trackAiUsage, por merr restaurant_id nga req (owner, kitchen, license, etj.). */
-async function trackAiUsageFromReq(req, featureType, tokensUsed, options = {}) {
+async function trackAiUsageFromReq(req, feature, tokensUsed, options = {}) {
   const restaurantId = options.restaurantId || resolveRestaurantId(req);
-  return trackAiUsage(restaurantId, featureType, tokensUsed, options);
+  return trackAiUsage(restaurantId, feature, tokensUsed, options);
 }
 
 module.exports = {

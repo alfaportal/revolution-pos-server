@@ -370,8 +370,8 @@ function normalizeTierId(tier) {
   return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_1";
 }
 
-/** Tier order shown in admin — main sellable tiers first. */
-const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4", "pako_5"];
+/** Tier order shown in admin — Super Admin dropdown. */
+const ADMIN_TIER_ORDER = ["pako_1", "pako_2", "pako_3", "pako_5"];
 const TIER_SHORT_LABELS = {
   pako_1: "Legacy",
   pako_2: "Pako 1",
@@ -383,7 +383,7 @@ const TIER_SHORT_LABELS = {
 function adminTierIdsForPicker(currentTier) {
   const current = normalizeTierId(currentTier);
   const ids = [...ADMIN_TIER_ORDER];
-  if (current === "pako_1" && !ids.includes("pako_1")) ids.unshift("pako_1");
+  if (current === "pako_4" && !ids.includes("pako_4")) ids.splice(3, 0, "pako_4");
   return ids;
 }
 
@@ -588,6 +588,16 @@ function openEditClient(id) {
     </select>
     <label>Pakoja</label>
     <div id="modal-package-tier-wrap" class="package-tier-picker"></div>
+    <label>Limit mujor tokenësh AI</label>
+    <input
+      type="number"
+      name="ai_monthly_token_limit"
+      min="0"
+      step="1"
+      placeholder="Pa limit"
+      value="${c.ai_monthly_token_limit != null && c.ai_monthly_token_limit !== "" ? esc(String(c.ai_monthly_token_limit)) : ""}"
+    >
+    <p class="field-hint">Opsional — bosh = pa limit. Kur arrihet, klienti merr 403 AI_TOKEN_LIMIT_EXCEEDED.</p>
     <label>Telefoni</label>
     <input name="telefoni" value="${esc(c.telefoni)}">
     <label>Email (kontakt biznesi)</label>
@@ -651,6 +661,7 @@ function openEditClient(id) {
       telefoni: fd.get("telefoni"),
       email: fd.get("email"),
       adresa: fd.get("adresa"),
+      ai_monthly_token_limit: String(fd.get("ai_monthly_token_limit") ?? "").trim() || null,
     };
     if (!linkOwnerClient) {
       clientPatch.owner_group_id = ownerGroupId || null;
@@ -2029,10 +2040,40 @@ function initAiUsageMonthInput() {
   if (input && !input.value) input.value = currentMonthValue();
 }
 
-function fmtUsd(value) {
+function fmtEur(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "0.000000";
   return n.toFixed(6);
+}
+
+const AI_FEATURE_LABELS = {
+  scan_menu: "Skanim menu",
+  scan_invoice: "Skanim fature",
+  daily_report: "Raport ditor",
+  chat: "Chat",
+  supply_suggestion: "Sugjerime furnizimi",
+  profit_forecast: "Parashikim fitimi",
+};
+
+function renderAiUsageBreakdown(row) {
+  const breakdown = row.breakdown || {};
+  const items = Object.keys(AI_FEATURE_LABELS)
+    .map((feature) => {
+      const item = breakdown[feature];
+      if (!item || !item.calls) return "";
+      return `<tr>
+        <td>${esc(AI_FEATURE_LABELS[feature])}</td>
+        <td>${Number(item.calls || 0).toLocaleString("sq-AL")}</td>
+        <td>${Number(item.tokens || 0).toLocaleString("sq-AL")}</td>
+        <td>${fmtEur(item.cost_eur)}</td>
+      </tr>`;
+    })
+    .filter(Boolean)
+    .join("");
+  if (!items) {
+    return `<tr><td colspan="4" style="color:var(--muted)">Pa breakdown për këtë muaj</td></tr>`;
+  }
+  return items;
 }
 
 async function loadAiUsage() {
@@ -2047,7 +2088,7 @@ async function loadAiUsage() {
   if (data.table_missing) {
     showMsg(
       "ai-usage-msg",
-      "Tabela ai_usage_logs nuk ekziston ende. Ekzekuto migrimin 023_ai_usage_logs.sql në Supabase.",
+      "Tabela ai_usage_logs nuk ekziston ende. Ekzekuto migrimet 023 dhe 035 në Supabase.",
       false,
     );
   } else {
@@ -2057,31 +2098,60 @@ async function loadAiUsage() {
   const rows = data.rows || [];
   tbl.innerHTML = rows.length
     ? rows
-        .map(
-          (row) => `<tr>
-          <td data-label="Lokal">${esc(row.local_name || row.restaurant_id || "—")}</td>
+        .map((row, idx) => {
+          const limitLabel =
+            row.token_limit != null && row.token_limit !== ""
+              ? Number(row.token_limit).toLocaleString("sq-AL")
+              : "—";
+          const remaining =
+            row.tokens_remaining != null
+              ? Number(row.tokens_remaining).toLocaleString("sq-AL")
+              : "";
+          const limitHint = remaining !== "" ? `<div class="field-hint">${remaining} mbetur</div>` : "";
+          return `<tr class="ai-usage-row" data-ai-usage-idx="${idx}">
+          <td data-label="Lokal"><strong>${esc(row.local_name || row.restaurant_id || "—")}</strong></td>
           <td data-label="Calls">${Number(row.calls || 0).toLocaleString("sq-AL")}</td>
           <td data-label="Tokens">${Number(row.tokens_total || 0).toLocaleString("sq-AL")}</td>
-          <td data-label="Kosto USD">${fmtUsd(row.cost_usd_total)}</td>
-        </tr>`,
-        )
+          <td data-label="Kosto EUR">${fmtEur(row.cost_eur_total)}</td>
+          <td data-label="Limit">${limitLabel}${limitHint}</td>
+          <td data-label="Detaje"><button type="button" class="btn btn-ghost btn-sm" data-ai-usage-toggle="${idx}">Breakdown</button></td>
+        </tr>
+        <tr class="ai-usage-detail hidden" data-ai-usage-detail="${idx}">
+          <td colspan="6">
+            <table class="admin-table admin-table--nested">
+              <thead><tr><th>Veçoria</th><th>Calls</th><th>Tokens</th><th>EUR</th></tr></thead>
+              <tbody>${renderAiUsageBreakdown(row)}</tbody>
+            </table>
+          </td>
+        </tr>`;
+        })
         .join("")
-    : `<tr><td colspan="4" style="color:var(--muted)">Nuk ka përdorim AI për ${esc(data.month || month)}</td></tr>`;
+    : `<tr><td colspan="6" style="color:var(--muted)">Nuk ka përdorim AI për ${esc(data.month || month)}</td></tr>`;
 
-  const totals = data.totals || { calls: 0, tokens_total: 0, cost_usd_total: 0 };
+  tbl.querySelectorAll("[data-ai-usage-toggle]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = btn.dataset.aiUsageToggle;
+      const detail = tbl.querySelector(`[data-ai-usage-detail="${idx}"]`);
+      detail?.classList.toggle("hidden");
+    });
+  });
+
+  const totals = data.totals || { calls: 0, tokens_total: 0, cost_eur_total: 0 };
   foot.innerHTML = `<tr class="admin-table-total">
     <td><strong>Total</strong></td>
     <td><strong>${Number(totals.calls || 0).toLocaleString("sq-AL")}</strong></td>
     <td><strong>${Number(totals.tokens_total || 0).toLocaleString("sq-AL")}</strong></td>
-    <td><strong>${fmtUsd(totals.cost_usd_total)}</strong></td>
+    <td><strong>${fmtEur(totals.cost_eur_total)}</strong></td>
+    <td colspan="2"></td>
   </tr>`;
 }
 
-async function exportAiUsageCsv() {
+async function exportAiUsageCsv({ detail = false } = {}) {
   initAiUsageMonthInput();
   const month = document.getElementById("ai-usage-month")?.value || currentMonthValue();
+  const detailParam = detail ? "&detail=1" : "";
   const res = await fetch(
-    apiUrl(`/api/super/ai-usage?month=${encodeURIComponent(month)}&format=csv`),
+    apiUrl(`/api/super/ai-usage?month=${encodeURIComponent(month)}&format=csv${detailParam}`),
     {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       credentials: "include",
@@ -2095,7 +2165,7 @@ async function exportAiUsageCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `ai-usage-${month}.csv`;
+  link.download = detail ? `ai-usage-${month}-detail.csv` : `ai-usage-${month}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -2261,7 +2331,19 @@ document.getElementById("btn-ai-usage-csv")?.addEventListener("click", async () 
   const btn = document.getElementById("btn-ai-usage-csv");
   if (btn) btn.disabled = true;
   try {
-    await exportAiUsageCsv();
+    await exportAiUsageCsv({ detail: false });
+  } catch (err) {
+    showMsg("ai-usage-msg", err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-ai-usage-csv-detail")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-ai-usage-csv-detail");
+  if (btn) btn.disabled = true;
+  try {
+    await exportAiUsageCsv({ detail: true });
   } catch (err) {
     showMsg("ai-usage-msg", err.message, false);
   } finally {

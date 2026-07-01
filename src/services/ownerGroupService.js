@@ -172,6 +172,7 @@ async function userCanAccessClient(userId, clientId) {
 }
 
 async function buildOwnerAuthContext(user, { clientId, viewAll } = {}) {
+  const { normalizePackageTier } = require("../lib/packages");
   const ownerGroupId = await resolveOwnerGroupForUser(user.id, user.client_id);
   let activeClientId = clientId || user.client_id;
   let aggregateView = !!viewAll;
@@ -192,6 +193,17 @@ async function buildOwnerAuthContext(user, { clientId, viewAll } = {}) {
     activeClientId = ids[0] || user.client_id;
   }
 
+  let package_tier = "pako_1";
+  if (activeClientId) {
+    const db = getSupabase();
+    const { data: clientRow } = await db
+      .from("clients")
+      .select("package_tier")
+      .eq("id", activeClientId)
+      .maybeSingle();
+    package_tier = normalizePackageTier(clientRow?.package_tier);
+  }
+
   return {
     sub: user.id,
     email: user.email,
@@ -200,6 +212,7 @@ async function buildOwnerAuthContext(user, { clientId, viewAll } = {}) {
     client_id: activeClientId,
     owner_group_id: ownerGroupId || null,
     view_all: aggregateView,
+    package_tier,
   };
 }
 

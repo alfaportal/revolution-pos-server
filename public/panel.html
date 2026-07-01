@@ -213,7 +213,7 @@
         <div class="card admin-only-card">
           <div class="card-title">AI Usage</div>
           <p class="field-hint" style="margin-bottom:1rem">
-            Përdorimi i AI (chat &amp; OCR) për çdo lokal — thirrje, tokenë dhe kosto totale USD.
+            Përdorimi i AI për çdo klient — thirrje, tokenë, kosto EUR (Anthropic) dhe breakdown sipas veçorisë.
           </p>
           <div id="ai-usage-msg" class="alert hidden"></div>
           <div class="form-row" style="align-items:flex-end;margin-bottom:1rem">
@@ -224,6 +224,7 @@
             <div class="link-actions" style="margin-bottom:0">
               <button type="button" class="btn btn-primary btn-sm" id="btn-ai-usage-load">Shfaq</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-usage-csv">Eksport CSV</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-usage-csv-detail">CSV detaje</button>
             </div>
           </div>
           <div class="overflow-x">
@@ -233,7 +234,9 @@
                   <th>Lokal</th>
                   <th>Calls këtë muaj</th>
                   <th>Tokens total</th>
-                  <th>Kosto totale (USD)</th>
+                  <th>Kosto EUR</th>
+                  <th>Limit tokenësh</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="tbl-ai-usage"></tbody>

@@ -1,7 +1,7 @@
 const express = require("express");
 const { authRequired, superAdminOnly } = require("../middleware/auth");
 const { asyncHandler } = require("../lib/asyncHandler");
-const { listAiUsageSummary, aiUsageRowsToCsv } = require("../services/aiUsageReportService");
+const { listAiUsageSummary, aiUsageRowsToCsv, aiUsageDetailRowsToCsv } = require("../services/aiUsageReportService");
 
 const router = express.Router();
 
@@ -13,12 +13,16 @@ router.get(
     const summary = await listAiUsageSummary({ month: req.query.month });
 
     if (String(req.query.format || "").toLowerCase() === "csv") {
+      const csv =
+        String(req.query.detail || "").toLowerCase() === "1"
+          ? aiUsageDetailRowsToCsv(summary.rows)
+          : aiUsageRowsToCsv(summary.rows);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="ai-usage-${summary.month}.csv"`,
       );
-      return res.send(aiUsageRowsToCsv(summary.rows));
+      return res.send(csv);
     }
 
     res.json({

@@ -271,7 +271,7 @@ async function generateForClient(client, suggestionDate, { force = false } = {})
   if (tokensUsed > 0) {
     insertAiUsageLog({
       restaurantId: clientId,
-      featureType: "chat",
+      feature: "supply_suggestion",
       tokensUsed,
     }).catch(err => console.warn("[supplySuggestions] usage log:", err.message));
   }

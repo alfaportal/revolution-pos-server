@@ -87,7 +87,10 @@ function clientHasFeature(client, feature) {
   return Boolean(features[feature]);
 }
 
+const AI_UPGRADE_MESSAGE = "Kontaktoni Revolution POS për upgrade";
+
 function packageUpgradeMessage(feature) {
+  if (feature === "ai") return AI_UPGRADE_MESSAGE;
   const labels = {
     kds: "KDS (kuzhina)",
     waiter: "Kamarieri",
@@ -95,7 +98,6 @@ function packageUpgradeMessage(feature) {
     mobile: "Aplikacioni mobile",
     website: "Website",
     online_orders: "Porosi online (takeaway & delivery)",
-    ai: "AI (skanim menu & asistent)",
   };
   const name = labels[feature] || feature;
   return `${name} nuk përfshihet në paketën tuaj. Kontaktoni administratorin për upgrade.`;
@@ -110,4 +112,5 @@ module.exports = {
   featuresForTier,
   clientHasFeature,
   packageUpgradeMessage,
+  AI_UPGRADE_MESSAGE,
 };

@@ -539,6 +539,15 @@
   display: none;
 }
 
+.ai-feature-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ai-feature-locked:not(.tab):not(.ai-chat-fab) {
+  pointer-events: none;
+}
+
 .zreport-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

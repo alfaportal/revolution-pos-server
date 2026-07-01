@@ -194,6 +194,36 @@ function renderOrderCard(o) {
 }
 
 let ownerPackageFeatures = {};
+const AI_UPGRADE_MSG = "Kontaktoni Revolution POS për upgrade";
+window.AI_UPGRADE_MSG = AI_UPGRADE_MSG;
+
+function applyAiFeatureLock(el, data) {
+  if (!el || !data) return;
+  const active = !!data.enabled;
+  const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
+  if (active) {
+    el.removeAttribute("hidden");
+    el.classList.remove("hidden", "ai-feature-locked");
+    el.removeAttribute("title");
+    el.removeAttribute("aria-disabled");
+    if (el.disabled !== undefined) el.disabled = false;
+  } else if (needsUpgrade) {
+    el.removeAttribute("hidden");
+    el.classList.remove("hidden");
+    el.classList.add("ai-feature-locked");
+    el.title = AI_UPGRADE_MSG;
+    el.setAttribute("aria-disabled", "true");
+    if (el.disabled !== undefined) el.disabled = true;
+  } else {
+    el.setAttribute("hidden", "");
+    el.classList.add("hidden");
+    el.classList.remove("ai-feature-locked");
+    el.removeAttribute("aria-disabled");
+    el.removeAttribute("title");
+    if (el.disabled !== undefined) el.disabled = false;
+  }
+}
+window.applyAiFeatureLock = applyAiFeatureLock;
 
 async function loadClient() {
   const data = await api("/api/owner/client");
@@ -2092,6 +2122,10 @@ document.querySelectorAll(".reservation-filter").forEach(btn => {
 
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
+    if (tab.classList.contains("ai-feature-locked")) {
+      alert(AI_UPGRADE_MSG);
+      return;
+    }
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     tab.classList.add("active");
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
@@ -2383,25 +2417,28 @@ async function importScannedMenuItems() {
 async function applyAiUiState() {
   const root = document.getElementById("ai-chat-root");
   const scanBtn = document.getElementById("btn-menu-scan-ai");
+  const fab = document.getElementById("ai-chat-fab");
   try {
     const data = await api("/api/ai/status");
     const active = !!data.enabled;
     const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
     root?.classList.toggle("hidden", !active);
+    applyAiFeatureLock(fab, data);
     if (scanBtn) {
       if (active) {
         scanBtn.removeAttribute("hidden");
         scanBtn.disabled = false;
+        scanBtn.classList.remove("ai-feature-locked");
         scanBtn.removeAttribute("title");
+      } else if (needsUpgrade) {
+        scanBtn.removeAttribute("hidden");
+        scanBtn.disabled = true;
+        scanBtn.classList.add("ai-feature-locked");
+        scanBtn.title = AI_UPGRADE_MSG;
       } else {
         scanBtn.setAttribute("hidden", "");
-        if (needsUpgrade) {
-          scanBtn.removeAttribute("hidden");
-          scanBtn.disabled = true;
-          scanBtn.title = "Kërkon Pako 4 — AI Profesionale. Kontaktoni administratorin.";
-        } else {
-          scanBtn.disabled = false;
-        }
+        scanBtn.disabled = false;
+        scanBtn.classList.remove("ai-feature-locked");
       }
     }
     window.applyInvoiceScanAiButton?.(data);
@@ -2411,6 +2448,7 @@ async function applyAiUiState() {
     window.applyNotificationsTab?.(data);
   } catch {
     root?.classList.add("hidden");
+    fab?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
     document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-reports")?.setAttribute("hidden", "");
@@ -2420,6 +2458,11 @@ async function applyAiUiState() {
 }
 
 document.getElementById("ai-chat-fab")?.addEventListener("click", () => {
+  const fab = document.getElementById("ai-chat-fab");
+  if (fab?.classList.contains("ai-feature-locked")) {
+    alert(AI_UPGRADE_MSG);
+    return;
+  }
   window.openOwnerAiAssistantTab?.();
 });
 

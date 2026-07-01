@@ -492,6 +492,19 @@ async function updateClient(id, body) {
     patch.owner_group_id = gid ? String(gid).trim() : null;
   }
 
+  if (Object.prototype.hasOwnProperty.call(body, "ai_monthly_token_limit")) {
+    const raw = body.ai_monthly_token_limit;
+    if (raw === null || raw === "" || raw === undefined) {
+      patch.ai_monthly_token_limit = null;
+    } else {
+      const limit = Math.floor(Number(raw));
+      if (!Number.isFinite(limit) || limit < 0) {
+        throw new Error("Limiti mujor i tokenëve duhet të jetë numër ≥ 0 ose bosh (pa limit).");
+      }
+      patch.ai_monthly_token_limit = limit;
+    }
+  }
+
   if (!Object.keys(patch).length) {
     throw new Error("Nuk ka fusha për përditësim.");
   }

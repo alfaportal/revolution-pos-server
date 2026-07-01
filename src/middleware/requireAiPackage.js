@@ -1,5 +1,6 @@
 const { getClientById } = require("../services/licenseService");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
+const { assertAiTokenLimit } = require("../services/aiTokenLimitService");
 const { resolveRestaurantId } = require("./trackAiUsage");
 
 async function requireAiPackage(req, res, next) {
@@ -21,6 +22,22 @@ async function requireAiPackage(req, res, next) {
         package_tier: client.package_tier || "pako_1",
       });
     }
+
+    try {
+      await assertAiTokenLimit(restaurantId);
+    } catch (limitErr) {
+      if (limitErr.code === "AI_TOKEN_LIMIT_EXCEEDED") {
+        return res.status(403).json({
+          ok: false,
+          gabim: limitErr.message,
+          code: limitErr.code,
+          tokens_used: limitErr.tokens_used,
+          tokens_limit: limitErr.tokens_limit,
+        });
+      }
+      throw limitErr;
+    }
+
     req.client = client;
     return next();
   } catch (e) {

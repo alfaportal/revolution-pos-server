@@ -20,8 +20,9 @@ const { clientHasFeature } = require("../lib/packages");
 router.get("/status", licenseApiKeyOptional, optionalAiStaffAuth, asyncHandler(async (req, res) => {
   const restaurantId = resolveRestaurantId(req);
   let packageAi = false;
+  let client = null;
   if (restaurantId) {
-    const client = await getClientById(restaurantId).catch(() => null);
+    client = await getClientById(restaurantId).catch(() => null);
     packageAi = clientHasFeature(client, "ai");
   }
   res.json({
@@ -29,6 +30,7 @@ router.get("/status", licenseApiKeyOptional, optionalAiStaffAuth, asyncHandler(a
     paused: isAiPaused(),
     configured: isAiEnabled(),
     package_ai: packageAi,
+    package_tier: client?.package_tier || null,
   });
 }));
 
@@ -81,7 +83,7 @@ router.post(
     const image = extractMenuScanImage(req);
     const result = await scanMenuFromImage(image);
 
-    await trackAiUsage(restaurantId, "ocr", result.tokensUsed);
+    await trackAiUsage(restaurantId, "scan_menu", result.tokensUsed);
 
     res.json({
       ok: true,
@@ -113,7 +115,7 @@ router.post(
     const image = extractMenuScanImage(req);
     const result = await scanInvoiceFromImage(image);
 
-    await trackAiUsage(restaurantId, "ocr", result.tokensUsed);
+    await trackAiUsage(restaurantId, "scan_invoice", result.tokensUsed);
 
     res.json({
       ok: true,

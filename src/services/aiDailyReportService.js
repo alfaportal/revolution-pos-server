@@ -393,11 +393,20 @@ async function generateDailyReportForClient(client, reportDate, { sendEmail = tr
     profitForecast,
   });
 
-  insertAiUsageLog({
-    restaurantId: clientId,
-    featureType: "chat",
-    tokensUsed: tokensUsed + forecastTokens,
-  }).catch(err => console.warn("[aiDailyReport] usage log:", err.message));
+  if (tokensUsed > 0) {
+    insertAiUsageLog({
+      restaurantId: clientId,
+      feature: "daily_report",
+      tokensUsed,
+    }).catch(err => console.warn("[aiDailyReport] usage log daily_report:", err.message));
+  }
+  if (forecastTokens > 0) {
+    insertAiUsageLog({
+      restaurantId: clientId,
+      feature: "profit_forecast",
+      tokensUsed: forecastTokens,
+    }).catch(err => console.warn("[aiDailyReport] usage log profit_forecast:", err.message));
+  }
 
   return { skipped: false, report };
 }

@@ -218,19 +218,23 @@
   function applyInvoiceScanAiButton(data) {
     const btn = document.getElementById("btn-invoice-scan-ai");
     if (!btn || !data) return;
+    const msg = window.AI_UPGRADE_MSG || "Kontaktoni Revolution POS për upgrade";
     const active = !!data.enabled;
     const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
     if (active) {
       btn.removeAttribute("hidden");
       btn.disabled = false;
+      btn.classList.remove("ai-feature-locked");
       btn.title = "Skano faturën e furnizuesit";
     } else if (needsUpgrade) {
       btn.removeAttribute("hidden");
       btn.disabled = true;
-      btn.title = "Kërkon Pako 4 — AI Profesionale. Kontaktoni administratorin.";
+      btn.classList.add("ai-feature-locked");
+      btn.title = msg;
     } else {
       btn.setAttribute("hidden", "");
       btn.disabled = false;
+      btn.classList.remove("ai-feature-locked");
       btn.title = "";
     }
   }
