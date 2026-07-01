@@ -1,6 +1,7 @@
 let token = localStorage.getItem("rip_token") || "";
 let licensesPollTimer = null;
 let publicAppOrigin = "https://revolution-pos.com";
+let adminStatFilter = null;
 
 const ADMIN_PWA_BANNER_KEY = "ri_admin_pwa_banner_dismissed";
 
@@ -1362,15 +1363,115 @@ async function loadStats() {
   const expiring = Number(s.trials_expiring_soon) || 0;
   const stockClients = Number(s.stock_alert_clients) || 0;
   const terminalClients = Number(s.terminal_limit_clients) || 0;
+  const stat = (val, label, action, warn = false) => {
+    const warnClass = warn ? " stat-warn" : "";
+    return `<button type="button" class="stat stat-btn${warnClass}" data-stat="${action}" aria-label="${esc(label)}: ${val}">
+      <div class="val">${val}</div>
+      <div class="lbl">${esc(label)}</div>
+    </button>`;
+  };
   document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="val">${s.clients_total}</div><div class="lbl">Klientë</div></div>
-    <div class="stat"><div class="val">${s.licenses_total}</div><div class="lbl">Liçensa</div></div>
-    <div class="stat"><div class="val">${s.licenses_active}</div><div class="lbl">Aktive</div></div>
-    <div class="stat${expiring ? " stat-warn" : ""}"><div class="val">${expiring}</div><div class="lbl">Trial skadon (7 ditë)</div></div>
-    <div class="stat${stockClients ? " stat-warn" : ""}"><div class="val">${stockClients}</div><div class="lbl">Stok i ulët</div></div>
-    <div class="stat${terminalClients ? " stat-warn" : ""}"><div class="val">${terminalClients}</div><div class="lbl">Limit terminale</div></div>
-    <div class="stat"><div class="val">${s.licenses_expired}</div><div class="lbl">Skaduar</div></div>
-    <div class="stat"><div class="val">${s.licenses_revoked}</div><div class="lbl">Revokuar</div></div>`;
+    ${stat(s.clients_total, "Klientë", "clients")}
+    ${stat(s.licenses_total, "Liçensa", "licenses")}
+    ${stat(s.licenses_active, "Aktive", "active")}
+    ${stat(expiring, "Trial skadon (7 ditë)", "trial", expiring > 0)}
+    ${stat(stockClients, "Stok i ulët", "stock", stockClients > 0)}
+    ${stat(terminalClients, "Limit terminale", "terminal", terminalClients > 0)}
+    ${stat(s.licenses_expired, "Skaduar", "expired")}
+    ${stat(s.licenses_revoked, "Revokuar", "revoked")}`;
+  bindStatCards();
+}
+
+function bindStatCards() {
+  document.querySelectorAll("#stats [data-stat]").forEach(btn => {
+    btn.addEventListener("click", () => handleStatCardClick(btn.dataset.stat));
+  });
+}
+
+function handleStatCardClick(action) {
+  adminStatFilter = null;
+  let tab = "klientet";
+  let scrollTo = null;
+
+  switch (action) {
+    case "licenses":
+      tab = "licensat";
+      scrollTo = "#panel-licensat";
+      break;
+    case "active":
+      tab = "licensat";
+      adminStatFilter = "aktive";
+      scrollTo = "#panel-licensat";
+      break;
+    case "expired":
+      tab = "licensat";
+      adminStatFilter = "skaduar";
+      scrollTo = "#panel-licensat";
+      break;
+    case "revoked":
+      tab = "licensat";
+      adminStatFilter = "revokuar";
+      scrollTo = "#panel-licensat";
+      break;
+    case "terminal":
+      tab = "licensat";
+      adminStatFilter = "terminal";
+      scrollTo = "#panel-licensat";
+      break;
+    case "trial":
+      tab = "klientet";
+      adminStatFilter = "trial";
+      scrollTo = "#trial-expiry-banner";
+      break;
+    case "stock":
+      tab = "klientet";
+      adminStatFilter = "stock";
+      scrollTo = "#stock-alert-banner";
+      break;
+    case "clients":
+    default:
+      tab = "klientet";
+      scrollTo = "#panel-klientet";
+      break;
+  }
+
+  activateAdminTab(tab);
+  const target = scrollTo ? document.querySelector(scrollTo) : null;
+  if (target && !target.classList.contains("hidden")) {
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  } else if (scrollTo === "#panel-klientet" || scrollTo === "#panel-licensat") {
+    requestAnimationFrame(() => {
+      document.querySelector(scrollTo)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+}
+
+function activateAdminTab(tabId) {
+  const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+  if (!tab) return;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
+  document.getElementById(`panel-${tabId}`)?.classList.remove("hidden");
+  if (tabId === "licensat") {
+    loadLicenses().catch(() => {});
+    prepareLicenseCreateForm().catch(() => {});
+    startLicensesPoll();
+  } else {
+    stopLicensesPoll();
+  }
+  if (tabId === "klientet") {
+    loadClients().catch(() => {});
+  }
+  if (tabId === "logu") {
+    loadActivityLog().catch(() => {});
+    loadEmergencyCode().catch(() => {});
+  }
+  if (tabId === "ai-usage") {
+    loadAiUsage().catch(err => showMsg("ai-usage-msg", err.message, false));
+  }
 }
 
 function trialAlertForClient(clientId) {
@@ -1531,8 +1632,14 @@ async function loadClients() {
     sel.disabled = !clientsCache.length;
   }
   const tbl = document.getElementById("tbl-clients");
-  tbl.innerHTML = clientsCache.length
-    ? clientsCache.map(c => `<tr>
+  let displayClients = clientsCache;
+  if (adminStatFilter === "trial") {
+    displayClients = clientsCache.filter(c => trialAlertForClient(c.id));
+  } else if (adminStatFilter === "stock") {
+    displayClients = clientsCache.filter(c => stockAlertForClient(c.id));
+  }
+  tbl.innerHTML = displayClients.length
+    ? displayClients.map(c => `<tr>
         <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}${stockBadgeHtml(c.id)}</td>
         <td data-label="Tipi">${esc(c.tipi)}</td>
         <td data-label="Pakoja">
@@ -1829,9 +1936,19 @@ function renderMobileLicenseCards(licenses) {
 async function loadLicenses() {
   const { licenses } = await api("/api/admin/licenses");
   licensesCache = licenses;
+  let list = licenses;
+  if (adminStatFilter === "aktive") {
+    list = list.filter(l => l.statusi === "aktive");
+  } else if (adminStatFilter === "skaduar") {
+    list = list.filter(l => l.statusi === "skaduar");
+  } else if (adminStatFilter === "revokuar") {
+    list = list.filter(l => l.statusi === "revokuar");
+  } else if (adminStatFilter === "terminal") {
+    list = list.filter(l => l.terminal_limit_reached);
+  }
   const tbl = document.getElementById("tbl-licenses");
-  tbl.innerHTML = licenses.length
-    ? licenses.map(l => {
+  tbl.innerHTML = list.length
+    ? list.map(l => {
         const devId = licenseDeviceId(l);
         const isActive = l.statusi === "aktive";
         const rowClass = isActive && devId ? "license-row-bound" : "";
@@ -1918,7 +2035,7 @@ async function loadLicenses() {
     };
   });
   bindTableActions(tbl);
-  renderMobileLicenseCards(licenses);
+  renderMobileLicenseCards(list);
 }
 
 async function loadOwners() {
@@ -2294,24 +2411,8 @@ document.getElementById("btn-refresh-licenses")?.addEventListener("click", async
 
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
-    document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
-    if (tab.dataset.tab === "licensat") {
-      loadLicenses().catch(() => {});
-      prepareLicenseCreateForm().catch(() => {});
-      startLicensesPoll();
-    } else {
-      stopLicensesPoll();
-    }
-    if (tab.dataset.tab === "logu") {
-      loadActivityLog().catch(() => {});
-      loadEmergencyCode().catch(() => {});
-    }
-    if (tab.dataset.tab === "ai-usage") {
-      loadAiUsage().catch((err) => showMsg("ai-usage-msg", err.message, false));
-    }
+    adminStatFilter = null;
+    activateAdminTab(tab.dataset.tab);
   });
 });
 

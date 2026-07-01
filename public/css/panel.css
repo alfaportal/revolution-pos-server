@@ -96,6 +96,32 @@ a { color: var(--primary); }
   text-align: center;
 }
 
+.stat-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.28);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.stat-btn:hover {
+  border-color: var(--primary);
+  background: #1e293b;
+}
+
+.stat-btn:active {
+  transform: scale(0.98);
+}
+
+.stat-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .stat .val { font-size: 1.75rem; font-weight: 800; }
 .stat .lbl { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
 
@@ -920,7 +946,8 @@ td.kds-link-cell .btn { margin-top: 0.25rem; }
   }
 
   .stats { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .stat { padding: 0.75rem 0.5rem; }
+  .stat { padding: 0.75rem 0.5rem; min-height: 4.5rem; }
+  .stat-btn { min-height: 4.5rem; }
   .stat .val { font-size: 1.45rem; }
 
   .tabs {
