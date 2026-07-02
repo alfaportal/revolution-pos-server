@@ -70,11 +70,24 @@ function isCustomerChannelDevice(deviceId) {
   return d === WEB_KIOSK || d === WEB_PUBLIC;
 }
 
+/** Porosi aktive nga telefon/tablet — mos i anulo kur POS thotë «tavolinë e lirë» lokale */
+function isRemoteActiveTableOrder(deviceId) {
+  const d = String(deviceId || "").trim().toUpperCase();
+  return d === WEB_KIOSK || d === WEB_PUBLIC || d === WEB_WAITER;
+}
+
 /** Terminali lokal Electron — jo WEB-WAITER/KIOSK/PUBLIC */
 function isPosDesktopDevice(deviceId) {
   const d = String(deviceId || "").trim().toUpperCase();
   if (!d) return true;
   return !d.startsWith("WEB-");
+}
+
+/** Porosi nga klienti (QR, kiosk, web) — kuzhina/banaku i shikon vetëm pas «Dërgo» nga POS. */
+function isDirectCustomerKitchenOrder(order) {
+  if (isPosDesktopDevice(order?.device_id)) return false;
+  if (isStaffWaiterOrder(order)) return false;
+  return isCustomerBarOrder(order);
 }
 
 module.exports = {
@@ -90,5 +103,7 @@ module.exports = {
   isCustomerBarOrder,
   isBarMobileOrder,
   isCustomerChannelDevice,
+  isRemoteActiveTableOrder,
   isPosDesktopDevice,
+  isDirectCustomerKitchenOrder,
 };

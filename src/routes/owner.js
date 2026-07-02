@@ -52,6 +52,7 @@ const {
   addWaiterWithPin,
   updateWaiterWithPin,
   deleteWaiterWithPin,
+  ensureWaiterWebToken,
 } = require("../services/waiterPinService");
 const { ensureKitchenCredentials, buildClientWebLinks, buildWaiterUrl } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
@@ -844,7 +845,9 @@ router.get("/waiters", async (req, res) => {
       ok: true,
       waiters: waiters.map(w => ({
         ...w,
-        waiter_url: client && w.web_token ? buildWaiterUrl(base, client, w.web_token) : "",
+        waiter_url: client && w.web_token
+          ? buildWaiterUrl(base, client, w.web_token)
+          : shared_waiter_url,
       })),
       shared_waiter_url,
     });
@@ -857,9 +860,15 @@ async function enrichWaiterForOwner(clientId, waiter) {
   let client = await getClientById(clientId);
   if (client) client = await ensureKitchenCredentials(client);
   const base = getPublicAppOrigin();
+  let token = waiter.web_token || null;
+  if (!token && waiter.id && waiter.has_pin !== false) {
+    token = await ensureWaiterWebToken(clientId, waiter.id);
+  }
+  const shared = client ? buildWaiterUrl(base, client, "") : "";
   return {
     ...waiter,
-    waiter_url: client && waiter.web_token ? buildWaiterUrl(base, client, waiter.web_token) : "",
+    web_token: token || waiter.web_token || null,
+    waiter_url: client && token ? buildWaiterUrl(base, client, token) : shared,
   };
 }
 

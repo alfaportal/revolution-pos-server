@@ -30,14 +30,28 @@ function formatMoney(n) {
   return Number(n || 0).toFixed(2);
 }
 
+const RECEIPT_TIMEZONE = "Europe/Belgrade";
+
 function formatReceiptDateTime(iso) {
   const d = iso ? new Date(iso) : new Date();
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+  if (Number.isNaN(d.getTime())) {
+    return formatReceiptDateTime(new Date().toISOString());
+  }
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: RECEIPT_TIMEZONE,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d).map(p => [p.type, p.value]),
+  );
+  return {
+    date: `${parts.day}/${parts.month}/${parts.year}`,
+    time: `${parts.hour}:${parts.minute}`,
+  };
 }
 
 async function getBusinessProfile(clientId) {
@@ -175,6 +189,7 @@ function buildReceiptLines(receipt) {
 
   lines.push(formatTotalLine(receipt.total, w));
   if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
+  lines.push(divider(w));
   lines.push(pad("Faleminderit!", w, "center"));
 
   return lines;
@@ -221,7 +236,7 @@ function formatReceiptText(receipt) {
 }
 
 function formatReceiptEscPosBase64(receipt) {
-  const buffer = buildEscPosFromLines(buildMarkedReceiptLines(receipt));
+  const buffer = buildEscPosFromLines(buildReceiptLines(receipt));
   return toBase64(buffer);
 }
 

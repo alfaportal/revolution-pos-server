@@ -114,13 +114,15 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
   const { getWaiterByWebToken } = require("./waiterPinService");
 
   let assigned_waiter = null;
+  let web_token_invalid = false;
   const token = String(webToken || "").trim();
   if (token) {
     const w = await getWaiterByWebToken(clientId, token);
-    if (!w) {
-      throw new Error("Linku personal i kamarierit nuk është i vlefshëm. Kopjoni linkun nga paneli → Kamarierët.");
+    if (w) {
+      assigned_waiter = { id: w.id, name: w.name };
+    } else {
+      web_token_invalid = true;
     }
-    assigned_waiter = { id: w.id, name: w.name };
   }
 
   const [{ data: settings }, { data: categories }, { data: menu }] =
@@ -163,6 +165,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     tables: layoutWithReservations.tables,
     reservations,
     assigned_waiter,
+    web_token_invalid,
   };
 }
 

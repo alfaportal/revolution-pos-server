@@ -89,9 +89,9 @@ function buildKitchenUrl(baseUrl, client, kind) {
     : kind === "kiosk"
       ? "kiosk"
       : kind === "bar"
-        ? "kitchen"
+        ? "bar"
         : kind === "kitchen"
-          ? "bar"
+          ? "kitchen"
           : "kitchen";
   return `${base}/${path}/${encodeURIComponent(slug)}?key=${encodeURIComponent(key)}`;
 }

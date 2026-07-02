@@ -482,6 +482,13 @@ async function syncCatalogFromPosTransactional(license, body) {
   });
 }
 
+async function syncStaffOnlyFromPos(body) {
+  const license = await resolveLicense(body);
+  const db = getSupabase();
+  const staffCount = await syncStaffFromPos(db, license.client_id, extractStaff(body));
+  return { staff: staffCount, client_id: license.client_id };
+}
+
 async function syncCatalogFromPos(body) {
   const license = await resolveLicense(body);
   if (process.env.DATABASE_URL) {
@@ -500,4 +507,4 @@ async function pullCatalogForLicense(body) {
   return getCatalogForPos(license.client_id);
 }
 
-module.exports = { syncCatalogFromPos, pullCatalogForLicense };
+module.exports = { syncCatalogFromPos, syncStaffOnlyFromPos, pullCatalogForLicense };

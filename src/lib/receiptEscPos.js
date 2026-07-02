@@ -94,7 +94,7 @@ function buildEscPosFromLines(lines) {
     chunks.push(text(s), text("\n"), ...resets);
   }
 
-  chunks.push(feed(1), cut(false));
+  chunks.push(buf([ESC, 0x64, 2]), cut(false));
   return concat(...chunks);
 }
 

@@ -1,7 +1,7 @@
 const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
-const { isBarMobileOrder, isKioskWaiterName } = require("../lib/orderSource");
+const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder } = require("../lib/orderSource");
 const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
 const { selectWithAcceptanceFallback, updateOrdersAcceptance } = require("../lib/salesOrderSelect");
 
@@ -118,13 +118,14 @@ async function getClientForKitchen(clientId) {
   return client;
 }
 
-/** Banak — porosi QR, kamarier, online, POS (rruga /kitchen/ në link) */
+/** Banak — porosi QR, kamarier, online, POS (rruga /bar/ në link) */
 async function listBarOrders(clientId) {
   const orders = await fetchOrderedSales(clientId);
   const lookup = await loadCategoryLookup(clientId);
   const result = [];
 
   for (const order of orders) {
+    if (isDirectCustomerKitchenOrder(order)) continue;
     if (!isBanakOrder(order)) continue;
     const items = normalizeItems(order.items_json).filter(it => isBarItem(it, lookup));
     const mapped = mapOrderWithItems(order, items.length ? items : normalizeItems(order.items_json));
@@ -134,13 +135,14 @@ async function listBarOrders(clientId) {
   return result;
 }
 
-/** Kuzhina KDS — vetëm artikuj ushqimi (rruga /bar/ në link) */
+/** Kuzhina KDS — vetëm artikuj ushqimi (rruga /kitchen/ në link) */
 async function listKitchenOrders(clientId) {
   const orders = await fetchOrderedSales(clientId);
   const lookup = await loadCategoryLookup(clientId);
   const result = [];
 
   for (const order of orders) {
+    if (isDirectCustomerKitchenOrder(order)) continue;
     const items = normalizeItems(order.items_json).filter(it => isKitchenItem(it, lookup));
     const mapped = mapOrderWithItems(order, items);
     if (mapped) result.push(mapped);

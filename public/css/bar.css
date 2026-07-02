@@ -47,9 +47,8 @@ body { background: var(--bg); }
 }
 
 .bar-tables-section {
-  margin-bottom: 1.25rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 
 .bar-tables-head {

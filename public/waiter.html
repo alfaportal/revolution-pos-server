@@ -41,6 +41,14 @@
       <section class="staff-login-panel">
         <h1 id="login-welcome">Mirë se vini</h1>
         <p class="staff-login-lead" id="login-sub">Shkruani PIN-in tuaj (4 shifra)</p>
+        <div id="online-orders-banner" class="waiter-online-banner hidden" role="status" aria-live="polite">
+          <span class="waiter-online-icon" aria-hidden="true">📲</span>
+          <span class="waiter-online-text">
+            <strong>Porosi online</strong>
+            <span id="online-orders-hint">Duke kontrolluar…</span>
+          </span>
+          <span class="waiter-online-badge" id="online-orders-badge" hidden>0</span>
+        </div>
         <div class="login-box pin-box">
           <div id="login-err" class="err hidden"></div>
           <div id="pin-display" class="pin-display" aria-live="polite">••••</div>
@@ -149,8 +157,9 @@
   </div>
 
   <script src="/js/offlineQueue.js?v=1"></script>
+  <script src="/js/order-alarm-sound.js?v=1"></script>
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=4"></script>
-  <script src="/js/waiter.js?v=22"></script>
+  <script src="/js/waiter.js?v=25"></script>
 </body>
 </html>

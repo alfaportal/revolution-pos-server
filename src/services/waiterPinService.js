@@ -145,12 +145,14 @@ async function verifyWaiterPin(clientId, pin, webToken = null) {
   const token = normalizeWebToken(webToken);
   if (token) {
     const w = await getWaiterByWebToken(clientId, token);
-    if (!w) throw new Error("Linku i kamarierit nuk është i vlefshëm. Kopjoni linkun nga paneli.");
-    if (!w.pin_hash) throw new Error("Ky kamarier nuk ka PIN. Pronari e vendos te Kamarierët.");
-    if (!(await pinMatches(normalized, w.pin_hash))) {
-      throw new Error(`PIN i gabuar për ${w.name}.`);
+    if (w) {
+      if (!w.pin_hash) throw new Error("Ky kamarier nuk ka PIN. Pronari e vendos te Kamarierët.");
+      if (!(await pinMatches(normalized, w.pin_hash))) {
+        throw new Error(`PIN i gabuar për ${w.name}.`);
+      }
+      return { id: w.id, name: w.name };
     }
-    return { id: w.id, name: w.name };
+    // Token i vjetër/gabim — mos e blloko faqen; provo PIN si link i përbashkët.
   }
   const waiters = await loadPinWaiters(clientId, { activeOnly: true });
   if (!waiters.length) {

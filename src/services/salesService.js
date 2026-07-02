@@ -44,10 +44,7 @@ function mergeOrderItems(existingItems, newItems) {
 async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = null) {
   const num = Number(tableNumber);
   if (!num || num < 1) return 0;
-  const { isCustomerChannelDevice, isPosDesktopDevice } = require("../lib/orderSource");
-  const exceptDevice = except ? String(except.device_id || "").trim().toUpperCase() : "";
-  const preserveCustomerBatches = !!(except && isPosDesktopDevice(exceptDevice));
-
+  const { isRemoteActiveTableOrder } = require("../lib/orderSource");
   const db = getSupabase();
   const { data: rows, error } = await db
     .from("sales_orders")
@@ -67,9 +64,7 @@ async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = n
     ) {
       continue;
     }
-    if (preserveCustomerBatches && isCustomerChannelDevice(row.device_id)) {
-      continue;
-    }
+    if (isRemoteActiveTableOrder(row.device_id)) continue;
     const { error: updErr } = await db
       .from("sales_orders")
       .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
@@ -87,7 +82,28 @@ async function freeTableFromPos(body) {
   assertLicenseUsable(license);
   const tableNum = Number(body.table_number);
   if (!tableNum || tableNum < 1) throw new Error("Mungon numri i tavolinës.");
-  const cancelled = await cancelOtherActiveOrdersForTable(license.client_id, tableNum);
+
+  const { isRemoteActiveTableOrder } = require("../lib/orderSource");
+  const db = getSupabase();
+  const { data: rows, error } = await db
+    .from("sales_orders")
+    .select("id, device_id")
+    .eq("client_id", license.client_id)
+    .eq("table_number", tableNum)
+    .in("status", ["ordered", "ready"]);
+  if (error) throw error;
+
+  const now = new Date().toISOString();
+  let cancelled = 0;
+  for (const row of rows || []) {
+    if (isRemoteActiveTableOrder(row.device_id)) continue;
+    const { error: updErr } = await db
+      .from("sales_orders")
+      .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+      .eq("id", row.id);
+    if (!updErr) cancelled += 1;
+  }
+
   try {
     require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
       table_number: tableNum,
@@ -215,13 +231,17 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   }
 
   if (finalStatus === "ordered" || finalStatus === "cancelled" || finalStatus === "ready" || finalStatus === "closed") {
-    try {
-      require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
-        order_id: data?.id,
-        status: finalStatus,
-      });
-    } catch {
-      /* optional */
+    const { isCustomerChannelDevice } = require("../lib/orderSource");
+    const skipKdsPing = isCustomerChannelDevice(deviceId) && finalStatus === "ordered";
+    if (!skipKdsPing) {
+      try {
+        require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
+          order_id: data?.id,
+          status: finalStatus,
+        });
+      } catch {
+        /* optional */
+      }
     }
   }
 

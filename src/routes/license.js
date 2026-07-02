@@ -11,9 +11,12 @@ const {
   updateOwnerReservationStatus,
   getMaxTableNumber,
 } = require("../services/reservationService");
-const { normalizeItems } = require("../services/salesService");
-const { acknowledgeBarOrders, cancelBarOrders, fetchOrderedSales } = require("../services/kdsService");
-const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
+const { acknowledgeBarOrders, cancelBarOrders } = require("../services/kdsService");
+const {
+  listPendingOnlineOrders,
+  listBarMobileOrderedForPos,
+  countPendingOnlineOrders,
+} = require("../services/onlineOrdersService");
 
 const router = express.Router();
 
@@ -179,52 +182,6 @@ router.post("/emergency-unlock", licenseApiKeyOptional, async (req, res) => {
     res.status(500).json({ valid: false, gabim: e.message });
   }
 });
-
-async function countPendingOnlineOrders(clientId) {
-  if (!clientId) return 0;
-  const orders = await listPendingOnlineOrders(clientId);
-  return orders.length;
-}
-
-async function listPendingOnlineOrders(clientId) {
-  if (!clientId) return [];
-  const { isOrderAccepted } = require("../lib/salesOrderSelect");
-  const rows = await fetchOrderedSales(clientId);
-  return rows
-    .filter(isCustomerBarOrder)
-    .filter(row => !isOrderAccepted(row))
-    .map(formatOrderForPos);
-}
-
-async function listBarMobileOrderedForPos(clientId) {
-  if (!clientId) return [];
-  const rows = await fetchOrderedSales(clientId);
-  return rows.filter(isCustomerBarOrder).map(formatOrderForPos);
-}
-
-function formatOrderForPos(row) {
-  const { isOrderAccepted } = require("../lib/salesOrderSelect");
-  const src = orderSourceLabel(row);
-  const handler = String(row.accepted_by_waiter_name || "").trim();
-  const accepted = isOrderAccepted(row);
-  return {
-    id: row.id,
-    table_number: Number(row.table_number) || 0,
-    customer_label: String(row.waiter_name || "").trim(),
-    source: src.code,
-    source_label: src.label,
-    source_icon: src.icon,
-    device_id: row.device_id || "",
-    items: normalizeItems(row.items_json),
-    total: Number(row.total) || 0,
-    ordered_at: row.ordered_at,
-    status: row.status || "ordered",
-    pending: !accepted,
-    accepted_by: handler,
-    accepted_at: row.accepted_at || null,
-    handler_label: handler || null,
-  };
-}
 
 /**
  * POST /api/v1/license/kasa-pin — PIN kamarieri (4 shifra) ose emergjencë

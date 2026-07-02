@@ -222,7 +222,7 @@
 
   async function fetchOrders() {
     if (!slug) {
-      showError("Linku i banakut nuk është i saktë. Duhet /kitchen/[slug]?key=...");
+      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[slug]?key=...");
       return;
     }
     if (!kitchenKey) {
@@ -230,7 +230,7 @@
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();
@@ -241,8 +241,8 @@
       if (data.restaurant_name || data.client_name) {
         const venue = data.restaurant_name || data.client_name;
         titleEl.textContent = venue;
-        subEl.textContent = "Porositë aktive — rifreskohet automatikisht";
-        document.title = `Banak — ${venue}`;
+        subEl.textContent = "Porositë e ushqimit — rifreskohet automatikisht";
+        document.title = `Kuzhina — ${venue}`;
         const venueBar = document.getElementById("kitchen-venue-name");
         if (venueBar) venueBar.textContent = venue;
       }

@@ -3,7 +3,7 @@
   const slug = parts[0] === "waiter" ? parts[1] : "";
   const urlParams = new URLSearchParams(window.location.search);
   const kitchenKey = urlParams.get("key") || "";
-  const waiterToken = urlParams.get("w") || "";
+  let waiterToken = urlParams.get("w") || "";
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
   const WAITER_IDLE_MS = 30000;
@@ -21,6 +21,18 @@
     if (kitchenKey) parts.push(`key=${encodeURIComponent(kitchenKey)}`);
     if (waiterToken) parts.push(`w=${encodeURIComponent(waiterToken)}`);
     return parts.length ? `?${parts.join("&")}` : "";
+  }
+
+  function dropInvalidWaiterTokenFromUrl() {
+    if (!waiterToken) return;
+    waiterToken = "";
+    try {
+      const p = new URLSearchParams(window.location.search);
+      p.delete("w");
+      const q = p.toString();
+      const next = `${window.location.pathname}${q ? `?${q}` : ""}`;
+      window.history.replaceState(null, "", next);
+    } catch { /* ignore */ }
   }
 
   function apiHeaders(extra = {}) {
@@ -44,6 +56,10 @@
   let idleTimer = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
+  let lastOnlinePending = null;
+  let onlineOrdersCache = [];
+  let onlineAlarmTimer = null;
+  let onlinePollTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -84,6 +100,12 @@
     let data = {};
     try { data = await res.json(); } catch { /* */ }
     if (!res.ok || data.ok === false) {
+      if (res.status === 403 && data.code === "KITCHEN_KEY_INVALID") {
+        throw new Error("Kodi i linkut (?key=...) nuk është i saktë. Kopjoni linkun e ri te paneli → Kamarierët → Kopjo.");
+      }
+      if (res.status === 403 && data.code === "PACKAGE_UPGRADE_REQUIRED") {
+        throw new Error(data.gabim || "Plani juaj nuk përfshin modulin e kamarierit.");
+      }
       throw new Error(data.gabim || `Gabim HTTP ${res.status}`);
     }
     return data;
@@ -276,23 +298,37 @@
       throw e;
     }
     applyBranding(bootstrap);
-    if (bootstrap.assigned_waiter?.name) {
-      const welcome = $("login-welcome");
-      const sub = $("login-sub");
-      if (welcome) welcome.textContent = `Mirë se vini, ${bootstrap.assigned_waiter.name}`;
-      if (sub) sub.textContent = "Shkruani PIN-in tuaj (4 shifra) — vetëm për ju";
-    }
     const hint = $("sync-hint");
-    const parts = [];
-    if (bootstrap.waiter_count != null) {
-      parts.push(`${bootstrap.waiter_count} kamarierë me PIN`);
+    if (bootstrap.web_token_invalid && urlParams.get("w")) {
+      dropInvalidWaiterTokenFromUrl();
+      if (hint) {
+        hint.textContent = "Linku personal ishte i vjetër — shkruani PIN-in. Merrni link të ri te Kamarierët → Kopjo.";
+      }
+    } else {
+      if (bootstrap.assigned_waiter?.name) {
+        const welcome = $("login-welcome");
+        const sub = $("login-sub");
+        if (welcome) welcome.textContent = `Mirë se vini, ${bootstrap.assigned_waiter.name}`;
+        if (sub) sub.textContent = "Shkruani PIN-in tuaj (4 shifra) — vetëm për ju";
+      }
+      const parts = [];
+      if (bootstrap.waiter_count != null) {
+        parts.push(`${bootstrap.waiter_count} kamarierë me PIN`);
+      }
+      if (bootstrap.synced_at) {
+        parts.push(`Menuja: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`);
+      }
+      if (bootstrap.waiter_count === 0) {
+        if (hint) {
+          hint.textContent =
+            "Nuk ka PIN në cloud — në PC: Admin → Cloud → «Sinkronizo gjithçka» (pas vendosjes së PIN te Kamarierët).";
+        }
+      } else if (parts.length && hint) {
+        hint.textContent = parts.join(" · ");
+      } else if (hint) {
+        hint.textContent = "Pronari shton kamarierët te paneli → Kamarierët.";
+      }
     }
-    if (bootstrap.synced_at) {
-      parts.push(`Menuja: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`);
-    }
-    hint.textContent = parts.length
-      ? parts.join(" · ")
-      : "Pronari shton kamarierët te paneli → Kamarierët.";
   }
 
   function escapeAttr(s) {
@@ -592,6 +628,86 @@
     }
   }
 
+  function stopOnlineAlarm() {
+    if (onlineAlarmTimer) {
+      clearInterval(onlineAlarmTimer);
+      onlineAlarmTimer = null;
+    }
+  }
+
+  function startOnlineAlarm() {
+    if (onlineAlarmTimer) return;
+    if ((Number(lastOnlinePending) || 0) > 0 && typeof window.playOrderAlarmSound === "function") {
+      window.playOrderAlarmSound();
+    }
+    onlineAlarmTimer = setInterval(() => {
+      if ((Number(lastOnlinePending) || 0) > 0 && typeof window.playOrderAlarmSound === "function") {
+        window.playOrderAlarmSound();
+      }
+    }, 12000);
+  }
+
+  function updateOnlineOrdersBanner(data) {
+    const banner = $("online-orders-banner");
+    const badge = $("online-orders-badge");
+    const hint = $("online-orders-hint");
+    if (!banner) return;
+    const pending = Number(data?.pending) || (data?.orders || []).length;
+    banner.classList.remove("hidden");
+    if (badge) {
+      badge.hidden = pending <= 0;
+      badge.textContent = String(Math.max(pending, 0));
+    }
+    banner.classList.toggle("waiter-online-banner--alert", pending > 0);
+    if (hint) {
+      if (pending > 0) {
+        hint.textContent = pending === 1
+          ? "1 porosi në pritje — hyrni me PIN për ta pranuar"
+          : `${pending} porosi në pritje — hyrni me PIN për t’i pranuar`;
+      } else {
+        hint.textContent = "Nuk ka porosi në pritje";
+      }
+    }
+    const isFirstPoll = lastOnlinePending === null;
+    const isNew = !!data?.has_new
+      || (lastOnlinePending != null && pending > lastOnlinePending)
+      || (isFirstPoll && pending > 0);
+    if (isNew && pending > 0) {
+      startOnlineAlarm();
+    } else if (pending <= 0) {
+      stopOnlineAlarm();
+    } else if (pending > 0) {
+      startOnlineAlarm();
+    }
+    lastOnlinePending = pending;
+    onlineOrdersCache = data?.orders || [];
+  }
+
+  async function pollOnlineOrders() {
+    if (!slug || !kitchenKey) return;
+    try {
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/online-orders/pending${apiQuery()}`);
+      updateOnlineOrdersBanner({
+        ...data,
+        has_new: data.has_new || (
+          lastOnlinePending != null && (Number(data.pending) || 0) > lastOnlinePending
+        ),
+      });
+    } catch {
+      /* offline — mos e prish hyrjen */
+    }
+  }
+
+  function startOnlineOrdersPolling() {
+    if (onlinePollTimer) return;
+    pollOnlineOrders().catch(() => {});
+    onlinePollTimer = setInterval(() => {
+      if ($("screen-pin")?.classList.contains("active") || activeWaiter) {
+        pollOnlineOrders().catch(() => {});
+      }
+    }, 2500);
+  }
+
   async function submitPinLogin() {
     const err = $("login-err");
     showErr(err, "");
@@ -601,17 +717,47 @@
     }
     const btn = $("btn-pin-login");
     btn.disabled = true;
+    const pin = pinDigits.join("");
     try {
       if (!bootstrap) await loadBootstrap();
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/login${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
-          pin: pinDigits.join(""),
+          pin,
           web_token: waiterToken || undefined,
         }),
       });
+      let acceptMsg = "";
+      const pendingIds = (onlineOrdersCache || []).map(o => o.id).filter(Boolean);
+      if (pendingIds.length) {
+        try {
+          const accepted = await api(
+            `/api/waiter/${encodeURIComponent(slug)}/online-orders/accept${apiQuery()}`,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                pin,
+                order_ids: pendingIds,
+                web_token: waiterToken || undefined,
+              }),
+            },
+          );
+          if (accepted.acknowledged > 0) {
+            acceptMsg = ` · ${accepted.acknowledged} porosi u pranuan`;
+            lastOnlinePending = Number(accepted.pending) || 0;
+            onlineOrdersCache = accepted.orders || [];
+            updateOnlineOrdersBanner({ pending: lastOnlinePending, orders: onlineOrdersCache, has_new: false });
+            await loadBootstrap();
+          }
+        } catch (acceptErr) {
+          acceptMsg = ` · ${acceptErr.message || "porositë nuk u pranuan"}`;
+        }
+      }
       clearPin();
       enterWaiterSession(data.waiter);
+      if (acceptMsg && data.waiter?.name) {
+        showSuccessToast(`${data.waiter.name}${acceptMsg}`);
+      }
     } catch (e) {
       clearPin();
       showErr(err, e.message);
@@ -978,6 +1124,7 @@
       }
       renderPinDisplay();
       showScreen("screen-pin");
+      startOnlineOrdersPolling();
     } catch (e) {
       showErr($("login-err"), e.message);
     }
