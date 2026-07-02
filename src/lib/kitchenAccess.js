@@ -99,7 +99,7 @@ function buildKitchenUrl(baseUrl, client, kind) {
 /** URL publike për skanim QR tavoline — pa key në link */
 function buildTableMenuUrl(baseUrl, client, tableNumber) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
-  const slug = client.id || client.kitchen_slug;
+  const slug = client.kitchen_slug || client.id;
   const table = Math.max(1, Number(tableNumber) || 1);
   return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
 }
