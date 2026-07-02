@@ -2,8 +2,8 @@
 
 const PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_4", "pako_5"];
 
-/** Tier që shfaqen në Super Admin (Pako 4 marketing = pako_5). */
-const ADMIN_PACKAGE_TIERS = ["pako_1", "pako_2", "pako_3", "pako_5"];
+/** Pako 1–4 në Super Admin (pako_1 legacy — vetëm për klientë të vjetër). */
+const ADMIN_PACKAGE_TIERS = ["pako_2", "pako_3", "pako_4", "pako_5"];
 
 /** Tier të vjetër → tier i ri (para migrimit DB). */
 const LEGACY_TIER_MAP = {
@@ -76,12 +76,19 @@ const TIER_FEATURES = {
 };
 
 const TIER_LABELS = {
-  pako_1: "Legacy — vetëm POS, panel & faqe (pa KDS)",
-  pako_2: "Pako 1 — KDS, kiosk, kamarier",
-  pako_3: "Pako 2 — Mobile & cloud",
-  pako_4: "Pako 3 — Porosi online & premium",
-  pako_5: "Pako 4 — AI Profesionale",
+  pako_1: "Legacy — POS & faqe (pa KDS/QR)",
+  pako_2: "Pako 1 — KDS, kiosk, kamarier, QR tavolinë",
+  pako_3: "Pako 2 — Cloud & mobile (pa porosi online)",
+  pako_4: "Pako 3 — Porosi online (takeaway & delivery)",
+  pako_5: "Pako 4 — AI Profesionale (+ gjithçka)",
 };
+
+/** Numri marketing 1–4 për shfaqje (pako_2 → 1, …, pako_5 → 4). */
+function marketingPakoNumber(tier) {
+  const id = normalizePackageTier(tier);
+  const map = { pako_2: 1, pako_3: 2, pako_4: 3, pako_5: 4 };
+  return map[id] || null;
+}
 
 function normalizePackageTier(tier) {
   const raw = String(tier || "pako_1").trim().toLowerCase();
@@ -129,4 +136,5 @@ module.exports = {
   clientHasFeature,
   packageUpgradeMessage,
   AI_UPGRADE_MESSAGE,
+  marketingPakoNumber,
 };

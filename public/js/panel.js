@@ -371,8 +371,8 @@ function normalizeTierId(tier) {
   return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_1";
 }
 
-/** Tier order shown in admin — Super Admin dropdown. */
-const ADMIN_TIER_ORDER = ["pako_1", "pako_2", "pako_3", "pako_5"];
+/** Pako 1–4 në Super Admin (pako_1 legacy vetëm nëse klienti e ka). */
+const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4", "pako_5"];
 const TIER_SHORT_LABELS = {
   pako_1: "Legacy",
   pako_2: "Pako 1",
@@ -384,7 +384,7 @@ const TIER_SHORT_LABELS = {
 function adminTierIdsForPicker(currentTier) {
   const current = normalizeTierId(currentTier);
   const ids = [...ADMIN_TIER_ORDER];
-  if (current === "pako_4" && !ids.includes("pako_4")) ids.splice(3, 0, "pako_4");
+  if (current === "pako_1" && !ids.includes("pako_1")) ids.unshift("pako_1");
   return ids;
 }
 
