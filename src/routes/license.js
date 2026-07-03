@@ -17,6 +17,7 @@ const {
   listBarMobileOrderedForPos,
   countPendingOnlineOrders,
 } = require("../services/onlineOrdersService");
+const { listClosedWebWaiterSalesForPos } = require("../services/salesService");
 
 const router = express.Router();
 
@@ -316,6 +317,23 @@ router.post("/waiter-login", licenseApiKeyOptional, async (req, res) => {
     res.json({ ok: true, valid: true, role: "waiter", waiter });
   } catch (e) {
     res.status(403).json({ ok: false, gabim: e.message || "PIN i gabuar." });
+  }
+});
+
+/**
+ * POST /api/v1/license/waiter-closed-sales — porosi WEB-WAITER të mbyllura (sync pazari lokal)
+ */
+router.post("/waiter-closed-sales", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+    const since = String(req.body.since || req.body.closed_after || "").trim();
+    const sales = await listClosedWebWaiterSalesForPos(resolved.clientId, since);
+    res.json({ ok: true, sales, count: sales.length });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
   }
 });
 

@@ -665,6 +665,38 @@ async function getOwnerReport(clientId, from, to) {
   };
 }
 
+/** Porosi të mbyllura nga paneli i kamarierit (telefon) — për sync në daily_log të POS-it. */
+async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
+  const db = getSupabase();
+  const { WEB_WAITER } = require("../lib/orderSource");
+  let q = db
+    .from("sales_orders")
+    .select(
+      "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, payment_method, local_order_id",
+    )
+    .eq("client_id", clientId)
+    .eq("device_id", WEB_WAITER)
+    .eq("status", "closed")
+    .order("closed_at", { ascending: true })
+    .limit(100);
+  const since = String(sinceIso || "").trim();
+  if (since) q = q.gt("closed_at", since);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map(row => ({
+    id: row.id,
+    table_number: Number(row.table_number) || 0,
+    waiter_name: String(row.waiter_name || "").trim(),
+    waiter_id: row.waiter_id || null,
+    items: normalizeItems(row.items_json),
+    total: Number(row.total) || 0,
+    receipt_number: String(row.receipt_number || "").trim(),
+    closed_at: row.closed_at || null,
+    payment_method: row.payment_method || "cash",
+    local_order_id: String(row.local_order_id || "").trim(),
+  }));
+}
+
 async function getOwnerStatsForGroup(clientIds) {
   const ids = [...new Set((clientIds || []).filter(Boolean))];
   const r = dateRanges();
@@ -713,5 +745,6 @@ module.exports = {
   listOwnerOrders,
   getOwnerOrderFilters,
   getOwnerReport,
+  listClosedWebWaiterSalesForPos,
   getClientById,
 };
