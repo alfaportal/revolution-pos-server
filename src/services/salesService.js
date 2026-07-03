@@ -498,16 +498,75 @@ async function getOwnerStats(clientId) {
   };
 }
 
+async function loadWaiterStaffMaps(clientId) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("pos_staff")
+    .select("id, name, active")
+    .eq("client_id", clientId)
+    .eq("role", "waiter");
+  if (error) throw error;
+
+  const byId = new Map();
+  const byNameLower = new Map();
+  const staffNames = [];
+  for (const row of data || []) {
+    const name = String(row.name || "").trim();
+    if (!name) continue;
+    staffNames.push(name);
+    byId.set(String(row.id).toLowerCase(), name);
+    byNameLower.set(name.toLowerCase(), { id: row.id, name });
+  }
+  return { byId, byNameLower, staffNames };
+}
+
+function pgFilterQuoted(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+/** Filtron porositë e mbyllura sipas emrit ose waiter_id (WEB-WAITER, QR etj.) */
+function applyWaiterFilterToQuery(q, waiterName, maps) {
+  const name = String(waiterName || "").trim();
+  if (!name) return q;
+  const staff = maps.byNameLower.get(name.toLowerCase());
+  const qName = pgFilterQuoted(name);
+  const parts = [`waiter_name.eq.${qName}`, `accepted_by_waiter_name.eq.${qName}`];
+  if (staff?.id) {
+    parts.push(`waiter_id.eq.${staff.id}`, `accepted_by_waiter_id.eq.${staff.id}`);
+  }
+  return q.or(parts.join(","));
+}
+
+function resolveWaiterAttribution(order, maps) {
+  const acceptedName = String(order.accepted_by_waiter_name || "").trim();
+  const acceptedId = order.accepted_by_waiter_id
+    ? String(order.accepted_by_waiter_id).toLowerCase()
+    : "";
+  if (acceptedName || acceptedId) {
+    return {
+      name: acceptedName || maps.byId.get(acceptedId) || "",
+      id: order.accepted_by_waiter_id || null,
+    };
+  }
+  const waiterName = String(order.waiter_name || "").trim();
+  const waiterId = order.waiter_id ? String(order.waiter_id).toLowerCase() : "";
+  return {
+    name: waiterName || (waiterId ? maps.byId.get(waiterId) : "") || "",
+    id: order.waiter_id || null,
+  };
+}
+
 async function listOwnerOrders(clientId, opts = {}) {
   const limit = Math.min(100, Number(opts.limit) || 50);
   const db = getSupabase();
+  const maps = await loadWaiterStaffMaps(clientId);
   const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
   const base =
     "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, status, device_id";
 
   const rows = await selectWithAcceptanceFallback(withAcceptance => {
     const select = withAcceptance
-      ? `${base}, accepted_by_waiter_name, accepted_at`
+      ? `${base}, accepted_by_waiter_name, accepted_by_waiter_id, accepted_at`
       : base;
     let q = db
       .from("sales_orders")
@@ -517,7 +576,7 @@ async function listOwnerOrders(clientId, opts = {}) {
       .order("closed_at", { ascending: false })
       .limit(limit);
 
-    if (opts.waiter) q = q.eq("waiter_name", String(opts.waiter).trim());
+    if (opts.waiter) q = applyWaiterFilterToQuery(q, opts.waiter, maps);
     if (opts.table != null && opts.table !== "") {
       q = q.eq("table_number", Number(opts.table));
     }
@@ -525,28 +584,37 @@ async function listOwnerOrders(clientId, opts = {}) {
   });
 
   const { orderSourceLabel } = require("../lib/orderSource");
-  return rows.map(o => ({
-    ...o,
-    items_json: normalizeItems(o.items_json),
-    source: orderSourceLabel(o),
-    accepted_by: String(o.accepted_by_waiter_name || "").trim(),
-  }));
+  return rows.map(o => {
+    const attr = resolveWaiterAttribution(o, maps);
+    return {
+      ...o,
+      waiter_name: attr.name || o.waiter_name || "",
+      waiter_id: attr.id || o.waiter_id || null,
+      items_json: normalizeItems(o.items_json),
+      source: orderSourceLabel(o),
+      accepted_by: String(o.accepted_by_waiter_name || "").trim(),
+    };
+  });
 }
 
 async function getOwnerOrderFilters(clientId) {
   const db = getSupabase();
+  const maps = await loadWaiterStaffMaps(clientId);
   const { data, error } = await db
     .from("sales_orders")
-    .select("waiter_name, table_number")
+    .select("waiter_name, waiter_id, accepted_by_waiter_name, accepted_by_waiter_id, table_number")
     .eq("client_id", clientId)
     .eq("status", "closed")
     .order("closed_at", { ascending: false })
     .limit(500);
   if (error) throw error;
   const rows = data || [];
-  const waiters = [...new Set(rows.map(r => r.waiter_name).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "sq"),
-  );
+  const waiterNames = new Set(maps.staffNames);
+  for (const row of rows) {
+    const attr = resolveWaiterAttribution(row, maps);
+    if (attr.name) waiterNames.add(attr.name);
+  }
+  const waiters = [...waiterNames].sort((a, b) => a.localeCompare(b, "sq"));
   const tables = [...new Set(rows.map(r => r.table_number).filter(n => n != null && n !== ""))]
     .map(Number)
     .sort((a, b) => a - b);
@@ -555,6 +623,7 @@ async function getOwnerOrderFilters(clientId) {
 
 async function getOwnerReport(clientId, from, to) {
   const db = getSupabase();
+  const maps = await loadWaiterStaffMaps(clientId);
   const fromD = from || new Date().toISOString().slice(0, 10);
   const toD = to || fromD;
 
@@ -568,7 +637,14 @@ async function getOwnerReport(clientId, from, to) {
     .order("closed_at", { ascending: false });
 
   if (error) throw error;
-  const orders = data || [];
+  const orders = (data || []).map(o => {
+    const attr = resolveWaiterAttribution(o, maps);
+    return {
+      ...o,
+      waiter_name: attr.name || o.waiter_name || "",
+      waiter_id: attr.id || o.waiter_id || null,
+    };
+  });
   const total = orders.reduce((s, o) => s + Number(o.total), 0);
 
   const byDay = {};
