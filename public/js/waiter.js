@@ -198,8 +198,6 @@
     });
     cart = [];
     renderCart();
-    tableNumber = 0;
-    showScreen("screen-tables");
     showOrderMsg("", false);
     showSuccessToast(
       `📴 Porosia për T${sentTable} u ruajt offline — do të dërgohet kur kthehet interneti.`,
@@ -659,19 +657,7 @@
       return;
     }
     tableNumber = num;
-    const table = bootstrap.tables?.find(t => t.number === num);
-    const sameWaiter = table?.waiter_id
-      ? sameWaiterId(table.waiter_id, activeWaiter.id)
-      : table?.waiter_name?.toLowerCase() === activeWaiter.name.toLowerCase();
-    if (table?.active_items?.length && sameWaiter) {
-      cart = table.active_items.map(i => ({
-        name: i.name,
-        price: Number(i.price),
-        quantity: Number(i.quantity),
-      }));
-    } else {
-      cart = [];
-    }
+    cart = [];
     menuGroupFilter = "pije";
     document.querySelectorAll("#menu-group-bar .menu-group-btn").forEach(b => {
       b.classList.toggle("active", b.dataset.group === "pije");
@@ -968,12 +954,10 @@
       cart = [];
       renderCart();
       const sentMsg = `✅ Porosia u dërgua te banaku për T${sentTable}!`;
-      tableNumber = 0;
-      await refreshBootstrap();
-      showScreen("screen-tables");
       showOrderMsg("", false);
       showSuccessToast(sentMsg);
       scheduleIdleLock();
+      await refreshBootstrap();
     } catch (e) {
       if (window.OfflineQueue && isNetworkError(e)) {
         try {
