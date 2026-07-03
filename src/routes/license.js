@@ -331,6 +331,14 @@ router.post("/waiter-closed-sales", licenseApiKeyOptional, async (req, res) => {
     }
     const since = String(req.body.since || req.body.closed_after || "").trim();
     const sales = await listClosedWebWaiterSalesForPos(resolved.clientId, since);
+    console.log(
+      "[license/waiter-closed-sales] client=",
+      resolved.clientId,
+      "since=",
+      since || "(all)",
+      "count=",
+      sales.length,
+    );
     res.json({ ok: true, sales, count: sales.length });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });

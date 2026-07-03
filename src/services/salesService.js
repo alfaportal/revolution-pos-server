@@ -683,7 +683,16 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   if (since) q = q.gt("closed_at", since);
   const { data, error } = await q;
   if (error) throw error;
-  return (data || []).map(row => ({
+  const rows = data || [];
+  console.log(
+    "[sales/waiter-closed] client=",
+    clientId,
+    "since=",
+    since || "(all)",
+    "found=",
+    rows.length,
+  );
+  return rows.map(row => ({
     id: row.id,
     table_number: Number(row.table_number) || 0,
     waiter_name: String(row.waiter_name || "").trim(),
