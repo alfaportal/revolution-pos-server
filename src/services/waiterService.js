@@ -303,7 +303,7 @@ async function closeWaiterTable(clientId, body) {
 
   const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
-    device_id: existing?.device_id || WEB_DEVICE,
+    device_id: WEB_DEVICE,
     local_order_id: localOrderId,
     table_number: tableNumber,
     waiter_name: waiter.name,
@@ -311,6 +311,7 @@ async function closeWaiterTable(clientId, body) {
     items,
     total,
     receipt_number: receiptNumber,
+    payment_method: body.payment_method || "cash",
     status: "closed",
     ordered_at: existing?.ordered_at || now,
     closed_at: now,
