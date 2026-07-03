@@ -8,10 +8,6 @@ const {
   cancelWaiterOrder,
   closeWaiterTable,
 } = require("../services/waiterService");
-const {
-  listPendingOnlineOrders,
-  acceptPendingOnlineOrders,
-} = require("../services/onlineOrdersService");
 
 const { getKitchenMenuItemPhoto } = require("../services/menuService");
 const { verifyKasaSessionToken } = require("../lib/kasaSession");
@@ -65,54 +61,15 @@ router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"
   }
 });
 
-router.get("/:slug/online-orders/pending", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
-  try {
-    const orders = await listPendingOnlineOrders(req.kitchenClient.id);
-    res.json({
-      ok: true,
-      pending: orders.length,
-      has_pending: orders.length > 0,
-      orders,
-      connected: true,
-    });
-  } catch (e) {
-    res.status(500).json({ ok: false, gabim: e.message, pending: 0, has_pending: false, orders: [] });
-  }
+router.get("/:slug/online-orders/pending", resolveKitchenClient, requirePackageFeature("waiter"), (req, res) => {
+  res.json({ ok: true, pending: 0, has_pending: false, orders: [], connected: true });
 });
 
-router.post("/:slug/online-orders/accept", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
-  try {
-    const rawIds = Array.isArray(req.body.order_ids)
-      ? req.body.order_ids
-      : (req.body.order_id ? [req.body.order_id] : []);
-    const pin = String(req.body.pin || req.body.waiter_pin || "").trim();
-    if (!pin) {
-      return res.status(400).json({ ok: false, gabim: "Vendosni PIN-in e kamarierit që e pranon porosinë." });
-    }
-    const { verifyWaiterPin } = require("../services/waiterPinService");
-    const handler = await verifyWaiterPin(
-      req.kitchenClient.id,
-      pin,
-      extractWaiterToken(req) || req.body?.web_token || null,
-    );
-    const result = await acceptPendingOnlineOrders(req.kitchenClient.id, rawIds, {
-      waiterId: handler.id,
-      waiterName: handler.name,
-    });
-    const orders = await listPendingOnlineOrders(req.kitchenClient.id);
-    res.json({
-      ok: !!result.ok,
-      acknowledged: result.acknowledged,
-      order_ids: result.order_ids,
-      accepted_by: result.accepted_by,
-      pending: orders.length,
-      has_pending: orders.length > 0,
-      orders,
-      gabim: result.ok ? undefined : "Porosia nuk u shënua — provoni përsëri.",
-    });
-  } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
-  }
+router.post("/:slug/online-orders/accept", resolveKitchenClient, requirePackageFeature("waiter"), (req, res) => {
+  res.status(403).json({
+    ok: false,
+    gabim: "Porositë online pranohen vetëm nga kasa (KAFENE desktop).",
+  });
 });
 
 router.post("/:slug/kasa-session", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {

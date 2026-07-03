@@ -56,10 +56,6 @@
   let idleTimer = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
-  let lastOnlinePending = null;
-  let onlineOrdersCache = [];
-  let onlineAlarmTimer = null;
-  let onlinePollTimer = null;
 
   const $ = id => document.getElementById(id);
 
@@ -628,86 +624,6 @@
     }
   }
 
-  function stopOnlineAlarm() {
-    if (onlineAlarmTimer) {
-      clearInterval(onlineAlarmTimer);
-      onlineAlarmTimer = null;
-    }
-  }
-
-  function startOnlineAlarm() {
-    if (onlineAlarmTimer) return;
-    if ((Number(lastOnlinePending) || 0) > 0 && typeof window.playOrderAlarmSound === "function") {
-      window.playOrderAlarmSound();
-    }
-    onlineAlarmTimer = setInterval(() => {
-      if ((Number(lastOnlinePending) || 0) > 0 && typeof window.playOrderAlarmSound === "function") {
-        window.playOrderAlarmSound();
-      }
-    }, 12000);
-  }
-
-  function updateOnlineOrdersBanner(data) {
-    const banner = $("online-orders-banner");
-    const badge = $("online-orders-badge");
-    const hint = $("online-orders-hint");
-    if (!banner) return;
-    const pending = Number(data?.pending) || (data?.orders || []).length;
-    banner.classList.remove("hidden");
-    if (badge) {
-      badge.hidden = pending <= 0;
-      badge.textContent = String(Math.max(pending, 0));
-    }
-    banner.classList.toggle("waiter-online-banner--alert", pending > 0);
-    if (hint) {
-      if (pending > 0) {
-        hint.textContent = pending === 1
-          ? "1 porosi në pritje — hyrni me PIN për ta pranuar"
-          : `${pending} porosi në pritje — hyrni me PIN për t’i pranuar`;
-      } else {
-        hint.textContent = "Nuk ka porosi në pritje";
-      }
-    }
-    const isFirstPoll = lastOnlinePending === null;
-    const isNew = !!data?.has_new
-      || (lastOnlinePending != null && pending > lastOnlinePending)
-      || (isFirstPoll && pending > 0);
-    if (isNew && pending > 0) {
-      startOnlineAlarm();
-    } else if (pending <= 0) {
-      stopOnlineAlarm();
-    } else if (pending > 0) {
-      startOnlineAlarm();
-    }
-    lastOnlinePending = pending;
-    onlineOrdersCache = data?.orders || [];
-  }
-
-  async function pollOnlineOrders() {
-    if (!slug || !kitchenKey) return;
-    try {
-      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/online-orders/pending${apiQuery()}`);
-      updateOnlineOrdersBanner({
-        ...data,
-        has_new: data.has_new || (
-          lastOnlinePending != null && (Number(data.pending) || 0) > lastOnlinePending
-        ),
-      });
-    } catch {
-      /* offline — mos e prish hyrjen */
-    }
-  }
-
-  function startOnlineOrdersPolling() {
-    if (onlinePollTimer) return;
-    pollOnlineOrders().catch(() => {});
-    onlinePollTimer = setInterval(() => {
-      if ($("screen-pin")?.classList.contains("active") || activeWaiter) {
-        pollOnlineOrders().catch(() => {});
-      }
-    }, 2500);
-  }
-
   async function submitPinLogin() {
     const err = $("login-err");
     showErr(err, "");
@@ -727,37 +643,8 @@
           web_token: waiterToken || undefined,
         }),
       });
-      let acceptMsg = "";
-      const pendingIds = (onlineOrdersCache || []).map(o => o.id).filter(Boolean);
-      if (pendingIds.length) {
-        try {
-          const accepted = await api(
-            `/api/waiter/${encodeURIComponent(slug)}/online-orders/accept${apiQuery()}`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                pin,
-                order_ids: pendingIds,
-                web_token: waiterToken || undefined,
-              }),
-            },
-          );
-          if (accepted.acknowledged > 0) {
-            acceptMsg = ` · ${accepted.acknowledged} porosi u pranuan`;
-            lastOnlinePending = Number(accepted.pending) || 0;
-            onlineOrdersCache = accepted.orders || [];
-            updateOnlineOrdersBanner({ pending: lastOnlinePending, orders: onlineOrdersCache, has_new: false });
-            await loadBootstrap();
-          }
-        } catch (acceptErr) {
-          acceptMsg = ` · ${acceptErr.message || "porositë nuk u pranuan"}`;
-        }
-      }
       clearPin();
       enterWaiterSession(data.waiter);
-      if (acceptMsg && data.waiter?.name) {
-        showSuccessToast(`${data.waiter.name}${acceptMsg}`);
-      }
     } catch (e) {
       clearPin();
       showErr(err, e.message);
@@ -1124,7 +1011,6 @@
       }
       renderPinDisplay();
       showScreen("screen-pin");
-      startOnlineOrdersPolling();
     } catch (e) {
       showErr($("login-err"), e.message);
     }
