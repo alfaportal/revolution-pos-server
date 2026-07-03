@@ -71,10 +71,8 @@
     photoWrap.appendChild(ph);
   }
 
-  function createMenuItemButton(item, { onSelect, disabled, formatEuro, getPhotoUrl }) {
-    const resolvePhoto = getPhotoUrl || defaultPhotoUrl;
+  function createMenuItemButton(item, { onSelect, disabled, formatEuro }) {
     const soldOut = Boolean(item.out_of_stock || item.sold_out);
-    const isDrink = isDrinkCategory(item.category);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "menu-item-btn" + (soldOut ? " menu-item-sold-out-btn" : "");
@@ -83,27 +81,6 @@
 
     const card = document.createElement("div");
     card.className = "menu-item-card";
-
-    const photoWrap = document.createElement("div");
-    photoWrap.className = "menu-item-photo-wrap" + (isDrink ? " is-drink" : " is-food");
-
-    if (itemHasPhoto(item)) {
-      const img = document.createElement("img");
-      img.className = "menu-item-photo";
-      img.alt = item.name || "";
-      img.loading = "lazy";
-      img.decoding = "async";
-      img.src = resolvePhoto(item);
-      img.onerror = () => {
-        img.remove();
-        createPlaceholder(item, photoWrap);
-      };
-      photoWrap.appendChild(img);
-    } else {
-      createPlaceholder(item, photoWrap);
-    }
-
-    card.appendChild(photoWrap);
 
     const meta = document.createElement("div");
     meta.className = "menu-item-meta";

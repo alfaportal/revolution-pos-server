@@ -656,6 +656,11 @@ a.info-card-link:active {
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 4.5rem;
 }
 
 .pub-menu-card:hover {
@@ -664,70 +669,47 @@ a.info-card-link:active {
   border-color: rgba(201, 162, 39, 0.28);
 }
 
-.pub-menu-media {
-  aspect-ratio: 1;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(145deg, var(--bg-soft) 0%, #fff 100%);
-  border: none;
-  padding: 0;
-  cursor: default;
-}
-
+.pub-menu-media,
 .pub-menu-photo-btn {
-  cursor: pointer;
-}
-
-.pub-menu-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.pub-menu-emoji {
-  font-size: 2.75rem;
-  line-height: 1;
-  filter: drop-shadow(0 4px 10px rgba(26, 18, 16, 0.1));
+  display: none !important;
 }
 
 .pub-menu-body {
-  padding: 0.65rem 0.7rem 0.75rem;
+  padding: 0.75rem 0.65rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.35rem;
   text-align: center;
+  width: 100%;
 }
 
 .pub-menu-name {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 800;
-  line-height: 1.32;
+  line-height: 1.28;
   color: var(--text);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .pub-menu-price {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 800;
-  padding: 0.32rem 0.75rem;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.22);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #0f766e;
+  box-shadow: none;
 }
 
 .pub-menu-price.is-gold {
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-  color: var(--burgundy);
-  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.28);
+  background: transparent;
+  color: #b45309;
+  box-shadow: none;
 }
 
 @media (min-width: 560px) {
@@ -1079,7 +1061,7 @@ body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
   grid-column: 2;
   grid-row: 1 / span 2;
   font-weight: 800;
-  color: var(--accent);
+  color: #0f766e;
 }
 
 .order-menu-item-add {
