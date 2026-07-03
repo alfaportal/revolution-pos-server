@@ -205,9 +205,10 @@
   function renderOrders(orders, cancelledOrders) {
     hideError();
     const active = orders || [];
+    const pending = active.filter(isPendingOrder);
     const cancelled = cancelledOrders || [];
     let hasNew = false;
-    for (const o of active.filter(isPendingOrder)) {
+    for (const o of pending) {
       if (!knownIds.has(o.id)) hasNew = true;
     }
     if (hasNew && knownIds.size) {
@@ -218,7 +219,7 @@
     updateAlarmState(active);
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
-    if (!active.length && !cancelled.length) {
+    if (!pending.length && !cancelled.length) {
       gridEl.innerHTML = "";
       emptyEl?.classList.remove("hidden");
       knownIds = new Set();
@@ -243,20 +244,12 @@
         </article>`;
     }).join("");
 
-    gridEl.innerHTML = cancelledHtml + active.map(o => {
+    gridEl.innerHTML = cancelledHtml + pending.map(o => {
       const isNew = !knownIds.has(o.id);
       const src = sourceMeta(o);
       const items = (o.items_json || []).map(renderOrderItem).join("");
-      const accepted = !!(o.accepted_at || o.accepted_by_waiter_name);
-      const acceptor = String(o.accepted_by_waiter_name || "").trim();
-      const acceptLine = accepted
-        ? `<div class="ticket-waiter ticket-accepted">✅ Pranuar nga: <strong>${escapeHtml(acceptor || "—")}</strong></div>`
-        : `<div class="ticket-waiter ticket-pending">⏳ Në pritje — pranoni me PIN</div>`;
-      const actions = accepted
-        ? ""
-        : `<button type="button" class="btn-ready btn-accept" data-accept="${o.id}">Prano me PIN 🔐</button>`;
       return `
-        <article class="order-ticket${isNew ? " new" : ""}${accepted ? " accepted" : " pending"}" data-id="${o.id}">
+        <article class="order-ticket${isNew ? " new" : ""} pending" data-id="${o.id}">
           <div class="ticket-kind">Porosi — jo faturë</div>
           <div class="ticket-source">${src.icon} ${src.label}</div>
           <div class="ticket-head">
@@ -264,16 +257,30 @@
             <div class="ticket-time">${formatTime(o.ordered_at || o.created_at)}<br><small>${elapsed(o.ordered_at || o.created_at)}</small></div>
           </div>
           <div class="ticket-waiter">👤 <strong>${escapeHtml(o.waiter_name || "—")}</strong></div>
-          ${acceptLine}
+          <div class="ticket-waiter ticket-pending">⏳ Në pritje — pranoni me PIN</div>
           <ul class="ticket-items">${items || "<li>—</li>"}</ul>
-          ${actions}
+          <button type="button" class="btn-ready btn-accept" data-accept="${o.id}">Prano me PIN 🔐</button>
         </article>`;
     }).join("");
 
-    knownIds = new Set(active.filter(isPendingOrder).map(o => o.id));
+    knownIds = new Set(pending.map(o => o.id));
     gridEl.querySelectorAll("[data-accept]").forEach(btn => {
       btn.addEventListener("click", () => acceptOrder(btn.dataset.accept, btn));
     });
+  }
+
+  function dismissOrderCard(orderId) {
+    const card = gridEl?.querySelector(`.order-ticket[data-id="${CSS.escape(String(orderId))}"]`);
+    if (!card) return;
+    card.classList.add("bar-ticket-leaving");
+    setTimeout(() => {
+      card.remove();
+      knownIds.delete(String(orderId));
+      const hasCards = gridEl?.querySelector(".order-ticket");
+      if (!hasCards) emptyEl?.classList.remove("hidden");
+      updateAlarmState([]);
+      if (countEl) countEl.textContent = "0 porosi";
+    }, 1500);
   }
 
   async function fetchOrders() {
@@ -338,7 +345,8 @@
       }
       const acceptedBy = data.accepted_by || "";
       showToast(acceptedBy ? `Porosia u pranua nga ${acceptedBy}` : "Porosia u pranua.", "success");
-      await refreshAll();
+      dismissOrderCard(orderId);
+      setTimeout(() => refreshAll(), 1600);
     } catch (e) {
       showToast(e.message || "Gabim.", "error");
       btn.disabled = false;
