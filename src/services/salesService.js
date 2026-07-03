@@ -137,7 +137,7 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   const { data: existing } = await db
     .from("sales_orders")
-    .select("status, closed_at, ordered_at, items_json")
+    .select("status, closed_at, ordered_at, items_json, accepted_at, accepted_by_waiter_name, accepted_by_waiter_id")
     .eq("client_id", license.client_id)
     .eq("local_order_id", localOrderId)
     .eq("device_id", deviceId)
@@ -151,6 +151,10 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     const nextItems = JSON.stringify(items);
     finalStatus = prevItems === nextItems ? "ready" : "ordered";
   }
+
+  const itemsChanged = !!existing
+    && finalStatus === "ordered"
+    && JSON.stringify(normalizeItems(existing.items_json)) !== JSON.stringify(items);
 
   const tableNum = Number(body.table_number) || 0;
   const keepKey = { local_order_id: localOrderId, device_id: deviceId };
@@ -179,9 +183,14 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   row.payment_method = ["karte", "kartë", "card", "kart"].includes(pmRaw) ? "karte" : "cash";
 
   if (finalStatus === "ordered") {
-    row.ordered_at = body.ordered_at || now;
+    row.ordered_at = itemsChanged ? now : (body.ordered_at || now);
     row.closed_at = row.ordered_at;
     row.ready_at = null;
+    if (itemsChanged) {
+      row.accepted_at = null;
+      row.accepted_by_waiter_name = null;
+      row.accepted_by_waiter_id = null;
+    }
   } else if (finalStatus === "cancelled") {
     row.ordered_at = body.ordered_at || existing?.ordered_at || now;
     row.closed_at = now;
