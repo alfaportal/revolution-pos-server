@@ -168,6 +168,7 @@ app.get("/owner/panel", (_req, res) => {
 });
 
 app.get("/bar/:slug", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/bar.html"));
 });
 
