@@ -134,7 +134,17 @@ router.post("/:slug/kasa-session", resolveKitchenClient, requirePackageFeature("
 
 async function postWaiterOrder(req, res) {
   try {
-    const result = await submitWaiterOrder(req.kitchenClient.id, req.body);
+    const { getWaiterByWebToken } = require("../services/waiterPinService");
+    const body = { ...(req.body || {}) };
+    const token = extractWaiterToken(req);
+    if (token) {
+      const fromToken = await getWaiterByWebToken(req.kitchenClient.id, token);
+      if (fromToken?.id) {
+        if (!body.waiter_id) body.waiter_id = fromToken.id;
+        if (!body.waiter_name) body.waiter_name = fromToken.name;
+      }
+    }
+    const result = await submitWaiterOrder(req.kitchenClient.id, body);
     res.status(201).json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message || "Porosia nuk u dërgua." });

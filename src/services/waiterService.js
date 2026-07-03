@@ -223,6 +223,27 @@ async function submitWaiterOrder(clientId, body) {
     ordered_at: existing?.ordered_at || now,
   });
 
+  let saved = sale;
+  if (sale?.id) {
+    const db = getSupabase();
+    const patch = { waiter_name: waiter.name, waiter_id: waiter.id };
+    let { data, error } = await db
+      .from("sales_orders")
+      .update(patch)
+      .eq("id", sale.id)
+      .select()
+      .single();
+    if (error && patch.waiter_id && /waiter_id|schema cache/i.test(String(error.message || ""))) {
+      ({ data, error } = await db
+        .from("sales_orders")
+        .update({ waiter_name: waiter.name })
+        .eq("id", sale.id)
+        .select()
+        .single());
+    }
+    if (!error && data) saved = data;
+  }
+
   try {
     const { deductStockForOrder } = require("./stockService");
     await deductStockForOrder(clientId, newItems);
@@ -237,7 +258,7 @@ async function submitWaiterOrder(clientId, body) {
     console.warn("[inventory] waiter deduct failed:", err.message);
   }
 
-  return { ok: true, order: sale, sent_to: "bar", waiter };
+  return { ok: true, order: saved, sent_to: "bar", waiter };
 }
 
 async function cancelWaiterOrder(clientId, body) {
