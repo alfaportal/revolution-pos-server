@@ -132,7 +132,17 @@
       </div>
       <div id="cart-msg" class="cart-msg hidden"></div>
       <button type="button" class="btn btn-send-order" id="btn-send">Dërgo Porosinë</button>
-      <button type="button" class="btn btn-close btn-close-secondary" id="btn-close">Mbyll tavolinën + Printo faturën</button>
+      <div id="cart-table-bill" class="cart-table-bill hidden">
+        <span>Totali në tavolinë</span>
+        <span id="cart-table-total">0.00 €</span>
+      </div>
+      <div id="cart-pay-row" class="cart-pay-row hidden">
+        <p class="cart-pay-label">Mbyll tavolinën — zgjidh pagesën</p>
+        <div class="cart-pay-btns">
+          <button type="button" class="btn btn-pay-cash" id="btn-pay-cash">Cash</button>
+          <button type="button" class="btn btn-pay-card" id="btn-pay-card">Kartë</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -152,6 +162,6 @@
   <script src="/js/order-alarm-sound.js?v=1"></script>
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=4"></script>
-  <script src="/js/waiter.js?v=27"></script>
+  <script src="/js/waiter.js?v=28"></script>
 </body>
 </html>

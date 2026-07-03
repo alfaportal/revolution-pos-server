@@ -385,14 +385,29 @@
     }, { passive: false });
   }
 
+  function getTableMeta(num) {
+    return bootstrap?.tables?.find(t => Number(t.number) === Number(num));
+  }
+
+  function tableBillTotal(num) {
+    const items = getTableMeta(num)?.active_items || [];
+    return items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
+  }
+
+  function canPayTable(num) {
+    return (getTableMeta(num)?.active_items || []).length > 0;
+  }
+
   function syncCartBarLayout() {
     const screen = $("screen-order");
     const bar = $("cart-bar");
     if (!screen || !bar) return;
-    const hasItems = cart.length > 0;
-    screen.classList.toggle("has-cart", hasItems);
-    bar.classList.toggle("hidden", !hasItems);
-    if (hasItems) {
+    const hasCart = cart.length > 0;
+    const showPay = tableNumber > 0 && canPayTable(tableNumber);
+    const showBar = hasCart || showPay;
+    screen.classList.toggle("has-cart", showBar);
+    bar.classList.toggle("hidden", !showBar);
+    if (showBar) {
       const h = Math.ceil(bar.getBoundingClientRect().height);
       screen.style.setProperty("--cart-bar-height", `${h}px`);
     } else {
@@ -706,6 +721,14 @@
     }
     const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
     $("cart-total").textContent = formatEuro(total);
+
+    const showPay = tableNumber > 0 && canPayTable(tableNumber);
+    $("cart-table-bill")?.classList.toggle("hidden", !showPay);
+    if ($("cart-table-total")) {
+      $("cart-table-total").textContent = formatEuro(tableBillTotal(tableNumber));
+    }
+    $("cart-pay-row")?.classList.toggle("hidden", !showPay);
+
     syncCartBarLayout();
     requestAnimationFrame(syncCartBarLayout);
   }
@@ -727,6 +750,7 @@
       }
       if ($("screen-order").classList.contains("active")) {
         renderMenu();
+        renderCart();
       }
       renderTables();
       checkReservationReminders();
@@ -844,25 +868,39 @@
     showScreen("screen-tables");
   });
 
-  $("btn-close")?.addEventListener("click", async () => {
+  async function closeTableWithPayment(paymentMethod) {
     const err = $("order-err");
     showErr(err, "");
-    const table = bootstrap.tables?.find(t => t.number === tableNumber);
-    const hasOrder = cart.length || table?.active_items?.length;
-    if (!hasOrder) {
+    showOrderMsg("", false);
+
+    if (!activeWaiter?.id) {
+      showErr(err, "Sesioni ka skaduar. Shkruani PIN-in.");
+      lockSession();
+      return;
+    }
+    const table = getTableMeta(tableNumber);
+    if (!tableNumber || !canPayTable(tableNumber)) {
       showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
       return;
     }
-    if (!confirm(`Mbyll tavolinën T${tableNumber} dhe printo faturën?`)) return;
-    const btn = $("btn-close");
-    btn.disabled = true;
-    btn.textContent = "Duke mbyllur...";
+
+    const btnCash = $("btn-pay-cash");
+    const btnCard = $("btn-pay-card");
+    if (btnCash) btnCash.disabled = true;
+    if (btnCard) btnCard.disabled = true;
+    const prevCash = btnCash?.textContent || "Cash";
+    const prevCard = btnCard?.textContent || "Kartë";
+    if (paymentMethod === "cash" && btnCash) btnCash.textContent = "Duke mbyllur...";
+    if (paymentMethod === "karte" && btnCard) btnCard.textContent = "Duke mbyllur...";
+
+    const closedTable = tableNumber;
     try {
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           ...waiterPayload(),
-          table_number: tableNumber,
+          table_number: closedTable,
+          payment_method: paymentMethod,
           items: cart.map(c => ({
             name: c.name,
             quantity: c.quantity,
@@ -870,15 +908,31 @@
           })),
         }),
       });
-      showReceipt(data.receipt);
-      setTimeout(printReceipt, 400);
+      cart = [];
+      renderCart();
+      const payLabel = paymentMethod === "karte" ? "Kartë" : "Cash";
+      showSuccessToast(`✅ T${closedTable} u mbyll — ${payLabel}`);
+      if (data.receipt) showReceipt(data.receipt);
+      tableNumber = 0;
+      await refreshBootstrap();
+      showScreen("screen-tables");
+      scheduleIdleLock();
     } catch (e) {
       showErr(err, e.message);
     } finally {
-      btn.disabled = false;
-      btn.textContent = "Mbyll tavolinën + Printo faturën";
+      if (btnCash) {
+        btnCash.disabled = false;
+        btnCash.textContent = prevCash;
+      }
+      if (btnCard) {
+        btnCard.disabled = false;
+        btnCard.textContent = prevCard;
+      }
     }
-  });
+  }
+
+  bindTap($("btn-pay-cash"), () => closeTableWithPayment("cash"));
+  bindTap($("btn-pay-card"), () => closeTableWithPayment("karte"));
 
   async function submitOrder() {
     const btn = $("btn-send");

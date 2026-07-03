@@ -549,6 +549,70 @@ html, body {
 .btn-send-order:active { background: #16a34a; }
 .btn-send-order:disabled { opacity: 0.55; cursor: wait; }
 
+.cart-table-bill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0.15rem 0.35rem;
+  margin-top: 0.35rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.25);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fde68a;
+}
+
+.cart-table-bill.hidden { display: none; }
+
+.cart-pay-row {
+  margin-top: 0.5rem;
+}
+
+.cart-pay-row.hidden { display: none; }
+
+.cart-pay-label {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.cart-pay-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.btn-pay-cash,
+.btn-pay-card {
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-pay-cash {
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  color: #fff;
+}
+
+.btn-pay-card {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  color: #fff;
+}
+
+.btn-pay-cash:disabled,
+.btn-pay-card:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .btn-close-secondary {
   padding: 0.65rem 1rem;
   font-size: 0.85rem;
