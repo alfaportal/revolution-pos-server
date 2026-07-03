@@ -1,7 +1,7 @@
 const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
-const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder } = require("../lib/orderSource");
+const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder, isPublicWebOrder } = require("../lib/orderSource");
 const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
 const { selectWithAcceptanceFallback, updateOrdersAcceptance } = require("../lib/salesOrderSelect");
 
@@ -125,7 +125,7 @@ async function listBarOrders(clientId) {
   const result = [];
 
   for (const order of orders) {
-    if (isDirectCustomerKitchenOrder(order)) continue;
+    if (isDirectCustomerKitchenOrder(order) && !isPublicWebOrder(order)) continue;
     if (!isBanakOrder(order)) continue;
     const items = normalizeItems(order.items_json).filter(it => isBarItem(it, lookup));
     const mapped = mapOrderWithItems(order, items.length ? items : normalizeItems(order.items_json));
