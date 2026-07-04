@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="/logo-source.png">
   <title>Kamarieri — Revolution Invest POS</title>
   <link rel="stylesheet" href="/css/staff-brand.css">
-  <link rel="stylesheet" href="/css/waiter.css?v=3">
+  <link rel="stylesheet" href="/css/waiter.css?v=4">
   <link rel="stylesheet" href="/css/menu-pos.css?v=9">
 </head>
 <body>
@@ -176,6 +176,20 @@
     </div>
   </div>
 
+  <div id="online-close-modal" class="accept-modal online-close-modal hidden" hidden role="dialog" aria-modal="true" aria-labelledby="online-close-modal-title">
+    <div class="accept-modal-backdrop" id="online-close-modal-backdrop"></div>
+    <div class="accept-modal-card">
+      <h2 id="online-close-modal-title">Online 1</h2>
+      <div class="accept-modal-source" id="online-close-modal-source"></div>
+      <ul class="accept-modal-items" id="online-close-modal-items"></ul>
+      <div class="accept-modal-total">Totali: <strong id="online-close-modal-total">0.00 €</strong></div>
+      <div class="accept-modal-actions online-close-actions">
+        <button type="button" id="online-close-modal-cash" class="accept-btn-pay-cash">Cash</button>
+        <button type="button" id="online-close-modal-card" class="accept-btn-pay-card">Kartë</button>
+      </div>
+    </div>
+  </div>
+
   <div id="waiter-desktop-footer" class="waiter-desktop-footer hidden">
     <button type="button" class="btn btn-calc-desktop" data-open-calc>🧮 Kalkulatorë</button>
   </div>
@@ -215,6 +229,6 @@
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=5"></script>
   <script src="/js/waiter-calculator.js?v=1"></script>
-  <script src="/js/waiter.js?v=48"></script>
+  <script src="/js/waiter.js?v=49"></script>
 </body>
 </html>

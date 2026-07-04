@@ -1383,7 +1383,19 @@ html, body {
   color: #fff;
 }
 
-/* ─── Telefon kamarier: PIN + porosi kompakt ─── */
+.accept-btn-pay-cash {
+  background: #16a34a;
+  color: #fff;
+}
+
+.accept-btn-pay-card {
+  background: #2563eb;
+  color: #fff;
+}
+
+.online-close-actions {
+  margin-top: 0.25rem;
+}
 @media (max-width: 520px) {
   #screen-pin.staff-login-screen {
     padding: 0.35rem;

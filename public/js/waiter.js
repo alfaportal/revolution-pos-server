@@ -701,13 +701,13 @@
         <span class="table-stat table-total">${formatEuro(total)}</span>
       </div>`;
     return `<button type="button" class="online-slot-card table-card ${cardClass}"
-        data-online-slot="${slot.slot}" data-order-id="${escapeHtml(o.id)}"${pending ? "" : ' tabindex="-1" aria-disabled="true"'}>
+        data-online-slot="${slot.slot}" data-order-id="${escapeHtml(o.id)}"${pending ? ' data-online-pending="1"' : ' data-online-accepted="1"'}>
       <div class="num online-slot-label">${label}</div>
       <span class="table-status-pill ${pending ? "pending-online-pill" : "occupied"}">${statusText}</span>
       <span class="table-source-badge source-warn">${src.icon} ${src.label}</span>
       <div class="meta">${stats}</div>
       <div class="online-slot-hint">${customer}</div>
-      ${pending ? '<div class="online-slot-action">Kliko → PRANO / REFUZO</div>' : '<div class="online-slot-action muted">Pranuar — mbyll nga paneli</div>'}
+      ${pending ? '<div class="online-slot-action">Kliko → PRANO / REFUZO</div>' : '<div class="online-slot-action">Kliko → Cash / Kartë</div>'}
     </button>`;
   }
 
@@ -730,6 +730,16 @@
         if (!slot || slot.status !== "pending" || !slot.order) return;
         if (String(slot.order.id) !== orderId) return;
         renderAcceptModal(slot.order);
+      });
+    });
+    (root || $("tables-grid")).querySelectorAll(".online-slot-card.accepted-online[data-order-id]").forEach(btn => {
+      bindTap(btn, () => {
+        const slotNum = Number(btn.dataset.onlineSlot);
+        const orderId = String(btn.dataset.orderId || "");
+        const slot = (onlineSlots || []).find(s => Number(s.slot) === slotNum);
+        if (!slot || slot.status !== "accepted" || !slot.order) return;
+        if (String(slot.order.id) !== orderId) return;
+        renderOnlineCloseModal(slot.order, slot);
       });
     });
   }
@@ -1099,6 +1109,86 @@
       console.error("[waiter] REFUZO error", { orderId, error: e.message });
       showSuccessToast(e.message || "Nuk u refuzua porosia.");
       if (btn) { btn.disabled = false; btn.textContent = "REFUZO"; }
+    }
+  }
+
+  let onlineCloseOrderId = null;
+
+  function closeOnlineCloseModal() {
+    onlineCloseOrderId = null;
+    const modal = $("online-close-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.setAttribute("hidden", "");
+    }
+  }
+
+  function renderOnlineCloseModal(o, slot) {
+    const modal = $("online-close-modal");
+    if (!modal || !o?.id) return;
+    onlineCloseOrderId = o.id;
+    const src = orderSourceMeta(o);
+    const srcName = String(o.waiter_name || "").trim();
+    const slotLabel = slot?.label || `Online ${slot?.slot || "?"}`;
+    $("online-close-modal-title").textContent = slotLabel;
+    $("online-close-modal-source").innerHTML = `${src.icon} ${src.label}${srcName ? ` · ${escapeHtml(srcName)}` : ""}`;
+    $("online-close-modal-items").innerHTML =
+      (o.items_json || []).map(renderAcceptOrderItem).join("") || "<li>—</li>";
+    $("online-close-modal-total").textContent = formatEuro(orderItemsTotal(o));
+
+    const cashBtn = $("online-close-modal-cash");
+    const cardBtn = $("online-close-modal-card");
+    if (cashBtn) {
+      cashBtn.disabled = false;
+      cashBtn.textContent = "Cash";
+      cashBtn.onclick = () => closeOnlineAcceptedOrder(o, "cash", cashBtn, cardBtn);
+    }
+    if (cardBtn) {
+      cardBtn.disabled = false;
+      cardBtn.textContent = "Kartë";
+      cardBtn.onclick = () => closeOnlineAcceptedOrder(o, "karte", cashBtn, cardBtn);
+    }
+    modal.classList.remove("hidden");
+    modal.removeAttribute("hidden");
+  }
+
+  async function closeOnlineAcceptedOrder(order, paymentMethod, btnCash, btnCard) {
+    if (!order?.id || tableClosing) return;
+    tableClosing = true;
+    const prevCash = btnCash?.textContent || "Cash";
+    const prevCard = btnCard?.textContent || "Kartë";
+    if (btnCash) { btnCash.disabled = true; btnCard.disabled = true; }
+    if (paymentMethod === "cash" && btnCash) btnCash.textContent = "…";
+    if (paymentMethod === "karte" && btnCard) btnCard.textContent = "…";
+    try {
+      const closeItems = (order.items_json || []).map(it => ({
+        name: it.name,
+        quantity: Number(it.quantity) || 1,
+        price: Number(it.price) || 0,
+      }));
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...waiterPayload(),
+          order_id: order.id,
+          table_number: 0,
+          payment_method: paymentMethod,
+          items: closeItems,
+        }),
+      });
+      closeOnlineCloseModal();
+      const payLabel = paymentMethod === "karte" ? "Kartë" : "Cash";
+      showSuccessToast(`✅ ${orderTableLabel(order)} u mbyll — ${payLabel}`);
+      if (data.receipt) showReceipt(data.receipt);
+      await pollIncomingOrders();
+      await refreshBootstrap();
+      scheduleIdleLock();
+    } catch (e) {
+      showSuccessToast(e.message || "Nuk u mbyll porosia.");
+      if (btnCash) { btnCash.disabled = false; btnCash.textContent = prevCash; }
+      if (btnCard) { btnCard.disabled = false; btnCard.textContent = prevCard; }
+    } finally {
+      tableClosing = false;
     }
   }
 
@@ -1736,6 +1826,7 @@
 
   bindCartLines();
   $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
+  $("online-close-modal-backdrop")?.addEventListener("click", closeOnlineCloseModal);
   setupWaiterIdleLock();
   setupDesktopReturn();
   setupDesktopCalculatorBar();
