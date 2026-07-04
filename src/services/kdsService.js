@@ -534,6 +534,30 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
   return { count: acked.length, ids: acked };
 }
 
+async function cancelBarOrdersViaSql(clientId, orderIds) {
+  const pool = getPgPool();
+  if (!pool || !orderIds.length) return null;
+
+  const { rows } = await pool.query(
+    `UPDATE sales_orders SET
+       status = 'cancelled',
+       closed_at = NOW(),
+       total = 0,
+       ready_at = NULL
+     WHERE client_id = $1::uuid
+       AND status = 'ordered'
+       AND id = ANY($2::uuid[])
+       AND NOT (
+         refused_at IS NOT NULL
+         AND order_expires_at IS NOT NULL
+         AND order_expires_at > NOW()
+       )
+     RETURNING id`,
+    [clientId, orderIds],
+  );
+  return (rows || []).map(r => r.id).filter(Boolean);
+}
+
 async function cancelBarOrders(clientId, orderIds, { force = false, reason = "unknown" } = {}) {
   console.warn("[cancelBarOrders] CALLED", {
     clientId,
@@ -544,39 +568,74 @@ async function cancelBarOrders(clientId, orderIds, { force = false, reason = "un
   });
   const db = getSupabase();
   let ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
-  if (!ids.length) return { count: 0, ids: [] };
+  if (!ids.length) return { count: 0, ids: [], skipped_grace: [] };
+
+  const skippedGrace = [];
+  let toCancel = ids;
 
   if (!force) {
     const { data: rows, error: fetchErr } = await db
       .from("sales_orders")
-      .select("id, refused_at, order_expires_at, refused_by_waiter_ids")
+      .select("id, status, refused_at, order_expires_at, refused_by_waiter_ids")
       .eq("client_id", clientId)
       .in("id", ids);
+
     if (fetchErr && !isMissingRefusalColumnError(fetchErr)) throw fetchErr;
+
     if (!fetchErr && rows?.length) {
-      ids = rows
-        .filter(row => !isInRefusalGrace(normalizeRefusalFields(row)))
-        .map(row => row.id)
-        .filter(Boolean);
+      toCancel = [];
+      for (const row of rows) {
+        const norm = normalizeRefusalFields(row);
+        if (isInRefusalGrace(norm)) {
+          console.log("[cancelBarOrders] SKIPPED - order in grace period", {
+            orderId: row.id,
+            refused_at: norm.refused_at,
+            order_expires_at: norm.order_expires_at,
+            reason,
+          });
+          skippedGrace.push(row.id);
+          continue;
+        }
+        if (String(row.status || "") === "ordered") {
+          toCancel.push(row.id);
+        }
+      }
     }
-    if (!ids.length) return { count: 0, ids: [] };
   }
 
-  const now = new Date().toISOString();
-  const { data, error } = await db
-    .from("sales_orders")
-    .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
-    .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .in("id", ids)
-    .select("id");
+  if (!toCancel.length) {
+    console.log("[cancelBarOrders] nothing to cancel", { skipped_grace: skippedGrace, reason });
+    return { count: 0, ids: [], skipped_grace: skippedGrace };
+  }
 
-  if (error) throw error;
-  const cancelled = (data || []).map(row => row.id).filter(Boolean);
+  let cancelled = [];
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      cancelled = await cancelBarOrdersViaSql(clientId, toCancel) || [];
+    } catch (err) {
+      if (!isMissingRefusalColumnError(err)) throw err;
+    }
+  }
+
+  if (!pool && toCancel.length) {
+    const now = new Date().toISOString();
+    const { data, error } = await db
+      .from("sales_orders")
+      .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .in("id", toCancel)
+      .select("id");
+
+    if (error) throw error;
+    cancelled = (data || []).map(row => row.id).filter(Boolean);
+  }
+
   if (cancelled.length) {
     notifyKitchenUpdate(clientId, { order_ids: cancelled, status: "cancelled" });
   }
-  return { count: cancelled.length, ids: cancelled };
+  return { count: cancelled.length, ids: cancelled, skipped_grace: skippedGrace };
 }
 
 async function listRecentlyCancelledOrders(clientId, windowSec = 30) {

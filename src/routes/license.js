@@ -458,6 +458,19 @@ router.post("/online-orders/cancel", licenseApiKeyOptional, async (req, res) => 
 
     const result = await cancelBarOrders(resolved.clientId, rawIds, { reason: "license/online-orders/cancel" });
     if (!result.count) {
+      if (result.skipped_grace?.length) {
+        console.log("[online-orders/cancel] grace skip", {
+          clientId: resolved.clientId,
+          skipped_grace: result.skipped_grace,
+        });
+        return res.json({
+          ok: true,
+          cancelled: 0,
+          order_ids: [],
+          skipped_grace: result.skipped_grace,
+          message: "Porosia në grace period pas REFUZO — mbetet aktive për kamarierët e tjerë.",
+        });
+      }
       return res.json({
         ok: false,
         cancelled: 0,
@@ -469,6 +482,7 @@ router.post("/online-orders/cancel", licenseApiKeyOptional, async (req, res) => 
       ok: true,
       cancelled: result.count,
       order_ids: result.ids,
+      skipped_grace: result.skipped_grace || [],
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
