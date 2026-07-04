@@ -48,11 +48,11 @@
   let activeWaiter = null;
   let tableNumber = 0;
   let cart = [];
-  let activeMenuCategory = "";
+  let menuGroupFilter = "pije";
   let pinDigits = [];
   let successToastTimer = null;
   let cartLinesBound = false;
-  let categoryBarBound = false;
+  let groupBarBound = false;
   let idleTimer = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
@@ -653,45 +653,13 @@
     }
   }
 
-  function ensureMenuCategory() {
-    const cats = MenuCatalog.getCategoryList(bootstrap);
-    if (!cats.length) {
-      activeMenuCategory = "";
-      return;
-    }
-    if (!activeMenuCategory || !cats.includes(activeMenuCategory)) {
-      activeMenuCategory = MenuCatalog.pickDefaultCategory(bootstrap);
-    }
-  }
-
-  function renderCategoryBar() {
-    const bar = $("menu-group-bar");
-    if (!bar) return;
-    ensureMenuCategory();
-    const cats = MenuCatalog.getCategoryList(bootstrap);
-    if (!cats.length) {
-      bar.innerHTML = "";
-      return;
-    }
-    bar.innerHTML = cats.map(c => `
-      <button type="button" class="menu-group-btn${c === activeMenuCategory ? " active" : ""}"
-        role="tab" data-category="${escapeAttr(c)}" aria-selected="${c === activeMenuCategory}">
-        <span class="menu-tab-label">${escapeHtml(c)}</span>
-      </button>`).join("");
-  }
-
-  function bindCategoryBar() {
-    if (categoryBarBound) return;
-    categoryBarBound = true;
-    const bar = $("menu-group-bar");
-    if (!bar) return;
-    bindTap(bar, (_e, target) => {
-      const btn = target?.closest?.("[data-category]");
-      if (!btn) return;
-      activeMenuCategory = btn.dataset.category || "";
-      renderCategoryBar();
-      renderMenuItems();
-    });
+  function bindMenuGroupBar() {
+    if (groupBarBound) return;
+    groupBarBound = true;
+    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
+      menuGroupFilter = group;
+      renderMenu();
+    }, { defaultGroup: "pije" });
   }
 
   function bindCartLines() {
@@ -738,7 +706,7 @@
     updateTablesLiveBar(bootstrap.tables);
   }
 
-  function renderMenuItems() {
+  function renderMenu() {
     const menu = bootstrap?.menu || [];
     const grid = $("menu-grid");
     if (!grid) return;
@@ -746,38 +714,18 @@
       grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
       return;
     }
-    const { items } = MenuCatalog.filterMenuItems(bootstrap, activeMenuCategory);
-    if (!items.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
-      return;
-    }
-    grid.innerHTML = `<div class="waiter-menu-list">${items.map(item => {
-      const soldOut = Boolean(item.out_of_stock || item.sold_out);
-      return `
-        <div class="waiter-menu-row${soldOut ? " is-sold-out" : ""}">
-          <div class="waiter-menu-info">
-            <span class="waiter-menu-name">${escapeHtml(item.name)}</span>
-            <span class="waiter-menu-cat">${escapeHtml(item.category || "")}</span>
-            <span class="waiter-menu-price">${soldOut ? escapeHtml(item.sold_out_label || "Mbaroi") : formatEuro(item.price)}</span>
-          </div>
-          <button type="button" class="btn btn-primary waiter-menu-add" data-item-id="${escapeAttr(item.id)}"
-            ${soldOut ? "disabled" : ""}>Shto</button>
-        </div>`;
-    }).join("")}</div>`;
-
-    grid.querySelectorAll(".waiter-menu-add").forEach(btn => {
-      bindTap(btn, () => {
-        const id = btn.getAttribute("data-item-id");
-        const item = menu.find(m => String(m.id) === String(id));
-        if (!item || item.out_of_stock || item.sold_out) return;
-        addToCart({ id: item.id, name: item.name, price: Number(item.price) }, btn);
-      });
+    MenuPosUI.renderMenuGrid({
+      container: grid,
+      menuItems: menu,
+      groupFilter: menuGroupFilter,
+      formatEuro,
+      getPhotoUrl: kitchenPhotoUrl,
+      onSelectItem: (item, btn) => addToCart({
+        id: item.id,
+        name: item.name,
+        price: Number(item.price),
+      }, btn),
     });
-  }
-
-  function renderMenu() {
-    renderCategoryBar();
-    renderMenuItems();
   }
 
   // Link personal i kamarierit: token valid në URL + kamarier i caktuar nga bootstrap.
@@ -872,7 +820,10 @@
     }
     tableNumber = num;
     cart = [];
-    activeMenuCategory = "";
+    menuGroupFilter = "pije";
+    document.querySelectorAll("#menu-group-bar .menu-group-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.group === "pije");
+    });
     $("order-title").textContent = `T${num}`;
     showOrderMsg("", false);
     renderMenu();
@@ -884,10 +835,7 @@
     const existing = cart.find(c => c.name === item.name && Number(c.price) === Number(item.price));
     if (existing) existing.quantity += 1;
     else cart.push({ ...item, quantity: 1 });
-    if (btnEl) {
-      btnEl.classList.add("menu-item-flash");
-      setTimeout(() => btnEl.classList.remove("menu-item-flash"), 400);
-    }
+    if (btnEl) MenuPosUI.flashButton(btnEl);
     renderCart();
   }
 
@@ -1308,7 +1256,7 @@
     document.addEventListener(ev, ensureAudioUnlocked, { passive: true }),
   );
 
-  bindCategoryBar();
+  bindMenuGroupBar();
   bindCartLines();
   setupWaiterIdleLock();
   setupDesktopReturn();
