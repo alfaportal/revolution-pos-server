@@ -141,39 +141,21 @@
     </div>`;
   }
 
-  function applyVenueName(venue) {
-    if (!venue) return;
-    titleEl.textContent = `Banak — ${venue}`;
-    document.title = `Banak — ${venue}`;
-    const venueBar = document.getElementById("bar-venue-name");
-    if (venueBar) venueBar.textContent = venue;
-  }
-
   async function fetchLiveTables() {
-    if (!slug) {
-      showError("Linku i banakut nuk është i saktë. Duhet /bar/[slug]?key=...");
-      return;
-    }
-    if (!kitchenKey) {
-      showError("Mungon kodi i aksesit (?key=...) në link.");
-      return;
-    }
-    if (!tablesGridEl) return;
+    if (!slug || !kitchenKey || !tablesGridEl) return;
     try {
       const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/tables/live${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) return;
-      hideError();
-      applyVenueName(data.restaurant_name || data.client_name);
       const tables = data.tables || [];
       tablesGridEl.innerHTML = tables.length
         ? tables.map(renderLiveTableCard).join("")
         : '<p class="bar-tables-hint">Nuk ka tavolina të konfiguruara.</p>';
-      const stamp = formatTime(data.updated_at || new Date().toISOString());
-      if (tablesUpdatedEl) tablesUpdatedEl.textContent = `Përditësuar: ${stamp}`;
-      if (syncEl) syncEl.textContent = `Rifreskuar: ${stamp}`;
+      if (tablesUpdatedEl && data.updated_at) {
+        tablesUpdatedEl.textContent = `Përditësuar: ${formatTime(data.updated_at)}`;
+      }
     } catch {
       /* ignore */
     }
@@ -373,7 +355,7 @@
   }
 
   async function refreshAll() {
-    await fetchLiveTables();
+    await Promise.all([fetchLiveTables(), fetchOrders()]);
   }
 
   function connectSse() {
