@@ -173,6 +173,23 @@ async function verifyWaiterPin(clientId, pin, webToken = null) {
   throw new Error("PIN i gabuar.");
 }
 
+async function getWaiterByName(clientId, waiterName) {
+  const name = String(waiterName || "").trim();
+  if (!name) return null;
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("pos_staff")
+    .select("id, name, role, active")
+    .eq("client_id", clientId)
+    .eq("role", "waiter")
+    .ilike("name", name)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) return null;
+  if (data.active === false) return null;
+  return { id: data.id, name: data.name };
+}
+
 async function getWaiterById(clientId, waiterId) {
   const db = getSupabase();
   const { data, error } = await db
@@ -311,6 +328,7 @@ module.exports = {
   updateWaiterWithPin,
   deleteWaiterWithPin,
   getWaiterById,
+  getWaiterByName,
   getWaiterByWebToken,
   ensureWaiterWebToken,
   ensureAllWaiterWebTokens,

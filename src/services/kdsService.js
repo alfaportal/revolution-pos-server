@@ -102,14 +102,54 @@ function mapOrderForOnlineSlot(order) {
     ordered_at: norm.ordered_at,
     device_id: norm.device_id,
     accepted_at: norm.accepted_at,
+    accepted_by_waiter_id: norm.accepted_by_waiter_id,
     accepted_by_waiter_name: norm.accepted_by_waiter_name,
     refused_at: norm.refused_at,
     order_expires_at: norm.order_expires_at,
   };
 }
 
-/** Ndërton Online 1…N — e njëjta renditje si paneli (ordered_at ↑). */
-function buildOnlineSlotLayout(orders, { slotCount = 6 } = {}) {
+function sameWaiterId(a, b) {
+  if (!a || !b) return false;
+  return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+}
+
+/** Porosia u pranua nga ky kamarier (ID, pastaj emër). */
+function isOrderAcceptedByWaiter(order, waiterId, waiterName = "") {
+  const norm = normalizeAcceptanceFields(order);
+  const accepted = !!(norm.accepted_at || String(norm.accepted_by_waiter_name || "").trim());
+  if (!accepted) return false;
+  const acceptId = String(norm.accepted_by_waiter_id || "").trim();
+  const wid = String(waiterId || "").trim();
+  if (acceptId && wid && sameWaiterId(acceptId, wid)) return true;
+  const acceptName = String(norm.accepted_by_waiter_name || "").trim().toLowerCase();
+  const wName = String(waiterName || "").trim().toLowerCase();
+  return !!(acceptName && wName && acceptName === wName);
+}
+
+/** A duhet sloti të shfaqet për këtë kamarier (pending= të gjithë, accepted= vetëm pranuesi). */
+function onlineSlotVisibleToWaiter(raw, waiterId, waiterName = "") {
+  const wid = String(waiterId || "").trim();
+  if (!wid) return { visible: true };
+
+  const norm = normalizeRefusalFields(normalizeAcceptanceFields(raw));
+  const accepted = !!(norm.accepted_at || String(norm.accepted_by_waiter_name || "").trim());
+
+  if (accepted) {
+    if (isOrderAcceptedByWaiter(norm, wid, waiterName)) {
+      return { visible: true, status: "accepted" };
+    }
+    return { visible: false, status: "free" };
+  }
+
+  if (waiterRefusedOrder(norm, wid)) return { visible: false, status: "free" };
+  if (isOrderExpired(norm)) return { visible: false, status: "free" };
+  if (!needsWaiterAcceptance(raw)) return { visible: false, status: "free" };
+  return { visible: true, status: "pending" };
+}
+
+/** Ndërton Online 1…N — renditje globale ordered_at ↑; maskë per-kamarier kur waiterId. */
+function buildOnlineSlotLayout(orders, { slotCount = 6, waiterId = null, waiterName = "" } = {}) {
   const count = Math.min(12, Math.max(1, Number(slotCount) || 6));
   const slots = [];
   for (let i = 1; i <= count; i += 1) {
@@ -125,8 +165,18 @@ function buildOnlineSlotLayout(orders, { slotCount = 6 } = {}) {
     if (idx >= count) return;
     const order = mapOrderForOnlineSlot(raw);
     const accepted = !!(order.accepted_at || String(order.accepted_by_waiter_name || "").trim());
-    slots[idx].order = order;
-    slots[idx].status = accepted ? "accepted" : "pending";
+
+    if (!waiterId) {
+      slots[idx].order = order;
+      slots[idx].status = accepted ? "accepted" : "pending";
+      return;
+    }
+
+    const vis = onlineSlotVisibleToWaiter(raw, waiterId, waiterName);
+    if (vis.visible) {
+      slots[idx].order = order;
+      slots[idx].status = vis.status || (accepted ? "accepted" : "pending");
+    }
   });
 
   return slots;
@@ -736,6 +786,8 @@ module.exports = {
   filterWaiterAcceptOrders,
   filterOrdersForWaiterPolling,
   isOnlineSlotOrder,
+  isOrderAcceptedByWaiter,
+  onlineSlotVisibleToWaiter,
   buildOnlineSlotLayout,
   expireRefusedOrders,
   isInRefusalGrace,
