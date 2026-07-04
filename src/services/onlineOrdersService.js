@@ -1,5 +1,11 @@
 const { normalizeItems } = require("./salesService");
-const { fetchOrderedSales, acknowledgeBarOrders } = require("./kdsService");
+const {
+  fetchOrderedSales,
+  fetchRefusalGraceOrders,
+  mergeOrdersById,
+  acknowledgeBarOrders,
+  isInRefusalGrace,
+} = require("./kdsService");
 const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
 const { isOrderAccepted } = require("../lib/salesOrderSelect");
 const { getSupabase } = require("../db");
@@ -8,6 +14,7 @@ function formatOrderForPos(row) {
   const src = orderSourceLabel(row);
   const handler = String(row.accepted_by_waiter_name || "").trim();
   const accepted = isOrderAccepted(row);
+  const inGrace = isInRefusalGrace(row);
   return {
     id: row.id,
     table_number: Number(row.table_number) || 0,
@@ -21,15 +28,23 @@ function formatOrderForPos(row) {
     ordered_at: row.ordered_at,
     status: row.status || "ordered",
     pending: !accepted,
+    in_refusal_grace: inGrace,
+    refused_at: row.refused_at || null,
+    order_expires_at: row.order_expires_at || null,
     accepted_by: handler,
     accepted_at: row.accepted_at || null,
     handler_label: handler || null,
   };
 }
 
+async function loadPosOnlineOrderRows(clientId) {
+  const base = await fetchOrderedSales(clientId);
+  return mergeOrdersById(base, await fetchRefusalGraceOrders(clientId));
+}
+
 async function listPendingOnlineOrders(clientId) {
   if (!clientId) return [];
-  const rows = await fetchOrderedSales(clientId);
+  const rows = await loadPosOnlineOrderRows(clientId);
   return rows
     .filter(isCustomerBarOrder)
     .filter(row => !isOrderAccepted(row))
@@ -38,7 +53,7 @@ async function listPendingOnlineOrders(clientId) {
 
 async function listBarMobileOrderedForPos(clientId) {
   if (!clientId) return [];
-  const rows = await fetchOrderedSales(clientId);
+  const rows = await loadPosOnlineOrderRows(clientId);
   return rows.filter(isCustomerBarOrder).map(formatOrderForPos);
 }
 
