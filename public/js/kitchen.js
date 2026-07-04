@@ -1,7 +1,10 @@
 (function () {
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = parts[0] === "kitchen" ? parts[1] : "";
-  const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
+  const urlParams = new URLSearchParams(window.location.search);
+  const kitchenKey = urlParams.get("key") || "";
+  const waiterToken = String(urlParams.get("w") || "").trim();
+  const waiterMode = !!waiterToken;
 
   const titleEl = document.getElementById("kitchen-title");
   const subEl = document.getElementById("kitchen-sub");
@@ -17,9 +20,16 @@
   let eventSource = null;
   let alarmTimer = null;
   let toastTimer = null;
+  let assignedWaiter = null;
+  const venueInfo = { name: "", address: "" };
+  let activeModalOrderId = null;   // porosia që shfaqet aktualisht te modali
+  const handledOrderIds = new Set(); // porositë e trajtuara (pranuar/refuzuar) në këtë sesion
 
   function apiQuery() {
-    return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
+    const p = [];
+    if (kitchenKey) p.push(`key=${encodeURIComponent(kitchenKey)}`);
+    if (waiterToken) p.push(`w=${encodeURIComponent(waiterToken)}`);
+    return p.length ? `?${p.join("&")}` : "";
   }
 
   function apiHeaders() {
@@ -155,7 +165,7 @@
     }
     if (hasNew && knownIds.size) {
       playNewOrderSound();
-      showToast("Porosi e re — pranoni me PIN", "info");
+      showToast(waiterMode ? "Porosi e re" : "Porosi e re — pranoni me PIN", "info");
     }
 
     updateAlarmState(active);
@@ -193,10 +203,18 @@
       const acceptor = String(o.accepted_by_waiter_name || "").trim();
       const acceptLine = accepted
         ? `<div class="ticket-waiter ticket-accepted">✅ Pranuar nga: <strong>${escapeHtml(acceptor || "—")}</strong></div>`
-        : `<div class="ticket-waiter ticket-pending">⏳ Në pritje — pranoni me PIN</div>`;
-      const actions = accepted
-        ? `<button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>`
-        : `<button type="button" class="btn-ready btn-accept" data-accept="${o.id}">Prano me PIN 🔐</button>`;
+        : `<div class="ticket-waiter ticket-pending">⏳ Në pritje${waiterMode ? "" : " — pranoni me PIN"}</div>`;
+      let actions;
+      if (accepted) {
+        actions = `<button type="button" class="btn-ready" data-ready="${o.id}">Gati ✅</button>`;
+      } else if (waiterMode) {
+        actions = `<div class="ticket-actions">
+          <button type="button" class="btn-ready btn-accept" data-accept="${o.id}">PRANO ✅</button>
+          <button type="button" class="btn-ready btn-refuse" data-refuse="${o.id}">REFUZO ✖</button>
+        </div>`;
+      } else {
+        actions = `<button type="button" class="btn-ready btn-accept" data-accept="${o.id}">Prano me PIN 🔐</button>`;
+      }
       return `
         <article class="order-ticket${isNew ? " new" : ""}${accepted ? " accepted" : " pending"}" data-id="${o.id}">
           <div class="ticket-source">${src.icon} ${src.label}</div>
@@ -214,6 +232,9 @@
     knownIds = new Set(active.map(o => o.id));
     gridEl.querySelectorAll("[data-accept]").forEach(btn => {
       btn.addEventListener("click", () => acceptOrder(btn.dataset.accept, btn));
+    });
+    gridEl.querySelectorAll("[data-refuse]").forEach(btn => {
+      btn.addEventListener("click", () => refuseOrder(btn.dataset.refuse, btn));
     });
     gridEl.querySelectorAll("[data-ready]").forEach(btn => {
       btn.addEventListener("click", () => markReady(btn.dataset.ready, btn));
@@ -240,53 +261,94 @@
       }
       if (data.restaurant_name || data.client_name) {
         const venue = data.restaurant_name || data.client_name;
-        titleEl.textContent = venue;
-        subEl.textContent = "Porositë e ushqimit — rifreskohet automatikisht";
-        document.title = `Kuzhina — ${venue}`;
+        venueInfo.name = venue;
+        venueInfo.address = data.address || "";
+        titleEl.textContent = waiterMode && data.assigned_waiter?.name
+          ? `Kamarieri: ${data.assigned_waiter.name}`
+          : venue;
+        subEl.textContent = waiterMode
+          ? "Porositë e tavolinave tuaja — rifreskohet automatikisht"
+          : "Porositë e ushqimit — rifreskohet automatikisht";
+        document.title = `${waiterMode ? "Porositë" : "Kuzhina"} — ${venue}`;
         const venueBar = document.getElementById("kitchen-venue-name");
         if (venueBar) venueBar.textContent = venue;
       }
+      assignedWaiter = data.assigned_waiter || assignedWaiter;
       renderOrders(data.orders || [], data.cancelled || []);
+      if (waiterMode) maybeShowAcceptModal(data.orders || []);
     } catch (e) {
       showError(e.message || "Gabim rrjeti.");
     }
   }
 
-  async function acceptOrder(orderId, btn) {
-    const pinTrim = await OrderPinModal.request({
-      title: "Prano porosinë",
-      hint: "Shkruani PIN-in 4-shifror të kamarierit që e pranon porosinë",
-    });
-    if (!pinTrim) return;
-    if (!/^\d{4}$/.test(String(pinTrim).trim())) {
-      showToast("PIN duhet të jetë 4 shifra.", "error");
-      return;
+  async function acceptOrder(orderId, btn, orderForReceipt) {
+    let body = {};
+    // Rrjedha e re (link personal): pa PIN — kamarieri është identifikuar.
+    if (!waiterMode) {
+      const pinTrim = await OrderPinModal.request({
+        title: "Prano porosinë",
+        hint: "Shkruani PIN-in 4-shifror të kamarierit që e pranon porosinë",
+      });
+      if (!pinTrim) return;
+      if (!/^\d{4}$/.test(String(pinTrim).trim())) {
+        showToast("PIN duhet të jetë 4 shifra.", "error");
+        return;
+      }
+      body = { pin: String(pinTrim).trim() };
     }
-    btn.disabled = true;
-    btn.textContent = "Duke u përpunuar...";
+    if (btn) { btn.disabled = true; btn.textContent = "Duke u përpunuar..."; }
     try {
       const res = await fetch(
         `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/accept${apiQuery()}`,
         {
           method: "POST",
           headers: { ...apiHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ pin: String(pinTrim).trim() }),
+          body: JSON.stringify(body),
         },
       );
       const data = await res.json();
       if (!res.ok || !data.ok) {
         showToast(data.gabim || "Nuk u pranua porosia.", "error");
-        btn.disabled = false;
-        btn.textContent = "Prano me PIN 🔐";
+        if (btn) { btn.disabled = false; btn.textContent = waiterMode ? "PRANO ✅" : "Prano me PIN 🔐"; }
         return;
       }
+      handledOrderIds.add(orderId);
+      closeAcceptModal();
       const acceptedBy = data.accepted_by || "";
       showToast(acceptedBy ? `Porosia u pranua nga ${acceptedBy}` : "Porosia u pranua.", "success");
+      // Printo kuponin e pranimit (fatura termike) — vetëm në rrjedhën e re.
+      if (waiterMode) {
+        const src = orderForReceipt || data.order;
+        if (src) printAcceptanceReceipt(src, acceptedBy);
+      }
       await fetchOrders();
     } catch (e) {
       showToast(e.message || "Gabim.", "error");
-      btn.disabled = false;
-      btn.textContent = "Prano me PIN 🔐";
+      if (btn) { btn.disabled = false; btn.textContent = waiterMode ? "PRANO ✅" : "Prano me PIN 🔐"; }
+    }
+  }
+
+  async function refuseOrder(orderId, btn) {
+    if (!waiterMode) return;
+    if (btn) { btn.disabled = true; btn.textContent = "Duke u përpunuar..."; }
+    try {
+      const res = await fetch(
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`,
+        { method: "POST", headers: { ...apiHeaders(), "Content-Type": "application/json" }, body: "{}" },
+      );
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        showToast(data.gabim || "Nuk u refuzua porosia.", "error");
+        if (btn) { btn.disabled = false; btn.textContent = "REFUZO ✖"; }
+        return;
+      }
+      handledOrderIds.add(orderId);
+      closeAcceptModal();
+      showToast("Porosia u refuzua.", "info");
+      await fetchOrders();
+    } catch (e) {
+      showToast(e.message || "Gabim.", "error");
+      if (btn) { btn.disabled = false; btn.textContent = "REFUZO ✖"; }
     }
   }
 
@@ -312,6 +374,152 @@
       btn.disabled = false;
       btn.textContent = "Gati ✅";
     }
+  }
+
+  // ---- Modal PRANO / REFUZO (rrjedha e re, pa PIN) ----
+  function orderTotal(o) {
+    if (o.total != null) return Number(o.total) || 0;
+    return (o.items_json || []).reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
+  }
+
+  function maybeShowAcceptModal(orders) {
+    const pending = (orders || []).filter(o =>
+      !(o.accepted_at || o.accepted_by_waiter_name) && !handledOrderIds.has(o.id));
+    if (!pending.length) {
+      closeAcceptModal();
+      return;
+    }
+    // Shfaq porosinë më të vjetër në pritje (nëse nuk po shfaqet tashmë).
+    const next = pending[0];
+    if (activeModalOrderId === next.id) return;
+    renderAcceptModal(next);
+  }
+
+  function renderAcceptModal(o) {
+    const modal = document.getElementById("accept-modal");
+    if (!modal) return;
+    activeModalOrderId = o.id;
+    const src = sourceMeta(o);
+    const srcName = String(o.waiter_name || "").trim();
+    const srcText = `${src.icon} ${src.label}${srcName ? ` · ${escapeHtml(srcName)}` : ""}`;
+    document.getElementById("accept-modal-source").innerHTML = srcText;
+    document.getElementById("accept-modal-table").textContent = tableLabel(o);
+    document.getElementById("accept-modal-items").innerHTML =
+      (o.items_json || []).map(renderOrderItem).join("") || "<li>—</li>";
+    document.getElementById("accept-modal-total").textContent = formatEuro(orderTotal(o));
+
+    const acceptBtn = document.getElementById("accept-modal-accept");
+    const refuseBtn = document.getElementById("accept-modal-refuse");
+    if (acceptBtn) {
+      acceptBtn.disabled = false;
+      acceptBtn.textContent = "PRANO ✅";
+      acceptBtn.onclick = () => acceptOrder(o.id, acceptBtn, o);
+    }
+    if (refuseBtn) {
+      refuseBtn.disabled = false;
+      refuseBtn.textContent = "REFUZO ✖";
+      refuseBtn.onclick = () => refuseOrder(o.id, refuseBtn);
+    }
+    modal.classList.remove("hidden");
+    modal.removeAttribute("hidden");
+  }
+
+  function closeAcceptModal() {
+    activeModalOrderId = null;
+    const modal = document.getElementById("accept-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.setAttribute("hidden", "");
+    }
+  }
+
+  // ---- Printimi i kuponit të pranimit (fatura termike, print në shfletues) ----
+  function acceptanceReceiptHtml(o, acceptedBy) {
+    const fmt = n => Number(n || 0).toFixed(2);
+    const items = (o.items_json || []).map(it => {
+      const qty = Number(it.quantity) || 1;
+      const unit = fmt(it.price);
+      const line = fmt((Number(it.price) || 0) * qty);
+      return `<div class="rc-item-line"><span class="rc-item-name">${escapeHtml(it.name)}</span>` +
+        `<span class="rc-item-calc">${qty}x ${unit} = ${line}</span></div>`;
+    }).join("");
+    const now = new Date();
+    const meta = [
+      `Tavolina: ${tableLabel(o)}`,
+      acceptedBy ? `Kamarieri: ${escapeHtml(acceptedBy)}` : "",
+      `Data: ${now.toLocaleDateString("sq-AL")}  Ora: ${now.toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`,
+    ].filter(Boolean);
+    return `<div class="receipt-thermal">
+      <div class="rc-header">
+        <div class="rc-business-name">${escapeHtml(venueInfo.name || "Faturë")}</div>
+        ${venueInfo.address ? `<div class="rc-meta-line">${escapeHtml(venueInfo.address)}</div>` : ""}
+        <div class="rc-meta-line">POROSI E PRANUAR</div>
+      </div>
+      <div class="rc-divider"></div>
+      <div class="rc-order-meta">${meta.map(m => `<div>${m}</div>`).join("")}</div>
+      <div class="rc-divider"></div>
+      <div class="rc-items-compact">${items || '<div class="rc-empty">—</div>'}</div>
+      <div class="rc-divider"></div>
+      <div class="rc-total"><span class="rc-total-label">TOTALI:</span><span class="rc-total-value">${fmt(orderTotal(o))} EUR</span></div>
+      <div class="rc-divider"></div>
+      <div class="rc-thanks">Faleminderit!</div>
+    </div>`;
+  }
+
+  function receiptPrintStyles(mm) {
+    return `
+      * { margin:0; padding:0; box-sizing:border-box; }
+      @page { size: ${mm}mm auto; margin: 0; }
+      html, body { width:100%; background:#fff; }
+      body { font-family:"Courier New","Consolas",ui-monospace,monospace; color:#000; font-size:13px; line-height:1.3; padding:3mm 3mm 6mm; }
+      .receipt-thermal { width:100%; }
+      .rc-header { text-align:center; margin-bottom:2mm; }
+      .rc-business-name { font-weight:700; font-size:1.35em; text-transform:uppercase; margin-bottom:1mm; }
+      .rc-meta-line { font-size:0.95em; }
+      .rc-divider { border:0; border-top:1px dashed #000; margin:1.6mm 0; }
+      .rc-order-meta { font-size:0.95em; line-height:1.4; }
+      .rc-items-compact .rc-item-line { display:flex; justify-content:space-between; gap:3mm; margin:0.8mm 0; }
+      .rc-items-compact .rc-item-name { flex:1; word-break:break-word; }
+      .rc-items-compact .rc-item-calc { white-space:nowrap; }
+      .rc-total { display:flex; justify-content:space-between; font-weight:700; font-size:1.2em; margin:1.2mm 0; }
+      .rc-thanks { text-align:center; font-weight:700; margin-top:2mm; }
+      .rc-empty { text-align:center; }
+    `;
+  }
+
+  function printAcceptanceReceipt(o, acceptedBy) {
+    try {
+      const mm = 80;
+      const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">` +
+        `<title>${escapeHtml(venueInfo.name || "Faturë")}</title>` +
+        `<style>${receiptPrintStyles(mm)}</style></head>` +
+        `<body>${acceptanceReceiptHtml(o, acceptedBy)}</body></html>`;
+      const old = document.getElementById("accept-print-frame");
+      if (old) old.remove();
+      const frame = document.createElement("iframe");
+      frame.id = "accept-print-frame";
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+      document.body.appendChild(frame);
+      let done = false;
+      const cleanup = () => setTimeout(() => { try { frame.remove(); } catch (_) { /* */ } }, 800);
+      const trigger = () => {
+        if (done) return;
+        done = true;
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.onafterprint = cleanup;
+          frame.contentWindow.print();
+          cleanup();
+        } catch (_) { cleanup(); }
+      };
+      const fdoc = frame.contentWindow.document;
+      fdoc.open();
+      fdoc.write(doc);
+      fdoc.close();
+      frame.onload = () => setTimeout(trigger, 200);
+      setTimeout(trigger, 500);
+    } catch (_) { /* print opsional */ }
   }
 
   function connectSse() {
