@@ -180,10 +180,16 @@
 
   function updateTablesLiveBar(tables) {
     const occupied = (tables || []).filter(t => t.status === "occupied").length;
+    const online = pendingAcceptOrders.length;
     const countEl = $("tables-order-count");
     if (countEl) {
-      countEl.textContent = occupied === 1 ? "1 porosi" : `${occupied} porosi`;
+      const parts = [];
+      if (online > 0) parts.push(online === 1 ? "1 online" : `${online} online`);
+      if (occupied > 0) parts.push(occupied === 1 ? "1 tavolinë" : `${occupied} tavolina`);
+      countEl.textContent = parts.length ? parts.join(" · ") : "0 porosi";
     }
+    const liveBar = $("tables-live-bar");
+    if (liveBar) liveBar.classList.toggle("has-online-pending", online > 0);
     const refreshedEl = $("tables-refreshed");
     if (refreshedEl) {
       const t = new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" });
@@ -789,6 +795,50 @@
   let acceptModalOrderId = null;
   const handledAcceptIds = new Set();
   let acceptPollTimer = null;
+  /** Porosi QR/Takeaway/Delivery në pritje PRANO/REFUZO (nga /bar/orders). */
+  let pendingAcceptOrders = [];
+
+  function isPendingAcceptOrder(o) {
+    if (!o?.id) return false;
+    if (o.accepted_at || String(o.accepted_by_waiter_name || "").trim()) return false;
+    if (handledAcceptIds.has(o.id)) return false;
+    if (isOrderFromCurrentWaiter(o)) return false;
+    return true;
+  }
+
+  function syncPendingAcceptOrders(orders) {
+    pendingAcceptOrders = (orders || []).filter(isPendingAcceptOrder);
+    updateTablesLiveBar(bootstrap?.tables || []);
+    renderPendingOnlineBanner();
+  }
+
+  function renderPendingOnlineBanner() {
+    const host = $("tables-online-banner");
+    if (!host) return;
+    if (!pendingAcceptOrders.length) {
+      host.classList.add("hidden");
+      host.innerHTML = "";
+      return;
+    }
+    const items = pendingAcceptOrders.slice(0, 3).map(o => {
+      const src = orderSourceMeta(o);
+      const label = orderTableLabel(o);
+      const qty = (o.items_json || []).reduce((s, it) => s + (Number(it.quantity) || 1), 0);
+      const qtyLabel = qty === 1 ? "1 artikull" : `${qty} artikuj`;
+      return `<div class="online-banner-item">
+        <span>${src.icon} ${escapeHtml(label)}${o.waiter_name ? ` · ${escapeHtml(String(o.waiter_name).slice(0, 40))}` : ""}</span>
+        <span>${qtyLabel} · ${formatEuro(orderItemsTotal(o))}</span>
+      </div>`;
+    }).join("");
+    const extra = pendingAcceptOrders.length > 3
+      ? `<small>+ ${pendingAcceptOrders.length - 3} tjetër në pritje</small>`
+      : "";
+    host.innerHTML = `<div class="online-banner-inner">
+      <strong>🥡 Porosi në pritje — PRANO ose REFUZO</strong>
+      ${items}${extra}
+    </div>`;
+    host.classList.remove("hidden");
+  }
 
   function canAcceptOrdersWithoutPin() {
     return Boolean(activeWaiter?.id) && Boolean(waiterToken) && Boolean(bootstrap?.assigned_waiter?.id);
@@ -973,9 +1023,11 @@
       const orders = data.orders || [];
       console.log("[waiter] accept poll", {
         count: orders.length,
+        pendingAccept: orders.filter(isPendingAcceptOrder).length,
         grace: orders.filter(o => o.refused_at).length,
         ids: orders.map(o => o.id),
       });
+      syncPendingAcceptOrders(orders);
       await maybeShowAcceptModal(orders);
     } catch (e) {
       console.warn("[waiter] accept poll failed", e.message);
@@ -1044,6 +1096,8 @@
 
   function lockSession() {
     stopAcceptPolling();
+    pendingAcceptOrders = [];
+    renderPendingOnlineBanner();
     clearIdleTimer();
     activeWaiter = null;
     clearWaiterSession();
