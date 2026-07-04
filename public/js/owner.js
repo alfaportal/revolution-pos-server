@@ -1031,7 +1031,13 @@ function renderWaitersTable() {
           ? `<div class="link-actions" style="flex-wrap:wrap;gap:0.35rem">
               <input type="text" class="waiter-link-input" readonly value="${escAttr(w.waiter_url)}" style="font-family:monospace;font-size:0.7rem;min-width:160px;flex:1">
               <button type="button" class="btn btn-ghost btn-sm btn-waiter-copy-link">Kopjo</button>
-            </div>`
+            </div>
+            ${w.kds_url
+              ? `<div class="link-actions" style="flex-wrap:wrap;gap:0.35rem;margin-top:0.3rem">
+                  <input type="text" class="waiter-kds-input" readonly value="${escAttr(w.kds_url)}" style="font-family:monospace;font-size:0.7rem;min-width:160px;flex:1" title="Link për pranimin e porosive (KDS)">
+                  <button type="button" class="btn btn-ghost btn-sm btn-waiter-copy-kds">Kopjo KDS</button>
+                </div>`
+              : ""}`
           : '<span style="color:var(--muted)">—</span>'}
       </td>
       <td><span class="menu-status ${w.active ? "active" : "inactive"}">${w.active ? "Aktiv" : "Joaktiv"}</span></td>
@@ -1056,6 +1062,20 @@ function renderWaitersTable() {
         setTimeout(() => { this.textContent = orig; }, 1500);
       } catch {
         prompt("Kopjoni linkun:", val);
+      }
+    });
+  });
+  body.querySelectorAll(".btn-waiter-copy-kds").forEach(btn => {
+    btn.addEventListener("click", async function () {
+      const val = btn.closest("tr")?.querySelector(".waiter-kds-input")?.value || "";
+      if (!val) return;
+      try {
+        await navigator.clipboard.writeText(val);
+        const orig = this.textContent;
+        this.textContent = "U kopjua!";
+        setTimeout(() => { this.textContent = orig; }, 1500);
+      } catch {
+        prompt("Kopjoni linkun KDS:", val);
       }
     });
   });

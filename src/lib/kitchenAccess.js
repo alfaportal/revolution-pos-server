@@ -112,6 +112,14 @@ function buildWaiterUrl(baseUrl, client, webToken = "") {
   return `${url}&w=${encodeURIComponent(t)}`;
 }
 
+/** Link personal i pranimit të porosive (KDS) për një kamarier — /kitchen/...&w=token */
+function buildWaiterKitchenUrl(baseUrl, client, webToken = "") {
+  const url = buildKitchenUrl(baseUrl, client, "kitchen");
+  const t = String(webToken || "").trim();
+  if (!url || !t) return "";
+  return `${url}&w=${encodeURIComponent(t)}`;
+}
+
 /** Linket web për një lokal — sipas paketës (banak, kuzhinë, kamarier, kiosk, faqe). */
 function buildClientWebLinks(baseUrl, client, packageTier) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
@@ -152,5 +160,6 @@ module.exports = {
   buildKitchenUrl,
   buildTableMenuUrl,
   buildWaiterUrl,
+  buildWaiterKitchenUrl,
   buildClientWebLinks,
 };
