@@ -2,6 +2,16 @@
 <html lang="sq">
 <head>
   <meta charset="UTF-8">
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      if (!p.get("w")) return;
+      var parts = location.pathname.split("/").filter(Boolean);
+      if (parts[0] !== "kitchen" || !parts[1]) return;
+      var q = p.toString();
+      location.replace("/waiter/" + encodeURIComponent(parts[1]) + (q ? "?" + q : ""));
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="theme-color" content="#0f1b3d">
   <link rel="icon" type="image/png" href="/logo-source.png">

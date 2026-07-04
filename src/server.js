@@ -180,7 +180,12 @@ app.get("/menu/:slug/:tableNumber", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/kiosk.html"));
 });
 
-app.get("/kitchen/:slug", (_req, res) => {
+app.get("/kitchen/:slug", (req, res) => {
+  const token = String(req.query.w || "").trim();
+  if (token) {
+    const q = new URLSearchParams(req.query);
+    return res.redirect(302, `/waiter/${encodeURIComponent(req.params.slug)}?${q.toString()}`);
+  }
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
