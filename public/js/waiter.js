@@ -514,6 +514,36 @@
     return items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   }
 
+  function orderItemKey(it) {
+    return `${String(it.name || "").trim()}|${Number(it.price) || 0}`;
+  }
+
+  /** Artikujt e plotë për mbyllje: tavolina aktive + çfarë ka ende në shportë. */
+  function getCloseTableItems(num) {
+    const map = new Map();
+    for (const it of getTableMeta(num)?.active_items || []) {
+      const key = orderItemKey(it);
+      map.set(key, {
+        name: String(it.name || "").trim(),
+        price: Number(it.price) || 0,
+        quantity: Number(it.quantity) || 1,
+      });
+    }
+    for (const it of cart) {
+      const key = orderItemKey(it);
+      const prev = map.get(key);
+      if (prev) prev.quantity += Number(it.quantity) || 1;
+      else {
+        map.set(key, {
+          name: String(it.name || "").trim(),
+          price: Number(it.price) || 0,
+          quantity: Number(it.quantity) || 1,
+        });
+      }
+    }
+    return [...map.values()].filter(it => it.name && it.quantity > 0);
+  }
+
   function canPayTable(num) {
     return (getTableMeta(num)?.active_items || []).length > 0;
   }
@@ -912,7 +942,7 @@
       acceptedBy ? `Kamarieri: ${escapeHtml(acceptedBy)}` : "",
       `Data: ${now.toLocaleDateString("sq-AL")}  Ora: ${now.toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`,
     ].filter(Boolean);
-    const html = `<div class="receipt-thermal">
+    const html = `<div class="receipt-thermal" data-width-mm="80">
       <div class="rc-header">
         <div class="rc-business-name">${escapeHtml(venue)}</div>
         <div class="rc-meta-line">POROSI E PRANUAR</div>
@@ -926,10 +956,45 @@
       <div class="rc-divider"></div>
       <div class="rc-thanks">Faleminderit!</div>
     </div>`;
-    const sheet = $("receipt-print");
-    if (!sheet) return;
-    sheet.innerHTML = html;
-    $("receipt-modal").classList.remove("hidden");
+    thermalPrintHtml(html, venue, 80);
+  }
+
+  function thermalPrintHtml(html, title, mm = 80) {
+    try {
+      const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">` +
+        `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+        `<title>${escapeHtml(title || "Faturë")}</title>` +
+        `<style>${receiptPrintStyles(mm)}</style></head>` +
+        `<body>${html}</body></html>`;
+      const old = document.getElementById("accept-print-frame");
+      if (old) old.remove();
+      const frame = document.createElement("iframe");
+      frame.id = "accept-print-frame";
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText =
+        "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+      document.body.appendChild(frame);
+      let done = false;
+      const cleanup = () => {
+        setTimeout(() => { try { frame.remove(); } catch (_) { /* ignore */ } }, 800);
+      };
+      const trigger = () => {
+        if (done) return;
+        done = true;
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.onafterprint = cleanup;
+          frame.contentWindow.print();
+          cleanup();
+        } catch (_) { cleanup(); }
+      };
+      const fdoc = frame.contentWindow.document;
+      fdoc.open();
+      fdoc.write(doc);
+      fdoc.close();
+      frame.onload = () => setTimeout(trigger, 200);
+      setTimeout(trigger, 500);
+    } catch { /* print opsional */ }
   }
 
   function enterWaiterSession(waiter) {
@@ -1316,24 +1381,47 @@
 
     const closedTable = tableNumber;
     try {
+      if (cart.length) {
+        await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+          method: "POST",
+          body: JSON.stringify({
+            ...waiterPayload(),
+            table_number: closedTable,
+            items: cart.map(c => ({
+              name: c.name,
+              quantity: c.quantity,
+              price: c.price,
+            })),
+          }),
+        });
+        cart = [];
+        renderCart();
+        await refreshBootstrap();
+      }
+
+      const closeItems = getCloseTableItems(closedTable);
+      if (!closeItems.length) {
+        showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
+        return;
+      }
+
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           ...waiterPayload(),
           table_number: closedTable,
           payment_method: paymentMethod,
-          items: cart.map(c => ({
-            name: c.name,
-            quantity: c.quantity,
-            price: c.price,
-          })),
+          items: closeItems,
         }),
       });
       cart = [];
       renderCart();
       const payLabel = paymentMethod === "karte" ? "Kartë" : "Cash";
       showSuccessToast(`✅ T${closedTable} u mbyll — ${payLabel}`);
-      if (data.receipt) showReceipt(data.receipt);
+      if (data.receipt) {
+        showReceipt(data.receipt);
+        setTimeout(() => printReceipt(), 450);
+      }
       tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");

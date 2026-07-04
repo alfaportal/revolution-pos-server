@@ -305,9 +305,10 @@ async function closeWaiterTable(clientId, body) {
   assertWaiterOnTable(existing, waiter, tableNumber);
 
   const cartItems = normalizeItems(body.items);
+  const existingItems = normalizeItems(existing?.items_json);
   const items = cartItems.length
-    ? cartItems
-    : normalizeItems(existing?.items_json);
+    ? mergeOrderItems(existingItems, cartItems)
+    : existingItems;
   if (!items.length) {
     throw new Error("Nuk ka artikuj për të mbyllur tavolinën.");
   }
