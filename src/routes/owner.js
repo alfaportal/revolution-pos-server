@@ -57,7 +57,7 @@ const {
 } = require("../services/waiterPinService");
 const { buildTablesFromAreas } = require("../lib/tableLayout");
 const { getAssignmentState, setWaiterTables } = require("../services/waiterTablesService");
-const { ensureKitchenCredentials, buildClientWebLinks, buildWaiterUrl } = require("../lib/kitchenAccess");
+const { ensureKitchenCredentials, buildClientWebLinks, buildWaiterUrl, buildWaiterKitchenUrl } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { listKioskQrCodes, listTableQrMeta, getTableQrCode, getTableQrPng, qrPrintHtml, singleQrPrintHtml, tableMenuUrl } = require("../services/kioskQrService");
 const {
@@ -858,6 +858,7 @@ router.get("/waiters", async (req, res) => {
         waiter_url: client && w.web_token
           ? buildWaiterUrl(base, client, w.web_token)
           : shared_waiter_url,
+        kds_url: client && w.web_token ? buildWaiterKitchenUrl(base, client, w.web_token) : "",
         assigned_tables: assignState.byWaiter.get(w.id) || [],
       })),
       shared_waiter_url,
@@ -900,6 +901,7 @@ async function enrichWaiterForOwner(clientId, waiter) {
     ...waiter,
     web_token: token || waiter.web_token || null,
     waiter_url: client && token ? buildWaiterUrl(base, client, token) : shared,
+    kds_url: client && token ? buildWaiterKitchenUrl(base, client, token) : "",
   };
 }
 
