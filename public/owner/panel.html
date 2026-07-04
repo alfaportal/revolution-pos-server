@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="link-row" id="owner-link-waiter-row">
-        <label>Kamarierët — link i përbashkët (preferoni linkun personal te skeda Kamarierët)</label>
+        <label>Kamarierët — link i përbashkët (menaxho punonjësit nga KAFENE desktop)</label>
         <div class="link-actions">
           <input type="text" id="owner-waiter-url" readonly>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-waiter">Kopjo</button>
@@ -90,7 +90,6 @@
       <button class="tab" data-tab="licenca">Licenca</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="stoku">Stoku</button>
-      <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>Asistent AI</button>
       <button class="tab ai-feature-tab hidden" data-tab="njoftimet" id="tab-notifications" hidden>Njoftimet</button>
@@ -287,34 +286,6 @@
       </div>
     </div>
 
-    <div id="panel-kamarieret" class="panel-section hidden">
-      <div class="card">
-        <div class="card-title">Kamarierët me PIN</div>
-        <p class="links-hint">Çdo kamarier hyn në tablet me PIN 4-shifror dhe <strong>link personal</strong> (mos ndani linkun me kolegët). Për pranimin e porosive në telefon, kopjoni <strong>Linku KDS</strong> te secili kamarier.</p>
-        <div class="filter-row menu-add-row">
-          <div>
-            <label for="waiter-add-name">Emri</label>
-            <input type="text" id="waiter-add-name" placeholder="p.sh. Sherif">
-          </div>
-          <div>
-            <label for="waiter-add-pin">PIN (4 shifra)</label>
-            <input type="password" id="waiter-add-pin" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" placeholder="1234">
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-waiter-add">Shto kamarier</button>
-        </div>
-        <div id="waiters-msg" class="owner-license-msg"></div>
-        <p id="waiters-sync-hint" class="links-hint" style="margin-top:0"></p>
-        <div class="table-wrap">
-          <table class="menu-owner-table venue-owner-table">
-            <thead>
-              <tr><th>Emri</th><th>PIN</th><th>Linku tablet</th><th>Linku KDS</th><th>Statusi</th><th>Veprimet</th></tr>
-            </thead>
-            <tbody id="waiters-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <div id="panel-rezervime" class="panel-section hidden">
       <div class="card">
         <div class="card-title card-title-row">
@@ -362,7 +333,7 @@
 
       <div class="card" style="margin-top:1rem">
         <div class="card-title">Stafi — kamarierë dhe kuzhinierë</div>
-        <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte). Për tabletat e kamarierit me PIN, përdorni tabin <strong>Kamarierët</strong>.</p>
+        <p class="links-hint">Kamarierët shfaqen te hyrja e tabletit të porosive. Kuzhinierët ruhen për menaxhim (POS / raporte). Për tabletat e kamarierit me PIN dhe linkun KDS, përdorni panelin <strong>KAFENE desktop</strong>.</p>
         <div class="filter-row menu-add-row">
           <div>
             <label for="staff-add-name">Emri</label>
@@ -875,20 +846,6 @@
     </div>
   </div>
 
-  <div id="assign-tables-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="assign-tables-title">
-    <div class="owner-modal-backdrop" id="assign-tables-modal-backdrop"></div>
-    <div class="owner-modal-card">
-      <div class="owner-modal-head">
-        <h2 id="assign-tables-title">Cakto tavolinat</h2>
-        <button type="button" class="owner-modal-close" id="assign-tables-modal-close" aria-label="Mbyll">×</button>
-      </div>
-      <p class="links-hint">Zgjidhni tavolinat për këtë kamarier. Ai do të shohë vetëm tavolinat e caktuara në telefon. Një tavolinë e caktuar te dikush tjetër, kalon te ky kamarier kur e zgjidhni.</p>
-      <div id="assign-tables-list" class="assign-tables-list"></div>
-      <div id="assign-tables-modal-msg" class="owner-license-msg"></div>
-      <button type="button" class="btn btn-primary" id="btn-assign-tables-save">Ruaj caktimet</button>
-    </div>
-  </div>
-
   <div id="menu-scan-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="menu-scan-title">
     <div class="owner-modal-backdrop" id="menu-scan-backdrop"></div>
     <div class="owner-modal-card">
@@ -1005,7 +962,7 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=31"></script>
+  <script src="/js/owner.js?v=32"></script>
   <script src="/js/owner-locations.js?v=1"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
