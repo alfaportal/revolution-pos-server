@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=8", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=9", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -59,11 +59,10 @@
   let activeWaiter = null;
   let tableNumber = 0;
   let cart = [];
-  let menuGroupFilter = "pije";
+  let menuGroupFilter = "all";
   let pinDigits = [];
   let successToastTimer = null;
   let cartLinesBound = false;
-  let groupBarBound = false;
   let idleTimer = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
@@ -694,15 +693,6 @@
     }
   }
 
-  function bindMenuGroupBar() {
-    if (groupBarBound) return;
-    groupBarBound = true;
-    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
-      menuGroupFilter = group;
-      renderMenu();
-    }, { defaultGroup: "pije" });
-  }
-
   function bindCartLines() {
     const lines = $("cart-lines");
     if (!lines || cartLinesBound) return;
@@ -1058,10 +1048,6 @@
     }
     tableNumber = num;
     cart = [];
-    menuGroupFilter = "pije";
-    document.querySelectorAll("#menu-group-bar .menu-group-btn").forEach(b => {
-      b.classList.toggle("active", b.dataset.group === "pije");
-    });
     $("order-title").textContent = `T${num}`;
     showOrderMsg("", false);
     renderMenu();
@@ -1495,7 +1481,7 @@
       });
       cart = [];
       renderCart();
-      const sentMsg = `✅ Porosia u dërgua te banaku për T${sentTable}!`;
+      const sentMsg = `✅ Porosia u dërgua për T${sentTable}!`;
       showOrderMsg("", false);
       showSuccessToast(sentMsg);
       scheduleIdleLock();
@@ -1524,7 +1510,6 @@
     document.addEventListener(ev, ensureAudioUnlocked, { passive: true }),
   );
 
-  bindMenuGroupBar();
   bindCartLines();
   $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
   setupWaiterIdleLock();
