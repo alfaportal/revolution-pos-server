@@ -5,7 +5,7 @@ const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCa
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
-const { getWaiterByWebToken } = require("../services/waiterPinService");
+const { getWaiterByWebToken, getWaiterById, getWaiterByName } = require("../services/waiterPinService");
 const { getAssignmentState } = require("../services/waiterTablesService");
 
 const router = express.Router();
@@ -19,6 +19,26 @@ async function resolveWaiterFromToken(clientId, req) {
   const token = extractWaiterToken(req);
   if (!token) return null;
   return getWaiterByWebToken(clientId, token);
+}
+
+/** Telefon (?w=), POS (?waiter_id / ?waiter_name + key). */
+async function resolveWaiterForBarView(clientId, req) {
+  const fromToken = await resolveWaiterFromToken(clientId, req);
+  if (fromToken?.id) return fromToken;
+
+  const qId = String(req.query.waiter_id || "").trim();
+  if (qId) {
+    const w = await getWaiterById(clientId, qId);
+    if (w) return w;
+  }
+
+  const qName = String(req.query.waiter_name || "").trim();
+  if (qName) {
+    const w = await getWaiterByName(clientId, qName);
+    if (w) return w;
+  }
+
+  return null;
 }
 
 /**
@@ -51,26 +71,30 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     // Telefoni i kamarierit: të gjitha porositë në pritje — pa ndarje banak/kuzhinë.
     let orders = await fetchOrderedSales(client.id);
     orders = mergeOrdersById(orders, await fetchRefusalGraceOrders(client.id));
-    const online_slots = buildOnlineSlotLayout(orders);
     let cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
 
-    // Link personal i kamarierit: filtro vetëm tavolinat e caktuara.
     let assigned_waiter = null;
-    const waiter = await resolveWaiterFromToken(client.id, req);
-    if (waiter?.id) {
-      assigned_waiter = { id: waiter.id, name: waiter.name };
+    const slotWaiter = await resolveWaiterForBarView(client.id, req);
+    const online_slots = buildOnlineSlotLayout(orders, {
+      waiterId: slotWaiter?.id || null,
+      waiterName: slotWaiter?.name || "",
+    });
+
+    if (slotWaiter?.id) {
+      assigned_waiter = { id: slotWaiter.id, name: slotWaiter.name };
       const assignState = await getAssignmentState(client.id);
       const beforeFilter = orders.length;
-      orders = filterOrdersForWaiterPolling(orders, waiter.id, assignState);
-      orders = filterWaiterAcceptOrders(orders, waiter.id);
-      cancelled = await filterOrdersForWaiter(client.id, cancelled, waiter.id);
+      orders = filterOrdersForWaiterPolling(orders, slotWaiter.id, assignState);
+      orders = filterWaiterAcceptOrders(orders, slotWaiter.id);
+      cancelled = await filterOrdersForWaiter(client.id, cancelled, slotWaiter.id);
       console.log("[bar/orders]", {
-        waiterId: waiter.id,
-        waiterName: waiter.name,
+        waiterId: slotWaiter.id,
+        waiterName: slotWaiter.name,
         beforeFilter,
         afterPolling: orders.length,
         graceOrders: orders.filter(o => o.refused_at).length,
+        onlineOccupied: online_slots.filter(s => s.status !== "free").length,
         orderIds: orders.map(o => o.id),
       });
     }
