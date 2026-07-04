@@ -57,7 +57,89 @@
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
 
+  // Njoftimi për porosi të reja (tingull + vibrim)
+  let orderSnapshot = null;          // Map<tableNumber, itemCount> nga polling-u i mëparshëm
+  let suppressOrderAlertOnce = false; // Anashkalon njoftimin për veprimin lokal të kamarierit
+  let audioCtx = null;
+
   const $ = id => document.getElementById(id);
+
+  // ---- Tingull + vibrim për porosi të reja ----
+  function ensureAudioUnlocked() {
+    try {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    } catch { /* ignore */ }
+  }
+
+  function playOrderBeep() {
+    ensureAudioUnlocked();
+    if (!audioCtx) return;
+    try {
+      const now = audioCtx.currentTime;
+      // Dy beep-e të shkurtra "ding-ding".
+      [0, 0.22].forEach(offset => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, now + offset);
+        osc.frequency.setValueAtTime(1175, now + offset + 0.09);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.35, now + offset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.2);
+      });
+    } catch { /* ignore */ }
+  }
+
+  function vibrateOrder() {
+    // navigator.vibrate() punon në Android; iOS Safari s'e mbështet (thjesht injorohet).
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        navigator.vibrate([200, 100, 200]);
+      }
+    } catch { /* ignore */ }
+  }
+
+  function playOrderAlert() {
+    playOrderBeep();
+    vibrateOrder();
+  }
+
+  function tableItemCount(t) {
+    if (Array.isArray(t?.active_items)) return t.active_items.length;
+    return t?.status === "occupied" ? 1 : 0;
+  }
+
+  function detectIncomingOrders(tables) {
+    const snap = new Map();
+    (tables || []).forEach(t => snap.set(Number(t.number), tableItemCount(t)));
+
+    // Hera e parë: vetëm ruajmë gjendjen, pa njoftim.
+    if (orderSnapshot === null) {
+      orderSnapshot = snap;
+      return;
+    }
+
+    let hasNew = false;
+    snap.forEach((count, num) => {
+      const prev = orderSnapshot.get(num) || 0;
+      if (count > prev) hasNew = true;
+    });
+
+    orderSnapshot = snap;
+
+    if (suppressOrderAlertOnce) {
+      suppressOrderAlertOnce = false;
+      return;
+    }
+    if (hasNew) playOrderAlert();
+  }
 
   function waiterPayload() {
     if (!activeWaiter?.id) throw new Error("Sesioni i kamarierit ka skaduar. Shkruani PIN-in.");
@@ -744,6 +826,7 @@
       bootstrap.menu = data.menu;
       bootstrap.categories = data.categories;
       bootstrap.waiter_count = data.waiter_count;
+      detectIncomingOrders(data.tables);
       const hint = $("sync-hint");
       if (bootstrap.synced_at) {
         hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
@@ -1083,6 +1166,7 @@
       showOrderMsg("", false);
       showSuccessToast(sentMsg);
       scheduleIdleLock();
+      suppressOrderAlertOnce = true; // Mos bjer zilja për porosinë që dërgoi vetë kamarieri
       await refreshBootstrap();
     } catch (e) {
       if (window.OfflineQueue && isNetworkError(e)) {
@@ -1101,6 +1185,11 @@
       btn.textContent = "Dërgo Porosinë";
     }
   }
+
+  // Çaktivizo bllokimin e audios pas gjestit të parë (kërkesë e iOS/Android).
+  ["touchstart", "pointerdown", "click", "keydown"].forEach(ev =>
+    document.addEventListener(ev, ensureAudioUnlocked, { passive: true }),
+  );
 
   bindMenuGroupBar();
   bindCartLines();
