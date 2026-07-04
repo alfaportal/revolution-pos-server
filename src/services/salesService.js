@@ -75,6 +75,73 @@ async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = n
   return cancelled;
 }
 
+const STALE_POS_SYNC_MS = 2 * 60 * 1000;
+const EXPIRE_STARTUP_GRACE_MS = 90 * 1000;
+const _salesServiceStartedAt = Date.now();
+
+/** Anulon porositë POS në cloud pa heartbeat — tavolina kthehet «e lirë» pas 2 min. */
+async function expireStalePosSyncOrders(clientId) {
+  if (Date.now() - _salesServiceStartedAt < EXPIRE_STARTUP_GRACE_MS) return;
+
+  const { isPosDesktopDevice } = require("../lib/orderSource");
+  const db = getSupabase();
+  const cutoffMs = Date.now() - STALE_POS_SYNC_MS;
+  const now = new Date().toISOString();
+
+  let rows;
+  try {
+    const { data, error } = await db
+      .from("sales_orders")
+      .select("id, table_number, device_id, ordered_at, pos_synced_at")
+      .eq("client_id", clientId)
+      .in("status", ["ordered", "ready"])
+      .gte("table_number", 1);
+    if (error) throw error;
+    rows = data || [];
+  } catch (err) {
+    if (!/pos_synced_at|column|schema cache/i.test(String(err.message || ""))) {
+      console.warn("[sales] expire stale sync:", err.message);
+      return;
+    }
+    const { data, error } = await db
+      .from("sales_orders")
+      .select("id, table_number, device_id, ordered_at, closed_at")
+      .eq("client_id", clientId)
+      .in("status", ["ordered", "ready"])
+      .gte("table_number", 1);
+    if (error) {
+      console.warn("[sales] expire stale sync:", error.message);
+      return;
+    }
+    rows = (data || []).map(r => ({ ...r, pos_synced_at: r.closed_at }));
+  }
+
+  const freedTables = new Set();
+  for (const row of rows) {
+    if (!isPosDesktopDevice(row.device_id)) continue;
+    const touch = row.pos_synced_at || row.ordered_at;
+    if (!touch || new Date(touch).getTime() > cutoffMs) continue;
+
+    const { error: updErr } = await db
+      .from("sales_orders")
+      .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+      .eq("id", row.id);
+    if (!updErr && row.table_number) freedTables.add(Number(row.table_number));
+    else if (updErr) console.warn("[sales] expire stale row:", updErr.message);
+  }
+
+  if (!freedTables.size) return;
+
+  try {
+    const kds = require("./kdsEvents");
+    for (const table_number of freedTables) {
+      kds.notifyKitchenUpdate(clientId, { table_number, status: "free" });
+    }
+  } catch {
+    /* optional */
+  }
+}
+
 async function freeTableFromPos(body) {
   const celesi = normalizeKey(body.celesi || body.license_key);
   if (!celesi) throw new Error("Mungon çelësi i licencës.");
@@ -182,8 +249,13 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const pmRaw = String(body.payment_method || "cash").trim().toLowerCase();
   row.payment_method = ["karte", "kartë", "card", "kart"].includes(pmRaw) ? "karte" : "cash";
 
+  const { isPosDesktopDevice } = require("../lib/orderSource");
+  if (isPosDesktopDevice(deviceId) && ["ordered", "ready"].includes(finalStatus)) {
+    row.pos_synced_at = now;
+  }
+
   if (finalStatus === "ordered") {
-    row.ordered_at = itemsChanged ? now : (body.ordered_at || now);
+    row.ordered_at = itemsChanged ? now : (body.ordered_at || existing?.ordered_at || now);
     row.closed_at = row.ordered_at;
     row.ready_at = null;
     if (itemsChanged) {
@@ -221,6 +293,15 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
 
   if (error && row.waiter_id && /waiter_id|schema cache/i.test(String(error.message || ""))) {
     delete row.waiter_id;
+    ({ data, error } = await db
+      .from("sales_orders")
+      .upsert(row, { onConflict: "client_id,local_order_id,device_id" })
+      .select()
+      .single());
+  }
+
+  if (error && row.pos_synced_at && /pos_synced_at|schema cache/i.test(String(error.message || ""))) {
+    delete row.pos_synced_at;
     ({ data, error } = await db
       .from("sales_orders")
       .upsert(row, { onConflict: "client_id,local_order_id,device_id" })
@@ -329,6 +410,8 @@ async function getLiveTablesForOwner(clientId) {
   const db = getSupabase();
   const { loadAreasForClient } = require("./venueService");
   const { buildTablesFromAreas } = require("../lib/tableLayout");
+
+  await expireStalePosSyncOrders(clientId);
 
   const activeOrders = await fetchOwnerActiveOrders(clientId);
 
