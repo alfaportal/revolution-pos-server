@@ -822,35 +822,107 @@
     $("receipt-modal").classList.remove("hidden");
   }
 
+  function receiptPrintStyles(mm) {
+    // Fatura mbush 100% të gjerësisë së letrës: në printer termik mbush rrotullën
+    // (58/80mm), në çdo letër tjetër (p.sh. A4 në iPhone) mbush gjerësinë e faqes —
+    // kështu nuk del kurrë e vockël në mes të një faqeje bosh.
+    return `
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      @page { size: ${mm}mm auto; margin: 0; }
+      html, body { width: 100%; background: #fff; }
+      body {
+        font-family: "Courier New", "Consolas", ui-monospace, monospace;
+        color: #000;
+        font-size: 13px;
+        line-height: 1.3;
+        padding: 3mm 3mm 6mm;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .receipt-thermal { width: 100%; max-width: none; }
+      .rc-header { text-align: center; margin-bottom: 2mm; }
+      .rc-business-name {
+        font-weight: 700; font-size: 1.35em; line-height: 1.2;
+        margin-bottom: 1mm; text-transform: uppercase;
+      }
+      .rc-business-meta, .rc-meta-line { font-size: 0.95em; line-height: 1.35; }
+      .rc-meta-line { margin: 0.4mm 0; }
+      .rc-divider { border: 0; border-top: 1px dashed #000; margin: 1.6mm 0; height: 0; }
+      .rc-divider-strong { border-top-style: solid; }
+      .rc-order-meta { font-size: 0.95em; line-height: 1.4; }
+      .rc-order-meta div { margin: 0.3mm 0; }
+      .rc-items-compact .rc-item-line {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        gap: 3mm; font-size: 1em; line-height: 1.3; margin: 0.8mm 0;
+      }
+      .rc-items-compact .rc-item-name { flex: 1; min-width: 0; word-break: break-word; }
+      .rc-items-compact .rc-item-calc { white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .rc-total {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: 3mm; font-weight: 700; font-size: 1.2em; margin: 1.2mm 0;
+      }
+      .rc-total-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .rc-payment { font-weight: 700; font-size: 1em; margin: 1mm 0; }
+      .rc-thanks { text-align: center; font-weight: 700; font-size: 1.05em; margin-top: 2mm; }
+      .rc-empty { text-align: center; padding: 1mm 0; }
+    `;
+  }
+
   function printReceipt() {
     const sheet = $("receipt-print");
-    const thermal = sheet?.querySelector(".receipt-thermal");
-    const mm = Number(thermal?.dataset?.widthMm || sheet?.style?.maxWidth?.replace("mm", "") || 80);
-    const narrow = mm <= 58;
-    const prevTitle = document.title;
-    const bizName = thermal?.querySelector(".rc-business-name")?.textContent?.trim();
+    if (!sheet) return;
+    const thermal = sheet.querySelector(".receipt-thermal");
+    const mm = Number(thermal?.dataset?.widthMm || sheet?.style?.maxWidth?.replace("mm", "") || 80) || 80;
+    const bizName = thermal?.querySelector(".rc-business-name")?.textContent?.trim() || "Faturë";
+    const content = thermal ? thermal.outerHTML : sheet.innerHTML;
 
-    document.title = bizName || " ";
-    document.body.classList.add("print-receipt");
-    if (narrow) document.documentElement.classList.add("print-receipt-w58");
+    const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">` +
+      `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+      `<title>${escapeHtml(bizName)}</title>` +
+      `<style>${receiptPrintStyles(mm)}</style></head>` +
+      `<body>${content}</body></html>`;
 
-    let pageStyle = document.getElementById("receipt-page-size");
-    if (!pageStyle) {
-      pageStyle = document.createElement("style");
-      pageStyle.id = "receipt-page-size";
-      document.head.appendChild(pageStyle);
-    }
-    pageStyle.textContent = `@media print { @page { size: ${narrow ? 58 : 80}mm auto; margin: 0; } }`;
+    const old = document.getElementById("receipt-print-frame");
+    if (old) old.remove();
 
+    const frame = document.createElement("iframe");
+    frame.id = "receipt-print-frame";
+    frame.setAttribute("aria-hidden", "true");
+    frame.style.cssText =
+      "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(frame);
+
+    let done = false;
     const cleanup = () => {
-      document.body.classList.remove("print-receipt");
-      document.documentElement.classList.remove("print-receipt-w58");
-      document.title = prevTitle;
-      if (pageStyle) pageStyle.textContent = "";
-      window.removeEventListener("afterprint", cleanup);
+      setTimeout(() => {
+        try { frame.remove(); } catch (_) { /* ignore */ }
+      }, 800);
     };
-    window.addEventListener("afterprint", cleanup);
-    requestAnimationFrame(() => window.print());
+
+    const triggerPrint = () => {
+      if (done) return;
+      done = true;
+      const win = frame.contentWindow;
+      try {
+        win.focus();
+        if (win.onafterprint === null) win.onafterprint = cleanup;
+        win.print();
+        cleanup();
+      } catch (_) {
+        // Fallback: printo dritaren kryesore nëse iframe dështon.
+        try { window.print(); } catch (__) { /* ignore */ }
+        cleanup();
+      }
+    };
+
+    const fdoc = frame.contentWindow.document;
+    fdoc.open();
+    fdoc.write(doc);
+    fdoc.close();
+
+    frame.onload = () => setTimeout(triggerPrint, 200);
+    // Rezervë nëse onload nuk aktivizohet (disa shfletues).
+    setTimeout(triggerPrint, 500);
   }
 
   function hideReceipt() {
