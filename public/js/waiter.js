@@ -573,6 +573,8 @@
   function scheduleIdleLock() {
     clearIdleTimer();
     if (!activeWaiter) return;
+    // Link personal: tableti i përket vetëm këtij kamarieri — mos e blloko pas 30s.
+    if (hasPersonalWaiterLink()) return;
     idleTimer = setTimeout(() => lockSession(), WAITER_IDLE_MS);
   }
 
@@ -667,6 +669,11 @@
         price: Number(item.price),
       }, btn),
     });
+  }
+
+  // Link personal i kamarierit: token valid në URL + kamarier i caktuar nga bootstrap.
+  function hasPersonalWaiterLink() {
+    return Boolean(waiterToken) && Boolean(bootstrap?.assigned_waiter?.id);
   }
 
   function enterWaiterSession(waiter) {
@@ -1203,6 +1210,11 @@
     try {
       await loadBootstrap();
       if (await tryKasaSessionEnter()) return;
+      // Link personal i kamarierit: identifikohet automatikisht pa PIN.
+      if (hasPersonalWaiterLink()) {
+        enterWaiterSession(bootstrap.assigned_waiter);
+        return;
+      }
       const restored = loadWaiterSession();
       if (restored?.id && restored?.name && !navigator.onLine) {
         enterWaiterSession(restored);
