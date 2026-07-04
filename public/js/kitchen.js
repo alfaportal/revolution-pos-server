@@ -344,7 +344,7 @@
       }
       handledOrderIds.add(orderId);
       closeAcceptModal();
-      showToast("Porosia u refuzua.", "info");
+      showToast("Porosia kaloi te kamarierët e tjerë — 2 minuta.", "info");
       await fetchOrders();
     } catch (e) {
       showToast(e.message || "Gabim.", "error");
