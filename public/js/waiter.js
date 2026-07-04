@@ -733,6 +733,205 @@
     return Boolean(waiterToken) && Boolean(bootstrap?.assigned_waiter?.id);
   }
 
+  // ---- Pranimi i porosive (link personal — pa PIN) ----
+  let acceptModalOrderId = null;
+  const handledAcceptIds = new Set();
+  let acceptPollTimer = null;
+
+  function canAcceptOrdersWithoutPin() {
+    return hasPersonalWaiterLink() && Boolean(activeWaiter?.id);
+  }
+
+  function orderSourceMeta(o) {
+    const device = String(o?.device_id || "").toUpperCase();
+    const w = String(o?.waiter_name || "").trim().toLowerCase();
+    if (device === "WEB-PUBLIC" || w.startsWith("takeaway") || w.startsWith("delivery")) {
+      return { icon: "🥡", label: "Takeaway" };
+    }
+    if (device === "WEB-KIOSK" || w.startsWith("qr") || w.startsWith("tavolin")) {
+      return { icon: "📱", label: "QR Code" };
+    }
+    if (w === "kiosk" || w.startsWith("kiosk")) {
+      return { icon: "🪑", label: "Kiosk" };
+    }
+    return { icon: "🖥️", label: "POS" };
+  }
+
+  function orderTableLabel(o) {
+    const device = String(o?.device_id || "").toUpperCase();
+    if (device === "WEB-PUBLIC") {
+      const w = String(o?.waiter_name || "").toLowerCase();
+      if (w.startsWith("delivery")) return "Delivery";
+      if (w.startsWith("takeaway")) return "Takeaway";
+      return "Online";
+    }
+    return `T${o?.table_number || "?"}`;
+  }
+
+  function orderItemsTotal(o) {
+    if (o?.total != null) return Number(o.total) || 0;
+    return (o?.items_json || []).reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+  }
+
+  function renderAcceptOrderItem(it) {
+    const qty = Number(it.quantity) || 1;
+    const price = Number(it.price) || 0;
+    const lineTotal = price * qty;
+    return `<li>
+      <span class="qty">${qty}×</span>
+      <span class="item-name">${escapeHtml(it.name)}</span>
+      <span class="item-price">${formatEuro(price)}${qty > 1 ? ` <small>= ${formatEuro(lineTotal)}</small>` : ""}</span>
+    </li>`;
+  }
+
+  function closeAcceptModal() {
+    acceptModalOrderId = null;
+    const modal = $("accept-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.setAttribute("hidden", "");
+    }
+  }
+
+  function renderAcceptModal(o) {
+    const modal = $("accept-modal");
+    if (!modal || !o) return;
+    acceptModalOrderId = o.id;
+    const src = orderSourceMeta(o);
+    const srcName = String(o.waiter_name || "").trim();
+    $("accept-modal-source").innerHTML = `${src.icon} ${src.label}${srcName ? ` · ${escapeHtml(srcName)}` : ""}`;
+    $("accept-modal-table").textContent = orderTableLabel(o);
+    $("accept-modal-items").innerHTML =
+      (o.items_json || []).map(renderAcceptOrderItem).join("") || "<li>—</li>";
+    $("accept-modal-total").textContent = formatEuro(orderItemsTotal(o));
+
+    const acceptBtn = $("accept-modal-accept");
+    const refuseBtn = $("accept-modal-refuse");
+    if (acceptBtn) {
+      acceptBtn.disabled = false;
+      acceptBtn.textContent = "PRANO";
+      acceptBtn.onclick = () => acceptIncomingOrder(o.id, acceptBtn, o);
+    }
+    if (refuseBtn) {
+      refuseBtn.disabled = false;
+      refuseBtn.textContent = "REFUZO";
+      refuseBtn.onclick = () => refuseIncomingOrder(o.id, refuseBtn);
+    }
+    modal.classList.remove("hidden");
+    modal.removeAttribute("hidden");
+  }
+
+  function maybeShowAcceptModal(orders) {
+    const pending = (orders || []).filter(o =>
+      !(o.accepted_at || o.accepted_by_waiter_name) && !handledAcceptIds.has(o.id));
+    if (!pending.length) {
+      closeAcceptModal();
+      return;
+    }
+    const next = pending[0];
+    if (acceptModalOrderId === next.id) return;
+    renderAcceptModal(next);
+    playOrderAlert();
+  }
+
+  async function acceptIncomingOrder(orderId, btn, orderForReceipt) {
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    try {
+      const data = await api(
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/accept${apiQuery()}`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+      handledAcceptIds.add(orderId);
+      closeAcceptModal();
+      showSuccessToast(data.accepted_by
+        ? `✅ Porosia u pranua — ${data.accepted_by}`
+        : "✅ Porosia u pranua.");
+      if (orderForReceipt) printAcceptanceReceipt(orderForReceipt, data.accepted_by || activeWaiter?.name);
+      await pollIncomingOrders();
+      await refreshBootstrap();
+    } catch (e) {
+      showSuccessToast(e.message || "Nuk u pranua porosia.");
+      if (btn) { btn.disabled = false; btn.textContent = "PRANO"; }
+    }
+  }
+
+  async function refuseIncomingOrder(orderId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    try {
+      await api(
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+      handledAcceptIds.add(orderId);
+      closeAcceptModal();
+      showSuccessToast("Porosia u refuzua.");
+      await pollIncomingOrders();
+      await refreshBootstrap();
+    } catch (e) {
+      showSuccessToast(e.message || "Nuk u refuzua porosia.");
+      if (btn) { btn.disabled = false; btn.textContent = "REFUZO"; }
+    }
+  }
+
+  async function pollIncomingOrders() {
+    if (!canAcceptOrdersWithoutPin() || !slug || !kitchenKey) return;
+    try {
+      const data = await api(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`);
+      maybeShowAcceptModal(data.orders || []);
+    } catch { /* ignore background poll */ }
+  }
+
+  function startAcceptPolling() {
+    if (acceptPollTimer) clearInterval(acceptPollTimer);
+    if (!canAcceptOrdersWithoutPin()) return;
+    pollIncomingOrders();
+    acceptPollTimer = setInterval(() => pollIncomingOrders(), 3000);
+  }
+
+  function stopAcceptPolling() {
+    if (acceptPollTimer) {
+      clearInterval(acceptPollTimer);
+      acceptPollTimer = null;
+    }
+    closeAcceptModal();
+  }
+
+  function printAcceptanceReceipt(o, acceptedBy) {
+    const venue = bootstrap?.restaurant_name || bootstrap?.client_name || "Faturë";
+    const fmt = n => Number(n || 0).toFixed(2);
+    const items = (o.items_json || []).map(it => {
+      const qty = Number(it.quantity) || 1;
+      const unit = fmt(it.price);
+      const line = fmt((Number(it.price) || 0) * qty);
+      return `<div class="rc-item-line"><span class="rc-item-name">${escapeHtml(it.name)}</span>` +
+        `<span class="rc-item-calc">${qty}x ${unit} = ${line}</span></div>`;
+    }).join("");
+    const now = new Date();
+    const meta = [
+      `Tavolina: ${orderTableLabel(o)}`,
+      acceptedBy ? `Kamarieri: ${escapeHtml(acceptedBy)}` : "",
+      `Data: ${now.toLocaleDateString("sq-AL")}  Ora: ${now.toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`,
+    ].filter(Boolean);
+    const html = `<div class="receipt-thermal">
+      <div class="rc-header">
+        <div class="rc-business-name">${escapeHtml(venue)}</div>
+        <div class="rc-meta-line">POROSI E PRANUAR</div>
+      </div>
+      <div class="rc-divider"></div>
+      <div class="rc-order-meta">${meta.map(m => `<div>${m}</div>`).join("")}</div>
+      <div class="rc-divider"></div>
+      <div class="rc-items-compact">${items || '<div class="rc-empty">—</div>'}</div>
+      <div class="rc-divider"></div>
+      <div class="rc-total"><span class="rc-total-label">TOTALI:</span><span class="rc-total-value">${fmt(orderItemsTotal(o))} EUR</span></div>
+      <div class="rc-divider"></div>
+      <div class="rc-thanks">Faleminderit!</div>
+    </div>`;
+    const sheet = $("receipt-print");
+    if (!sheet) return;
+    sheet.innerHTML = html;
+    $("receipt-modal").classList.remove("hidden");
+  }
+
   function enterWaiterSession(waiter) {
     activeWaiter = { id: waiter.id, name: waiter.name };
     saveWaiterSession();
@@ -741,10 +940,12 @@
     renderTables();
     setupReservationReminders();
     scheduleIdleLock();
+    startAcceptPolling();
     showScreen("screen-tables");
   }
 
   function lockSession() {
+    stopAcceptPolling();
     clearIdleTimer();
     activeWaiter = null;
     clearWaiterSession();
@@ -1258,6 +1459,7 @@
 
   bindMenuGroupBar();
   bindCartLines();
+  $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
   setupWaiterIdleLock();
   setupDesktopReturn();
   setupConnectionStatus();

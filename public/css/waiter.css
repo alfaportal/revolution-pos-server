@@ -1158,6 +1158,108 @@ html, body {
 
 .hidden { display: none !important; }
 
+/* Modal pranimi porosie — pa PIN */
+.accept-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.accept-modal.hidden { display: none !important; }
+
+.accept-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 30, 0.72);
+}
+
+.accept-modal-card {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: #fff;
+  color: #0f1b3d;
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  border: 3px solid #ef4444;
+}
+
+.accept-modal-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+  text-align: center;
+  color: #dc2626;
+}
+
+.accept-modal-source {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.accept-modal-table-row {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.accept-modal-items {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0;
+  border-top: 1px dashed #cbd5e1;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.accept-modal-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-size: 0.98rem;
+}
+
+.accept-modal-items .qty { font-weight: 700; }
+.accept-modal-items .item-name { flex: 1; }
+
+.accept-modal-total {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: right;
+  margin: 0.5rem 0 1rem;
+}
+
+.accept-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.accept-modal-actions button {
+  padding: 0.85rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.accept-btn-yes {
+  background: #16a34a;
+  color: #fff;
+}
+
+.accept-btn-no {
+  background: #dc2626;
+  color: #fff;
+}
+
 /* ─── Telefon kamarier: PIN + porosi kompakt ─── */
 @media (max-width: 520px) {
   #screen-pin.staff-login-screen {
