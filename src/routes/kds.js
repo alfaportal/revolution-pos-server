@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, filterWaiterAcceptOrders } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, filterWaiterAcceptOrders, filterOrdersForWaiterPolling } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
@@ -58,7 +58,8 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     const waiter = await resolveWaiterFromToken(client.id, req);
     if (waiter?.id) {
       assigned_waiter = { id: waiter.id, name: waiter.name };
-      orders = await filterOrdersForWaiter(client.id, orders, waiter.id);
+      const assignState = await getAssignmentState(client.id);
+      orders = filterOrdersForWaiterPolling(orders, waiter.id, assignState);
       orders = filterWaiterAcceptOrders(orders, waiter.id);
       cancelled = await filterOrdersForWaiter(client.id, cancelled, waiter.id);
     }
