@@ -405,6 +405,7 @@ async function getLiveTablesForOwner(clientId) {
     table_count: layout.table_count,
     tables,
     areas: layout.areas,
+    restaurant_name: settings?.restaurant_name || "",
     updated_at: new Date().toISOString(),
   };
 }
