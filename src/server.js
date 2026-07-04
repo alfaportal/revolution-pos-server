@@ -140,6 +140,13 @@ app.get("/terms", (_req, res) => sendMarketingPage(res, SITE_INDEX));
 
 app.use(express.static(SITE_DIR));
 
+app.use((req, res, next) => {
+  if (req.path === "/js/waiter.js" || req.path === "/sw.js") {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  }
+  next();
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 app.get(ADMIN_PATH, (_req, res) => {

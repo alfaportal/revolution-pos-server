@@ -11,7 +11,18 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js", { scope: "/waiter/" }).catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=7", { scope: "/waiter/" })
+      .then((reg) => reg.update?.())
+      .catch(() => {});
+  }
+
+  function isMobileWaiter() {
+    try {
+      return window.matchMedia("(pointer: coarse)").matches
+        || window.matchMedia("(max-width: 900px)").matches;
+    } catch {
+      return window.innerWidth < 900;
+    }
   }
 
   let syncInProgress = false;
@@ -1195,6 +1206,8 @@
     sheet.innerHTML = receipt.html || renderReceiptFallback(receipt);
     const mm = receipt.paper_width_mm || sheet.querySelector(".receipt-thermal")?.dataset?.widthMm || 80;
     sheet.style.maxWidth = `${mm}mm`;
+    const printBtn = $("btn-print");
+    if (printBtn) printBtn.classList.toggle("hidden", isMobileWaiter());
     $("receipt-modal").classList.remove("hidden");
   }
 
@@ -1205,7 +1218,7 @@
     return `
       * { margin: 0; padding: 0; box-sizing: border-box; }
       @page { size: ${mm}mm auto; margin: 0; }
-      html, body { width: 100%; background: #fff; }
+      html, body { width: 100%; height: auto !important; min-height: 0 !important; background: #fff; overflow: hidden; }
       body {
         font-family: "Courier New", "Consolas", ui-monospace, monospace;
         color: #000;
@@ -1245,6 +1258,7 @@
   }
 
   function printReceipt() {
+    if (isMobileWaiter()) return;
     const sheet = $("receipt-print");
     if (!sheet) return;
     const thermal = sheet.querySelector(".receipt-thermal");
@@ -1279,14 +1293,16 @@
       if (done) return;
       done = true;
       const win = frame.contentWindow;
+      const bdoc = win.document;
       try {
+        const h = Math.max(bdoc.body.scrollHeight, bdoc.documentElement.scrollHeight);
+        bdoc.documentElement.style.height = `${h}px`;
+        bdoc.body.style.height = `${h}px`;
         win.focus();
-        if (win.onafterprint === null) win.onafterprint = cleanup;
+        win.onafterprint = cleanup;
         win.print();
         cleanup();
       } catch (_) {
-        // Fallback: printo dritaren kryesore nëse iframe dështon.
-        try { window.print(); } catch (__) { /* ignore */ }
         cleanup();
       }
     };
@@ -1380,7 +1396,12 @@
       renderCart();
       const payLabel = paymentMethod === "karte" ? "Kartë" : "Cash";
       showSuccessToast(`✅ T${closedTable} u mbyll — ${payLabel}`);
-      if (data.receipt) showReceipt(data.receipt);
+      if (data.receipt) {
+        showReceipt(data.receipt);
+        await refreshBootstrap();
+        scheduleIdleLock();
+        return;
+      }
       tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");
