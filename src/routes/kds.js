@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, filterWaiterAcceptOrders } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
@@ -59,6 +59,7 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     if (waiter?.id) {
       assigned_waiter = { id: waiter.id, name: waiter.name };
       orders = await filterOrdersForWaiter(client.id, orders, waiter.id);
+      orders = filterWaiterAcceptOrders(orders, waiter.id);
       cancelled = await filterOrdersForWaiter(client.id, cancelled, waiter.id);
     }
 
@@ -131,7 +132,7 @@ router.post("/:slug/orders/:orderId/accept", resolveKitchenClient, requirePackag
   }
 });
 
-// Refuzimi i porosisë nga kamarieri (link personal) — anulon porosinë.
+// Refuzimi i porosisë nga kamarieri — 2 minuta grace për kamarierët e tjerë.
 router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
@@ -139,12 +140,12 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
     if (!waiter?.id) {
       return res.status(400).json({ ok: false, gabim: "Mungon identifikimi i kamarierit (link personal)." });
     }
-    const { cancelBarOrders } = require("../services/kdsService");
-    const result = await cancelBarOrders(client.id, [req.params.orderId]);
-    if (!result.count) {
-      return res.status(400).json({ ok: false, gabim: "Porosia nuk u gjet ose është përfunduar." });
-    }
-    res.json({ ok: true, refused: result.ids });
+    const { refuseBarOrderWithGrace } = require("../services/kdsService");
+    const order = await refuseBarOrderWithGrace(client.id, req.params.orderId, {
+      waiterId: waiter.id,
+      waiterName: waiter.name,
+    });
+    res.json({ ok: true, order, grace_minutes: 2 });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

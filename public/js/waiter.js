@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=11", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=12", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -928,7 +928,7 @@
       );
       handledAcceptIds.add(orderId);
       closeAcceptModal();
-      showSuccessToast("Porosia u refuzua.");
+      showSuccessToast("Porosia kaloi te kamarierët e tjerë — 2 minuta për ta pranuar.");
       await pollIncomingOrders();
       await refreshBootstrap();
     } catch (e) {

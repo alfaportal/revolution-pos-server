@@ -36,6 +36,7 @@ const {
 const { resolvePublicClient } = require("./middleware/publicAuth");
 const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
+const { startRefusedOrdersExpiryJob } = require("./jobs/expireRefusedOrders");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
 const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
@@ -287,7 +288,20 @@ async function start() {
     console.warn("  ⚠️  Porosi online schema:", formatError(e));
   }
 
+  try {
+    const { ensureOrderRefusalSchema } = require("./lib/ensureOrderRefusalSchema");
+    const refOk = await ensureOrderRefusalSchema();
+    if (refOk) {
+      console.log("  ✅ Refuzim porosie (040): refused_by + order_expires_at");
+    } else {
+      console.warn("  ⚠️  Refuzim porosie: vendosni DATABASE_URL për auto-migrim 040");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  Refuzim porosie schema:", formatError(e));
+  }
+
   startLicenseExpiryCron();
+  startRefusedOrdersExpiryJob();
   startTrialNotificationCron();
   startAiDailyReportCron();
   startSupplySuggestionCron();
