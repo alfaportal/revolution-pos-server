@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
@@ -48,13 +48,8 @@ router.get("/:slug/bar/tables/live", resolveKitchenClient, requirePackageFeature
 router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    const [barOrders, kitchenOrders] = await Promise.all([
-      listBarOrders(client.id),
-      listKitchenOrders(client.id),
-    ]);
-    const byId = new Map();
-    for (const o of [...barOrders, ...kitchenOrders]) byId.set(o.id, o);
-    let orders = [...byId.values()];
+    // Telefoni i kamarierit: të gjitha porositë në pritje — pa ndarje banak/kuzhinë.
+    let orders = await fetchOrderedSales(client.id);
     let cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
 
