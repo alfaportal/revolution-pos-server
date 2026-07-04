@@ -237,12 +237,12 @@ html, body {
 }
 
 .table-card {
-  aspect-ratio: 1;
+  min-height: 108px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
   border-radius: var(--radius);
   border: 2px solid var(--border);
   background: var(--card);
@@ -253,8 +253,9 @@ html, body {
   color: inherit;
 }
 
-.table-card.free { border-color: var(--ok); }
-.table-card.occupied { border-color: var(--warn); background: #422006; }
+.table-card.free { border-color: var(--ok); background: #052e16; }
+.table-card.occupied { border-color: var(--danger); background: #450a0a; }
+.table-card.occupied.source-warn { border-color: var(--warn); background: #422006; }
 .table-card.reserved { border-color: #6366f1; box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.35); }
 .table-card.reserved.free { background: #1e1b4b; }
 
@@ -279,6 +280,168 @@ html, body {
   color: var(--muted);
   text-align: center;
   line-height: 1.2;
+  width: 100%;
+}
+
+.tables-live-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.92); }
+}
+
+.live-label {
+  font-weight: 800;
+  color: var(--ok);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+.live-sep {
+  opacity: 0.45;
+}
+
+.table-status-pill {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  line-height: 1.2;
+}
+
+.table-status-pill.free { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+.table-status-pill.occupied { background: rgba(239, 68, 68, 0.25); color: #fca5a5; }
+.table-status-pill.reserved { background: rgba(99, 102, 241, 0.25); color: #a5b4fc; }
+
+.table-source-badge {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  line-height: 1.25;
+}
+
+.table-source-badge.source-qr { background: rgba(59, 130, 246, 0.25); color: #93c5fd; }
+.table-source-badge.source-takeaway { background: rgba(249, 115, 22, 0.25); color: #fdba74; }
+.table-source-badge.source-kiosk { background: rgba(168, 85, 247, 0.25); color: #d8b4fe; }
+.table-source-badge.source-pos { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+
+.table-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-top: 0.2rem;
+}
+
+.table-stat {
+  font-size: 0.62rem;
+}
+
+.table-total {
+  font-weight: 800;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.menu-category-bar {
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.menu-category-bar::-webkit-scrollbar { display: none; }
+
+.menu-category-bar .menu-group-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.waiter-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.waiter-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.waiter-menu-row.is-sold-out {
+  opacity: 0.55;
+}
+
+.waiter-menu-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.waiter-menu-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.waiter-menu-cat {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.waiter-menu-price {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.waiter-menu-add {
+  flex-shrink: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+  min-width: 4.2rem;
+}
+
+.waiter-menu-add.menu-item-flash {
+  animation: menu-flash 0.4s ease;
+}
+
+@keyframes menu-flash {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); background: #16a34a; }
+  100% { transform: scale(1); }
 }
 
 .order-layout {
