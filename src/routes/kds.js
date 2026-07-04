@@ -146,7 +146,13 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
       waiterId: waiter.id,
       waiterName: waiter.name,
     });
-    res.json({ ok: true, order, grace_minutes: 2 });
+    res.json({
+      ok: true,
+      order,
+      status: order.status,
+      grace_minutes: 2,
+      refuse_mode: "grace_v2",
+    });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

@@ -4,6 +4,7 @@ const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder, isStaffWaiterOrder, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
 const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
 const { selectWithAcceptanceFallback, updateOrdersAcceptance, normalizeAcceptanceFields, isMissingAcceptanceColumnError } = require("../lib/salesOrderSelect");
+const { getPgPool } = require("../lib/pgPool");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,6 +51,12 @@ function isOrderExpired(order, nowMs = Date.now()) {
   const exp = order?.order_expires_at;
   if (!exp) return false;
   return new Date(exp).getTime() <= nowMs;
+}
+
+/** Porosi në grace period pas REFUZO — nuk duhet anuluar menjëherë. */
+function isInRefusalGrace(order, nowMs = Date.now()) {
+  const norm = normalizeRefusalFields(order);
+  return !!norm.refused_at && !isOrderExpired(norm, nowMs);
 }
 
 function waiterRefusedOrder(order, waiterId) {
@@ -286,6 +293,42 @@ async function acceptBarOrder(clientId, orderId, { waiterId = null, waiterName =
   return data;
 }
 
+async function refuseBarOrderWithGraceViaSql(clientId, orderId, wid) {
+  const pool = getPgPool();
+  if (!pool) return null;
+
+  const { rows, rowCount } = await pool.query(
+    `UPDATE sales_orders SET
+       refused_by_waiter_ids = CASE
+         WHEN refused_by_waiter_ids @> jsonb_build_array($3::text)
+         THEN refused_by_waiter_ids
+         ELSE refused_by_waiter_ids || jsonb_build_array($3::text)
+       END,
+       refused_at = COALESCE(refused_at, NOW()),
+       order_expires_at = COALESCE(order_expires_at, NOW() + INTERVAL '2 minutes')
+     WHERE id = $1::uuid
+       AND client_id = $2::uuid
+       AND status = 'ordered'
+     RETURNING *`,
+    [orderId, clientId, wid],
+  );
+  if (!rowCount) return null;
+  return rows[0];
+}
+
+function assertRefusalGraceOrder(row, orderId) {
+  if (!row) throw new Error("Porosia nuk u refuzua.");
+  if (String(row.status || "") !== "ordered") {
+    throw new Error(`REFUZO ndryshoi statusin në «${row.status}» — duhet «ordered».`);
+  }
+  if (!row.refused_at || !row.order_expires_at) {
+    throw new Error("REFUZO nuk vendosi refused_at/order_expires_at — ekzekutoni migrimin 040.");
+  }
+  console.log(
+    `[refuse-grace] order=${orderId} status=${row.status} refused_at=${row.refused_at} expires=${row.order_expires_at}`,
+  );
+}
+
 async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
   const db = getSupabase();
   const wid = String(waiterId || "").trim();
@@ -314,37 +357,51 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
     return normalized;
   }
 
-  const refusedIds = parseRefusedWaiterIds(normalized);
-  refusedIds.push(wid);
-  const now = new Date();
-  const patch = {
-    refused_by_waiter_ids: refusedIds,
-  };
-  if (!normalized.refused_at) {
-    patch.refused_at = now.toISOString();
-    patch.order_expires_at = new Date(now.getTime() + REFUSAL_GRACE_MS).toISOString();
-  }
-
-  const { data, error } = await db
-    .from("sales_orders")
-    .update(patch)
-    .eq("id", orderId)
-    .eq("client_id", clientId)
-    .eq("status", "ordered")
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingRefusalColumnError(error)) {
+  let data = null;
+  try {
+    data = await refuseBarOrderWithGraceViaSql(clientId, orderId, wid);
+  } catch (err) {
+    if (isMissingRefusalColumnError(err)) {
       throw new Error("Mungon migrimi 040_order_refusal_grace.sql në Supabase.");
     }
-    throw error;
+    throw err;
   }
-  if (!data) throw new Error("Porosia nuk u refuzua.");
+
+  if (!data) {
+    const refusedIds = parseRefusedWaiterIds(normalized);
+    refusedIds.push(wid);
+    const now = new Date();
+    const patch = {
+      refused_by_waiter_ids: refusedIds,
+    };
+    if (!normalized.refused_at) {
+      patch.refused_at = now.toISOString();
+      patch.order_expires_at = new Date(now.getTime() + REFUSAL_GRACE_MS).toISOString();
+    }
+
+    const { data: updated, error } = await db
+      .from("sales_orders")
+      .update(patch)
+      .eq("id", orderId)
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingRefusalColumnError(error)) {
+        throw new Error("Mungon migrimi 040_order_refusal_grace.sql në Supabase.");
+      }
+      throw error;
+    }
+    data = updated;
+  }
+
+  assertRefusalGraceOrder(data, orderId);
 
   notifyKitchenUpdate(clientId, {
     order_id: orderId,
-    status: "refused",
+    status: "refusal_grace",
     refused_by: String(waiterName || "").trim() || wid,
   });
   return normalizeRefusalFields(data);
@@ -360,6 +417,7 @@ async function expireRefusedOrders() {
       .from("sales_orders")
       .select("id, client_id")
       .eq("status", "ordered")
+      .not("refused_at", "is", null)
       .not("order_expires_at", "is", null)
       .lt("order_expires_at", now);
     if (error) throw error;
@@ -420,10 +478,26 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
   return { count: acked.length, ids: acked };
 }
 
-async function cancelBarOrders(clientId, orderIds) {
+async function cancelBarOrders(clientId, orderIds, { force = false } = {}) {
   const db = getSupabase();
-  const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
+  let ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
   if (!ids.length) return { count: 0, ids: [] };
+
+  if (!force) {
+    const { data: rows, error: fetchErr } = await db
+      .from("sales_orders")
+      .select("id, refused_at, order_expires_at, refused_by_waiter_ids")
+      .eq("client_id", clientId)
+      .in("id", ids);
+    if (fetchErr && !isMissingRefusalColumnError(fetchErr)) throw fetchErr;
+    if (!fetchErr && rows?.length) {
+      ids = rows
+        .filter(row => !isInRefusalGrace(normalizeRefusalFields(row)))
+        .map(row => row.id)
+        .filter(Boolean);
+    }
+    if (!ids.length) return { count: 0, ids: [] };
+  }
 
   const now = new Date().toISOString();
   const { data, error } = await db
@@ -481,6 +555,7 @@ module.exports = {
   filterWaiterAcceptOrders,
   filterOrdersForWaiterPolling,
   expireRefusedOrders,
+  isInRefusalGrace,
   needsWaiterAcceptance,
   markKitchenOrderReady,
   acknowledgeBarOrders,
