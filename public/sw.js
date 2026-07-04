@@ -1,5 +1,5 @@
 /* Revolution POS — Service Worker (waiter + static assets) */
-const CACHE_NAME = "ri-pos-offline-v7";
+const CACHE_NAME = "ri-pos-offline-v8";
 
 const PRECACHE_URLS = [
   "/logo-source.png",

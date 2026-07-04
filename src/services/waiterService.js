@@ -318,10 +318,11 @@ async function closeWaiterTable(clientId, body) {
   const license = await getLicenseForClient(clientId);
   const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
   const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
+  const deviceId = existing?.device_id || WEB_DEVICE;
 
   const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
-    device_id: WEB_DEVICE,
+    device_id: deviceId,
     local_order_id: localOrderId,
     table_number: tableNumber,
     waiter_name: waiter.name,
