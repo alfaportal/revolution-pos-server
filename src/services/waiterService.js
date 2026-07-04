@@ -330,9 +330,8 @@ async function closeWaiterTable(clientId, body) {
 
   const cartItems = normalizeItems(body.items);
   const existingItems = normalizeItems(existing?.items_json);
-  const items = cartItems.length
-    ? mergeOrderItems(existingItems, cartItems)
-    : existingItems;
+  // Klienti dërgon listën e plotë të faturës — mos e bashko me ekzistuesen (dyfishon sasitë).
+  const items = cartItems.length ? cartItems : existingItems;
   if (!items.length) {
     throw new Error("Nuk ka artikuj për të mbyllur tavolinën.");
   }
