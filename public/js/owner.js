@@ -998,6 +998,7 @@ async function deleteMenuRow(row) {
 
 let ownerWaitersCache = [];
 let ownerAllTables = [];
+let editWaiterId = null;
 
 function setWaitersMsg(text, ok) {
   const msg = document.getElementById("waiters-msg");
@@ -1027,23 +1028,15 @@ function renderWaitersTable() {
       <td><input type="text" class="waiter-edit-name" value="${escAttr(w.name)}"></td>
       <td><span class="menu-status active">****</span></td>
       <td>
-        ${w.waiter_url
-          ? `<div class="link-actions" style="flex-wrap:wrap;gap:0.35rem">
-              <input type="text" class="waiter-link-input" readonly value="${escAttr(w.waiter_url)}" style="font-family:monospace;font-size:0.7rem;min-width:160px;flex:1">
-              <button type="button" class="btn btn-ghost btn-sm btn-waiter-copy-link">Kopjo</button>
-            </div>
-            ${w.kds_url
-              ? `<div class="link-actions" style="flex-wrap:wrap;gap:0.35rem;margin-top:0.3rem">
-                  <input type="text" class="waiter-kds-input" readonly value="${escAttr(w.kds_url)}" style="font-family:monospace;font-size:0.7rem;min-width:160px;flex:1" title="Link për pranimin e porosive (KDS)">
-                  <button type="button" class="btn btn-ghost btn-sm btn-waiter-copy-kds">Kopjo KDS</button>
-                </div>`
-              : ""}`
+        ${w.waiter_url || w.kds_url
+          ? `<button type="button" class="btn btn-ghost btn-sm btn-waiter-show-links">Shiko linket</button>`
           : '<span style="color:var(--muted)">—</span>'}
       </td>
       <td><span class="menu-status ${w.active ? "active" : "inactive"}">${w.active ? "Aktiv" : "Joaktiv"}</span></td>
       <td>
         <div class="menu-row-actions">
           <button type="button" class="btn btn-primary btn-sm btn-waiter-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-waiter-edit">Ndrysho kamarierin</button>
           <button type="button" class="btn btn-ghost btn-sm btn-waiter-tables">Cakto tavolinat${(w.assigned_tables && w.assigned_tables.length) ? ` (${w.assigned_tables.length})` : ""}</button>
           <button type="button" class="btn btn-ghost btn-sm btn-waiter-pin">Rivendos PIN</button>
           <button type="button" class="btn btn-ghost btn-sm btn-waiter-toggle">${w.active ? "Fshih" : "Aktivizo"}</button>
@@ -1051,33 +1044,8 @@ function renderWaitersTable() {
         </div>
       </td>
     </tr>`).join("");
-  body.querySelectorAll(".btn-waiter-copy-link").forEach(btn => {
-    btn.addEventListener("click", async function () {
-      const val = btn.closest("tr")?.querySelector(".waiter-link-input")?.value || "";
-      if (!val) return;
-      try {
-        await navigator.clipboard.writeText(val);
-        const orig = this.textContent;
-        this.textContent = "U kopjua!";
-        setTimeout(() => { this.textContent = orig; }, 1500);
-      } catch {
-        prompt("Kopjoni linkun:", val);
-      }
-    });
-  });
-  body.querySelectorAll(".btn-waiter-copy-kds").forEach(btn => {
-    btn.addEventListener("click", async function () {
-      const val = btn.closest("tr")?.querySelector(".waiter-kds-input")?.value || "";
-      if (!val) return;
-      try {
-        await navigator.clipboard.writeText(val);
-        const orig = this.textContent;
-        this.textContent = "U kopjua!";
-        setTimeout(() => { this.textContent = orig; }, 1500);
-      } catch {
-        prompt("Kopjoni linkun KDS:", val);
-      }
-    });
+  body.querySelectorAll(".btn-waiter-show-links, .btn-waiter-edit").forEach(btn => {
+    btn.addEventListener("click", () => openWaiterEditModal(btn.closest("tr")?.dataset.id));
   });
   body.querySelectorAll(".btn-waiter-save").forEach(btn => {
     btn.addEventListener("click", () => saveWaiterRow(btn.closest("tr")));
@@ -1095,6 +1063,64 @@ function renderWaitersTable() {
     btn.addEventListener("click", () => deleteWaiterRow(btn.closest("tr")));
   });
 }
+
+function openWaiterEditModal(waiterId) {
+  if (!waiterId) return;
+  const w = ownerWaitersCache.find(x => x.id === waiterId);
+  if (!w) return;
+  editWaiterId = waiterId;
+  document.getElementById("waiter-edit-title").textContent = w.name || "Ndrysho kamarierin";
+  document.getElementById("waiter-edit-sub").textContent =
+    "Linket personale për tabletin e kamarierit dhe faqen e pranimit të porosive (KDS).";
+  const waiterUrl = w.waiter_url || "";
+  const kdsUrl = w.kds_url || "";
+  document.getElementById("waiter-edit-waiter-url").value = waiterUrl;
+  document.getElementById("waiter-edit-kds-url").value = kdsUrl;
+  document.getElementById("waiter-edit-waiter-row")?.classList.toggle("hidden", !waiterUrl);
+  document.getElementById("waiter-edit-kds-row")?.classList.toggle("hidden", !kdsUrl);
+  document.getElementById("waiter-edit-links-empty")?.classList.toggle("hidden", !!(waiterUrl || kdsUrl));
+  document.getElementById("waiter-edit-modal")?.classList.remove("hidden");
+}
+
+function closeWaiterEditModal() {
+  document.getElementById("waiter-edit-modal")?.classList.add("hidden");
+  editWaiterId = null;
+}
+
+async function copyWaiterEditLink(inputId, btn) {
+  const val = document.getElementById(inputId)?.value || "";
+  if (!val) return;
+  try {
+    await navigator.clipboard.writeText(val);
+    const orig = btn.textContent;
+    btn.textContent = "U kopjua!";
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch {
+    prompt("Kopjoni linkun:", val);
+  }
+}
+
+document.getElementById("waiter-edit-modal-backdrop")?.addEventListener("click", closeWaiterEditModal);
+document.getElementById("waiter-edit-modal-close")?.addEventListener("click", closeWaiterEditModal);
+document.getElementById("btn-waiter-edit-copy-link")?.addEventListener("click", function () {
+  copyWaiterEditLink("waiter-edit-waiter-url", this);
+});
+document.getElementById("btn-waiter-edit-copy-kds")?.addEventListener("click", function () {
+  copyWaiterEditLink("waiter-edit-kds-url", this);
+});
+document.getElementById("btn-waiter-edit-tables")?.addEventListener("click", () => {
+  const id = editWaiterId;
+  closeWaiterEditModal();
+  if (id) openAssignTablesModal(id);
+});
+document.getElementById("btn-waiter-edit-pin")?.addEventListener("click", () => {
+  const id = editWaiterId;
+  const w = ownerWaitersCache.find(x => x.id === id);
+  closeWaiterEditModal();
+  if (!id || !w) return;
+  const row = document.querySelector(`#waiters-body tr[data-id="${id}"]`);
+  if (row) resetWaiterPin(row);
+});
 
 async function loadOwnerWaiters() {
   const data = await api("/api/owner/waiters");
@@ -2278,6 +2304,7 @@ document.querySelectorAll(".tab").forEach(tab => {
       applyAiUiState();
       loadOwnerSupplySuggestions?.();
     }
+    if (tab.dataset.tab === "kamarieret") loadOwnerWaiters();
     if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
     if (tab.dataset.tab === "ai-asistent") loadOwnerAiAssistant?.();
     if (tab.dataset.tab === "njoftimet") loadOwnerNotifications?.();
