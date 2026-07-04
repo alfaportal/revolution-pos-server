@@ -739,7 +739,7 @@
   let acceptPollTimer = null;
 
   function canAcceptOrdersWithoutPin() {
-    return hasPersonalWaiterLink() && Boolean(activeWaiter?.id);
+    return Boolean(activeWaiter?.id) && Boolean(waiterToken) && Boolean(bootstrap?.assigned_waiter?.id);
   }
 
   function orderSourceMeta(o) {
