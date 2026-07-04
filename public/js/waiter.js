@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=9", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=10", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -773,6 +773,30 @@
     return Boolean(activeWaiter?.id) && Boolean(waiterToken) && Boolean(bootstrap?.assigned_waiter?.id);
   }
 
+  function isOrderFromCurrentWaiter(o) {
+    if (!activeWaiter || !o) return false;
+    const oid = String(o.waiter_id || "").trim().toLowerCase();
+    const oname = String(o.waiter_name || "").trim().toLowerCase();
+    const myId = String(activeWaiter.id).trim().toLowerCase();
+    const myName = String(activeWaiter.name).trim().toLowerCase();
+    if (oid && oid === myId) return true;
+    if (oname && myName && oname === myName) return true;
+    const device = String(o.device_id || "").toUpperCase();
+    if (device === "WEB-WAITER" && oid === myId) return true;
+    return false;
+  }
+
+  async function autoAcceptOwnOrder(orderId) {
+    if (!orderId || handledAcceptIds.has(orderId)) return;
+    handledAcceptIds.add(orderId);
+    try {
+      await api(
+        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/accept${apiQuery()}`,
+        { method: "POST", body: JSON.stringify({}) },
+      );
+    } catch { /* pranim i heshtur — porosia e kamarierit */ }
+  }
+
   function orderSourceMeta(o) {
     const device = String(o?.device_id || "").toUpperCase();
     const w = String(o?.waiter_name || "").trim().toLowerCase();
@@ -852,14 +876,22 @@
     modal.removeAttribute("hidden");
   }
 
-  function maybeShowAcceptModal(orders) {
+  async function maybeShowAcceptModal(orders) {
     const pending = (orders || []).filter(o =>
       !(o.accepted_at || o.accepted_by_waiter_name) && !handledAcceptIds.has(o.id));
-    if (!pending.length) {
+
+    const own = pending.filter(isOrderFromCurrentWaiter);
+    const external = pending.filter(o => !isOrderFromCurrentWaiter(o));
+
+    for (const o of own) {
+      await autoAcceptOwnOrder(o.id);
+    }
+
+    if (!external.length) {
       closeAcceptModal();
       return;
     }
-    const next = pending[0];
+    const next = external[0];
     if (acceptModalOrderId === next.id) return;
     renderAcceptModal(next);
     playOrderAlert();
@@ -907,7 +939,7 @@
     if (!canAcceptOrdersWithoutPin() || !slug || !kitchenKey) return;
     try {
       const data = await api(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`);
-      maybeShowAcceptModal(data.orders || []);
+      await maybeShowAcceptModal(data.orders || []);
     } catch { /* ignore background poll */ }
   }
 
@@ -1475,17 +1507,18 @@
     }
 
     try {
-      await api(orderUrl, {
+      const data = await api(orderUrl, {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      if (data.order?.id) handledAcceptIds.add(data.order.id);
       cart = [];
       renderCart();
       const sentMsg = `✅ Porosia u dërgua për T${sentTable}!`;
       showOrderMsg("", false);
       showSuccessToast(sentMsg);
       scheduleIdleLock();
-      suppressOrderAlertOnce = true; // Mos bjer zilja për porosinë që dërgoi vetë kamarieri
+      suppressOrderAlertOnce = true;
       await refreshBootstrap();
     } catch (e) {
       if (window.OfflineQueue && isNetworkError(e)) {

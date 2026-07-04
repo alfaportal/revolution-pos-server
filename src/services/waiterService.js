@@ -275,6 +275,30 @@ async function submitWaiterOrder(clientId, body) {
     console.warn("[inventory] waiter deduct failed:", err.message);
   }
 
+  if (saved?.id) {
+    try {
+      const { updateOrdersAcceptance, isOrderAccepted } = require("../lib/salesOrderSelect");
+      if (!isOrderAccepted(saved)) {
+        await updateOrdersAcceptance(getSupabase(), {
+          clientId,
+          orderIds: [saved.id],
+          waiterId: waiter.id,
+          waiterName: waiter.name,
+        });
+        const { notifyKitchenUpdate } = require("./kdsEvents");
+        notifyKitchenUpdate(clientId, { order_id: saved.id, status: "accepted", accepted_by: waiter.name });
+        const { data: refreshed } = await getSupabase()
+          .from("sales_orders")
+          .select("*")
+          .eq("id", saved.id)
+          .maybeSingle();
+        if (refreshed) saved = refreshed;
+      }
+    } catch (err) {
+      console.warn("[waiter] auto-accept on submit failed:", err.message);
+    }
+  }
+
   return { ok: true, order: saved, sent_to: "bar", waiter };
 }
 
