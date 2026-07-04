@@ -456,7 +456,7 @@ router.post("/online-orders/cancel", licenseApiKeyOptional, async (req, res) => 
       ? req.body.order_ids
       : (req.body.order_id ? [req.body.order_id] : []);
 
-    const result = await cancelBarOrders(resolved.clientId, rawIds);
+    const result = await cancelBarOrders(resolved.clientId, rawIds, { reason: "license/online-orders/cancel" });
     if (!result.count) {
       return res.json({
         ok: false,
