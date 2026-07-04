@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=12", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=14", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -692,6 +692,16 @@
     if (returnUrl && /^https?:\/\//i.test(returnUrl)) {
       btn.classList.remove("hidden");
       btn.addEventListener("click", () => window.location.assign(returnUrl));
+    }
+  }
+
+  function setupDesktopCalculatorBar() {
+    const footer = $("waiter-desktop-footer");
+    if (!footer) return;
+    const desktopEmbed = Boolean(kasaSession || returnUrl) && !isMobileWaiter();
+    if (desktopEmbed) {
+      footer.classList.remove("hidden");
+      document.body.classList.add("has-desktop-calc-footer");
     }
   }
 
@@ -1572,6 +1582,8 @@
   $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
   setupWaiterIdleLock();
   setupDesktopReturn();
+  setupDesktopCalculatorBar();
+  if (typeof window.initWaiterCalculator === "function") window.initWaiterCalculator();
   setupConnectionStatus();
   registerServiceWorker();
   setupReservationReminders();
