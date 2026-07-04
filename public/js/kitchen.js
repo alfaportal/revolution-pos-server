@@ -93,7 +93,7 @@
       if (w.startsWith("delivery")) return { icon: "🛵", label: "Delivery" };
       return { icon: "🥡", label: "Takeaway" };
     }
-    if (device === "WEB-KIOSK") return { icon: "🪑", label: "Tavolinë" };
+    if (device === "WEB-KIOSK") return { icon: "📱", label: "QR Code" };
     if (device === "WEB-WAITER") return { icon: "📱", label: "Kamarier" };
     return { icon: "🖥️", label: "POS" };
   }
