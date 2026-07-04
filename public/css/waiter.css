@@ -319,6 +319,56 @@ html, body {
   opacity: 0.45;
 }
 
+.tables-live-bar.has-online-pending .live-dot {
+  background: var(--warn);
+  box-shadow: 0 0 6px var(--warn);
+}
+
+.tables-live-bar.has-online-pending .live-label {
+  color: var(--warn);
+}
+
+.tables-online-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: linear-gradient(135deg, #422006 0%, #1c1408 100%);
+  color: #fde68a;
+  font-size: 0.88rem;
+}
+
+.tables-online-banner.hidden {
+  display: none !important;
+}
+
+.online-banner-inner strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.online-banner-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  color: #fef3c7;
+  font-size: 0.85rem;
+}
+
+.online-banner-item + .online-banner-item {
+  border-top: 1px solid rgba(251, 191, 36, 0.2);
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+}
+
+.online-banner-inner small {
+  display: block;
+  margin-top: 0.35rem;
+  opacity: 0.85;
+}
+
 .table-status-pill {
   display: inline-block;
   font-size: 0.62rem;
