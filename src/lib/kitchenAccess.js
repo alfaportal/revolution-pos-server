@@ -120,6 +120,20 @@ function buildWaiterKitchenUrl(baseUrl, client, webToken = "") {
   return `${url}&w=${encodeURIComponent(t)}`;
 }
 
+/** Shton waiter_url dhe kds_url për secilin kamarier (POS / owner panel). */
+function enrichWaitersWithWebLinks(baseUrl, client, waiters = []) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  const sharedWaiterUrl = client ? buildWaiterUrl(base, client, "") : "";
+  return (waiters || []).map(w => {
+    const token = String(w.web_token || "").trim();
+    return {
+      ...w,
+      waiter_url: client && token ? buildWaiterUrl(base, client, token) : sharedWaiterUrl,
+      kds_url: client && token ? buildWaiterKitchenUrl(base, client, token) : "",
+    };
+  });
+}
+
 /** Linket web për një lokal — sipas paketës (banak, kuzhinë, kamarier, kiosk, faqe). */
 function buildClientWebLinks(baseUrl, client, packageTier) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
@@ -161,5 +175,6 @@ module.exports = {
   buildTableMenuUrl,
   buildWaiterUrl,
   buildWaiterKitchenUrl,
+  enrichWaitersWithWebLinks,
   buildClientWebLinks,
 };

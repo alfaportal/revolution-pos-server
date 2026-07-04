@@ -4,6 +4,9 @@ const { validateLicense, getLicenseAccessLinks } = require("../services/licenseS
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
+const { getClientById } = require("../services/salesService");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const { ensureKitchenCredentials, enrichWaitersWithWebLinks } = require("../lib/kitchenAccess");
 const { createKasaSessionToken } = require("../lib/kasaSession");
 const {
   listOwnerReservations,
@@ -270,9 +273,13 @@ router.post("/waiters-list", licenseApiKeyOptional, async (req, res) => {
     }
 
     const waiters = await listWaitersForOwner(licenseResult.client_id);
+    let client = await getClientById(licenseResult.client_id);
+    if (client) client = await ensureKitchenCredentials(client);
+    const base = getPublicAppOrigin();
+    const active = (waiters || []).filter(w => w.active !== false && w.has_pin);
     res.json({
       ok: true,
-      waiters: (waiters || []).filter(w => w.active !== false && w.has_pin),
+      waiters: enrichWaitersWithWebLinks(base, client, active),
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });

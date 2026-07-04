@@ -90,6 +90,7 @@
       <button class="tab" data-tab="licenca">Licenca</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="stoku">Stoku</button>
+      <button class="tab" data-tab="kamarieret">Kamarierët</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
       <button class="tab ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>Asistent AI</button>
       <button class="tab ai-feature-tab hidden" data-tab="njoftimet" id="tab-notifications" hidden>Njoftimet</button>
@@ -874,6 +875,36 @@
     </div>
   </div>
 
+  <div id="waiter-edit-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="waiter-edit-title">
+    <div class="owner-modal-backdrop" id="waiter-edit-modal-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="waiter-edit-title">Ndrysho kamarierin</h2>
+        <button type="button" class="owner-modal-close" id="waiter-edit-modal-close" aria-label="Mbyll">×</button>
+      </div>
+      <p id="waiter-edit-sub" class="links-hint"></p>
+      <div class="link-row" id="waiter-edit-waiter-row">
+        <label>Link personal i kamarierit (tablet)</label>
+        <div class="link-actions" style="flex-wrap:wrap;gap:0.35rem">
+          <input type="text" id="waiter-edit-waiter-url" readonly style="font-family:monospace;font-size:0.75rem;flex:1;min-width:200px">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-waiter-edit-copy-link">Kopjo</button>
+        </div>
+      </div>
+      <div class="link-row" id="waiter-edit-kds-row" style="margin-top:0.75rem">
+        <label>Link personal i pranimit të porosive (KDS)</label>
+        <div class="link-actions" style="flex-wrap:wrap;gap:0.35rem">
+          <input type="text" id="waiter-edit-kds-url" readonly style="font-family:monospace;font-size:0.75rem;flex:1;min-width:200px">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-waiter-edit-copy-kds">Kopjo KDS</button>
+        </div>
+      </div>
+      <p id="waiter-edit-links-empty" class="links-hint hidden">Linku personal nuk është gati — ruajeni kamarierin dhe provoni përsëri.</p>
+      <div class="menu-row-actions" style="margin-top:1rem;flex-wrap:wrap;gap:0.35rem">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-waiter-edit-tables">Cakto tavolinat</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-waiter-edit-pin">Rivendos PIN</button>
+      </div>
+    </div>
+  </div>
+
   <div id="assign-tables-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="assign-tables-title">
     <div class="owner-modal-backdrop" id="assign-tables-modal-backdrop"></div>
     <div class="owner-modal-card">
@@ -1004,7 +1035,7 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=29"></script>
+  <script src="/js/owner.js?v=30"></script>
   <script src="/js/owner-locations.js?v=1"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
