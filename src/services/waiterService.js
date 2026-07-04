@@ -149,20 +149,37 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
   const pinWaiters = await loadPinWaitersCount(clientId);
   const branding = await getStaffBrandingForClient(client, kitchenSlug);
 
+  // Filtrimi sipas caktimit të tavolinave (vetëm për link personal të kamarierit).
+  // Nëse pronari ka caktuar tavolina, kamarieri sheh VETËM të vetat; tavolinat pa
+  // caktim nuk shfaqen te askush. Nëse nuk ka asnjë caktim, sillet si më parë (të gjitha).
+  let tables = layoutWithReservations.tables;
+  let areasOut = layoutWithReservations.areas;
+  if (assigned_waiter?.id) {
+    const { getAssignmentState } = require("./waiterTablesService");
+    const assignState = await getAssignmentState(clientId);
+    if (assignState.hasAny) {
+      const allowed = new Set(assignState.byWaiter.get(assigned_waiter.id) || []);
+      tables = tables.filter(t => allowed.has(Number(t.number)));
+      areasOut = areasOut
+        .map(a => ({ ...a, tables: a.tables.filter(t => allowed.has(Number(t.number))) }))
+        .filter(a => a.tables.length);
+    }
+  }
+
   return {
     client_name: client.emri,
     restaurant_name: settings?.restaurant_name || client.emri,
     address: branding.address,
     logo_url: branding.logo_url,
     revolution_logo_url: branding.revolution_logo_url,
-    table_count: layoutWithReservations.table_count,
+    table_count: tables.length,
     synced_at: settings?.synced_at || null,
     pin_auth: true,
     waiter_count: pinWaiters,
     categories: buildMenuCategories(categories, menu),
     menu: (menu || []).filter(isVisibleOnWebMenu).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
-    areas: layoutWithReservations.areas,
-    tables: layoutWithReservations.tables,
+    areas: areasOut,
+    tables,
     reservations,
     assigned_waiter,
     web_token_invalid,
