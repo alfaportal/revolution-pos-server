@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos, syncSaleFromPos } = require("./salesService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
-const { WEB_WAITER, isKioskWaiterName } = require("../lib/orderSource");
+const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC, isKioskWaiterName } = require("../lib/orderSource");
 const { buildMenuCategories, mapMenuItemForKitchen } = require("./menuCatalogService");
 const { isVisibleOnWebMenu } = require("../lib/stockHelpers");
 const {
@@ -34,13 +34,35 @@ async function getActiveTableOrders(clientId) {
     .select("id, table_number, waiter_name, waiter_id, status, total, ordered_at, items_json, local_order_id, device_id")
     .eq("client_id", clientId)
     .in("status", ["ordered", "ready"])
-    .order("ordered_at", { ascending: false });
+    .order("ordered_at", { ascending: true });
   if (error) throw error;
-  const byTable = new Map();
+
+  const rowsByTable = new Map();
   for (const row of data || []) {
     const n = Number(row.table_number);
-    if (!n || byTable.has(n)) continue;
-    byTable.set(n, row);
+    if (!n) continue;
+    if (!rowsByTable.has(n)) rowsByTable.set(n, []);
+    rowsByTable.get(n).push(row);
+  }
+
+  const byTable = new Map();
+  for (const [n, rows] of rowsByTable) {
+    if (rows.length === 1) {
+      byTable.set(n, rows[0]);
+      continue;
+    }
+    let items = [];
+    for (const row of rows) {
+      items = mergeOrderItems(items, row.items_json);
+    }
+    const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const primary = rows.find(r => String(r.device_id || "").toUpperCase() !== WEB_WAITER) || rows[0];
+    byTable.set(n, {
+      ...primary,
+      items_json: items,
+      total,
+      merged_order_ids: rows.map(r => r.id),
+    });
   }
   return byTable;
 }
@@ -97,9 +119,18 @@ function sameWaiterId(a, b) {
   return String(a).toLowerCase() === String(b).toLowerCase();
 }
 
+function isExternalChannelOrder(existing) {
+  if (!existing) return false;
+  const device = String(existing.device_id || "").trim().toUpperCase();
+  if (device === WEB_KIOSK || device === WEB_PUBLIC) return true;
+  if (isKioskWaiterName(existing.waiter_name)) return true;
+  const w = String(existing.waiter_name || "").trim().toLowerCase();
+  return w.startsWith("takeaway") || w.startsWith("delivery");
+}
+
 function assertWaiterOnTable(existing, waiter, tableNumber) {
   if (!existing?.waiter_name) return;
-  if (isKioskWaiterName(existing.waiter_name)) return;
+  if (isExternalChannelOrder(existing)) return;
   if (waiter?.id && existing.waiter_id && !sameWaiterId(existing.waiter_id, waiter.id)) {
     throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
   }
@@ -317,6 +348,30 @@ async function cancelWaiterOrder(clientId, body) {
   return { ok: true, message: "Porosia u anullua", order: sale };
 }
 
+async function cancelSiblingActiveTableOrders(clientId, tableNumber, keepOrderId) {
+  const db = getSupabase();
+  const num = Number(tableNumber);
+  const keepId = String(keepOrderId || "").trim();
+  if (!num || !keepId) return;
+
+  const { data, error } = await db
+    .from("sales_orders")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("table_number", num)
+    .in("status", ["ordered", "ready"])
+    .neq("id", keepId);
+  if (error) throw error;
+
+  const now = new Date().toISOString();
+  for (const row of data || []) {
+    await db
+      .from("sales_orders")
+      .update({ status: "cancelled", closed_at: now, total: 0, ready_at: null })
+      .eq("id", row.id);
+  }
+}
+
 async function closeWaiterTable(clientId, body) {
   await assertClient(clientId);
   const waiter = await resolveWaiterForOrder(clientId, body.waiter_id, body.waiter_name);
@@ -358,6 +413,21 @@ async function closeWaiterTable(clientId, body) {
     ordered_at: existing?.ordered_at || now,
     closed_at: now,
   });
+
+  if (saleResult.sale?.id) {
+    const siblingIds = (existing?.merged_order_ids || []).filter(id => id !== saleResult.sale.id);
+    if (siblingIds.length) {
+      const db = getSupabase();
+      const cancelNow = new Date().toISOString();
+      await db
+        .from("sales_orders")
+        .update({ status: "cancelled", closed_at: cancelNow, total: 0, ready_at: null })
+        .in("id", siblingIds)
+        .in("status", ["ordered", "ready"]);
+    } else {
+      await cancelSiblingActiveTableOrders(clientId, tableNumber, saleResult.sale.id);
+    }
+  }
 
   const receiptBundle = saleResult.receipt || null;
 

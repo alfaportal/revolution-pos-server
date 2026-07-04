@@ -37,16 +37,16 @@ async function updateOrdersAcceptance(db, { clientId, orderIds, waiterId = null,
   const name = String(waiterName || "").trim();
   const strategies = [
     {
+      patch: {
+        accepted_at: now,
+        accepted_by_waiter_id: waiterId,
+        accepted_by_waiter_name: name,
+      },
+      filterAcceptedNull: true,
+    },
+    {
       patch: { accepted_by_waiter_id: waiterId, accepted_by_waiter_name: name },
       filterAcceptedNull: false,
-    },
-    {
-      patch: { waiter_id: waiterId },
-      filterAcceptedNull: false,
-    },
-    {
-      patch: { accepted_at: now, accepted_by_waiter_id: waiterId, accepted_by_waiter_name: name },
-      filterAcceptedNull: true,
     },
     {
       patch: { accepted_at: now },

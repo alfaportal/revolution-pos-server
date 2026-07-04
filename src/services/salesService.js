@@ -282,6 +282,13 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
       if (!existing) {
         row.ordered_at = body.ordered_at || row.closed_at;
       }
+      if (existing?.accepted_at) row.accepted_at = existing.accepted_at;
+      if (existing?.accepted_by_waiter_name) {
+        row.accepted_by_waiter_name = existing.accepted_by_waiter_name;
+      }
+      if (existing?.accepted_by_waiter_id) {
+        row.accepted_by_waiter_id = existing.accepted_by_waiter_id;
+      }
     }
   }
 
@@ -757,31 +764,28 @@ async function getOwnerReport(clientId, from, to) {
   };
 }
 
-/** Porosi të mbyllura nga paneli i kamarierit (telefon) — për sync në daily_log të POS-it. */
+/** Porosi të mbyllura nga telefoni i kamarierit — për sync në daily_log të POS-it. */
 async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   const db = getSupabase();
   const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
+  const webDevices = [WEB_WAITER, WEB_KIOSK, WEB_PUBLIC];
   let q = db
     .from("sales_orders")
     .select(
-      "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, payment_method, local_order_id, device_id",
+      "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, payment_method, local_order_id, device_id, accepted_by_waiter_name, accepted_by_waiter_id",
     )
     .eq("client_id", clientId)
     .eq("status", "closed")
-    .or(`device_id.eq.${WEB_WAITER},and(waiter_id.not.is.null,local_order_id.like.web-%)`)
+    .in("device_id", webDevices)
     .order("closed_at", { ascending: false })
     .limit(100);
   const since = String(sinceIso || "").trim();
   if (since) q = q.gte("closed_at", since);
   const { data, error } = await q;
   if (error) throw error;
-  const rows = (data || []).filter(row => {
-    const device = String(row.device_id || "").trim().toUpperCase();
-    if (device === WEB_WAITER) return true;
-    if (device === WEB_KIOSK || device === WEB_PUBLIC) return false;
-    return !!row.waiter_id && String(row.local_order_id || "").startsWith("web-");
-  });
-  rows.sort((a, b) => String(a.closed_at || "").localeCompare(String(b.closed_at || "")));
+  const rows = (data || []).slice().sort((a, b) =>
+    String(a.closed_at || "").localeCompare(String(b.closed_at || "")),
+  );
   console.log(
     "[sales/waiter-closed] client=",
     clientId,
@@ -793,8 +797,8 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   return rows.map(row => ({
     id: row.id,
     table_number: Number(row.table_number) || 0,
-    waiter_name: String(row.waiter_name || "").trim(),
-    waiter_id: row.waiter_id || null,
+    waiter_name: String(row.accepted_by_waiter_name || row.waiter_name || "").trim(),
+    waiter_id: row.accepted_by_waiter_id || row.waiter_id || null,
     items: normalizeItems(row.items_json),
     total: Number(row.total) || 0,
     receipt_number: String(row.receipt_number || "").trim(),
