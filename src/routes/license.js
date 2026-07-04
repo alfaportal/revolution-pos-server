@@ -19,6 +19,7 @@ const {
   listPendingOnlineOrders,
   listBarMobileOrderedForPos,
   countPendingOnlineOrders,
+  refusePendingOnlineOrder,
 } = require("../services/onlineOrdersService");
 const {
   listClosedWebWaiterSalesForPos,
@@ -444,6 +445,41 @@ router.post("/online-orders/acknowledge", licenseApiKeyOptional, async (req, res
     });
   } catch (e) {
     res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/online-orders/refuse — REFUZO me grace 2 min (QR, Takeaway, Delivery)
+ */
+router.post("/online-orders/refuse", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+
+    const rawIds = Array.isArray(req.body.order_ids)
+      ? req.body.order_ids
+      : (req.body.order_id ? [req.body.order_id] : []);
+    const orderId = String(req.body.order_id || rawIds[0] || "").trim();
+    const pin = String(req.body.pin || req.body.waiter_pin || "").trim();
+
+    if (!orderId) {
+      return res.status(400).json({ ok: false, gabim: "Zgjidhni porosinë." });
+    }
+
+    const result = await refusePendingOnlineOrder(resolved.clientId, orderId, { pin });
+    console.log("[online-orders/refuse] OK", {
+      clientId: resolved.clientId,
+      orderId,
+      refused_by: result.refused_by,
+      status: result.status,
+    });
+    res.json(result);
+  } catch (e) {
+    console.error("[online-orders/refuse] FAIL", { error: e.message });
+    const status = e.code === "MISSING_PIN" || e.code === "MISSING_ORDER" ? 400 : 500;
+    res.status(status).json({ ok: false, gabim: e.message });
   }
 });
 

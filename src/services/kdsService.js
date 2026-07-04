@@ -97,7 +97,9 @@ function filterOrdersForWaiterPolling(orders, waiterId, assignmentState) {
     if (sharedAfterRefusal) return true;
 
     const tableNum = Number(o.table_number);
-    if (!tableNum) return false;
+    if (!tableNum) {
+      return needsWaiterAcceptance(o);
+    }
     return allowed.has(tableNum);
   });
 }
