@@ -8,6 +8,7 @@ const {
 } = require("./kdsService");
 const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
 const { isOrderAccepted } = require("../lib/salesOrderSelect");
+const { verifyWaiterPin } = require("./waiterPinService");
 const { getSupabase } = require("../db");
 
 function formatOrderForPos(row) {
@@ -62,12 +63,45 @@ async function countPendingOnlineOrders(clientId) {
   return orders.length;
 }
 
+async function refusePendingOnlineOrder(clientId, orderId, { pin = "" } = {}) {
+  const id = String(orderId || "").trim();
+  if (!id) {
+    const err = new Error("Mungon porosia.");
+    err.code = "MISSING_ORDER";
+    throw err;
+  }
+
+  const pinTrim = String(pin || "").trim();
+  if (!pinTrim) {
+    const err = new Error("Vendosni PIN-in e kamarierit që e refuzon porosinë.");
+    err.code = "MISSING_PIN";
+    throw err;
+  }
+
+  const handler = await verifyWaiterPin(clientId, pinTrim);
+  const { refuseBarOrderWithGrace } = require("./kdsService");
+  const order = await refuseBarOrderWithGrace(clientId, id, {
+    waiterId: handler.id,
+    waiterName: handler.name,
+  });
+
+  return {
+    ok: true,
+    refused: 1,
+    order_id: id,
+    order,
+    status: order.status,
+    refuse_mode: "grace_v2",
+    grace_minutes: 2,
+    refused_by: handler.name,
+  };
+}
+
 async function acceptPendingOnlineOrders(clientId, orderIds, { waiterId = null, waiterName = "", pin = "" } = {}) {
   const ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
   if (!ids.length) return { ok: true, acknowledged: 0, order_ids: [], accepted_by: waiterName };
 
   if (pin && !waiterName) {
-    const { verifyWaiterPin } = require("./waiterPinService");
     const handler = await verifyWaiterPin(clientId, pin);
     waiterId = handler.id;
     waiterName = handler.name;
@@ -99,4 +133,5 @@ module.exports = {
   listBarMobileOrderedForPos,
   countPendingOnlineOrders,
   acceptPendingOnlineOrders,
+  refusePendingOnlineOrder,
 };
