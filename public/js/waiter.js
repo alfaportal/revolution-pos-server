@@ -956,45 +956,7 @@
       <div class="rc-divider"></div>
       <div class="rc-thanks">Faleminderit!</div>
     </div>`;
-    thermalPrintHtml(html, venue, 80);
-  }
-
-  function thermalPrintHtml(html, title, mm = 80) {
-    try {
-      const doc = `<!DOCTYPE html><html><head><meta charset="utf-8">` +
-        `<meta name="viewport" content="width=device-width, initial-scale=1">` +
-        `<title>${escapeHtml(title || "Faturë")}</title>` +
-        `<style>${receiptPrintStyles(mm)}</style></head>` +
-        `<body>${html}</body></html>`;
-      const old = document.getElementById("accept-print-frame");
-      if (old) old.remove();
-      const frame = document.createElement("iframe");
-      frame.id = "accept-print-frame";
-      frame.setAttribute("aria-hidden", "true");
-      frame.style.cssText =
-        "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
-      document.body.appendChild(frame);
-      let done = false;
-      const cleanup = () => {
-        setTimeout(() => { try { frame.remove(); } catch (_) { /* ignore */ } }, 800);
-      };
-      const trigger = () => {
-        if (done) return;
-        done = true;
-        try {
-          frame.contentWindow.focus();
-          frame.contentWindow.onafterprint = cleanup;
-          frame.contentWindow.print();
-          cleanup();
-        } catch (_) { cleanup(); }
-      };
-      const fdoc = frame.contentWindow.document;
-      fdoc.open();
-      fdoc.write(doc);
-      fdoc.close();
-      frame.onload = () => setTimeout(trigger, 200);
-      setTimeout(trigger, 500);
-    } catch { /* print opsional */ }
+    showReceipt({ html, paper_width_mm: 80 });
   }
 
   function enterWaiterSession(waiter) {
@@ -1418,10 +1380,7 @@
       renderCart();
       const payLabel = paymentMethod === "karte" ? "Kartë" : "Cash";
       showSuccessToast(`✅ T${closedTable} u mbyll — ${payLabel}`);
-      if (data.receipt) {
-        showReceipt(data.receipt);
-        setTimeout(() => printReceipt(), 450);
-      }
+      if (data.receipt) showReceipt(data.receipt);
       tableNumber = 0;
       await refreshBootstrap();
       showScreen("screen-tables");
