@@ -494,27 +494,36 @@
     }, 4500);
   }
 
-  /** Reliable tap/click for mobile — one action per gesture, works with touch. */
+  /** Reliable tap/click for mobile — one action per gesture, blocks ghost click after touch. */
   function bindTap(el, handler, { preventTouchScroll = false } = {}) {
     if (!el || el.dataset.tapBound) return;
     el.dataset.tapBound = "1";
     let lastFire = 0;
+    let suppressClickUntil = 0;
     const fire = (e, sourceEl) => {
       const now = Date.now();
-      if (now - lastFire < 280) return;
+      if (now - lastFire < 400) return;
       lastFire = now;
       return handler(e, sourceEl);
     };
-    el.addEventListener("click", e => fire(e, e.target));
     el.addEventListener("touchend", e => {
       const touch = e.changedTouches?.[0];
       const target = touch
         ? document.elementFromPoint(touch.clientX, touch.clientY)
         : e.target;
       if (!target || !el.contains(target)) return;
+      suppressClickUntil = Date.now() + 600;
       const handled = fire(e, target);
       if (preventTouchScroll && handled !== false) e.preventDefault();
     }, { passive: false });
+    el.addEventListener("click", e => {
+      if (Date.now() < suppressClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      fire(e, e.target);
+    });
   }
 
   function getTableMeta(num) {
@@ -1522,6 +1531,7 @@
       showOrderMsg(e.message, false);
       btn.disabled = false;
       btn.textContent = "Dërgo Porosinë";
+      orderSubmitting = false;
       return;
     }
 
@@ -1536,6 +1546,7 @@
       } finally {
         btn.disabled = false;
         btn.textContent = "Dërgo Porosinë";
+        orderSubmitting = false;
       }
       return;
     }
@@ -1568,7 +1579,7 @@
       showOrderMsg(msg, false);
     } finally {
       orderSubmitting = false;
-      btn.disabled = false;
+      btn.disabled = cart.length === 0;
       btn.textContent = "Dërgo Porosinë";
     }
   }

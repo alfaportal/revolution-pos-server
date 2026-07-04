@@ -40,6 +40,34 @@ function mergeOrderItems(existingItems, newItems) {
   return merged;
 }
 
+/** Parandalon double-submit: porosi e njëjtë brenda 60s (table + device + waiter). */
+async function findRecentActiveOrderForDedup(db, {
+  clientId,
+  tableNumber,
+  deviceId,
+  waiterId = "",
+  windowSec = 60,
+} = {}) {
+  const num = Number(tableNumber);
+  if (!num || num < 1 || !clientId || !deviceId) return null;
+  const since = new Date(Date.now() - windowSec * 1000).toISOString();
+  let q = db
+    .from("sales_orders")
+    .select("id, local_order_id, device_id, waiter_id, waiter_name, items_json, total, ordered_at, status, accepted_at, accepted_by_waiter_name, accepted_by_waiter_id")
+    .eq("client_id", clientId)
+    .eq("table_number", num)
+    .eq("device_id", deviceId)
+    .in("status", ["ordered", "ready"])
+    .gte("ordered_at", since)
+    .order("ordered_at", { ascending: false })
+    .limit(1);
+  const wid = String(waiterId || "").trim();
+  if (wid) q = q.eq("waiter_id", wid);
+  const { data, error } = await q.maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
 /** Një porosi aktive për tavolinë — mbyll rreshtat e vjetër (WEB-WAITER vs POS etj.) */
 async function cancelOtherActiveOrdersForTable(clientId, tableNumber, except = null) {
   const num = Number(tableNumber);
@@ -192,23 +220,44 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
   const deviceId = String(body.device_id || license.device_id || "").trim().toUpperCase();
   const { WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
   const rawItems = Array.isArray(body.items) ? body.items : JSON.parse(body.items_json || "[]");
-  const items = normalizeItems(rawItems);
-  const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
+  let items = normalizeItems(rawItems);
+  let total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
   const now = new Date().toISOString();
   const incomingStatus = String(body.status || defaultStatus).toLowerCase();
   const allowed = ["ordered", "ready", "closed", "cancelled"];
   const status = allowed.includes(incomingStatus) ? incomingStatus : defaultStatus;
 
-  const localOrderId = String(body.local_order_id || body.order_id || Date.now());
+  let localOrderId = String(body.local_order_id || body.order_id || Date.now());
   const db = getSupabase();
 
-  const { data: existing } = await db
+  let { data: existing } = await db
     .from("sales_orders")
-    .select("status, closed_at, ordered_at, items_json, accepted_at, accepted_by_waiter_name, accepted_by_waiter_id")
+    .select("status, closed_at, ordered_at, items_json, accepted_at, accepted_by_waiter_name, accepted_by_waiter_id, local_order_id, device_id, id, total, waiter_name, waiter_id")
     .eq("client_id", license.client_id)
     .eq("local_order_id", localOrderId)
     .eq("device_id", deviceId)
     .maybeSingle();
+
+  const tableNum = Number(body.table_number) || 0;
+  if (!existing && status === "ordered" && tableNum >= 1) {
+    const recent = await findRecentActiveOrderForDedup(db, {
+      clientId: license.client_id,
+      tableNumber: tableNum,
+      deviceId,
+      waiterId: body.waiter_id,
+    });
+    if (recent) {
+      const prevItems = normalizeItems(recent.items_json);
+      const nextItems = items;
+      if (JSON.stringify(prevItems) === JSON.stringify(nextItems)) {
+        return recent;
+      }
+      localOrderId = recent.local_order_id;
+      existing = recent;
+      items = mergeOrderItems(prevItems, nextItems);
+      total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    }
+  }
 
   let finalStatus = status;
   if (existing?.status === "closed" && status === "ordered") {
@@ -223,7 +272,6 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     && finalStatus === "ordered"
     && JSON.stringify(normalizeItems(existing.items_json)) !== JSON.stringify(items);
 
-  const tableNum = Number(body.table_number) || 0;
   const keepKey = { local_order_id: localOrderId, device_id: deviceId };
   const skipSiblingCancel = deviceId === WEB_KIOSK || deviceId === WEB_PUBLIC;
   if (tableNum >= 1 && ["ordered", "ready", "closed", "cancelled"].includes(finalStatus) && !skipSiblingCancel) {
@@ -332,10 +380,19 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
     const skipKdsPing = isCustomerChannelDevice(deviceId) && finalStatus === "ordered";
     if (!skipKdsPing) {
       try {
-        require("./kdsEvents").notifyKitchenUpdate(license.client_id, {
+        const kds = require("./kdsEvents");
+        const tableNum = Number(data?.table_number ?? body.table_number) || 0;
+        kds.notifyKitchenUpdate(license.client_id, {
           order_id: data?.id,
           status: finalStatus,
+          ...(tableNum >= 1 ? { table_number: tableNum } : {}),
         });
+        if (finalStatus === "closed" && tableNum >= 1) {
+          kds.notifyKitchenUpdate(license.client_id, {
+            table_number: tableNum,
+            status: "free",
+          });
+        }
       } catch {
         /* optional */
       }
@@ -766,11 +823,9 @@ async function getOwnerReport(clientId, from, to) {
   };
 }
 
-/** Porosi të mbyllura nga telefoni i kamarierit — për sync në daily_log të POS-it. */
+/** Porosi të mbyllura (të gjitha kanalet) — për sync në daily_log të POS-it. */
 async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   const db = getSupabase();
-  const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
-  const webDevices = [WEB_WAITER, WEB_KIOSK, WEB_PUBLIC];
   let q = db
     .from("sales_orders")
     .select(
@@ -778,7 +833,6 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
     )
     .eq("client_id", clientId)
     .eq("status", "closed")
-    .in("device_id", webDevices)
     .order("closed_at", { ascending: false })
     .limit(100);
   const since = String(sinceIso || "").trim();
@@ -808,6 +862,49 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
     payment_method: row.payment_method || "cash",
     local_order_id: String(row.local_order_id || "").trim(),
   }));
+}
+
+function mapClosedSaleRowForPos(row) {
+  return {
+    id: row.id,
+    table_number: Number(row.table_number) || 0,
+    waiter_name: String(row.accepted_by_waiter_name || row.waiter_name || "").trim(),
+    waiter_id: row.accepted_by_waiter_id || row.waiter_id || null,
+    items: normalizeItems(row.items_json),
+    total: Number(row.total) || 0,
+    receipt_number: String(row.receipt_number || "").trim(),
+    closed_at: row.closed_at || null,
+    payment_method: row.payment_method || "cash",
+    local_order_id: String(row.local_order_id || "").trim(),
+    device_id: String(row.device_id || "").trim(),
+  };
+}
+
+/** Të gjitha porositë closed — rindërtim i plotë i daily_log (POS + web). */
+async function listAllClosedSalesForPosRebuild(clientId) {
+  const db = getSupabase();
+  const pageSize = 1000;
+  const select =
+    "id, table_number, waiter_name, waiter_id, items_json, total, receipt_number, closed_at, payment_method, local_order_id, device_id, accepted_by_waiter_name, accepted_by_waiter_id";
+  const all = [];
+  let offset = 0;
+  for (;;) {
+    const { data, error } = await db
+      .from("sales_orders")
+      .select(select)
+      .eq("client_id", clientId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const batch = data || [];
+    all.push(...batch);
+    if (batch.length < pageSize) break;
+    offset += pageSize;
+    if (offset > 50000) break;
+  }
+  console.log("[sales/rebuild-register] client=", clientId, "closed=", all.length);
+  return all.map(mapClosedSaleRowForPos);
 }
 
 async function getOwnerStatsForGroup(clientIds) {
@@ -859,5 +956,6 @@ module.exports = {
   getOwnerOrderFilters,
   getOwnerReport,
   listClosedWebWaiterSalesForPos,
+  listAllClosedSalesForPosRebuild,
   getClientById,
 };

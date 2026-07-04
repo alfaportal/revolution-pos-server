@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
 const { getClientById, normalizeItems, mergeOrderItems, updateActiveSaleFromPos, syncSaleFromPos } = require("./salesService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
-const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC, isKioskWaiterName } = require("../lib/orderSource");
+const { WEB_WAITER, WEB_KIOSK, WEB_PUBLIC, isKioskWaiterName, isPosDesktopDevice } = require("../lib/orderSource");
 const { buildMenuCategories, mapMenuItemForKitchen } = require("./menuCatalogService");
 const { isVisibleOnWebMenu } = require("../lib/stockHelpers");
 const {
@@ -131,12 +131,17 @@ function isExternalChannelOrder(existing) {
 function assertWaiterOnTable(existing, waiter, tableNumber) {
   if (!existing?.waiter_name) return;
   if (isExternalChannelOrder(existing)) return;
-  if (waiter?.id && existing.waiter_id && !sameWaiterId(existing.waiter_id, waiter.id)) {
+  // Porositë POS mund të mbyllen nga çdo kamarier nga telefoni
+  if (isPosDesktopDevice(existing.device_id)) return;
+  // Porositë WEB — kontrollo vetëm waiter_id nëse ekziston
+  const wId = waiter?.id;
+  const eId = existing.waiter_id;
+  if (wId && eId && sameWaiterId(eId, wId)) return;
+  if (wId && eId && !sameWaiterId(eId, wId)) {
     throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
   }
-  if (existing.waiter_name.toLowerCase() !== waiter.name.toLowerCase()) {
-    throw new Error(`Tavolina T${tableNumber} është e kamarierit: ${existing.waiter_name}`);
-  }
+  // Nëse nuk ka waiter_id, lejo mbylljen (emrat mund të ndryshojnë paksa)
+  return;
 }
 
 async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter", webToken = "" } = {}) {
@@ -381,10 +386,13 @@ async function closeWaiterTable(clientId, body) {
 
   const active = await getActiveTableOrders(clientId);
   const existing = active.get(tableNumber);
+  if (!existing) {
+    throw new Error(`Nuk ka porosi aktive në cloud për T${tableNumber}.`);
+  }
   assertWaiterOnTable(existing, waiter, tableNumber);
 
   const cartItems = normalizeItems(body.items);
-  const existingItems = normalizeItems(existing?.items_json);
+  const existingItems = normalizeItems(existing.items_json);
   // Klienti dërgon listën e plotë të faturës — mos e bashko me ekzistuesen (dyfishon sasitë).
   const items = cartItems.length ? cartItems : existingItems;
   if (!items.length) {
@@ -395,8 +403,11 @@ async function closeWaiterTable(clientId, body) {
   const now = new Date().toISOString();
   const license = await getLicenseForClient(clientId);
   const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
-  const localOrderId = existing?.local_order_id || `web-${uuidv4()}`;
-  const deviceId = existing?.device_id || WEB_DEVICE;
+  const localOrderId = String(existing.local_order_id || "").trim();
+  const deviceId = String(existing.device_id || WEB_DEVICE).trim().toUpperCase();
+  if (!localOrderId) {
+    throw new Error(`Porosia në cloud për T${tableNumber} nuk ka local_order_id.`);
+  }
 
   const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
@@ -410,12 +421,12 @@ async function closeWaiterTable(clientId, body) {
     receipt_number: receiptNumber,
     payment_method: body.payment_method || "cash",
     status: "closed",
-    ordered_at: existing?.ordered_at || now,
+    ordered_at: existing.ordered_at || now,
     closed_at: now,
   });
 
   if (saleResult.sale?.id) {
-    const siblingIds = (existing?.merged_order_ids || []).filter(id => id !== saleResult.sale.id);
+    const siblingIds = (existing.merged_order_ids || []).filter(id => id !== saleResult.sale.id);
     if (siblingIds.length) {
       const db = getSupabase();
       const cancelNow = new Date().toISOString();

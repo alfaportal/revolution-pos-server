@@ -20,7 +20,10 @@ const {
   listBarMobileOrderedForPos,
   countPendingOnlineOrders,
 } = require("../services/onlineOrdersService");
-const { listClosedWebWaiterSalesForPos } = require("../services/salesService");
+const {
+  listClosedWebWaiterSalesForPos,
+  listAllClosedSalesForPosRebuild,
+} = require("../services/salesService");
 
 const router = express.Router();
 
@@ -336,13 +339,15 @@ router.post("/waiter-closed-sales", licenseApiKeyOptional, async (req, res) => {
     if (resolved.error) {
       return res.status(resolved.error.status).json(resolved.error.body);
     }
+    const rebuild = req.body.rebuild === true || req.body.rebuild === "true";
     const since = String(req.body.since || req.body.closed_after || "").trim();
-    const sales = await listClosedWebWaiterSalesForPos(resolved.clientId, since);
+    const sales = rebuild
+      ? await listAllClosedSalesForPosRebuild(resolved.clientId)
+      : await listClosedWebWaiterSalesForPos(resolved.clientId, since);
     console.log(
       "[license/waiter-closed-sales] client=",
       resolved.clientId,
-      "since=",
-      since || "(all)",
+      rebuild ? "rebuild=all-closed" : `since=${since || "(all)"}`,
       "count=",
       sales.length,
     );
