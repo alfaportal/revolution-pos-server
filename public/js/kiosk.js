@@ -15,6 +15,7 @@
   let cart = [];
   let menuGroupFilter = "pije";
   let groupBarBound = false;
+  let orderSubmitting = false;
 
   const $ = id => document.getElementById(id);
 
@@ -203,7 +204,38 @@
     scheduleKioskLayout();
   }
 
-  $("btn-send").addEventListener("click", async () => {
+  function bindTap(el, handler) {
+    if (!el || el.dataset.tapBound) return;
+    el.dataset.tapBound = "1";
+    let lastFire = 0;
+    let suppressClickUntil = 0;
+    const fire = e => {
+      const now = Date.now();
+      if (now - lastFire < 400) return;
+      lastFire = now;
+      return handler(e);
+    };
+    el.addEventListener("touchend", e => {
+      const touch = e.changedTouches?.[0];
+      const target = touch
+        ? document.elementFromPoint(touch.clientX, touch.clientY)
+        : e.target;
+      if (!target || !el.contains(target)) return;
+      suppressClickUntil = Date.now() + 600;
+      fire(e);
+    }, { passive: true });
+    el.addEventListener("click", e => {
+      if (Date.now() < suppressClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      fire(e);
+    });
+  }
+
+  async function submitOrder() {
+    if (orderSubmitting) return;
     const err = $("order-err");
     showErr(err, "");
     if (!cart.length) {
@@ -211,6 +243,7 @@
       return;
     }
     const btn = $("btn-send");
+    orderSubmitting = true;
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     try {
@@ -232,10 +265,13 @@
     } catch (e) {
       showErr(err, e.message);
     } finally {
-      btn.disabled = false;
+      orderSubmitting = false;
+      btn.disabled = cart.length === 0;
       btn.textContent = "Dërgo porosinë te banaku";
     }
-  });
+  }
+
+  bindTap($("btn-send"), submitOrder);
 
   async function refreshMenu() {
     if (!bootstrap) return;

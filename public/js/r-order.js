@@ -3,6 +3,7 @@
   let orderType = "takeaway";
   let activeCategory = "";
   let cart = [];
+  let orderSubmitting = false;
 
   function getSlug() {
     const parts = window.location.pathname.split("/").filter(Boolean);
@@ -267,6 +268,7 @@
   }
 
   async function submitOrder() {
+    if (orderSubmitting) return;
     showFormError("");
     const slug = getSlug();
     const name = String(document.getElementById("customer-name")?.value || "").trim();
@@ -291,6 +293,7 @@
       return;
     }
 
+    orderSubmitting = true;
     submitBtn.disabled = true;
     submitBtn.textContent = "Duke dërguar…";
 
@@ -321,6 +324,8 @@
       showFormError(err.message || "Gabim rrjeti.");
       submitBtn.disabled = cartCount() === 0;
       submitBtn.textContent = "Dërgo Porosinë";
+    } finally {
+      orderSubmitting = false;
     }
   }
 
