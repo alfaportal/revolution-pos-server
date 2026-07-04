@@ -77,6 +77,61 @@ function filterWaiterAcceptOrders(orders, waiterId) {
   });
 }
 
+/** Takeaway/Delivery — slotet Online 1…6 (jo QR tavolinë). */
+function isOnlineSlotOrder(order) {
+  if (!order || isStaffWaiterOrder(order)) return false;
+  const device = String(order?.device_id || "").trim().toUpperCase();
+  if (device === WEB_PUBLIC) return true;
+  const tableNum = Number(order.table_number) || 0;
+  if (tableNum > 0) return false;
+  if (device === WEB_KIOSK || isKioskWaiterName(order?.waiter_name)) return false;
+  const w = String(order?.waiter_name || "").trim().toLowerCase();
+  if (w.startsWith("takeaway") || w.startsWith("delivery")) return true;
+  return false;
+}
+
+function mapOrderForOnlineSlot(order) {
+  const norm = normalizeRefusalFields(normalizeAcceptanceFields(order));
+  return {
+    id: norm.id,
+    table_number: Number(norm.table_number) || 0,
+    waiter_name: norm.waiter_name,
+    waiter_id: norm.waiter_id,
+    items_json: normalizeItems(norm.items_json),
+    total: Number(norm.total) || 0,
+    ordered_at: norm.ordered_at,
+    device_id: norm.device_id,
+    accepted_at: norm.accepted_at,
+    accepted_by_waiter_name: norm.accepted_by_waiter_name,
+    refused_at: norm.refused_at,
+    order_expires_at: norm.order_expires_at,
+  };
+}
+
+/** Ndërton Online 1…N — e njëjta renditje si paneli (ordered_at ↑). */
+function buildOnlineSlotLayout(orders, { slotCount = 6 } = {}) {
+  const count = Math.min(12, Math.max(1, Number(slotCount) || 6));
+  const slots = [];
+  for (let i = 1; i <= count; i += 1) {
+    slots.push({ slot: i, label: `Online ${i}`, status: "free", order: null });
+  }
+
+  const onlineOrders = (orders || [])
+    .filter(isOnlineSlotOrder)
+    .filter(o => String(o.status || "ordered") === "ordered")
+    .sort((a, b) => String(a.ordered_at || a.created_at || "").localeCompare(String(b.ordered_at || b.created_at || "")));
+
+  onlineOrders.forEach((raw, idx) => {
+    if (idx >= count) return;
+    const order = mapOrderForOnlineSlot(raw);
+    const accepted = !!(order.accepted_at || String(order.accepted_by_waiter_name || "").trim());
+    slots[idx].order = order;
+    slots[idx].status = accepted ? "accepted" : "pending";
+  });
+
+  return slots;
+}
+
 /**
  * Filtron sipas tavolinave të caktuara — POROSI NË GRACE PAS REFUZO shfaqen te krejt kamarierët.
  * @param {{ hasAny: boolean, byWaiter: Map<string, number[]> }} assignmentState
@@ -680,6 +735,8 @@ module.exports = {
   refuseBarOrderWithGrace,
   filterWaiterAcceptOrders,
   filterOrdersForWaiterPolling,
+  isOnlineSlotOrder,
+  buildOnlineSlotLayout,
   expireRefusedOrders,
   isInRefusalGrace,
   needsWaiterAcceptance,
