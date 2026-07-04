@@ -1,5 +1,5 @@
 /* Revolution POS — Service Worker (waiter + static assets) */
-const CACHE_NAME = "ri-pos-offline-v6";
+const CACHE_NAME = "ri-pos-offline-v7";
 
 const PRECACHE_URLS = [
   "/logo-source.png",
@@ -9,7 +9,6 @@ const PRECACHE_URLS = [
   "/js/offlineQueue.js",
   "/js/menuCatalog.js",
   "/js/menu-pos.js",
-  "/js/waiter.js",
 ];
 
 function isStaticAsset(pathname) {
@@ -76,6 +75,10 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   if (isStaticAsset(url.pathname)) {
+    if (url.pathname.startsWith("/js/")) {
+      event.respondWith(fetch(request));
+      return;
+    }
     event.respondWith(networkFirst(request));
     return;
   }
