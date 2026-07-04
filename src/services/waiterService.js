@@ -353,6 +353,24 @@ async function cancelWaiterOrder(clientId, body) {
   return { ok: true, message: "Porosia u anullua", order: sale };
 }
 
+async function fetchActiveOrderById(clientId, orderId) {
+  const id = String(orderId || "").trim();
+  if (!UUID_RE.test(id)) throw new Error("ID porosie i pavlefshëm.");
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("sales_orders")
+    .select(
+      "id, table_number, waiter_name, waiter_id, status, total, ordered_at, items_json, local_order_id, device_id, accepted_at, accepted_by_waiter_name",
+    )
+    .eq("client_id", clientId)
+    .eq("id", id)
+    .in("status", ["ordered", "ready"])
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error("Porosia nuk u gjet ose është mbyllur tashmë.");
+  return data;
+}
+
 async function cancelSiblingActiveTableOrders(clientId, tableNumber, keepOrderId) {
   const db = getSupabase();
   const num = Number(tableNumber);
@@ -381,15 +399,26 @@ async function closeWaiterTable(clientId, body) {
   await assertClient(clientId);
   const waiter = await resolveWaiterForOrder(clientId, body.waiter_id, body.waiter_name);
 
+  const orderId = String(body.order_id || body.cloud_order_id || "").trim();
   const tableNumber = Number(body.table_number);
-  if (!tableNumber || tableNumber < 1) throw new Error("Zgjidhni tavolinën.");
+  let existing;
+  let closeTableNum;
 
-  const active = await getActiveTableOrders(clientId);
-  const existing = active.get(tableNumber);
-  if (!existing) {
-    throw new Error(`Nuk ka porosi aktive në cloud për T${tableNumber}.`);
+  if (orderId) {
+    existing = await fetchActiveOrderById(clientId, orderId);
+    closeTableNum = Number(existing.table_number) || 0;
+    assertWaiterOnTable(existing, waiter, closeTableNum || tableNumber || 1);
+  } else if (tableNumber >= 1) {
+    closeTableNum = tableNumber;
+    const active = await getActiveTableOrders(clientId);
+    existing = active.get(tableNumber);
+    if (!existing) {
+      throw new Error(`Nuk ka porosi aktive në cloud për T${tableNumber}.`);
+    }
+    assertWaiterOnTable(existing, waiter, tableNumber);
+  } else {
+    throw new Error("Zgjidhni porosinë (order_id) ose tavolinën.");
   }
-  assertWaiterOnTable(existing, waiter, tableNumber);
 
   const cartItems = normalizeItems(body.items);
   const existingItems = normalizeItems(existing.items_json);
@@ -406,14 +435,16 @@ async function closeWaiterTable(clientId, body) {
   const localOrderId = String(existing.local_order_id || "").trim();
   const deviceId = String(existing.device_id || WEB_DEVICE).trim().toUpperCase();
   if (!localOrderId) {
-    throw new Error(`Porosia në cloud për T${tableNumber} nuk ka local_order_id.`);
+    throw new Error(closeTableNum >= 1
+      ? `Porosia në cloud për T${closeTableNum} nuk ka local_order_id.`
+      : "Porosia online nuk ka local_order_id.");
   }
 
   const saleResult = await syncSaleFromPos({
     celesi: license.celesi,
     device_id: deviceId,
     local_order_id: localOrderId,
-    table_number: tableNumber,
+    table_number: closeTableNum,
     waiter_name: waiter.name,
     waiter_id: waiter.id,
     items,
@@ -435,8 +466,8 @@ async function closeWaiterTable(clientId, body) {
         .update({ status: "cancelled", closed_at: cancelNow, total: 0, ready_at: null })
         .in("id", siblingIds)
         .in("status", ["ordered", "ready"]);
-    } else {
-      await cancelSiblingActiveTableOrders(clientId, tableNumber, saleResult.sale.id);
+    } else if (closeTableNum >= 1) {
+      await cancelSiblingActiveTableOrders(clientId, closeTableNum, saleResult.sale.id);
     }
   }
 
@@ -456,7 +487,7 @@ async function closeWaiterTable(clientId, body) {
         }
       : {
           receipt_number: receiptNumber,
-          table_number: tableNumber,
+          table_number: closeTableNum,
           waiter_name: waiter.name,
           items,
           total,
