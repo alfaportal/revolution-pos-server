@@ -70,6 +70,31 @@ function filterWaiterAcceptOrders(orders, waiterId) {
   });
 }
 
+/**
+ * Filtron sipas tavolinave të caktuara — POROSI NË GRACE PAS REFUZO shfaqen te krejt kamarierët.
+ * @param {{ hasAny: boolean, byWaiter: Map<string, number[]> }} assignmentState
+ */
+function filterOrdersForWaiterPolling(orders, waiterId, assignmentState) {
+  const state = assignmentState || { hasAny: false, byWaiter: new Map() };
+  if (!state.hasAny) return orders || [];
+
+  const allowed = new Set(state.byWaiter.get(waiterId) || []);
+  const wid = String(waiterId || "").trim();
+
+  return (orders || []).filter(o => {
+    const norm = normalizeRefusalFields(o);
+    const sharedAfterRefusal = norm.refused_at
+      && !isOrderExpired(norm)
+      && needsWaiterAcceptance(o)
+      && !waiterRefusedOrder(norm, wid);
+    if (sharedAfterRefusal) return true;
+
+    const tableNum = Number(o.table_number);
+    if (!tableNum) return false;
+    return allowed.has(tableNum);
+  });
+}
+
 async function fetchOrderedSales(clientId) {
   const db = getSupabase();
   const base =
@@ -454,6 +479,7 @@ module.exports = {
   acceptBarOrder,
   refuseBarOrderWithGrace,
   filterWaiterAcceptOrders,
+  filterOrdersForWaiterPolling,
   expireRefusedOrders,
   needsWaiterAcceptance,
   markKitchenOrderReady,
