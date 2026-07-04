@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=10", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=11", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -70,6 +70,8 @@
   // Njoftimi për porosi të reja (tingull + vibrim)
   let orderSnapshot = null;          // Map<tableNumber, itemCount> nga polling-u i mëparshëm
   let suppressOrderAlertOnce = false; // Anashkalon njoftimin për veprimin lokal të kamarierit
+  let orderSubmitting = false;
+  let tableClosing = false;
   let audioCtx = null;
 
   const $ = id => document.getElementById(id);
@@ -1350,6 +1352,7 @@
   });
 
   async function closeTableWithPayment(paymentMethod) {
+    if (tableClosing) return;
     const err = $("order-err");
     showErr(err, "");
     showOrderMsg("", false);
@@ -1375,6 +1378,7 @@
     if (paymentMethod === "karte" && btnCard) btnCard.textContent = "Duke mbyllur...";
 
     const closedTable = tableNumber;
+    tableClosing = true;
     try {
       if (cart.length) {
         await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
@@ -1426,6 +1430,7 @@
     } catch (e) {
       showErr(err, e.message);
     } finally {
+      tableClosing = false;
       if (btnCash) {
         btnCash.disabled = false;
         btnCash.textContent = prevCash;
@@ -1442,7 +1447,7 @@
 
   async function submitOrder() {
     const btn = $("btn-send");
-    if (btn?.disabled) return;
+    if (btn?.disabled || orderSubmitting) return;
 
     const err = $("order-err");
     showErr(err, "");
@@ -1469,6 +1474,7 @@
     }
 
     if (!btn) return;
+    orderSubmitting = true;
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     const sentTable = tableNumber;
@@ -1533,6 +1539,7 @@
       showErr(err, msg);
       showOrderMsg(msg, false);
     } finally {
+      orderSubmitting = false;
       btn.disabled = false;
       btn.textContent = "Dërgo Porosinë";
     }
