@@ -48,7 +48,13 @@ router.get("/:slug/bar/tables/live", resolveKitchenClient, requirePackageFeature
 router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    let orders = await listKitchenOrders(client.id);
+    const [barOrders, kitchenOrders] = await Promise.all([
+      listBarOrders(client.id),
+      listKitchenOrders(client.id),
+    ]);
+    const byId = new Map();
+    for (const o of [...barOrders, ...kitchenOrders]) byId.set(o.id, o);
+    let orders = [...byId.values()];
     let cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
 

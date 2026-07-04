@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=7", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=8", { scope: "/waiter/" })
       .then((reg) => reg.update?.())
       .catch(() => {});
   }
@@ -887,7 +887,6 @@
       showSuccessToast(data.accepted_by
         ? `✅ Porosia u pranua — ${data.accepted_by}`
         : "✅ Porosia u pranua.");
-      if (orderForReceipt) printAcceptanceReceipt(orderForReceipt, data.accepted_by || activeWaiter?.name);
       await pollIncomingOrders();
       await refreshBootstrap();
     } catch (e) {
@@ -1207,7 +1206,7 @@
     const mm = receipt.paper_width_mm || sheet.querySelector(".receipt-thermal")?.dataset?.widthMm || 80;
     sheet.style.maxWidth = `${mm}mm`;
     const printBtn = $("btn-print");
-    if (printBtn) printBtn.classList.toggle("hidden", isMobileWaiter());
+    if (printBtn) printBtn.classList.add("hidden");
     $("receipt-modal").classList.remove("hidden");
   }
 
@@ -1258,7 +1257,7 @@
   }
 
   function printReceipt() {
-    if (isMobileWaiter()) return;
+    return;
     const sheet = $("receipt-print");
     if (!sheet) return;
     const thermal = sheet.querySelector(".receipt-thermal");
