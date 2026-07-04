@@ -53,7 +53,10 @@ const {
   updateWaiterWithPin,
   deleteWaiterWithPin,
   ensureWaiterWebToken,
+  getWaiterById,
 } = require("../services/waiterPinService");
+const { buildTablesFromAreas } = require("../lib/tableLayout");
+const { getAssignmentState, setWaiterTables } = require("../services/waiterTablesService");
 const { ensureKitchenCredentials, buildClientWebLinks, buildWaiterUrl } = require("../lib/kitchenAccess");
 const { featuresForTier } = require("../lib/packages");
 const { listKioskQrCodes, listTableQrMeta, getTableQrCode, getTableQrPng, qrPrintHtml, singleQrPrintHtml, tableMenuUrl } = require("../services/kioskQrService");
@@ -841,6 +844,13 @@ router.get("/waiters", async (req, res) => {
     const base = getPublicAppOrigin();
     const waiters = await listWaitersForOwner(req.user.client_id);
     const shared_waiter_url = client ? buildWaiterUrl(base, client, "") : "";
+
+    // Lista e tavolinave (numra virtualë nga hapësirat) + caktimet aktuale.
+    const venue = await listVenue(req.user.client_id);
+    const layout = buildTablesFromAreas(venue.areas, venue.table_count, null);
+    const tables = layout.tables.map(t => ({ number: t.number, area_name: t.area_name }));
+    const assignState = await getAssignmentState(req.user.client_id);
+
     res.json({
       ok: true,
       waiters: waiters.map(w => ({
@@ -848,11 +858,32 @@ router.get("/waiters", async (req, res) => {
         waiter_url: client && w.web_token
           ? buildWaiterUrl(base, client, w.web_token)
           : shared_waiter_url,
+        assigned_tables: assignState.byWaiter.get(w.id) || [],
       })),
       shared_waiter_url,
+      tables,
     });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
+  }
+});
+
+// Cakto (ose rikakto) tavolinat për një kamarier.
+router.put("/waiters/:id/tables", async (req, res) => {
+  try {
+    const waiter = await getWaiterById(req.user.client_id, req.params.id);
+    if (!waiter) {
+      res.status(404).json({ gabim: "Kamarieri nuk u gjet." });
+      return;
+    }
+    const assigned_tables = await setWaiterTables(
+      req.user.client_id,
+      req.params.id,
+      req.body?.tables,
+    );
+    res.json({ ok: true, assigned_tables });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 

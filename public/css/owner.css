@@ -2012,3 +2012,51 @@
   color: #fecaca;
   background: rgba(239, 68, 68, 0.18);
 }
+
+/* Caktimi i tavolinave për kamarierin */
+.assign-tables-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.assign-tables-group-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.assign-tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.4rem;
+}
+
+.assign-table-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.assign-table-chip input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.assign-table-chip small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.assign-table-chip.taken {
+  border-color: rgba(234, 179, 8, 0.5);
+  background: rgba(234, 179, 8, 0.08);
+}

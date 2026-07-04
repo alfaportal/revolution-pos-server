@@ -997,6 +997,7 @@ async function deleteMenuRow(row) {
 }
 
 let ownerWaitersCache = [];
+let ownerAllTables = [];
 
 function setWaitersMsg(text, ok) {
   const msg = document.getElementById("waiters-msg");
@@ -1037,6 +1038,7 @@ function renderWaitersTable() {
       <td>
         <div class="menu-row-actions">
           <button type="button" class="btn btn-primary btn-sm btn-waiter-save">Ruaj</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-waiter-tables">Cakto tavolinat${(w.assigned_tables && w.assigned_tables.length) ? ` (${w.assigned_tables.length})` : ""}</button>
           <button type="button" class="btn btn-ghost btn-sm btn-waiter-pin">Rivendos PIN</button>
           <button type="button" class="btn btn-ghost btn-sm btn-waiter-toggle">${w.active ? "Fshih" : "Aktivizo"}</button>
           <button type="button" class="btn btn-danger btn-sm btn-waiter-delete">Fshi</button>
@@ -1060,6 +1062,9 @@ function renderWaitersTable() {
   body.querySelectorAll(".btn-waiter-save").forEach(btn => {
     btn.addEventListener("click", () => saveWaiterRow(btn.closest("tr")));
   });
+  body.querySelectorAll(".btn-waiter-tables").forEach(btn => {
+    btn.addEventListener("click", () => openAssignTablesModal(btn.closest("tr")?.dataset.id));
+  });
   body.querySelectorAll(".btn-waiter-pin").forEach(btn => {
     btn.addEventListener("click", () => resetWaiterPin(btn.closest("tr")));
   });
@@ -1074,6 +1079,7 @@ function renderWaitersTable() {
 async function loadOwnerWaiters() {
   const data = await api("/api/owner/waiters");
   ownerWaitersCache = data.waiters || [];
+  ownerAllTables = data.tables || [];
   renderWaitersTable();
   updateWaitersSyncHint(data.synced_at);
 }
@@ -1164,6 +1170,97 @@ async function deleteWaiterRow(row) {
     setWaitersMsg(err.message, false);
   }
 }
+
+// ---- Caktimi i tavolinave për kamarierin (modal) ----
+let assignTablesWaiterId = null;
+
+function setAssignTablesMsg(text, ok) {
+  const msg = document.getElementById("assign-tables-modal-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function openAssignTablesModal(waiterId) {
+  if (!waiterId) return;
+  const waiter = ownerWaitersCache.find(w => w.id === waiterId);
+  if (!waiter) return;
+  assignTablesWaiterId = waiterId;
+
+  const titleEl = document.getElementById("assign-tables-title");
+  if (titleEl) titleEl.textContent = `Cakto tavolinat — ${waiter.name}`;
+
+  // Tavolinat e zëna nga kamarierë të tjerë (për t'i shënuar informativisht).
+  const takenByOther = new Map();
+  ownerWaitersCache.forEach(w => {
+    if (w.id === waiterId) return;
+    (w.assigned_tables || []).forEach(n => takenByOther.set(Number(n), w.name));
+  });
+  const mine = new Set((waiter.assigned_tables || []).map(Number));
+
+  const container = document.getElementById("assign-tables-list");
+  if (container) {
+    if (!ownerAllTables.length) {
+      container.innerHTML = '<p class="links-hint">Nuk ka tavolina. Shtoni hapësira te «Lokal & Stafi».</p>';
+    } else {
+      // Grupim sipas hapësirës.
+      const groups = {};
+      ownerAllTables.forEach(t => {
+        const area = t.area_name || "Tavolinat";
+        (groups[area] = groups[area] || []).push(t);
+      });
+      container.innerHTML = Object.keys(groups).map(area => `
+        <div class="assign-tables-group">
+          <div class="assign-tables-group-title">${escAttr(area)}</div>
+          <div class="assign-tables-grid">
+            ${groups[area].map(t => {
+              const other = takenByOther.get(Number(t.number));
+              return `<label class="assign-table-chip${other ? " taken" : ""}">
+                <input type="checkbox" value="${t.number}" ${mine.has(Number(t.number)) ? "checked" : ""}>
+                <span>T${t.number}${other ? `<small> · ${escAttr(other)}</small>` : ""}</span>
+              </label>`;
+            }).join("")}
+          </div>
+        </div>`).join("");
+    }
+  }
+  setAssignTablesMsg("");
+  document.getElementById("assign-tables-modal")?.classList.remove("hidden");
+}
+
+function closeAssignTablesModal() {
+  assignTablesWaiterId = null;
+  document.getElementById("assign-tables-modal")?.classList.add("hidden");
+}
+
+async function saveAssignTablesModal() {
+  if (!assignTablesWaiterId) return;
+  const btn = document.getElementById("btn-assign-tables-save");
+  const inputs = document.querySelectorAll("#assign-tables-list input[type=checkbox]:checked");
+  const tables = [...inputs].map(i => Number(i.value)).filter(n => Number.isFinite(n));
+  if (btn) btn.disabled = true;
+  setAssignTablesMsg("Duke ruajtur…", true);
+  try {
+    const { assigned_tables } = await api(`/api/owner/waiters/${assignTablesWaiterId}/tables`, {
+      method: "PUT",
+      body: JSON.stringify({ tables }),
+    });
+    // Rifresko cache-in: kjo tavolina mund të jenë marrë nga kamarierë të tjerë.
+    await loadOwnerWaiters();
+    const w = ownerWaitersCache.find(x => x.id === assignTablesWaiterId);
+    if (w) w.assigned_tables = assigned_tables || tables;
+    setWaitersMsg("Tavolinat u caktuan.", true);
+    closeAssignTablesModal();
+  } catch (err) {
+    setAssignTablesMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.getElementById("assign-tables-modal-close")?.addEventListener("click", closeAssignTablesModal);
+document.getElementById("assign-tables-modal-backdrop")?.addEventListener("click", closeAssignTablesModal);
+document.getElementById("btn-assign-tables-save")?.addEventListener("click", saveAssignTablesModal);
 
 let ownerVenueCache = { areas: [], staff: [], table_count: 0 };
 
