@@ -48,11 +48,11 @@
   let activeWaiter = null;
   let tableNumber = 0;
   let cart = [];
-  let menuGroupFilter = "pije";
+  let activeMenuCategory = "";
   let pinDigits = [];
   let successToastTimer = null;
   let cartLinesBound = false;
-  let groupBarBound = false;
+  let categoryBarBound = false;
   let idleTimer = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
@@ -111,26 +111,45 @@
     vibrateOrder();
   }
 
-  function tableItemCount(t) {
-    if (Array.isArray(t?.active_items)) return t.active_items.length;
+  function tableItemQtyTotal(t) {
+    if (Array.isArray(t?.active_items) && t.active_items.length) {
+      return t.active_items.reduce((s, i) => s + (Number(i.quantity) || 1), 0);
+    }
     return t?.status === "occupied" ? 1 : 0;
+  }
+
+  /** Burimi i porosisë — nga emri i kamarierit në cloud (pa device_id). */
+  function inferTableOrderSource(t) {
+    const name = String(t?.waiter_name || "").trim();
+    const lower = name.toLowerCase();
+    if (lower.startsWith("takeaway") || lower.startsWith("delivery")) {
+      return { code: "takeaway", label: "Takeaway", icon: "🥡" };
+    }
+    if (lower.startsWith("qr") || lower.startsWith("tavolin")) {
+      return { code: "qr", label: "QR Code", icon: "📱" };
+    }
+    if (lower === "kiosk" || lower.startsWith("kiosk")) {
+      return { code: "kiosk", label: "Kiosk", icon: "🪑" };
+    }
+    return { code: "pos", label: "POS", icon: "🖥️" };
   }
 
   function detectIncomingOrders(tables) {
     const snap = new Map();
-    (tables || []).forEach(t => snap.set(Number(t.number), tableItemCount(t)));
+    const list = tables || [];
+    list.forEach(t => snap.set(Number(t.number), tableItemQtyTotal(t)));
 
-    // Hera e parë: vetëm ruajmë gjendjen, pa njoftim.
-    if (orderSnapshot === null) {
-      orderSnapshot = snap;
-      return;
+    const newAlerts = [];
+    if (orderSnapshot !== null) {
+      snap.forEach((count, num) => {
+        const prev = orderSnapshot.get(num) || 0;
+        if (count > prev) {
+          const tbl = list.find(x => Number(x.number) === num);
+          const src = tbl ? inferTableOrderSource(tbl) : { label: "POS", icon: "🖥️" };
+          newAlerts.push({ num, src, added: count - prev });
+        }
+      });
     }
-
-    let hasNew = false;
-    snap.forEach((count, num) => {
-      const prev = orderSnapshot.get(num) || 0;
-      if (count > prev) hasNew = true;
-    });
 
     orderSnapshot = snap;
 
@@ -138,7 +157,26 @@
       suppressOrderAlertOnce = false;
       return;
     }
-    if (hasNew) playOrderAlert();
+    if (!newAlerts.length) return;
+
+    playOrderAlert();
+    newAlerts.forEach(({ num, src, added }) => {
+      const qty = added === 1 ? "1 artikull" : `${added} artikuj`;
+      showSuccessToast(`🔔 T${num} — ${src.icon} ${src.label} · +${qty}`);
+    });
+  }
+
+  function updateTablesLiveBar(tables) {
+    const occupied = (tables || []).filter(t => t.status === "occupied").length;
+    const countEl = $("tables-order-count");
+    if (countEl) {
+      countEl.textContent = occupied === 1 ? "1 porosi" : `${occupied} porosi`;
+    }
+    const refreshedEl = $("tables-refreshed");
+    if (refreshedEl) {
+      const t = new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" });
+      refreshedEl.textContent = `Rifreskuar: ${t}`;
+    }
   }
 
   function waiterPayload() {
@@ -505,17 +543,35 @@
     const reserved = Boolean(t.reserved || t.reservation);
     const lock = reserved ? '<span class="table-reserve-icon" aria-hidden="true">🔒</span>' : "";
     const reserveMeta = t.reservation
-      ? `<br><span class="table-reserve-meta">${escapeHtml(t.reservation.time)} · ${t.reservation.guests}p</span>`
+      ? `<span class="table-reserve-meta">${escapeHtml(t.reservation.time)} · ${t.reservation.guests}p</span>`
       : "";
     const cardClass = [t.status, reserved ? "reserved" : ""].filter(Boolean).join(" ");
+    const isOccupied = t.status === "occupied";
+    const itemCount = tableItemQtyTotal(t);
+    const source = isOccupied ? inferTableOrderSource(t) : null;
+    const statusPill = isOccupied
+      ? '<span class="table-status-pill occupied">E zënë</span>'
+      : reserved
+        ? '<span class="table-status-pill reserved">Rezervuar</span>'
+        : '<span class="table-status-pill free">E lirë</span>';
+    const sourceBadge = source
+      ? `<span class="table-source-badge source-${source.code}">${source.icon} ${source.label}</span>`
+      : "";
+    const stats = isOccupied
+      ? `<div class="table-stats">
+          <span class="table-stat">${itemCount === 1 ? "1 artikull" : `${itemCount} artikuj`}</span>
+          <span class="table-stat table-total">${formatEuro(t.order_total || tableBillTotal(t.number))}</span>
+        </div>`
+      : reserved
+        ? `<div class="table-stats">${reserveMeta}</div>`
+        : "";
+
     return `
       <button type="button" class="table-card ${cardClass}" data-table="${t.number}">
         <div class="num">T${t.number}${lock}</div>
-        <div class="meta">${t.status === "occupied"
-          ? `${escapeHtml(t.waiter_name || "E zënë")}<br>${formatEuro(t.order_total || 0)}`
-          : reserved
-            ? `Rezervuar${reserveMeta}`
-            : "E lirë"}</div>
+        ${statusPill}
+        ${sourceBadge}
+        <div class="meta">${stats}</div>
       </button>`;
   }
 
@@ -597,13 +653,45 @@
     }
   }
 
-  function bindMenuGroupBar() {
-    if (groupBarBound) return;
-    groupBarBound = true;
-    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
-      menuGroupFilter = group;
-      renderMenu();
-    }, { defaultGroup: "pije" });
+  function ensureMenuCategory() {
+    const cats = MenuCatalog.getCategoryList(bootstrap);
+    if (!cats.length) {
+      activeMenuCategory = "";
+      return;
+    }
+    if (!activeMenuCategory || !cats.includes(activeMenuCategory)) {
+      activeMenuCategory = MenuCatalog.pickDefaultCategory(bootstrap);
+    }
+  }
+
+  function renderCategoryBar() {
+    const bar = $("menu-group-bar");
+    if (!bar) return;
+    ensureMenuCategory();
+    const cats = MenuCatalog.getCategoryList(bootstrap);
+    if (!cats.length) {
+      bar.innerHTML = "";
+      return;
+    }
+    bar.innerHTML = cats.map(c => `
+      <button type="button" class="menu-group-btn${c === activeMenuCategory ? " active" : ""}"
+        role="tab" data-category="${escapeAttr(c)}" aria-selected="${c === activeMenuCategory}">
+        <span class="menu-tab-label">${escapeHtml(c)}</span>
+      </button>`).join("");
+  }
+
+  function bindCategoryBar() {
+    if (categoryBarBound) return;
+    categoryBarBound = true;
+    const bar = $("menu-group-bar");
+    if (!bar) return;
+    bindTap(bar, (_e, target) => {
+      const btn = target?.closest?.("[data-category]");
+      if (!btn) return;
+      activeMenuCategory = btn.dataset.category || "";
+      renderCategoryBar();
+      renderMenuItems();
+    });
   }
 
   function bindCartLines() {
@@ -647,9 +735,10 @@
       grid.innerHTML = bootstrap.tables.map(renderTableCard).join("");
     }
     bindTableCards(grid);
+    updateTablesLiveBar(bootstrap.tables);
   }
 
-  function renderMenu() {
+  function renderMenuItems() {
     const menu = bootstrap?.menu || [];
     const grid = $("menu-grid");
     if (!grid) return;
@@ -657,18 +746,38 @@
       grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
       return;
     }
-    MenuPosUI.renderMenuGrid({
-      container: grid,
-      menuItems: menu,
-      groupFilter: menuGroupFilter,
-      formatEuro,
-      getPhotoUrl: kitchenPhotoUrl,
-      onSelectItem: (item, btn) => addToCart({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price),
-      }, btn),
+    const { items } = MenuCatalog.filterMenuItems(bootstrap, activeMenuCategory);
+    if (!items.length) {
+      grid.innerHTML = '<p class="hint">Nuk ka artikuj në këtë kategori.</p>';
+      return;
+    }
+    grid.innerHTML = `<div class="waiter-menu-list">${items.map(item => {
+      const soldOut = Boolean(item.out_of_stock || item.sold_out);
+      return `
+        <div class="waiter-menu-row${soldOut ? " is-sold-out" : ""}">
+          <div class="waiter-menu-info">
+            <span class="waiter-menu-name">${escapeHtml(item.name)}</span>
+            <span class="waiter-menu-cat">${escapeHtml(item.category || "")}</span>
+            <span class="waiter-menu-price">${soldOut ? escapeHtml(item.sold_out_label || "Mbaroi") : formatEuro(item.price)}</span>
+          </div>
+          <button type="button" class="btn btn-primary waiter-menu-add" data-item-id="${escapeAttr(item.id)}"
+            ${soldOut ? "disabled" : ""}>Shto</button>
+        </div>`;
+    }).join("")}</div>`;
+
+    grid.querySelectorAll(".waiter-menu-add").forEach(btn => {
+      bindTap(btn, () => {
+        const id = btn.getAttribute("data-item-id");
+        const item = menu.find(m => String(m.id) === String(id));
+        if (!item || item.out_of_stock || item.sold_out) return;
+        addToCart({ id: item.id, name: item.name, price: Number(item.price) }, btn);
+      });
     });
+  }
+
+  function renderMenu() {
+    renderCategoryBar();
+    renderMenuItems();
   }
 
   // Link personal i kamarierit: token valid në URL + kamarier i caktuar nga bootstrap.
@@ -679,7 +788,8 @@
   function enterWaiterSession(waiter) {
     activeWaiter = { id: waiter.id, name: waiter.name };
     saveWaiterSession();
-    $("tables-waiter").textContent = `Kamarieri: ${waiter.name}`;
+    $("tables-title").textContent = `Kamarieri: ${waiter.name}`;
+    $("tables-waiter").textContent = bootstrap?.restaurant_name || bootstrap?.client_name || "";
     renderTables();
     setupReservationReminders();
     scheduleIdleLock();
@@ -762,10 +872,7 @@
     }
     tableNumber = num;
     cart = [];
-    menuGroupFilter = "pije";
-    document.querySelectorAll("#menu-group-bar .menu-group-btn").forEach(b => {
-      b.classList.toggle("active", b.dataset.group === "pije");
-    });
+    activeMenuCategory = "";
     $("order-title").textContent = `T${num}`;
     showOrderMsg("", false);
     renderMenu();
@@ -777,7 +884,10 @@
     const existing = cart.find(c => c.name === item.name && Number(c.price) === Number(item.price));
     if (existing) existing.quantity += 1;
     else cart.push({ ...item, quantity: 1 });
-    if (btnEl) MenuPosUI.flashButton(btnEl);
+    if (btnEl) {
+      btnEl.classList.add("menu-item-flash");
+      setTimeout(() => btnEl.classList.remove("menu-item-flash"), 400);
+    }
     renderCart();
   }
 
@@ -1198,7 +1308,7 @@
     document.addEventListener(ev, ensureAudioUnlocked, { passive: true }),
   );
 
-  bindMenuGroupBar();
+  bindCategoryBar();
   bindCartLines();
   setupWaiterIdleLock();
   setupDesktopReturn();
