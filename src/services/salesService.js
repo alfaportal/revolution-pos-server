@@ -398,7 +398,7 @@ async function fetchOwnerActiveOrders(clientId) {
   const db = getSupabase();
   const { selectWithAcceptanceFallback } = require("../lib/salesOrderSelect");
   const base =
-    "table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id";
+    "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, local_order_id, status, device_id";
 
   return selectWithAcceptanceFallback(withAcceptance => {
     const select = withAcceptance
@@ -443,6 +443,7 @@ async function getLiveTablesForOwner(clientId) {
     if (num < 1 || metaByTable.has(num)) continue;
     const src = orderSourceLabel(o);
     metaByTable.set(num, {
+      id: o.id || null,
       ordered_at: o.ordered_at,
       local_order_id: o.local_order_id,
       order_status: o.status || "ordered",
@@ -466,6 +467,7 @@ async function getLiveTablesForOwner(clientId) {
     const meta = metaByTable.get(t.number);
     const order = t.status === "occupied"
       ? {
+          id: meta?.id || null,
           table_number: t.number,
           waiter_name: t.waiter_name || "",
           waiter_id: t.waiter_id || null,
