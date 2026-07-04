@@ -102,6 +102,38 @@ function filterOrdersForWaiterPolling(orders, waiterId, assignmentState) {
   });
 }
 
+async function fetchRefusalGraceOrders(clientId) {
+  const db = getSupabase();
+  const now = new Date().toISOString();
+  try {
+    const { data, error } = await db
+      .from("sales_orders")
+      .select(
+        "id, table_number, waiter_name, waiter_id, items_json, total, ordered_at, created_at, local_order_id, device_id, refused_at, order_expires_at, refused_by_waiter_ids, accepted_by_waiter_id, accepted_by_waiter_name, accepted_at",
+      )
+      .eq("client_id", clientId)
+      .eq("status", "ordered")
+      .not("refused_at", "is", null)
+      .gt("order_expires_at", now);
+    if (error) throw error;
+    return (data || []).map(o => normalizeRefusalFields(normalizeAcceptanceFields(o))).map(o => ({
+      ...o,
+      items_json: normalizeItems(o.items_json),
+    }));
+  } catch (err) {
+    if (isMissingRefusalColumnError(err)) return [];
+    throw err;
+  }
+}
+
+function mergeOrdersById(primary, extra) {
+  const byId = new Map((primary || []).map(o => [o.id, o]));
+  for (const o of extra || []) {
+    byId.set(o.id, { ...byId.get(o.id), ...o });
+  }
+  return [...byId.values()];
+}
+
 async function fetchOrderedSales(clientId) {
   const db = getSupabase();
   const base =
@@ -334,6 +366,8 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
   const wid = String(waiterId || "").trim();
   if (!wid) throw new Error("Mungon identifikimi i kamarierit.");
 
+  console.log("REFUZO START", { orderId, clientId, waiterId: wid, waiterName });
+
   const { data: order, error: fetchErr } = await db
     .from("sales_orders")
     .select("*")
@@ -342,6 +376,15 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
     .maybeSingle();
   if (fetchErr) throw fetchErr;
   if (!order) throw new Error("Porosia nuk u gjet.");
+
+  console.log("REFUZO FETCH", {
+    orderId,
+    currentStatus: order.status,
+    refused_at: order.refused_at ?? null,
+    order_expires_at: order.order_expires_at ?? null,
+    refused_by_waiter_ids: order.refused_by_waiter_ids ?? null,
+  });
+
   if (String(order.status || "") !== "ordered") {
     throw new Error("Porosia nuk është më aktive.");
   }
@@ -354,12 +397,15 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
 
   const normalized = normalizeRefusalFields(order);
   if (waiterRefusedOrder(normalized, wid)) {
+    console.log("REFUZO SKIP", { orderId, reason: "already_refused_by_waiter" });
     return normalized;
   }
 
   let data = null;
+  let updateVia = null;
   try {
     data = await refuseBarOrderWithGraceViaSql(clientId, orderId, wid);
+    if (data) updateVia = "sql";
   } catch (err) {
     if (isMissingRefusalColumnError(err)) {
       throw new Error("Mungon migrimi 040_order_refusal_grace.sql në Supabase.");
@@ -368,6 +414,7 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
   }
 
   if (!data) {
+    updateVia = "supabase";
     const refusedIds = parseRefusedWaiterIds(normalized);
     refusedIds.push(wid);
     const now = new Date();
@@ -398,6 +445,15 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
   }
 
   assertRefusalGraceOrder(data, orderId);
+
+  console.log("REFUZO END", {
+    orderId,
+    updateVia,
+    newStatus: data.status,
+    refused_at: data.refused_at,
+    order_expires_at: data.order_expires_at,
+    refused_by_waiter_ids: data.refused_by_waiter_ids,
+  });
 
   notifyKitchenUpdate(clientId, {
     order_id: orderId,
@@ -478,7 +534,14 @@ async function acknowledgeBarOrders(clientId, orderIds, { waiterId = null, waite
   return { count: acked.length, ids: acked };
 }
 
-async function cancelBarOrders(clientId, orderIds, { force = false } = {}) {
+async function cancelBarOrders(clientId, orderIds, { force = false, reason = "unknown" } = {}) {
+  console.warn("[cancelBarOrders] CALLED", {
+    clientId,
+    orderIds,
+    force,
+    reason,
+    stack: new Error().stack?.split("\n").slice(1, 5).join(" | "),
+  });
   const db = getSupabase();
   let ids = [...new Set((orderIds || []).map(id => String(id || "").trim()).filter(Boolean))];
   if (!ids.length) return { count: 0, ids: [] };
@@ -548,6 +611,8 @@ module.exports = {
   listKitchenOrders,
   listBarOrders,
   fetchOrderedSales,
+  fetchRefusalGraceOrders,
+  mergeOrdersById,
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
   acceptBarOrder,

@@ -921,17 +921,26 @@
 
   async function refuseIncomingOrder(orderId, btn) {
     if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    const refuseUrl = `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`;
+    console.log("[waiter] REFUZO click", { orderId, url: refuseUrl });
     try {
-      await api(
-        `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`,
-        { method: "POST", body: JSON.stringify({}) },
-      );
+      const data = await api(refuseUrl, { method: "POST", body: JSON.stringify({}) });
+      console.log("[waiter] REFUZO response", {
+        orderId,
+        refuse_mode: data.refuse_mode,
+        status: data.status,
+        refused_at: data.order?.refused_at,
+        order_expires_at: data.order?.order_expires_at,
+      });
+      if (data.refuse_mode !== "grace_v2") {
+        console.warn("[waiter] REFUZO: server nuk përdor grace_v2 — redeploy i nevojshëm!");
+      }
       handledAcceptIds.add(orderId);
       closeAcceptModal();
       showSuccessToast("Porosia kaloi te kamarierët e tjerë — 2 minuta për ta pranuar.");
       await pollIncomingOrders();
-      await refreshBootstrap();
     } catch (e) {
+      console.error("[waiter] REFUZO error", { orderId, error: e.message });
       showSuccessToast(e.message || "Nuk u refuzua porosia.");
       if (btn) { btn.disabled = false; btn.textContent = "REFUZO"; }
     }
@@ -940,9 +949,18 @@
   async function pollIncomingOrders() {
     if (!canAcceptOrdersWithoutPin() || !slug || !kitchenKey) return;
     try {
-      const data = await api(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`);
-      await maybeShowAcceptModal(data.orders || []);
-    } catch { /* ignore background poll */ }
+      const pollUrl = `/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`;
+      const data = await api(pollUrl);
+      const orders = data.orders || [];
+      console.log("[waiter] accept poll", {
+        count: orders.length,
+        grace: orders.filter(o => o.refused_at).length,
+        ids: orders.map(o => o.id),
+      });
+      await maybeShowAcceptModal(orders);
+    } catch (e) {
+      console.warn("[waiter] accept poll failed", e.message);
+    }
   }
 
   function startAcceptPolling() {

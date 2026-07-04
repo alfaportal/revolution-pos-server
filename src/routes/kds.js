@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, filterWaiterAcceptOrders, filterOrdersForWaiterPolling } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
@@ -50,6 +50,7 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     const client = req.kitchenClient;
     // Telefoni i kamarierit: të gjitha porositë në pritje — pa ndarje banak/kuzhinë.
     let orders = await fetchOrderedSales(client.id);
+    orders = mergeOrdersById(orders, await fetchRefusalGraceOrders(client.id));
     let cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
 
@@ -59,9 +60,18 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     if (waiter?.id) {
       assigned_waiter = { id: waiter.id, name: waiter.name };
       const assignState = await getAssignmentState(client.id);
+      const beforeFilter = orders.length;
       orders = filterOrdersForWaiterPolling(orders, waiter.id, assignState);
       orders = filterWaiterAcceptOrders(orders, waiter.id);
       cancelled = await filterOrdersForWaiter(client.id, cancelled, waiter.id);
+      console.log("[bar/orders]", {
+        waiterId: waiter.id,
+        waiterName: waiter.name,
+        beforeFilter,
+        afterPolling: orders.length,
+        graceOrders: orders.filter(o => o.refused_at).length,
+        orderIds: orders.map(o => o.id),
+      });
     }
 
     res.json({
@@ -135,6 +145,13 @@ router.post("/:slug/orders/:orderId/accept", resolveKitchenClient, requirePackag
 
 // Refuzimi i porosisë nga kamarieri — 2 minuta grace për kamarierët e tjerë.
 router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
+  const orderId = req.params.orderId;
+  console.log("[refuse-route] POST", {
+    orderId,
+    slug: req.params.slug,
+    clientId: req.kitchenClient?.id,
+    hasWaiterToken: Boolean(extractWaiterToken(req)),
+  });
   try {
     const client = req.kitchenClient;
     const waiter = await resolveWaiterFromToken(client.id, req);
@@ -142,9 +159,15 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
       return res.status(400).json({ ok: false, gabim: "Mungon identifikimi i kamarierit (link personal)." });
     }
     const { refuseBarOrderWithGrace } = require("../services/kdsService");
-    const order = await refuseBarOrderWithGrace(client.id, req.params.orderId, {
+    const order = await refuseBarOrderWithGrace(client.id, orderId, {
       waiterId: waiter.id,
       waiterName: waiter.name,
+    });
+    console.log("[refuse-route] OK", {
+      orderId,
+      status: order.status,
+      refused_at: order.refused_at,
+      order_expires_at: order.order_expires_at,
     });
     res.json({
       ok: true,
@@ -154,6 +177,7 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
       refuse_mode: "grace_v2",
     });
   } catch (e) {
+    console.error("[refuse-route] FAIL", { orderId, error: e.message });
     res.status(400).json({ ok: false, gabim: e.message });
   }
 });
