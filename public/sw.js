@@ -1,5 +1,5 @@
 /* Revolution POS — Service Worker (waiter + static assets) */
-const CACHE_NAME = "ri-pos-offline-v13";
+const CACHE_NAME = "ri-pos-offline-v14";
 
 const PRECACHE_URLS = [
   "/logo-source.png",
@@ -9,6 +9,7 @@ const PRECACHE_URLS = [
   "/js/offlineQueue.js",
   "/js/menuCatalog.js",
   "/js/menu-pos.js",
+  "/js/waiter-calculator.js",
 ];
 
 function isStaticAsset(pathname) {

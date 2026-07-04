@@ -87,6 +87,7 @@
           </div>
         </div>
         <div class="waiter-header-actions">
+          <button type="button" class="btn btn-calc-mini" data-open-calc aria-label="Kalkulatorë" title="Kalkulatorë">🧮</button>
           <button type="button" class="btn btn-ghost hidden" id="btn-back-desktop">← Kasa</button>
           <button type="button" class="btn btn-ghost" id="btn-logout">Kyçu</button>
         </div>
@@ -109,7 +110,10 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
         <button type="button" class="btn btn-ghost" id="btn-back">← Tavolinat</button>
         <h1 id="order-title" style="margin:0;font-size:1.1rem">T1</h1>
-        <span id="cart-badge" class="cart-badge hidden">0</span>
+        <div class="waiter-header-actions">
+          <button type="button" class="btn btn-calc-mini" data-open-calc aria-label="Kalkulatorë" title="Kalkulatorë">🧮</button>
+          <span id="cart-badge" class="cart-badge hidden">0</span>
+        </div>
       </div>
     </div>
     <div class="waiter-main order-main">
@@ -171,10 +175,45 @@
     </div>
   </div>
 
+  <div id="waiter-desktop-footer" class="waiter-desktop-footer hidden">
+    <button type="button" class="btn btn-calc-desktop" data-open-calc>🧮 Kalkulatorë</button>
+  </div>
+
+  <div id="calc-modal" class="calc-modal hidden" hidden role="dialog" aria-modal="true" aria-labelledby="calc-modal-title">
+    <div class="calc-modal-backdrop" id="calc-modal-backdrop"></div>
+    <div class="calc-modal-card">
+      <div class="calc-modal-head">
+        <h2 id="calc-modal-title">Kalkulatorë</h2>
+        <button type="button" class="calc-modal-close" id="calc-modal-close" aria-label="Mbyll">✕</button>
+      </div>
+      <div class="calc-display" id="calc-display" aria-live="polite">0.00</div>
+      <div class="calc-keys" id="calc-keys">
+        <button type="button" class="calc-key" data-calc="7">7</button>
+        <button type="button" class="calc-key" data-calc="8">8</button>
+        <button type="button" class="calc-key" data-calc="9">9</button>
+        <button type="button" class="calc-key calc-key-op" data-calc="/">÷</button>
+        <button type="button" class="calc-key" data-calc="4">4</button>
+        <button type="button" class="calc-key" data-calc="5">5</button>
+        <button type="button" class="calc-key" data-calc="6">6</button>
+        <button type="button" class="calc-key calc-key-op" data-calc="*">×</button>
+        <button type="button" class="calc-key" data-calc="1">1</button>
+        <button type="button" class="calc-key" data-calc="2">2</button>
+        <button type="button" class="calc-key" data-calc="3">3</button>
+        <button type="button" class="calc-key calc-key-op" data-calc="-">−</button>
+        <button type="button" class="calc-key calc-key-fn" data-calc="C">C</button>
+        <button type="button" class="calc-key" data-calc="0">0</button>
+        <button type="button" class="calc-key" data-calc=".">.</button>
+        <button type="button" class="calc-key calc-key-op" data-calc="+">+</button>
+        <button type="button" class="calc-key calc-key-eq" data-calc="=">=</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/order-alarm-sound.js?v=1"></script>
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=5"></script>
-  <script src="/js/waiter.js?v=44"></script>
+  <script src="/js/waiter-calculator.js?v=1"></script>
+  <script src="/js/waiter.js?v=45"></script>
 </body>
 </html>
