@@ -180,16 +180,21 @@
 
   function updateTablesLiveBar(tables) {
     const occupied = (tables || []).filter(t => t.status === "occupied").length;
-    const online = pendingAcceptOrders.length;
+    const onlinePending = (onlineSlots || []).filter(s => s.status === "pending").length;
+    const onlineAccepted = (onlineSlots || []).filter(s => s.status === "accepted").length;
     const countEl = $("tables-order-count");
     if (countEl) {
       const parts = [];
-      if (online > 0) parts.push(online === 1 ? "1 online" : `${online} online`);
+      if (onlinePending > 0) {
+        parts.push(onlinePending === 1 ? "1 online" : `${onlinePending} online`);
+      } else if (onlineAccepted > 0) {
+        parts.push(onlineAccepted === 1 ? "1 online pranuar" : `${onlineAccepted} online pranuar`);
+      }
       if (occupied > 0) parts.push(occupied === 1 ? "1 tavolinë" : `${occupied} tavolina`);
       countEl.textContent = parts.length ? parts.join(" · ") : "0 porosi";
     }
     const liveBar = $("tables-live-bar");
-    if (liveBar) liveBar.classList.toggle("has-online-pending", online > 0);
+    if (liveBar) liveBar.classList.toggle("has-online-pending", onlinePending > 0);
     const refreshedEl = $("tables-refreshed");
     if (refreshedEl) {
       const t = new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" });
@@ -669,6 +674,66 @@
     });
   }
 
+  function onlineSlotItemCount(o) {
+    return (o?.items_json || []).reduce((s, it) => s + (Number(it.quantity) || 1), 0);
+  }
+
+  function renderOnlineSlotCard(slot) {
+    const label = escapeHtml(slot.label || `Online ${slot.slot}`);
+    if (slot.status === "free" || !slot.order) {
+      return `<button type="button" class="online-slot-card table-card free" data-online-slot="${slot.slot}" disabled tabindex="-1">
+        <div class="num online-slot-label">${label}</div>
+        <span class="table-status-pill free">Lirë</span>
+      </button>`;
+    }
+    const o = slot.order;
+    const pending = slot.status === "pending";
+    const src = orderSourceMeta(o);
+    const itemCount = onlineSlotItemCount(o);
+    const total = orderItemsTotal(o);
+    const customer = escapeHtml(String(o.waiter_name || "").trim() || "Klient");
+    const cardClass = pending ? "pending-online pending-cloud" : "accepted-online occupied";
+    const statusText = pending
+      ? "Në pritje"
+      : escapeHtml(String(o.accepted_by_waiter_name || "Pranuar").trim() || "Pranuar");
+    const stats = `<div class="table-stats">
+        <span class="table-stat">${itemCount === 1 ? "1 artikull" : `${itemCount} artikuj`}</span>
+        <span class="table-stat table-total">${formatEuro(total)}</span>
+      </div>`;
+    return `<button type="button" class="online-slot-card table-card ${cardClass}"
+        data-online-slot="${slot.slot}" data-order-id="${escapeHtml(o.id)}"${pending ? "" : ' tabindex="-1" aria-disabled="true"'}>
+      <div class="num online-slot-label">${label}</div>
+      <span class="table-status-pill ${pending ? "pending-online-pill" : "occupied"}">${statusText}</span>
+      <span class="table-source-badge source-warn">${src.icon} ${src.label}</span>
+      <div class="meta">${stats}</div>
+      <div class="online-slot-hint">${customer}</div>
+      ${pending ? '<div class="online-slot-action">Kliko → PRANO / REFUZO</div>' : '<div class="online-slot-action muted">Pranuar — mbyll nga paneli</div>'}
+    </button>`;
+  }
+
+  function renderOnlineZoneSection() {
+    const slots = onlineSlots?.length ? onlineSlots : defaultOnlineSlots();
+    const title = escapeHtml(onlineZoneTitle || "POROSI ONLINE");
+    return `
+      <section class="waiter-area-block waiter-online-zone">
+        <h2 class="waiter-area-title">${title}</h2>
+        <div class="tables-grid-area online-slots-grid">${slots.map(renderOnlineSlotCard).join("")}</div>
+      </section>`;
+  }
+
+  function bindOnlineSlotCards(root) {
+    (root || $("tables-grid")).querySelectorAll(".online-slot-card.pending-online[data-order-id]").forEach(btn => {
+      bindTap(btn, () => {
+        const slotNum = Number(btn.dataset.onlineSlot);
+        const orderId = String(btn.dataset.orderId || "");
+        const slot = (onlineSlots || []).find(s => Number(s.slot) === slotNum);
+        if (!slot || slot.status !== "pending" || !slot.order) return;
+        if (String(slot.order.id) !== orderId) return;
+        renderAcceptModal(slot.order);
+      });
+    });
+  }
+
   function kitchenPhotoUrl(item) {
     if (!item?.photo_url) return "";
     const url = String(item.photo_url);
@@ -746,22 +811,31 @@
 
   function renderTables() {
     const grid = $("tables-grid");
-    if (!bootstrap?.tables?.length) {
-      grid.innerHTML = '<p class="hint">Nuk ka tavolina. Pronari shton hapësira te Lokal &amp; Stafi në panel.</p>';
-      return;
-    }
-    const areas = bootstrap.areas?.filter(a => a.tables?.length) || [];
-    if (areas.length > 1) {
-      grid.innerHTML = areas.map(area => `
-        <section class="waiter-area-block">
-          <h2 class="waiter-area-title">${escapeHtml(area.name)}</h2>
-          <div class="tables-grid-area">${area.tables.map(renderTableCard).join("")}</div>
-        </section>`).join("");
+    if (!grid) return;
+    const parts = [];
+    const tables = bootstrap?.tables || [];
+    if (!tables.length) {
+      parts.push('<p class="hint">Nuk ka tavolina. Pronari shton hapësira te Lokal &amp; Stafi në panel.</p>');
     } else {
-      grid.innerHTML = bootstrap.tables.map(renderTableCard).join("");
+      const areas = bootstrap.areas?.filter(a => a.tables?.length) || [];
+      if (areas.length > 1) {
+        parts.push(areas.map(area => `
+          <section class="waiter-area-block">
+            <h2 class="waiter-area-title">${escapeHtml(area.name)}</h2>
+            <div class="tables-grid-area">${area.tables.map(renderTableCard).join("")}</div>
+          </section>`).join(""));
+      } else {
+        parts.push(`<div class="tables-grid-area">${tables.map(renderTableCard).join("")}</div>`);
+      }
     }
+    if (canAcceptOrdersWithoutPin()) {
+      parts.push(renderOnlineZoneSection());
+    }
+    grid.innerHTML = parts.join("");
     bindTableCards(grid);
-    updateTablesLiveBar(bootstrap.tables);
+    bindOnlineSlotCards(grid);
+    updateTablesLiveBar(tables);
+    renderPendingOnlineBanner();
   }
 
   function renderMenu() {
@@ -795,8 +869,31 @@
   let acceptModalOrderId = null;
   const handledAcceptIds = new Set();
   let acceptPollTimer = null;
+  let lastAlertedAcceptOrderId = null;
   /** Porosi QR/Takeaway/Delivery në pritje PRANO/REFUZO (nga /bar/orders). */
   let pendingAcceptOrders = [];
+  /** Slotet Online 1…6 — sync nga cloud (/bar/orders). */
+  let onlineSlots = [];
+  let onlineZoneTitle = "POROSI ONLINE";
+
+  function defaultOnlineSlots(count = 6) {
+    return Array.from({ length: count }, (_, i) => ({
+      slot: i + 1,
+      label: `Online ${i + 1}`,
+      status: "free",
+      order: null,
+    }));
+  }
+
+  function syncOnlineSlotsFromPoll(data) {
+    if (Array.isArray(data?.online_slots) && data.online_slots.length) {
+      onlineSlots = data.online_slots;
+      onlineZoneTitle = String(data.online_zone_title || "POROSI ONLINE").trim() || "POROSI ONLINE";
+    } else {
+      onlineSlots = defaultOnlineSlots();
+    }
+    renderTables();
+  }
 
   function isPendingAcceptOrder(o) {
     if (!o?.id) return false;
@@ -809,35 +906,14 @@
   function syncPendingAcceptOrders(orders) {
     pendingAcceptOrders = (orders || []).filter(isPendingAcceptOrder);
     updateTablesLiveBar(bootstrap?.tables || []);
-    renderPendingOnlineBanner();
   }
 
   function renderPendingOnlineBanner() {
     const host = $("tables-online-banner");
-    if (!host) return;
-    if (!pendingAcceptOrders.length) {
+    if (host) {
       host.classList.add("hidden");
       host.innerHTML = "";
-      return;
     }
-    const items = pendingAcceptOrders.slice(0, 3).map(o => {
-      const src = orderSourceMeta(o);
-      const label = orderTableLabel(o);
-      const qty = (o.items_json || []).reduce((s, it) => s + (Number(it.quantity) || 1), 0);
-      const qtyLabel = qty === 1 ? "1 artikull" : `${qty} artikuj`;
-      return `<div class="online-banner-item">
-        <span>${src.icon} ${escapeHtml(label)}${o.waiter_name ? ` · ${escapeHtml(String(o.waiter_name).slice(0, 40))}` : ""}</span>
-        <span>${qtyLabel} · ${formatEuro(orderItemsTotal(o))}</span>
-      </div>`;
-    }).join("");
-    const extra = pendingAcceptOrders.length > 3
-      ? `<small>+ ${pendingAcceptOrders.length - 3} tjetër në pritje</small>`
-      : "";
-    host.innerHTML = `<div class="online-banner-inner">
-      <strong>🥡 Porosi në pritje — PRANO ose REFUZO</strong>
-      ${items}${extra}
-    </div>`;
-    host.classList.remove("hidden");
   }
 
   function canAcceptOrdersWithoutPin() {
@@ -960,9 +1036,20 @@
 
     if (!external.length) {
       closeAcceptModal();
+      lastAlertedAcceptOrderId = null;
       return;
     }
     const next = external[0];
+    const hasPendingOnlineSlots = (onlineSlots || []).some(s => s.status === "pending");
+    if (hasPendingOnlineSlots) {
+      if (lastAlertedAcceptOrderId !== next.id) {
+        lastAlertedAcceptOrderId = next.id;
+        playOrderAlert();
+        const src = orderSourceMeta(next);
+        showSuccessToast(`🥡 Porosi e re — ${src.icon} ${orderTableLabel(next)}`);
+      }
+      return;
+    }
     if (acceptModalOrderId === next.id) return;
     renderAcceptModal(next);
     playOrderAlert();
@@ -1024,9 +1111,11 @@
       console.log("[waiter] accept poll", {
         count: orders.length,
         pendingAccept: orders.filter(isPendingAcceptOrder).length,
+        onlineSlots: (data.online_slots || []).filter(s => s.status !== "free").length,
         grace: orders.filter(o => o.refused_at).length,
         ids: orders.map(o => o.id),
       });
+      syncOnlineSlotsFromPoll(data);
       syncPendingAcceptOrders(orders);
       await maybeShowAcceptModal(orders);
     } catch (e) {
@@ -1087,6 +1176,7 @@
     saveWaiterSession();
     $("tables-title").textContent = `Kamarieri: ${waiter.name}`;
     $("tables-waiter").textContent = bootstrap?.restaurant_name || bootstrap?.client_name || "";
+    onlineSlots = defaultOnlineSlots();
     renderTables();
     setupReservationReminders();
     scheduleIdleLock();
@@ -1097,6 +1187,7 @@
   function lockSession() {
     stopAcceptPolling();
     pendingAcceptOrders = [];
+    onlineSlots = [];
     renderPendingOnlineBanner();
     clearIdleTimer();
     activeWaiter = null;

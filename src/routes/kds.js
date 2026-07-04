@@ -1,7 +1,7 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling } = require("../services/kdsService");
+const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling, buildOnlineSlotLayout } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
@@ -51,6 +51,7 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
     // Telefoni i kamarierit: të gjitha porositë në pritje — pa ndarje banak/kuzhinë.
     let orders = await fetchOrderedSales(client.id);
     orders = mergeOrdersById(orders, await fetchRefusalGraceOrders(client.id));
+    const online_slots = buildOnlineSlotLayout(orders);
     let cancelled = await listRecentlyCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
 
@@ -80,6 +81,8 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
       kitchen_slug: client.kitchen_slug,
       ...branding,
       orders,
+      online_slots,
+      online_zone_title: "POROSI ONLINE",
       cancelled,
       assigned_waiter,
     });

@@ -283,6 +283,70 @@ html, body {
   width: 100%;
 }
 
+.waiter-online-zone {
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.online-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.online-slot-card .online-slot-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.online-slot-card.free {
+  opacity: 0.92;
+  cursor: default;
+}
+
+.online-slot-card.pending-online,
+.table-card.pending-cloud.pending-online {
+  border-color: #f97316;
+  background: #422006;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+  animation: waiter-online-pulse 1.8s ease-in-out infinite;
+}
+
+.online-slot-card.accepted-online {
+  border-color: var(--danger);
+  background: #450a0a;
+}
+
+.table-status-pill.pending-online-pill {
+  background: rgba(249, 115, 22, 0.28);
+  color: #fdba74;
+}
+
+.online-slot-hint {
+  font-size: 0.62rem;
+  color: #fed7aa;
+  text-align: center;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.online-slot-action {
+  font-size: 0.58rem;
+  color: #fdba74;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 0.1rem;
+}
+
+.online-slot-action.muted {
+  color: var(--muted);
+}
+
 .tables-live-bar {
   display: flex;
   flex-wrap: wrap;
