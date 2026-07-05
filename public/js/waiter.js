@@ -900,9 +900,14 @@
     }));
   }
 
+  function findOnlineSlotForOrder(orderId) {
+    if (!orderId) return null;
+    return (onlineSlots || []).find(s => s.order?.id === orderId) || null;
+  }
+
   function syncOnlineSlotsFromPoll(data) {
-    if (Array.isArray(data?.online_slots) && data.online_slots.length) {
-      onlineSlots = data.online_slots;
+    if (Array.isArray(data?.online_slots)) {
+      onlineSlots = data.online_slots.length ? data.online_slots : defaultOnlineSlots();
       onlineZoneTitle = String(data.online_zone_title || "POROSI ONLINE").trim() || "POROSI ONLINE";
     } else {
       onlineSlots = defaultOnlineSlots();
@@ -912,7 +917,28 @@
         s.order?.id === onlineCloseOrderId && s.status !== "free");
       if (!stillOpen) closeOnlineCloseModal();
     }
-    renderTables();
+  }
+
+  /** Pas poll — mbyll modal/slot të vjetër kur porosia u pranua ose mbyll remote. */
+  function reconcileWaiterOrderState(orders) {
+    if (acceptModalOrderId) {
+      const current = (orders || []).find(o => o.id === acceptModalOrderId);
+      const slot = findOnlineSlotForOrder(acceptModalOrderId);
+      const accepted = !!(current?.accepted_at || String(current?.accepted_by_waiter_name || "").trim())
+        || slot?.status === "accepted";
+      const gone = !current && (!slot || slot.status === "free");
+      if (accepted || gone) {
+        handledAcceptIds.add(acceptModalOrderId);
+        closeAcceptModal();
+      }
+    }
+    if (lastAlertedAcceptOrderId) {
+      const slot = findOnlineSlotForOrder(lastAlertedAcceptOrderId);
+      const inOrders = (orders || []).find(o => o.id === lastAlertedAcceptOrderId);
+      const stillPending = slot?.status === "pending"
+        || (inOrders && !(inOrders.accepted_at || inOrders.accepted_by_waiter_name));
+      if (!stillPending) lastAlertedAcceptOrderId = null;
+    }
   }
 
   function isPendingAcceptOrder(o) {
@@ -1061,14 +1087,22 @@
   async function maybeShowAcceptModal(orders) {
     if (acceptModalOrderId) {
       const current = (orders || []).find(o => o.id === acceptModalOrderId);
-      if (!current || current.accepted_at || String(current.accepted_by_waiter_name || "").trim()) {
+      const slot = findOnlineSlotForOrder(acceptModalOrderId);
+      const accepted = !!(current?.accepted_at || String(current?.accepted_by_waiter_name || "").trim())
+        || slot?.status === "accepted";
+      const gone = !current && (!slot || slot.status === "free");
+      if (accepted || gone) {
         handledAcceptIds.add(acceptModalOrderId);
         closeAcceptModal();
       }
     }
 
-    const pending = (orders || []).filter(o =>
-      !(o.accepted_at || o.accepted_by_waiter_name) && !handledAcceptIds.has(o.id));
+    const pending = (orders || []).filter(o => {
+      if (o.accepted_at || o.accepted_by_waiter_name || handledAcceptIds.has(o.id)) return false;
+      const slot = findOnlineSlotForOrder(o.id);
+      if (slot && slot.status !== "pending") return false;
+      return true;
+    });
 
     const own = pending.filter(isOrderFromCurrentWaiter);
     const external = pending.filter(o => !isOrderFromCurrentWaiter(o));
@@ -1240,7 +1274,9 @@
       });
       syncOnlineSlotsFromPoll(data);
       syncPendingAcceptOrders(orders);
+      reconcileWaiterOrderState(orders);
       await maybeShowAcceptModal(orders);
+      renderTables();
     } catch (e) {
       console.warn("[waiter] accept poll failed", e.message);
     }
@@ -1261,10 +1297,12 @@
     closeAcceptModal();
   }
 
-  function refreshWaiterLiveState() {
+  async function refreshWaiterLiveState() {
     if (!activeWaiter?.id) return;
-    pollIncomingOrders().catch(() => {});
-    refreshBootstrap().catch(() => {});
+    try {
+      await pollIncomingOrders();
+      await refreshBootstrap();
+    } catch { /* SSE refresh — poll/bootstrap log own errors */ }
   }
 
   function connectWaiterSse() {
@@ -1276,7 +1314,7 @@
     const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
     waiterEventSource = new EventSource(url);
     waiterEventSource.addEventListener("kitchen", () => {
-      refreshWaiterLiveState();
+      refreshWaiterLiveState().catch(() => {});
     });
     waiterEventSource.onerror = () => {
       if (waiterEventSource) {
