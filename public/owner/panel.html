@@ -40,50 +40,7 @@
   <div id="panel-boot-info" class="alert alert-ok hidden" role="status" style="margin:0.75rem 1rem 0"></div>
 
   <div class="container">
-    <div class="stats" id="stats"></div>
-
-    <div class="card links-card" id="owner-links-card">
-      <div class="card-title">Linqet e lokalit tuaj</div>
-      <p class="links-hint">Linku <strong>Banak</strong> hapet te <code>/bar/…</code> (porositë e tavolinës, online, POS). Linku <strong>Kuzhina</strong> hapet te <code>/kitchen/…</code> (ushqim).</p>
-      <p id="owner-links-empty" class="links-hint hidden">Paketa juaj nuk përfshin module web (KDS/Kiosk/Kamarier). Kontaktoni administratorin për upgrade.</p>
-      <div class="link-row" id="owner-link-bar-row">
-        <label>Banak — porosi (QR, kamarier, online, POS)</label>
-        <div class="link-actions">
-          <input type="text" id="owner-bar-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-bar">Kopjo</button>
-        </div>
-      </div>
-      <div class="link-row" id="owner-link-waiter-row">
-        <label>Kamarierët — link i përbashkët (menaxho punonjësit nga KAFENE desktop)</label>
-        <div class="link-actions">
-          <input type="text" id="owner-waiter-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-waiter">Kopjo</button>
-        </div>
-      </div>
-      <div class="link-row" id="owner-link-kitchen-row">
-        <label>Kuzhina (KDS) — vetëm ushqim</label>
-        <div class="link-actions">
-          <input type="text" id="owner-kitchen-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kitchen">Kopjo</button>
-        </div>
-      </div>
-      <div class="link-row" id="owner-link-kiosk-row">
-        <label>Tavolinë (QR menu)</label>
-        <div class="link-actions">
-          <input type="text" id="owner-kiosk-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
-        </div>
-      </div>
-      <div class="link-row" id="owner-link-public-row">
-        <label>Faqja publike</label>
-        <div class="link-actions">
-          <input type="text" id="owner-public-url" readonly>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-public">Kopjo</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="tabs nav-grid owner-tabs">
+    <div class="tabs nav-grid owner-tabs owner-nav-cards">
       <button type="button" class="tab nav-tile active" data-tab="tavolinat">
         <span class="nav-icon" aria-hidden="true">🪑</span>
         <span class="nav-label">Tavolinat Live</span>
@@ -127,6 +84,10 @@
       <button type="button" class="tab nav-tile" data-tab="raportet">
         <span class="nav-icon" aria-hidden="true">📑</span>
         <span class="nav-label">Raportet</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="linqet" id="tab-linqet">
+        <span class="nav-icon" aria-hidden="true">🔗</span>
+        <span class="nav-label">Linqet e lokalit</span>
       </button>
     </div>
 
@@ -820,6 +781,49 @@
           Aktivizimi i plotë bëhet në kompjuterin POS: <strong>Admin → Licenca</strong> (i njëjti Wi‑Fi).
         </p>
         <div id="owner-license-msg" class="owner-license-msg"></div>
+      </div>
+    </div>
+
+    <div id="panel-linqet" class="panel-section hidden">
+      <div class="card links-card" id="owner-links-card">
+        <div class="card-title">Linqet e lokalit tuaj</div>
+        <p class="links-hint">Linku <strong>Banak</strong> hapet te <code>/bar/…</code> (porositë e tavolinës, online, POS). Linku <strong>Kuzhina</strong> hapet te <code>/kitchen/…</code> (ushqim).</p>
+        <p id="owner-links-empty" class="links-hint hidden">Paketa juaj nuk përfshin module web (KDS/Kiosk/Kamarier). Kontaktoni administratorin për upgrade.</p>
+        <div class="link-row" id="owner-link-bar-row">
+          <label>Banak — porosi (QR, kamarier, online, POS)</label>
+          <div class="link-actions">
+            <input type="text" id="owner-bar-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-bar">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row" id="owner-link-waiter-row">
+          <label>Kamarierët — link i përbashkët (menaxho punonjësit nga KAFENE desktop)</label>
+          <div class="link-actions">
+            <input type="text" id="owner-waiter-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-waiter">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row" id="owner-link-kitchen-row">
+          <label>Kuzhina (KDS) — vetëm ushqim</label>
+          <div class="link-actions">
+            <input type="text" id="owner-kitchen-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kitchen">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row" id="owner-link-kiosk-row">
+          <label>Tavolinë (QR menu)</label>
+          <div class="link-actions">
+            <input type="text" id="owner-kiosk-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row" id="owner-link-public-row">
+          <label>Faqja publike</label>
+          <div class="link-actions">
+            <input type="text" id="owner-public-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-public">Kopjo</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
