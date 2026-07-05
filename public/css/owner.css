@@ -963,6 +963,112 @@
   text-align: center;
 }
 
+.owner-online-zone {
+  margin-top: 1.25rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.owner-online-zone.hidden {
+  display: none;
+}
+
+.owner-online-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.live-online-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+}
+
+.live-online-slot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 72px;
+  aspect-ratio: 1 / 1;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--card);
+  text-align: center;
+}
+
+.live-online-slot-card.free {
+  border-color: #22c55e;
+  background: #0f1f17;
+}
+
+.live-online-slot-card.pending {
+  border-color: #f97316;
+  background: #422006;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+
+.live-online-slot-card.occupied {
+  border-color: #f59e0b;
+  background: #2a1a0a;
+}
+
+.live-online-slot-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.live-online-slot-status {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.live-online-slot-card.free .live-online-slot-status {
+  color: #86efac;
+}
+
+.live-online-slot-card.pending .live-online-slot-status {
+  color: #fdba74;
+}
+
+.live-online-slot-card.occupied .live-online-slot-status {
+  color: #fcd34d;
+}
+
+.live-online-slot-meta {
+  font-size: 0.58rem;
+  color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-online-slot-total {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+@media (max-width: 600px) {
+  .live-online-slots-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .live-online-slot-label {
+    font-size: 0.82rem;
+  }
+}
+
 @media (max-width: 640px) {
   .live-tables-grid {
     grid-template-columns: repeat(2, 1fr);
