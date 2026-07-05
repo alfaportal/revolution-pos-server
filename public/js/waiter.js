@@ -1049,6 +1049,21 @@
     });
   }
 
+  function setupOnlineCloseModalButtons() {
+    bindTap($("online-close-modal-cash"), () => {
+      if (!onlineCloseOrderId) return;
+      const slot = (onlineSlots || []).find(s => s.order?.id === onlineCloseOrderId);
+      if (!slot?.order) return;
+      closeOnlineAcceptedOrder(slot.order, "cash", $("online-close-modal-cash"), $("online-close-modal-card"));
+    });
+    bindTap($("online-close-modal-card"), () => {
+      if (!onlineCloseOrderId) return;
+      const slot = (onlineSlots || []).find(s => s.order?.id === onlineCloseOrderId);
+      if (!slot?.order) return;
+      closeOnlineAcceptedOrder(slot.order, "karte", $("online-close-modal-cash"), $("online-close-modal-card"));
+    });
+  }
+
   function closeAcceptModal() {
     acceptModalOrderId = null;
     const modal = $("accept-modal");
@@ -1208,12 +1223,10 @@
     if (cashBtn) {
       cashBtn.disabled = false;
       cashBtn.textContent = "Cash";
-      cashBtn.onclick = () => closeOnlineAcceptedOrder(o, "cash", cashBtn, cardBtn);
     }
     if (cardBtn) {
       cardBtn.disabled = false;
       cardBtn.textContent = "Kartë";
-      cardBtn.onclick = () => closeOnlineAcceptedOrder(o, "karte", cashBtn, cardBtn);
     }
     modal.classList.remove("hidden");
     modal.removeAttribute("hidden");
@@ -1547,7 +1560,7 @@
         renderMenu();
         renderCart();
       }
-      renderTables();
+      if (!acceptPollTimer) renderTables();
       checkReservationReminders();
     } catch { /* ignore background refresh */ }
   }
@@ -1943,6 +1956,7 @@
 
   bindCartLines();
   setupAcceptModalButtons();
+  setupOnlineCloseModalButtons();
   $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
   $("online-close-modal-backdrop")?.addEventListener("click", closeOnlineCloseModal);
   setupWaiterIdleLock();
@@ -1979,7 +1993,7 @@
   setInterval(() => {
     if (navigator.onLine) syncPendingOrders().catch(() => {});
     if (activeWaiter && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
-      refreshBootstrap();
+      refreshWaiterLiveState().catch(() => {});
     }
   }, 5000);
 })();
