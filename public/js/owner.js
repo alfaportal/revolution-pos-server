@@ -335,6 +335,103 @@ async function loadOrderFilters() {
   tSel.value = tVal;
 }
 
+function parseOwnerBarKdsAccess() {
+  const url = (document.getElementById("owner-bar-url")?.value || "").trim();
+  if (!url) return null;
+  try {
+    const u = new URL(url, window.location.origin);
+    const parts = u.pathname.split("/").filter(Boolean);
+    const slug = parts[0] === "bar" ? parts[1] : "";
+    const key = u.searchParams.get("key") || "";
+    if (!slug || !key) return null;
+    return { slug, key };
+  } catch {
+    return null;
+  }
+}
+
+function defaultOwnerOnlineSlots(count = 6) {
+  return Array.from({ length: count }, (_, i) => ({
+    slot: i + 1,
+    label: `Online ${i + 1}`,
+    status: "free",
+    order: null,
+  }));
+}
+
+function ownerOnlineSlotTotal(order) {
+  const items = Array.isArray(order?.items_json) ? order.items_json : [];
+  if (!items.length) return Number(order?.total) || 0;
+  return items.reduce((sum, it) => {
+    const qty = Number(it.quantity) || 1;
+    const price = Number(it.price) || 0;
+    return sum + price * qty;
+  }, 0);
+}
+
+function renderOwnerOnlineSlotCard(slot) {
+  const label = escapeHtml(slot.label || `Online ${slot.slot}`);
+  if (slot.status === "free" || !slot.order) {
+    return `<div class="live-online-slot-card free">
+      <div class="live-online-slot-label">${label}</div>
+      <div class="live-online-slot-status">Lirë</div>
+    </div>`;
+  }
+  const o = slot.order;
+  const pending = slot.status === "pending";
+  const statusText = pending
+    ? "Në pritje"
+    : escapeHtml(String(o.accepted_by_waiter_name || "Pranuar").trim() || "Pranuar");
+  const customer = escapeHtml(String(o.waiter_name || "").trim() || "Klient");
+  return `<div class="live-online-slot-card ${pending ? "pending" : "occupied"}">
+    <div class="live-online-slot-label">${label}</div>
+    <div class="live-online-slot-status">${statusText}</div>
+    <div class="live-online-slot-meta">${customer}</div>
+    <div class="live-online-slot-total">${euro(ownerOnlineSlotTotal(o))}</div>
+  </div>`;
+}
+
+async function fetchOwnerOnlineSlots() {
+  const access = parseOwnerBarKdsAccess();
+  if (!access) {
+    return { slots: defaultOwnerOnlineSlots(), title: "POROSI ONLINE" };
+  }
+  const q = `?key=${encodeURIComponent(access.key)}`;
+  const res = await fetch(`/api/kds/${encodeURIComponent(access.slug)}/bar/orders${q}`, {
+    headers: { "x-kitchen-key": access.key },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.gabim || "Nuk u ngarkuan slotet online.");
+  return {
+    slots: Array.isArray(data.online_slots) && data.online_slots.length
+      ? data.online_slots
+      : defaultOwnerOnlineSlots(),
+    title: String(data.online_zone_title || "POROSI ONLINE").trim() || "POROSI ONLINE",
+  };
+}
+
+async function loadLiveOnlineSlots() {
+  const zone = document.getElementById("owner-online-zone");
+  const grid = document.getElementById("live-online-slots-grid");
+  const titleEl = document.getElementById("owner-online-title");
+  if (!zone || !grid) return;
+
+  if (!ownerPackageFeatures.kds || !parseOwnerBarKdsAccess()) {
+    zone.classList.add("hidden");
+    grid.innerHTML = "";
+    return;
+  }
+
+  zone.classList.remove("hidden");
+  try {
+    const { slots, title } = await fetchOwnerOnlineSlots();
+    if (titleEl) titleEl.textContent = title;
+    grid.innerHTML = slots.map(renderOwnerOnlineSlotCard).join("");
+  } catch {
+    grid.innerHTML = defaultOwnerOnlineSlots().map(renderOwnerOnlineSlotCard).join("");
+  }
+}
+
 async function loadLiveTables() {
   const data = await api("/api/owner/tables/live");
   const grid = document.getElementById("live-tables-grid");
@@ -344,6 +441,7 @@ async function loadLiveTables() {
   if (updated && data.updated_at) {
     updated.textContent = `Përditësuar: ${fmtTime(data.updated_at)}`;
   }
+  await loadLiveOnlineSlots();
 }
 
 function connectOwnerLiveEvents() {
