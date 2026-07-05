@@ -1465,9 +1465,10 @@ html, body {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 900px) {
   #screen-pin.staff-login-screen {
     padding: 0;
+    width: 100%;
     align-items: stretch;
     justify-content: stretch;
     min-height: 100dvh;
@@ -1478,6 +1479,32 @@ html, body {
 
   #screen-pin .staff-login-shell {
     width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    max-height: none;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  #screen-pin.staff-login-screen {
+    padding: 0;
+    width: 100%;
+    align-items: stretch;
+    justify-content: stretch;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  #screen-pin .staff-login-shell {
+    width: 100%;
+    max-width: 100%;
     min-height: 100dvh;
     max-height: none;
     height: 100dvh;

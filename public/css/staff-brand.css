@@ -267,18 +267,20 @@
   margin: 0.75rem 0 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .staff-login-screen {
     padding: 0;
     align-items: stretch;
     justify-content: stretch;
     min-height: 100dvh;
     height: 100dvh;
+    background: var(--staff-panel);
   }
 
   .staff-login-shell {
     grid-template-columns: 1fr;
     width: 100%;
+    max-width: 100%;
     min-height: 100dvh;
     height: 100dvh;
     border-radius: 0;

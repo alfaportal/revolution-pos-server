@@ -312,11 +312,43 @@
 .owner-stat .val { color: #38bdf8; }
 
 .owner-panel .stats {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem;
   margin-bottom: 1rem;
 }
 
 .owner-panel .stats .stat.owner-stat {
+  padding: 0.5rem;
+  min-height: 40px;
   cursor: default;
+}
+
+.owner-panel .stat .val {
+  font-size: 1.1rem;
+}
+
+.owner-panel .stat .lbl {
+  font-size: 0.65rem;
+}
+
+.owner-panel .tabs.nav-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.owner-panel .tab.nav-tile {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 44px;
+}
+
+.owner-panel .tab.nav-tile .nav-icon {
+  display: none;
 }
 
 .owner-panel .owner-tabs.nav-grid .tab.nav-tile.hidden,
