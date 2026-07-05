@@ -26,11 +26,13 @@
   }
 
   let syncInProgress = false;
+  let waiterEventSource = null;
 
   function apiQuery() {
     const parts = [];
     if (kitchenKey) parts.push(`key=${encodeURIComponent(kitchenKey)}`);
     if (waiterToken) parts.push(`w=${encodeURIComponent(waiterToken)}`);
+    else if (activeWaiter?.id) parts.push(`waiter_id=${encodeURIComponent(activeWaiter.id)}`);
     return parts.length ? `?${parts.join("&")}` : "";
   }
 
@@ -905,6 +907,11 @@
     } else {
       onlineSlots = defaultOnlineSlots();
     }
+    if (onlineCloseOrderId) {
+      const stillOpen = (onlineSlots || []).some(s =>
+        s.order?.id === onlineCloseOrderId && s.status !== "free");
+      if (!stillOpen) closeOnlineCloseModal();
+    }
     renderTables();
   }
 
@@ -1037,6 +1044,14 @@
   }
 
   async function maybeShowAcceptModal(orders) {
+    if (acceptModalOrderId) {
+      const current = (orders || []).find(o => o.id === acceptModalOrderId);
+      if (!current || current.accepted_at || String(current.accepted_by_waiter_name || "").trim()) {
+        handledAcceptIds.add(acceptModalOrderId);
+        closeAcceptModal();
+      }
+    }
+
     const pending = (orders || []).filter(o =>
       !(o.accepted_at || o.accepted_by_waiter_name) && !handledAcceptIds.has(o.id));
 
@@ -1231,6 +1246,39 @@
     closeAcceptModal();
   }
 
+  function refreshWaiterLiveState() {
+    if (!activeWaiter?.id) return;
+    pollIncomingOrders().catch(() => {});
+    refreshBootstrap().catch(() => {});
+  }
+
+  function connectWaiterSse() {
+    if (!slug || !kitchenKey || typeof EventSource === "undefined") return;
+    if (waiterEventSource) {
+      waiterEventSource.close();
+      waiterEventSource = null;
+    }
+    const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
+    waiterEventSource = new EventSource(url);
+    waiterEventSource.addEventListener("kitchen", () => {
+      refreshWaiterLiveState();
+    });
+    waiterEventSource.onerror = () => {
+      if (waiterEventSource) {
+        waiterEventSource.close();
+        waiterEventSource = null;
+      }
+      setTimeout(connectWaiterSse, 5000);
+    };
+  }
+
+  function disconnectWaiterSse() {
+    if (waiterEventSource) {
+      waiterEventSource.close();
+      waiterEventSource = null;
+    }
+  }
+
   function printAcceptanceReceipt(o, acceptedBy) {
     const venue = bootstrap?.restaurant_name || bootstrap?.client_name || "Faturë";
     const fmt = n => Number(n || 0).toFixed(2);
@@ -1274,11 +1322,13 @@
     setupReservationReminders();
     scheduleIdleLock();
     startAcceptPolling();
+    connectWaiterSse();
     showScreen("screen-tables");
   }
 
   function lockSession() {
     stopAcceptPolling();
+    disconnectWaiterSse();
     pendingAcceptOrders = [];
     onlineSlots = [];
     renderPendingOnlineBanner();
@@ -1428,6 +1478,17 @@
       const hint = $("sync-hint");
       if (bootstrap.synced_at) {
         hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
+      }
+      if ($("screen-order").classList.contains("active") && tableNumber > 0) {
+        const liveTable = (bootstrap.tables || []).find(t => Number(t.number) === Number(tableNumber));
+        if (!liveTable || liveTable.status !== "occupied") {
+          tableNumber = 0;
+          cart = [];
+          showOrderMsg("", false);
+          $("cart-bar")?.classList.add("hidden");
+          $("screen-order")?.classList.remove("has-cart");
+          showScreen("screen-tables");
+        }
       }
       if ($("screen-order").classList.contains("active")) {
         renderMenu();
