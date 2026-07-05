@@ -1,4 +1,4 @@
-@import url('/css/panel.css');
+@import url('/css/panel.css?v=29');
 
 .pwa-install-banner {
   position: sticky;
@@ -310,6 +310,46 @@
 }
 
 .owner-stat .val { color: #38bdf8; }
+
+.owner-panel .stats {
+  margin-bottom: 1rem;
+}
+
+.owner-panel .stats .stat.owner-stat {
+  cursor: default;
+}
+
+.owner-panel .owner-tabs.nav-grid .tab.nav-tile.hidden,
+.owner-panel .owner-tabs.nav-grid .tab.ai-feature-tab.hidden {
+  display: none !important;
+}
+
+.owner-panel .tab.nav-tile.active .tab-badge {
+  background: rgba(255, 255, 255, 0.92);
+  color: #1e3a8a;
+}
+
+.owner-panel .container {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 768px) {
+  .owner-panel .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .owner-panel .owner-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    padding-top: max(0.85rem, env(safe-area-inset-top));
+  }
+
+  .owner-panel .links-card {
+    margin-bottom: 0.85rem;
+  }
+}
 
 .order-card {
   background: #0b1220;
@@ -1421,8 +1461,8 @@
 }
 
 @media (max-width: 640px) {
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .header h1 { font-size: 1rem; }
+  .owner-panel .header h1,
+  .owner-panel .owner-header h1 { font-size: 1rem; }
 }
 
 /* ─── Katalogu i menusë ─── */

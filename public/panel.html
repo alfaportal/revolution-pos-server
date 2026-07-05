@@ -12,7 +12,7 @@
   <link rel="manifest" href="/admin-manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/panel.css?v=28">
+  <link rel="stylesheet" href="/css/panel.css?v=29">
 </head>
 <body>
   <script>
@@ -61,13 +61,31 @@
       <div id="stock-alert-banner" class="stock-alert-banner hidden" role="alert"></div>
       <div class="stats" id="stats"></div>
 
-      <div class="tabs">
-        <button class="tab active" data-tab="klientet" id="tab-klientet">Klientët <span id="tab-klientet-badge" class="tab-badge hidden"></span></button>
-        <button class="tab" data-tab="licensat">Liçensat</button>
-        <button class="tab" data-tab="pronaret">Pronarët</button>
-        <button class="tab" data-tab="logu">Log aktiviteti</button>
-        <button class="tab" data-tab="ai-usage">AI Usage</button>
-        <button class="tab" data-tab="shto">+ Shto</button>
+      <div class="tabs nav-grid admin-tabs">
+        <button type="button" class="tab nav-tile active" data-tab="klientet" id="tab-klientet">
+          <span class="nav-icon" aria-hidden="true">👥</span>
+          <span class="nav-label">Klientët <span id="tab-klientet-badge" class="tab-badge hidden"></span></span>
+        </button>
+        <button type="button" class="tab nav-tile" data-tab="licensat">
+          <span class="nav-icon" aria-hidden="true">🔑</span>
+          <span class="nav-label">Liçensat</span>
+        </button>
+        <button type="button" class="tab nav-tile" data-tab="pronaret">
+          <span class="nav-icon" aria-hidden="true">🏪</span>
+          <span class="nav-label">Pronarët</span>
+        </button>
+        <button type="button" class="tab nav-tile" data-tab="logu">
+          <span class="nav-icon" aria-hidden="true">📋</span>
+          <span class="nav-label">Log aktiviteti</span>
+        </button>
+        <button type="button" class="tab nav-tile" data-tab="ai-usage">
+          <span class="nav-icon" aria-hidden="true">🤖</span>
+          <span class="nav-label">AI Usage</span>
+        </button>
+        <button type="button" class="tab nav-tile" data-tab="shto">
+          <span class="nav-icon" aria-hidden="true">➕</span>
+          <span class="nav-label">Shto</span>
+        </button>
       </div>
 
       <div id="panel-klientet" class="panel-section">

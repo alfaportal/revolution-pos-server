@@ -12,9 +12,9 @@
   <link rel="manifest" href="/owner/manifest.json">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="stylesheet" href="/css/owner.css">
+  <link rel="stylesheet" href="/css/owner.css?v=2">
 </head>
-<body>
+<body class="owner-panel">
   <div id="pwa-install-banner" class="pwa-install-banner hidden" role="region" aria-label="Instalo aplikacionin">
     <button type="button" class="pwa-install-close" id="pwa-install-close" aria-label="Mbyll">×</button>
     <div class="pwa-install-title">📲 Shto Revolution Invest POS në ekranin kryesor</div>
@@ -83,18 +83,51 @@
       </div>
     </div>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
-      <button class="tab" data-tab="faqja">Faqja publike</button>
-      <button class="tab" data-tab="zreport">Raporti Ditor</button>
-      <button class="tab" data-tab="fiskale">Arka</button>
-      <button class="tab" data-tab="licenca">Licenca</button>
-      <button class="tab" data-tab="porosite">Porositë</button>
-      <button class="tab" data-tab="stoku">Stoku</button>
-      <button class="tab ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>Raporte AI</button>
-      <button class="tab ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>Asistent AI</button>
-      <button class="tab ai-feature-tab hidden" data-tab="njoftimet" id="tab-notifications" hidden>Njoftimet</button>
-      <button class="tab" data-tab="raportet">Raportet</button>
+    <div class="tabs nav-grid owner-tabs">
+      <button type="button" class="tab nav-tile active" data-tab="tavolinat">
+        <span class="nav-icon" aria-hidden="true">🪑</span>
+        <span class="nav-label">Tavolinat Live</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="faqja">
+        <span class="nav-icon" aria-hidden="true">🌐</span>
+        <span class="nav-label">Faqja publike</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="zreport">
+        <span class="nav-icon" aria-hidden="true">📊</span>
+        <span class="nav-label">Raporti Ditor</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="fiskale">
+        <span class="nav-icon" aria-hidden="true">🧾</span>
+        <span class="nav-label">Arka</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="licenca">
+        <span class="nav-icon" aria-hidden="true">🔐</span>
+        <span class="nav-label">Licenca</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="porosite">
+        <span class="nav-icon" aria-hidden="true">📦</span>
+        <span class="nav-label">Porositë</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="stoku">
+        <span class="nav-icon" aria-hidden="true">📋</span>
+        <span class="nav-label">Stoku</span>
+      </button>
+      <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>
+        <span class="nav-icon" aria-hidden="true">📈</span>
+        <span class="nav-label">Raporte AI</span>
+      </button>
+      <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="ai-asistent" id="tab-ai-assistant" hidden>
+        <span class="nav-icon" aria-hidden="true">💬</span>
+        <span class="nav-label">Asistent AI</span>
+      </button>
+      <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="njoftimet" id="tab-notifications" hidden>
+        <span class="nav-icon" aria-hidden="true">🔔</span>
+        <span class="nav-label">Njoftimet</span>
+      </button>
+      <button type="button" class="tab nav-tile" data-tab="raportet">
+        <span class="nav-icon" aria-hidden="true">📑</span>
+        <span class="nav-label">Raportet</span>
+      </button>
     </div>
 
     <div id="panel-tavolinat" class="panel-section">
