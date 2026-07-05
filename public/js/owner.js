@@ -106,7 +106,6 @@ window.getOwnerToken = () => token;
 
 window.reloadOwnerDashboard = async () => {
   await runBootStep("klienti", loadClient);
-  await runBootStep("statistikat", loadStats);
   await runBootStep("tavolinat", loadLiveTables);
   await runBootStep("porositë", async () => {
     await loadOrderFilters();
@@ -267,6 +266,9 @@ async function loadClient() {
     document.getElementById("biz-sub").textContent = "Shitjet dhe raportet e lokalit tuaj";
   }
 
+  const linksTab = document.getElementById("tab-linqet");
+  if (linksTab) linksTab.classList.toggle("hidden", !!viewAll);
+
   const linksCard = document.getElementById("owner-links-card");
   if (linksCard) linksCard.classList.toggle("hidden", !!viewAll);
 
@@ -318,21 +320,6 @@ document.getElementById("btn-owner-copy-kiosk")?.addEventListener("click", funct
 document.getElementById("btn-owner-copy-public")?.addEventListener("click", function () {
   kopjoLinkun("owner-public-url", this);
 });
-
-async function loadStats() {
-  const s = await api("/api/owner/stats");
-  const ch = s.channels || {};
-  const aggNote = s.aggregate
-    ? `<p class="stats-aggregate-note">Të gjitha lokalet (${s.location_count || "?"}) — vetëm statistikat e përmbledhura</p>`
-    : "";
-  document.getElementById("stats").innerHTML = `
-    ${aggNote}
-    <div class="stat owner-stat"><div class="val">${euro(s.sot.total)}</div><div class="lbl">Sot (${s.sot.count})</div></div>
-    <div class="stat owner-stat"><div class="val">${euro(s.java.total)}</div><div class="lbl">Kjo javë (${s.java.count})</div></div>
-    <div class="stat owner-stat"><div class="val">${euro(s.muaj.total)}</div><div class="lbl">Ky muaj (${s.muaj.count})</div></div>
-    <div class="stat owner-stat"><div class="val">${Number(ch.qr_sot) || 0}</div><div class="lbl">QR tavolinë sot</div></div>
-    <div class="stat owner-stat"><div class="val">${Number(ch.web_sot) || 0}</div><div class="lbl">Web faqe sot</div></div>`;
-}
 
 async function loadOrderFilters() {
   const { waiters, tables } = await api("/api/owner/orders/filters");
@@ -2483,7 +2470,6 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
     await runBootStep("lokalet", window.initOwnerLocationSwitcher);
   }
   await runBootStep("ai-status", applyAiUiState);
-  await runBootStep("statistikat", loadStats);
   await runBootStep("tavolinat", loadLiveTables);
   connectOwnerLiveEvents();
   await runBootStep("porositë", async () => {
@@ -2493,7 +2479,6 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
 
   setInterval(async () => {
     try {
-      await loadStats();
       if (!document.getElementById("panel-tavolinat").classList.contains("hidden")) {
         await loadLiveTables();
       }
