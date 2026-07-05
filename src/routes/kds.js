@@ -30,13 +30,13 @@ async function resolveWaiterForBarView(clientId, req) {
   const fromToken = await resolveWaiterFromToken(clientId, req);
   if (fromToken?.id) return fromToken;
 
-  const qId = String(req.query.waiter_id || "").trim();
+  const qId = String(req.query.waiter_id || req.body?.waiter_id || "").trim();
   if (qId) {
     const w = await getWaiterById(clientId, qId);
     if (w) return w;
   }
 
-  const qName = String(req.query.waiter_name || "").trim();
+  const qName = String(req.query.waiter_name || req.body?.waiter_name || "").trim();
   if (qName) {
     const w = await getWaiterByName(clientId, qName);
     if (w) return w;
@@ -143,14 +143,13 @@ router.post("/:slug/orders/:orderId/accept", resolveKitchenClient, requirePackag
     const client = req.kitchenClient;
     const { acceptBarOrder } = require("../services/kdsService");
 
-    // Rrjedha e re: kamarieri me link personal (?w=) — pranon pa PIN, i identifikuar tashmë.
-    const waiter = await resolveWaiterFromToken(client.id, req);
-    if (waiter?.id) {
+    const handler = await resolveWaiterForBarView(client.id, req);
+    if (handler?.id) {
       const order = await acceptBarOrder(client.id, req.params.orderId, {
-        waiterId: waiter.id,
-        waiterName: waiter.name,
+        waiterId: handler.id,
+        waiterName: handler.name,
       });
-      res.json({ ok: true, order, accepted_by: waiter.name });
+      res.json({ ok: true, order, accepted_by: handler.name });
       return;
     }
 
@@ -163,12 +162,12 @@ router.post("/:slug/orders/:orderId/accept", resolveKitchenClient, requirePackag
       });
     }
     const { verifyWaiterPin } = require("../services/waiterPinService");
-    const handler = await verifyWaiterPin(client.id, pin);
+    const pinWaiter = await verifyWaiterPin(client.id, pin);
     const order = await acceptBarOrder(client.id, req.params.orderId, {
-      waiterId: handler.id,
-      waiterName: handler.name,
+      waiterId: pinWaiter.id,
+      waiterName: pinWaiter.name,
     });
-    res.json({ ok: true, order, accepted_by: handler.name });
+    res.json({ ok: true, order, accepted_by: pinWaiter.name });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }
@@ -185,9 +184,9 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
   });
   try {
     const client = req.kitchenClient;
-    const waiter = await resolveWaiterFromToken(client.id, req);
+    const waiter = await resolveWaiterForBarView(client.id, req);
     if (!waiter?.id) {
-      return res.status(400).json({ ok: false, gabim: "Mungon identifikimi i kamarierit (link personal)." });
+      return res.status(400).json({ ok: false, gabim: "Mungon identifikimi i kamarierit." });
     }
     const { refuseBarOrderWithGrace } = require("../services/kdsService");
     const order = await refuseBarOrderWithGrace(client.id, orderId, {

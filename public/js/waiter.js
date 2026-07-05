@@ -1006,6 +1006,23 @@
     </li>`;
   }
 
+  function acceptWaiterAuthBody() {
+    const body = {};
+    if (!waiterToken && activeWaiter?.id) body.waiter_id = activeWaiter.id;
+    return body;
+  }
+
+  function setupAcceptModalButtons() {
+    bindTap($("accept-modal-accept"), () => {
+      if (!acceptModalOrderId) return;
+      acceptIncomingOrder(acceptModalOrderId, $("accept-modal-accept"));
+    });
+    bindTap($("accept-modal-refuse"), () => {
+      if (!acceptModalOrderId) return;
+      refuseIncomingOrder(acceptModalOrderId, $("accept-modal-refuse"));
+    });
+  }
+
   function closeAcceptModal() {
     acceptModalOrderId = null;
     const modal = $("accept-modal");
@@ -1032,12 +1049,10 @@
     if (acceptBtn) {
       acceptBtn.disabled = false;
       acceptBtn.textContent = "PRANO";
-      acceptBtn.onclick = () => acceptIncomingOrder(o.id, acceptBtn, o);
     }
     if (refuseBtn) {
       refuseBtn.disabled = false;
       refuseBtn.textContent = "REFUZO";
-      refuseBtn.onclick = () => refuseIncomingOrder(o.id, refuseBtn);
     }
     modal.classList.remove("hidden");
     modal.removeAttribute("hidden");
@@ -1088,7 +1103,7 @@
     try {
       const data = await api(
         `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/accept${apiQuery()}`,
-        { method: "POST", body: JSON.stringify({}) },
+        { method: "POST", body: JSON.stringify(acceptWaiterAuthBody()) },
       );
       handledAcceptIds.add(orderId);
       closeAcceptModal();
@@ -1108,7 +1123,7 @@
     const refuseUrl = `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`;
     console.log("[waiter] REFUZO click", { orderId, url: refuseUrl });
     try {
-      const data = await api(refuseUrl, { method: "POST", body: JSON.stringify({}) });
+      const data = await api(refuseUrl, { method: "POST", body: JSON.stringify(acceptWaiterAuthBody()) });
       console.log("[waiter] REFUZO response", {
         orderId,
         refuse_mode: data.refuse_mode,
@@ -1889,6 +1904,7 @@
   );
 
   bindCartLines();
+  setupAcceptModalButtons();
   $("accept-modal-backdrop")?.addEventListener("click", closeAcceptModal);
   $("online-close-modal-backdrop")?.addEventListener("click", closeOnlineCloseModal);
   setupWaiterIdleLock();
