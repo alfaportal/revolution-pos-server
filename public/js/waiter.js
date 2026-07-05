@@ -6,7 +6,7 @@
   let waiterToken = urlParams.get("w") || "";
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
-  const WAITER_IDLE_MS = 30000;
+  const WAITER_IDLE_MS = 60000;
   const WAITER_SESSION_KEY = slug ? `waiter_session_${slug}` : "waiter_session";
 
   function registerServiceWorker() {
@@ -761,8 +761,6 @@
   function scheduleIdleLock() {
     clearIdleTimer();
     if (!activeWaiter) return;
-    // Link personal: tableti i përket vetëm këtij kamarieri — mos e blloko pas 30s.
-    if (hasPersonalWaiterLink()) return;
     idleTimer = setTimeout(() => lockSession(), WAITER_IDLE_MS);
   }
 
@@ -770,10 +768,15 @@
     function onActivity() {
       if (activeWaiter) scheduleIdleLock();
     }
-    ["pointerdown", "touchstart", "keydown"].forEach(ev => {
+    ["pointerdown", "touchstart", "keydown", "click"].forEach(ev => {
       document.addEventListener(ev, onActivity, { passive: true, capture: true });
     });
+    document.addEventListener("scroll", onActivity, { passive: true, capture: true });
     window.resetWaiterIdleLock = scheduleIdleLock;
+  }
+
+  function hideWaiterSplash() {
+    $("waiter-splash")?.classList.add("hidden");
   }
 
   function setupDesktopReturn() {
@@ -1853,6 +1856,8 @@
       showScreen("screen-pin");
     } catch (e) {
       showErr($("login-err"), e.message);
+    } finally {
+      hideWaiterSplash();
     }
   })();
 

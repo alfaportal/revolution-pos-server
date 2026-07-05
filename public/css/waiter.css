@@ -18,14 +18,60 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
   font-family: "Segoe UI", system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100dvh;
+  height: 100%;
   overflow-x: hidden;
 }
 
-.screen { display: none; min-height: 100dvh; flex-direction: column; }
+.waiter-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  background: #0f1b3d;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+}
+
+.waiter-splash.hidden {
+  display: none;
+}
+
+.waiter-splash-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.waiter-splash-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.screen {
+  display: none;
+  width: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
+  flex-direction: column;
+}
 #screen-pin.screen.active {
   display: flex;
   flex-direction: column;
@@ -63,8 +109,11 @@ html, body {
 
 .waiter-main {
   flex: 1;
+  min-height: 0;
   padding: 1rem;
   padding-bottom: calc(1rem + var(--safe-bottom));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .login-box {
@@ -1396,21 +1445,44 @@ html, body {
 .online-close-actions {
   margin-top: 0.25rem;
 }
+@media (max-width: 768px) {
+  html, body {
+    width: 100%;
+    min-height: 100dvh;
+    height: 100%;
+  }
+
+  .screen.active {
+    width: 100%;
+    min-height: 100dvh;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  #screen-tables.active,
+  #screen-order.active {
+    overflow: hidden;
+  }
+}
+
 @media (max-width: 520px) {
   #screen-pin.staff-login-screen {
-    padding: 0.35rem;
+    padding: 0;
     align-items: stretch;
     justify-content: stretch;
     min-height: 100dvh;
     max-height: 100dvh;
+    height: 100dvh;
     overflow: hidden;
   }
 
   #screen-pin .staff-login-shell {
     width: 100%;
-    min-height: 0;
-    max-height: calc(100dvh - 0.7rem);
-    border-radius: 14px;
+    min-height: 100dvh;
+    max-height: none;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
   }
