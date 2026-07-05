@@ -841,7 +841,7 @@
         parts.push(`<div class="tables-grid-area">${tables.map(renderTableCard).join("")}</div>`);
       }
     }
-    if (canAcceptOrdersWithoutPin()) {
+    if (activeWaiter?.id) {
       parts.push(renderOnlineZoneSection());
     }
     grid.innerHTML = parts.join("");
@@ -1196,7 +1196,7 @@
   }
 
   async function pollIncomingOrders() {
-    if (!canAcceptOrdersWithoutPin() || !slug || !kitchenKey) return;
+    if (!activeWaiter?.id || !slug || !kitchenKey) return;
     try {
       const pollUrl = `/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`;
       const data = await api(pollUrl);
@@ -1218,7 +1218,7 @@
 
   function startAcceptPolling() {
     if (acceptPollTimer) clearInterval(acceptPollTimer);
-    if (!canAcceptOrdersWithoutPin()) return;
+    if (!activeWaiter?.id) return;
     pollIncomingOrders();
     acceptPollTimer = setInterval(() => pollIncomingOrders(), 3000);
   }
