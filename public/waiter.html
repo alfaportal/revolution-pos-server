@@ -5,13 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f1b3d">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kamarieri">
+  <link rel="manifest" href="/waiter-manifest.json">
   <link rel="icon" type="image/png" href="/logo-source.png">
+  <link rel="apple-touch-icon" href="/logo-source.png">
   <title>Kamarieri — Revolution Invest POS</title>
   <link rel="stylesheet" href="/css/staff-brand.css">
-  <link rel="stylesheet" href="/css/waiter.css?v=4">
+  <link rel="stylesheet" href="/css/waiter.css?v=5">
   <link rel="stylesheet" href="/css/menu-pos.css?v=9">
 </head>
 <body>
+  <div id="waiter-splash" class="waiter-splash" role="status" aria-live="polite">
+    <img class="waiter-splash-logo" src="/logo-source.png" width="72" height="72" alt="Revolution Invest POS">
+    <p class="waiter-splash-label">Revolution Invest POS</p>
+  </div>
   <script>
     (function () {
       var p = new URLSearchParams(location.search);
@@ -229,6 +237,6 @@
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=5"></script>
   <script src="/js/waiter-calculator.js?v=1"></script>
-  <script src="/js/waiter.js?v=49"></script>
+  <script src="/js/waiter.js?v=50"></script>
 </body>
 </html>
