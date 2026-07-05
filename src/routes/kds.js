@@ -4,6 +4,10 @@ const { requirePackageFeature } = require("../middleware/packageTier");
 const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling, buildOnlineSlotLayout } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
+const {
+  getRegisterSwitchState,
+  applyRegisterCode,
+} = require("../services/registerSwitchService");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
 const { getWaiterByWebToken, getWaiterById, getWaiterByName } = require("../services/waiterPinService");
 const { getAssignmentState } = require("../services/waiterTablesService");
@@ -215,6 +219,27 @@ router.post("/:slug/orders/:orderId/ready", resolveKitchenClient, requirePackage
     const { markKitchenOrderReady } = require("../services/kdsService");
     const order = await markKitchenOrderReady(client.id, req.params.orderId);
     res.json({ ok: true, order });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/:slug/register-mode", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
+  try {
+    const state = await getRegisterSwitchState(req.kitchenClient.id);
+    res.json({ ok: true, ...state });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/:slug/register-switch", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
+  try {
+    const result = await applyRegisterCode(req.kitchenClient.id, req.body?.code);
+    if (!result.matched) {
+      return res.json({ ok: false, matched: false });
+    }
+    res.json({ ok: true, matched: true });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

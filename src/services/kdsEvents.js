@@ -39,7 +39,23 @@ function notifyKitchenUpdate(clientId, payload = {}) {
   }
 }
 
+/** Njoftim SSE për cilësime venue (p.sh. ndërrim arke fiskale/termike). */
+function notifyVenueSettingsUpdate(clientId, payload = {}) {
+  const id = String(clientId);
+  const set = subscribers.get(id);
+  if (!set?.size) return;
+  const data = JSON.stringify({ at: new Date().toISOString(), ...payload });
+  for (const res of set) {
+    try {
+      res.write(`event: settings\ndata: ${data}\n\n`);
+    } catch {
+      set.delete(res);
+    }
+  }
+}
+
 module.exports = {
   subscribe,
   notifyKitchenUpdate,
+  notifyVenueSettingsUpdate,
 };

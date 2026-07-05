@@ -35,6 +35,14 @@ function cut(partial = false) {
   return buf([GS, 0x56, partial ? 1 : 0]);
 }
 
+function cutWithFeed() {
+  return buf([GS, 0x56, 0x42, 0x00]);
+}
+
+function feedLines(n = 3) {
+  return buf([ESC, 0x64, Math.max(0, Math.min(255, n))]);
+}
+
 function feed(lines = 3) {
   return text("\n".repeat(Math.max(1, lines)));
 }
@@ -50,6 +58,11 @@ function latinizeForEscPos(str) {
     .replace(/€/g, " EUR")
     .replace(/…/g, "...")
     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?");
+}
+
+function appendEscPosCut(buffer) {
+  const base = Buffer.isBuffer(buffer) ? buffer : Buffer.alloc(0);
+  return concat(base, feedLines(3), cut(false), cutWithFeed());
 }
 
 /**
@@ -94,8 +107,7 @@ function buildEscPosFromLines(lines) {
     chunks.push(text(s), text("\n"), ...resets);
   }
 
-  chunks.push(buf([ESC, 0x64, 2]), cut(false));
-  return concat(...chunks);
+  return appendEscPosCut(concat(...chunks));
 }
 
 function toBase64(buffer) {
@@ -108,8 +120,11 @@ module.exports = {
   align,
   size,
   cut,
+  cutWithFeed,
   feed,
+  feedLines,
   line,
+  appendEscPosCut,
   buildEscPosFromLines,
   toBase64,
 };

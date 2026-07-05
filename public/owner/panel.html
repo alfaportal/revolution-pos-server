@@ -87,6 +87,7 @@
       <button class="tab active" data-tab="tavolinat">Tavolinat Live</button>
       <button class="tab" data-tab="faqja">Faqja publike</button>
       <button class="tab" data-tab="zreport">Raporti Ditor</button>
+      <button class="tab" data-tab="fiskale">Arka</button>
       <button class="tab" data-tab="licenca">Licenca</button>
       <button class="tab" data-tab="porosite">Porositë</button>
       <button class="tab" data-tab="stoku">Stoku</button>
@@ -565,6 +566,34 @@
         </div>
         <div id="fiscal-msg" class="owner-license-msg"></div>
       </div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Kodet e arkës</div>
+        <p class="owner-fiscal-intro">
+          Vendosni dy kode sekretë (4–6 shifra). Kamarieri i fut në tastierë të panelit — sistemi ndërron arkën pa e treguar modalitetin.
+          Vetëm ju i shihni dhe i ndryshoni këtu.
+        </p>
+        <div class="fiscal-status-row" style="margin-bottom:0.75rem">
+          <span class="fiscal-status-label">Arka aktive tani</span>
+          <span id="register-mode-badge" class="fiscal-conn-badge unknown">—</span>
+        </div>
+        <div class="hub-fiscal-form">
+          <div class="hub-fiscal-field">
+            <label for="register-code-fiscal">Kod fiskale</label>
+            <input type="password" id="register-code-fiscal" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="4–6 shifra">
+            <p class="hub-field-note">Kodi që aktivizon arkën fiskale ATK.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="register-code-thermal">Kod termike</label>
+            <input type="password" id="register-code-thermal" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="4–6 shifra">
+            <p class="hub-field-note">Kodi që aktivizon printerin termik.</p>
+          </div>
+        </div>
+        <div class="hub-fiscal-actions">
+          <button type="button" class="btn btn-primary" id="btn-register-codes-save">Ruaj kodet</button>
+        </div>
+        <div id="register-codes-msg" class="owner-license-msg"></div>
+      </div>
     </div>
 
     <div id="panel-ai-raporte" class="panel-section hidden">
@@ -962,7 +991,7 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=32"></script>
+  <script src="/js/owner.js?v=33"></script>
   <script src="/js/owner-locations.js?v=1"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
