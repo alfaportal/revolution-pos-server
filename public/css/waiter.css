@@ -275,18 +275,14 @@ html, body {
 
 .tables-grid-area {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
-}
-
-.tables-grid:not(:has(.waiter-area-block)) {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .table-card {
-  min-height: 108px;
+  min-height: 72px;
+  aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -340,8 +336,9 @@ html, body {
 
 .online-slots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .online-slot-card .online-slot-label {
@@ -1445,6 +1442,17 @@ html, body {
 .online-close-actions {
   margin-top: 0.25rem;
 }
+@media (max-width: 600px) {
+  .tables-grid-area,
+  .online-slots-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .table-card .num {
+    font-size: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
   html, body {
     width: 100%;
