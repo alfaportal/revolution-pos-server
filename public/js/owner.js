@@ -592,7 +592,30 @@ async function loadFiscalSettings() {
     if (model) model.value = settings.fiscal_device_model || "";
     if (enabled) enabled.checked = settings.fiscal_enabled !== false;
     await loadFiscalDiagnostics();
+    await loadRegisterSwitchState();
   } catch { /* */ }
+}
+
+function setRegisterModeBadge(mode, configured) {
+  const el = document.getElementById("register-mode-badge");
+  if (!el) return;
+  if (!configured) {
+    el.className = "fiscal-conn-badge unknown";
+    el.textContent = "Kodet nuk janë vendosur";
+    return;
+  }
+  const isFiscal = String(mode || "").toLowerCase() === "fiscal";
+  el.className = "fiscal-conn-badge " + (isFiscal ? "connected" : "disconnected");
+  el.textContent = isFiscal ? "Fiskale" : "Termike";
+}
+
+async function loadRegisterSwitchState() {
+  try {
+    const data = await api("/api/owner/register-switch");
+    setRegisterModeBadge(data.active_coupon_type, data.codes_configured);
+  } catch {
+    setRegisterModeBadge("thermal", false);
+  }
 }
 
 function setFiscalConnStatus(state, label) {
@@ -1997,6 +2020,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     if (tab.dataset.tab === "njoftimet") loadOwnerNotifications?.();
     if (tab.dataset.tab === "faqja") loadPublicPage();
     if (tab.dataset.tab === "zreport") loadZReport();
+    if (tab.dataset.tab === "fiskale") loadFiscalSettings();
     if (tab.dataset.tab === "licenca") loadLicense();
   });
 });
@@ -2065,6 +2089,65 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
       msg.className = "owner-license-msg ok";
     }
     await loadFiscalDiagnostics();
+  } catch (err) {
+    if (msg) {
+      msg.textContent = err.message;
+      msg.className = "owner-license-msg err";
+    }
+  }
+});
+
+document.getElementById("btn-register-codes-save")?.addEventListener("click", async () => {
+  const msg = document.getElementById("register-codes-msg");
+  const fiscal = document.getElementById("register-code-fiscal")?.value?.trim() || "";
+  const thermal = document.getElementById("register-code-thermal")?.value?.trim() || "";
+  if (msg) {
+    msg.textContent = "";
+    msg.className = "owner-license-msg";
+  }
+  if (!fiscal && !thermal) {
+    if (msg) {
+      msg.textContent = "Shkruani të paktën një kod.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  if (fiscal && !/^\d{4,6}$/.test(fiscal)) {
+    if (msg) {
+      msg.textContent = "Kodi fiskale duhet 4–6 shifra.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  if (thermal && !/^\d{4,6}$/.test(thermal)) {
+    if (msg) {
+      msg.textContent = "Kodi termike duhet 4–6 shifra.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  if (fiscal && thermal && fiscal === thermal) {
+    if (msg) {
+      msg.textContent = "Kodet duhet të jenë të ndryshme.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  try {
+    const body = {};
+    if (fiscal) body.fiscal_code = fiscal;
+    if (thermal) body.thermal_code = thermal;
+    const data = await api("/api/owner/register-switch/codes", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+    if (document.getElementById("register-code-fiscal")) document.getElementById("register-code-fiscal").value = "";
+    if (document.getElementById("register-code-thermal")) document.getElementById("register-code-thermal").value = "";
+    setRegisterModeBadge(data.active_coupon_type, data.codes_configured);
+    if (msg) {
+      msg.textContent = "Kodet u ruajtën.";
+      msg.className = "owner-license-msg ok";
+    }
   } catch (err) {
     if (msg) {
       msg.textContent = err.message;

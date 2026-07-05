@@ -22,6 +22,11 @@ const {
 } = require("../services/zReportService");
 const { getFiscalSettings, updateFiscalSettings, getFiscalDiagnostics } = require("../services/fiscalService");
 const {
+  getRegisterSwitchState,
+  setRegisterCodes,
+  applyRegisterCode,
+} = require("../services/registerSwitchService");
+const {
   listOwnerMenu,
   addMenuItem,
   updateMenuItem,
@@ -356,6 +361,24 @@ router.patch("/fiscal/settings", async (req, res) => {
   try {
     const settings = await updateFiscalSettings(req.user.client_id, req.body);
     res.json({ ok: true, settings });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/register-switch", async (req, res) => {
+  try {
+    const state = await getRegisterSwitchState(req.user.client_id);
+    res.json({ ok: true, ...state });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.patch("/register-switch/codes", async (req, res) => {
+  try {
+    const state = await setRegisterCodes(req.user.client_id, req.body);
+    res.json({ ok: true, ...state });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
   }
