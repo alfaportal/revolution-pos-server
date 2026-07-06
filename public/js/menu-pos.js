@@ -6,7 +6,14 @@
 
   function categoryMatchesGroup(category, group) {
     if (!group || group === "all") return true;
+    if (group === "pije") return isDrinkCat(category);
+    if (group === "ushqim") return !isDrinkCat(category);
     return normCat(category) === normCat(group);
+  }
+
+  function isDrinkCat(name) {
+    var n = normCat(name);
+    return n.startsWith("pije") || n.includes("alkool") || n.includes("alkoolike") || n.includes("birr");
   }
 
   const EMOJI_RULES = [
@@ -217,13 +224,60 @@
     activate(initial);
   }
 
+  function isDrinkCategory(name) {
+    const n = normCat(name);
+    return n.startsWith("pije") || n.includes("alkool") || n.includes("alkoolike") || n.includes("birr");
+  }
+
+  function ensureGroupBarIcons(barEl) {
+    if (!barEl) return;
+    barEl.querySelectorAll(".menu-group-btn").forEach(btn => {
+      const group = btn.dataset.group || "pije";
+      const icons = { pije: "🥤", ushqim: "🍽️" };
+      if (btn.querySelector(".menu-tab-icon")) return;
+      const label = btn.textContent.trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim() || group;
+      btn.textContent = "";
+      const icon = document.createElement("span");
+      icon.className = "menu-tab-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = icons[group] || "📋";
+      const text = document.createElement("span");
+      text.className = "menu-tab-label";
+      text.textContent = label;
+      btn.appendChild(icon);
+      btn.appendChild(text);
+    });
+  }
+
+  function bindGroupBar(barEl, onChange, opts) {
+    if (!barEl) return;
+    ensureGroupBarIcons(barEl);
+    var defaultGroup = (opts && opts.defaultGroup) || "pije";
+    var buttons = [].slice.call(barEl.querySelectorAll(".menu-group-btn"));
+    function activate(group) {
+      buttons.forEach(function(b) {
+        b.classList.toggle("active", (b.dataset.group || "") === group);
+      });
+      onChange(group);
+    }
+    buttons.forEach(function(btn) {
+      btn.addEventListener("click", function() { activate(btn.dataset.group || "pije"); });
+    });
+    var initial = buttons.some(function(b) { return b.dataset.group === defaultGroup; })
+      ? defaultGroup
+      : (buttons[0] && buttons[0].dataset.group || "pije");
+    activate(initial);
+  }
+
   root.MenuPosUI = {
     categoryMatchesGroup,
     categoryIcon,
+    isDrinkCategory,
     itemEmoji,
     renderMenuGrid,
     renderMenuSections: renderMenuGrid,
     buildCategoryTabs,
+    bindGroupBar,
     flashButton(btn) {
       if (!btn) return;
       btn.classList.add("menu-item-flash");
