@@ -315,13 +315,13 @@
   function saveWaiterSession() {
     if (!activeWaiter || !slug) return;
     try {
-      sessionStorage.setItem(WAITER_SESSION_KEY, JSON.stringify(activeWaiter));
+      localStorage.setItem(WAITER_SESSION_KEY, JSON.stringify(activeWaiter));
     } catch { /* ignore */ }
   }
 
   function loadWaiterSession() {
     try {
-      const raw = sessionStorage.getItem(WAITER_SESSION_KEY);
+      const raw = localStorage.getItem(WAITER_SESSION_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
@@ -330,7 +330,7 @@
 
   function clearWaiterSession() {
     try {
-      sessionStorage.removeItem(WAITER_SESSION_KEY);
+      localStorage.removeItem(WAITER_SESSION_KEY);
     } catch { /* ignore */ }
   }
 
@@ -2035,7 +2035,7 @@
         return;
       }
       const restored = loadWaiterSession();
-      if (restored?.id && restored?.name && !navigator.onLine) {
+      if (restored?.id && restored?.name) {
         enterWaiterSession(restored);
         return;
       }
