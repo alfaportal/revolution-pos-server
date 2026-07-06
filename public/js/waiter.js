@@ -1621,12 +1621,14 @@
       if ($("screen-order").classList.contains("active") && tableNumber > 0) {
         const liveTable = (bootstrap.tables || []).find(t => Number(t.number) === Number(tableNumber));
         if (!liveTable || liveTable.status !== "occupied") {
-          tableNumber = 0;
-          cart = [];
-          showOrderMsg("", false);
-          $("cart-bar")?.classList.add("hidden");
-          $("screen-order")?.classList.remove("has-cart");
-          showScreen("screen-tables");
+          // Mos e nxjerr kamarierit nëse ka artikuj në shportë ose sapo e hapi tavolinën
+          if (!cart.length) {
+            tableNumber = 0;
+            showOrderMsg("", false);
+            $("cart-bar")?.classList.add("hidden");
+            $("screen-order")?.classList.remove("has-cart");
+            showScreen("screen-tables");
+          }
         }
       }
       if ($("screen-order").classList.contains("active")) {
@@ -1855,22 +1857,31 @@
     const closedTable = tableNumber;
     tableClosing = true;
     try {
-      const closeItems = getCloseTableItems(closedTable);
-      cart = [];
-      renderCart();
-
-      if (!closeItems.length) {
-        showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
-        return;
+      // Nëse ka artikuj në shportë, dërgoji si porosi para mbylljes
+      if (cart.length) {
+        await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
+          method: "POST",
+          body: JSON.stringify({
+            ...waiterPayload(),
+            table_number: closedTable,
+            items: cart.map(c => ({
+              name: c.name,
+              quantity: c.quantity,
+              price: c.price,
+            })),
+          }),
+        });
+        cart = [];
+        renderCart();
       }
 
+      // Mbyll tavolinën PA items — serveri i ka tashmë
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           ...waiterPayload(),
           table_number: closedTable,
           payment_method: paymentMethod,
-          items: closeItems,
         }),
       });
       cart = [];
