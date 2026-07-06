@@ -870,6 +870,26 @@
       tabBar.id = "menu-cat-bar";
       grid.parentElement.insertBefore(tabBar, grid);
       var categories = [...new Set(menu.map(function(m){ return m.category; }).filter(Boolean))];
+
+      // Radhit kategorit në renditje logjike
+      var catOrder = [
+        "pije të nxehta", "pije te nxehta",
+        "pije të ftohta", "pije te ftohta",
+        "birra",
+        "alkohole vera", "alkohole & vera",
+        "ushqime", "ushqim",
+        "ëmbëlsira", "embelsira",
+        "snacks",
+        "tjera"
+      ];
+      categories.sort(function(a, b) {
+        var ai = catOrder.indexOf(a.toLowerCase().trim());
+        var bi = catOrder.indexOf(b.toLowerCase().trim());
+        if (ai === -1) ai = 999;
+        if (bi === -1) bi = 999;
+        return ai - bi;
+      });
+
       if (categories.length) {
         menuGroupFilter = categories[0];
         MenuPosUI.buildCategoryTabs(tabBar, categories, function(cat) {
