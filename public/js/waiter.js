@@ -66,6 +66,7 @@
   let successToastTimer = null;
   let cartLinesBound = false;
   let idleTimer = null;
+  let wakeLock = null;
   const reservationNotified = new Set();
   let reservationCheckTimer = null;
 
@@ -1403,6 +1404,31 @@
     showReceipt({ html, paper_width_mm: 80 });
   }
 
+  // ---- Wake Lock — mban ekranin ndezur ----
+  async function requestWakeLock() {
+    try {
+      if (!("wakeLock" in navigator)) return;
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", function() { wakeLock = null; });
+    } catch (e) {
+      console.log("[waiter] wake lock denied:", e.message);
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      try { wakeLock.release(); } catch(e) {}
+      wakeLock = null;
+    }
+  }
+
+  // Ri-kërko wake lock kur faqja kthehet visible (pas tab switch)
+  document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === "visible" && activeWaiter) {
+      requestWakeLock();
+    }
+  });
+
   function enterWaiterSession(waiter) {
     activeWaiter = { id: waiter.id, name: waiter.name };
     saveWaiterSession();
@@ -1414,6 +1440,7 @@
     scheduleIdleLock();
     startAcceptPolling();
     connectWaiterSse();
+    requestWakeLock();
     showScreen("screen-tables");
   }
 
@@ -1424,6 +1451,7 @@
     onlineSlots = [];
     renderPendingOnlineBanner();
     clearIdleTimer();
+    releaseWakeLock();
     activeWaiter = null;
     clearWaiterSession();
     tableNumber = 0;
