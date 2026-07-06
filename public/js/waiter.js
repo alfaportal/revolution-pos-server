@@ -868,9 +868,7 @@
       tabBar = document.createElement("div");
       tabBar.id = "menu-cat-bar";
       grid.parentElement.insertBefore(tabBar, grid);
-      var categories = (typeof MenuCatalog !== "undefined")
-        ? MenuCatalog.getCategoryList(bootstrap)
-        : [...new Set(menu.map(function(m){ return m.category; }).filter(Boolean))];
+      var categories = [...new Set(menu.map(function(m){ return m.category; }).filter(Boolean))];
       if (categories.length) {
         menuGroupFilter = categories[0];
         MenuPosUI.buildCategoryTabs(tabBar, categories, function(cat) {
