@@ -1764,9 +1764,9 @@ body.has-desktop-calc-footer #screen-order .waiter-main {
   inset: 0;
   z-index: 1100;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
 }
 
 .calc-modal.hidden { display: none !important; }
@@ -1774,17 +1774,25 @@ body.has-desktop-calc-footer #screen-order .waiter-main {
 .calc-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 10, 30, 0.78);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .calc-modal-card {
   position: relative;
-  width: min(320px, 100%);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  width: 100%;
+  max-width: 400px;
+  background: #1a1a2e;
+  border-radius: 24px 24px 0 0;
+  padding: 1.25rem 1rem 1.5rem;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+  animation: calcSlideUp 0.25s ease-out;
+}
+
+@keyframes calcSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .calc-modal-head {
@@ -1792,79 +1800,155 @@ body.has-desktop-calc-footer #screen-order .waiter-main {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
 .calc-modal-head h2 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.04em;
 }
 
 .calc-modal-close {
   border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.15rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.calc-modal-close:active {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .calc-display {
-  background: #0b1220;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.85rem 0.75rem;
-  margin-bottom: 0.75rem;
-  font-size: 1.75rem;
-  font-weight: 700;
+  background: #0f0f23;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1rem 1rem;
+  margin-bottom: 0.85rem;
+  font-size: 2.2rem;
+  font-weight: 300;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  min-height: 2.75rem;
+  min-height: 3.25rem;
   word-break: break-all;
+  color: #ffffff;
+  letter-spacing: 0.02em;
 }
 
 .calc-keys {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .calc-key {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #243044;
-  color: var(--text);
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.85rem 0.25rem;
+  border: none;
+  border-radius: 14px;
+  background: #2a2a40;
+  color: #e2e8f0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  padding: 1rem 0.25rem;
   cursor: pointer;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, transform 0.1s;
 }
 
 .calc-key:active {
-  transform: scale(0.97);
-  background: #334155;
+  transform: scale(0.93);
+  background: #3d3d5c;
 }
 
 .calc-key-op {
   background: #1e3a5f;
-  color: #93c5fd;
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.calc-key-op:active {
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .calc-key-fn {
-  background: #3f2d2d;
+  background: #4a2020;
   color: #fca5a5;
+  font-weight: 600;
+}
+
+.calc-key-fn:active {
+  background: #7f1d1d;
 }
 
 .calc-key-eq {
   grid-column: 1 / -1;
-  background: var(--accent);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #fff;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 1rem;
+  border-radius: 14px;
+  letter-spacing: 0.02em;
 }
 
 .calc-key-eq:active {
-  background: var(--accent-dark);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: scale(0.97);
+}
+
+/* Desktop — karta në qendër */
+@media (min-width: 521px) {
+  .calc-modal {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .calc-modal-card {
+    border-radius: 24px;
+    max-width: 340px;
+    animation: calcFadeIn 0.2s ease-out;
+  }
+
+  @keyframes calcFadeIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}
+
+/* Telefon — butona ma të mëdha */
+@media (max-width: 520px) {
+  .calc-modal-card {
+    padding: 1rem 0.75rem calc(1rem + var(--safe-bottom, 0px));
+  }
+
+  .calc-display {
+    font-size: 2rem;
+    padding: 0.85rem 0.85rem;
+    border-radius: 14px;
+  }
+
+  .calc-key {
+    padding: 0.9rem 0.2rem;
+    font-size: 1.1rem;
+    border-radius: 12px;
+  }
+
+  .calc-keys {
+    gap: 0.4rem;
+  }
+
+  .calc-key-eq {
+    padding: 0.9rem;
+    font-size: 1.2rem;
+    border-radius: 12px;
+  }
 }

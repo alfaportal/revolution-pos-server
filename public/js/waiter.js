@@ -861,17 +861,44 @@
       grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
       return;
     }
+
+    // Ndërto tab-bar nëse nuk ekziston ende
+    var tabBar = grid.parentElement.querySelector("#menu-cat-bar");
+    if (!tabBar) {
+      tabBar = document.createElement("div");
+      tabBar.id = "menu-cat-bar";
+      grid.parentElement.insertBefore(tabBar, grid);
+      var categories = (typeof MenuCatalog !== "undefined")
+        ? MenuCatalog.getCategoryList(bootstrap)
+        : [...new Set(menu.map(function(m){ return m.category; }).filter(Boolean))];
+      if (categories.length) {
+        menuGroupFilter = categories[0];
+        MenuPosUI.buildCategoryTabs(tabBar, categories, function(cat) {
+          menuGroupFilter = cat;
+          renderMenuItems();
+        }, menuGroupFilter);
+      }
+    }
+    renderMenuItems();
+  }
+
+  function renderMenuItems() {
+    var menu = bootstrap?.menu || [];
+    var grid = $("menu-grid");
+    if (!grid) return;
     MenuPosUI.renderMenuGrid({
       container: grid,
       menuItems: menu,
       groupFilter: menuGroupFilter,
-      formatEuro,
+      formatEuro: formatEuro,
       getPhotoUrl: kitchenPhotoUrl,
-      onSelectItem: (item, btn) => addToCart({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price),
-      }, btn),
+      onSelectItem: function(item, btn) {
+        addToCart({
+          id: item.id,
+          name: item.name,
+          price: Number(item.price),
+        }, btn);
+      },
     });
   }
 
@@ -1782,25 +1809,10 @@
     const closedTable = tableNumber;
     tableClosing = true;
     try {
-      if (cart.length) {
-        await api(`/api/waiter/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
-          method: "POST",
-          body: JSON.stringify({
-            ...waiterPayload(),
-            table_number: closedTable,
-            items: cart.map(c => ({
-              name: c.name,
-              quantity: c.quantity,
-              price: c.price,
-            })),
-          }),
-        });
-        cart = [];
-        renderCart();
-        await refreshBootstrap();
-      }
-
       const closeItems = getCloseTableItems(closedTable);
+      cart = [];
+      renderCart();
+
       if (!closeItems.length) {
         showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
         return;

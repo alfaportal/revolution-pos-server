@@ -1,18 +1,12 @@
-/** UI e menusë mobile — kamarier + QR tavolinë. Grid foto-first, Pije / Ushqim. */
+/** UI e menusë mobile — kamarier + QR tavolinë. Grid foto-first, kategori dinamike. */
 (function (root) {
   function normCat(name) {
     return String(name || "").trim().toLowerCase();
   }
 
-  function isDrinkCategory(name) {
-    const n = normCat(name);
-    return n.startsWith("pije") || n.includes("alkool") || n.includes("alkoolike");
-  }
-
   function categoryMatchesGroup(category, group) {
-    if (group === "pije") return isDrinkCategory(category);
-    if (group === "ushqim") return !isDrinkCategory(category);
-    return true;
+    if (!group || group === "all") return true;
+    return normCat(category) === normCat(group);
   }
 
   const EMOJI_RULES = [
@@ -39,18 +33,43 @@
     [/taco|burrito|mex/, "🌮"],
   ];
 
-  const GROUP_TABS = {
-    pije: { icon: "🥤", label: "Pije" },
-    ushqim: { icon: "🍽️", label: "Ushqim" },
+  /** Emoji për secilën kategori (sipas emrit) */
+  const CATEGORY_ICONS = {
+    "pije të nxehta": "☕",
+    "pije te nxehta": "☕",
+    "pije të ftohta": "🥤",
+    "pije te ftohta": "🥤",
+    "birra": "🍺",
+    "alkohole vera": "🍷",
+    "alkohole & vera": "🍷",
+    "ushqime": "🍔",
+    "ushqim": "🍔",
+    "ëmbëlsira": "🍰",
+    "embelsira": "🍰",
+    "snacks": "🍿",
+    "tjera": "📦",
   };
+
+  function categoryIcon(catName) {
+    const n = normCat(catName);
+    if (CATEGORY_ICONS[n]) return CATEGORY_ICONS[n];
+    if (n.includes("pije") && n.includes("nxeht")) return "☕";
+    if (n.includes("pije") && n.includes("ftoht")) return "🥤";
+    if (n.includes("pije")) return "🥤";
+    if (n.includes("birr")) return "🍺";
+    if (n.includes("alkool") || n.includes("ver")) return "🍷";
+    if (n.includes("ushqi")) return "🍔";
+    if (n.includes("mbëlsir") || n.includes("mbelsir") || n.includes("dessert")) return "🍰";
+    if (n.includes("snack")) return "🍿";
+    return "📋";
+  }
 
   function itemEmoji(item) {
     const name = normCat(item?.name);
     for (const [re, emoji] of EMOJI_RULES) {
       if (re.test(name)) return emoji;
     }
-    if (isDrinkCategory(item?.category)) return "🥤";
-    return "🍽️";
+    return categoryIcon(item?.category) || "🍽️";
   }
 
   function itemHasPhoto(item) {
@@ -142,55 +161,69 @@
     container.appendChild(grid);
   }
 
-  function ensureGroupBarIcons(barEl) {
+  /**
+   * Ndërto tab-bar dinamike nga lista e kategorive.
+   * @param {HTMLElement} barEl - kontejneri ku shtohen tab-at
+   * @param {string[]} categories - lista e kategorive nga bootstrap
+   * @param {function} onChange - thirret me emrin e kategorisë kur klikohet
+   * @param {string} [defaultCat] - kategoria fillestare
+   */
+  function buildCategoryTabs(barEl, categories, onChange, defaultCat) {
     if (!barEl) return;
-    barEl.querySelectorAll(".menu-group-btn").forEach(btn => {
-      const group = btn.dataset.group || "pije";
-      const tab = GROUP_TABS[group] || { icon: "📋", label: group };
-      if (btn.querySelector(".menu-tab-icon")) return;
-      const label = btn.textContent.trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim() || tab.label;
-      btn.textContent = "";
+    barEl.innerHTML = "";
+    if (!categories || !categories.length) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "menu-cat-tabs";
+
+    categories.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "menu-cat-tab";
+      btn.dataset.category = cat;
+
       const icon = document.createElement("span");
       icon.className = "menu-tab-icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.textContent = tab.icon;
-      const text = document.createElement("span");
-      text.className = "menu-tab-label";
-      text.textContent = label;
+      icon.textContent = categoryIcon(cat);
+
+      const label = document.createElement("span");
+      label.className = "menu-tab-label";
+      label.textContent = cat;
+
       btn.appendChild(icon);
-      btn.appendChild(text);
+      btn.appendChild(label);
+      wrap.appendChild(btn);
     });
-  }
 
-  function bindGroupBar(barEl, onChange, { defaultGroup = "pije" } = {}) {
-    if (!barEl) return;
-    ensureGroupBarIcons(barEl);
-    const buttons = [...barEl.querySelectorAll(".menu-group-btn")];
+    barEl.appendChild(wrap);
 
-    function activate(group) {
+    const buttons = [...wrap.querySelectorAll(".menu-cat-tab")];
+
+    function activate(catName) {
       buttons.forEach(b => {
-        b.classList.toggle("active", (b.dataset.group || "") === group);
+        b.classList.toggle("active", b.dataset.category === catName);
       });
-      onChange(group);
+      onChange(catName);
     }
 
     buttons.forEach(btn => {
-      btn.addEventListener("click", () => activate(btn.dataset.group || "pije"));
+      btn.addEventListener("click", () => activate(btn.dataset.category));
     });
 
-    const initial = buttons.some(b => b.dataset.group === defaultGroup)
-      ? defaultGroup
-      : (buttons[0]?.dataset.group || "pije");
+    const initial = defaultCat && categories.includes(defaultCat)
+      ? defaultCat
+      : categories[0];
     activate(initial);
   }
 
   root.MenuPosUI = {
     categoryMatchesGroup,
-    isDrinkCategory,
+    categoryIcon,
     itemEmoji,
     renderMenuGrid,
     renderMenuSections: renderMenuGrid,
-    bindGroupBar,
+    buildCategoryTabs,
     flashButton(btn) {
       if (!btn) return;
       btn.classList.add("menu-item-flash");
