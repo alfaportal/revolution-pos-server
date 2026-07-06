@@ -1619,17 +1619,7 @@
         hint.textContent = `Menuja u sinkronizua: ${new Date(bootstrap.synced_at).toLocaleString("sq-AL")}`;
       }
       if ($("screen-order").classList.contains("active") && tableNumber > 0) {
-        const liveTable = (bootstrap.tables || []).find(t => Number(t.number) === Number(tableNumber));
-        if (!liveTable || liveTable.status !== "occupied") {
-          // Mos e nxjerr kamarierit nëse ka artikuj në shportë ose sapo e hapi tavolinën
-          if (!cart.length) {
-            tableNumber = 0;
-            showOrderMsg("", false);
-            $("cart-bar")?.classList.add("hidden");
-            $("screen-order")?.classList.remove("has-cart");
-            showScreen("screen-tables");
-          }
-        }
+        // Mos e nxjerr kamarierit automatikisht — ai kthehet vetë me butonin ← Tavolinat
       }
       if ($("screen-order").classList.contains("active")) {
         renderMenu();
