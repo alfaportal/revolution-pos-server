@@ -51,7 +51,7 @@
       </button>
       <button type="button" class="tab nav-tile" data-tab="zreport">
         <span class="nav-icon" aria-hidden="true">📊</span>
-        <span class="nav-label">Raporti Ditor</span>
+        <span class="nav-label">Raportet X/Z</span>
       </button>
       <button type="button" class="tab nav-tile" data-tab="fiskale">
         <span class="nav-icon" aria-hidden="true">🧾</span>
@@ -148,6 +148,16 @@
             <label for="menu-add-price">Çmimi (€)</label>
             <input type="number" id="menu-add-price" min="0" step="0.01" placeholder="0.00">
           </div>
+          <div>
+            <label for="menu-add-vat">TVSH</label>
+            <select id="menu-add-vat">
+              <option value="A">A — 18%</option>
+              <option value="B">B — 8%</option>
+              <option value="C">C — 0%</option>
+              <option value="D">D — Përjashtuar</option>
+              <option value="E">E — Tjetër</option>
+            </select>
+          </div>
           <button type="button" class="btn btn-primary btn-sm" id="btn-menu-add">Shto</button>
         </div>
         <div id="menu-msg" class="owner-license-msg"></div>
@@ -160,7 +170,7 @@
           <table class="menu-owner-table">
             <thead>
               <tr>
-                <th>Foto</th><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>Statusi</th><th class="col-actions">Veprime</th>
+                <th>Foto</th><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>TVSH</th><th>Statusi</th><th class="col-actions">Veprime</th>
               </tr>
             </thead>
             <tbody id="menu-items-body"></tbody>
@@ -485,22 +495,59 @@
     <div id="panel-zreport" class="panel-section hidden">
       <div class="card">
         <div class="card-title card-title-row">
-          <span>Raporti Ditor (Z-Report)</span>
+          <span id="zreport-title">Raporti Ditor (Z-Report)</span>
           <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-report-view-x">Raporti X</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-report-view-z">Raporti Z</button>
             <input type="date" id="zreport-date" style="max-width:10rem">
             <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-refresh">Rifresko</button>
             <button type="button" class="btn btn-primary btn-sm" id="btn-zreport-close">Mbyll ditën</button>
           </div>
         </div>
-        <p class="links-hint">Kuponët fiskalë ATK — qarkullimi, TVSH (A–E), gjendja e arkës. E njëjta për çdo biznes të regjistruar.</p>
+        <p class="links-hint" id="zreport-hint">Raporti X — gjendja e tashme e ditës, i printueshëm në çdo kohë, PA mbyllur asgjë. Raporti Z — mbyllja përfundimtare e ditës, me barazimin e arkës.</p>
         <div id="zreport-summary" class="zreport-summary"></div>
         <div id="zreport-vat" class="zreport-vat"></div>
         <div class="zreport-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-print">Printo Z-Report</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-print">Printo</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-csv">Export Excel (CSV)</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-html">Export PDF (HTML)</button>
         </div>
-        <div class="overflow-x" style="margin-top:1rem">
+
+        <div id="zreport-cash-section">
+        <div class="card-title" style="margin-top:1.25rem">Barazimi i arkës</div>
+        <div class="filter-row">
+          <div>
+            <label for="zreport-opening-float">Paraja e nisjes (€)</label>
+            <input type="number" id="zreport-opening-float" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-zreport-opening-save">Ruaj paranë e nisjes</button>
+        </div>
+        <div id="zreport-cash-summary" class="zreport-summary"></div>
+        <div class="filter-row">
+          <div>
+            <label for="zreport-closing-actual">Paraja e numëruar në mbyllje (€)</label>
+            <input type="number" id="zreport-closing-actual" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div style="flex:2">
+            <label for="zreport-diff-reason">Arsyeja e diferencës (nëse ka)</label>
+            <input type="text" id="zreport-diff-reason" placeholder="p.sh. kusur i gabuar, shpenzim i paregjistruar...">
+          </div>
+        </div>
+        <p class="links-hint">Plotësoni paranë e numëruar dhe arsyen (nëse ka diferencë) PARA se të klikoni "Mbyll ditën" më sipër.</p>
+        </div>
+
+        <div class="card-title" style="margin-top:1.25rem">Shitjet sipas kategorisë</div>
+        <div class="overflow-x">
+          <table><thead><tr><th>Kategoria</th><th>Totali</th></tr></thead><tbody id="zreport-by-category"></tbody></table>
+        </div>
+
+        <div class="card-title" style="margin-top:1.25rem">Shitjet sipas kamarierit</div>
+        <div class="overflow-x">
+          <table><thead><tr><th>Kamarieri</th><th>Porosi</th><th>Totali</th></tr></thead><tbody id="zreport-by-waiter"></tbody></table>
+        </div>
+
+        <div class="card-title" style="margin-top:1.25rem">Shitjet e ditës</div>
+        <div class="overflow-x">
           <table>
             <thead>
               <tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Pagesa</th><th>Kupon fiskal</th><th>Statusi</th></tr>
@@ -553,6 +600,11 @@
             <label for="fiscal-model">Modeli i arkës fiskale</label>
             <input type="text" id="fiscal-model" placeholder="p.sh. Fiscal Albania FA-500" autocomplete="off">
             <p class="hub-field-note">Marka dhe modeli i arkës (opsionale) — për referencë teknike.</p>
+          </div>
+          <div class="hub-fiscal-field">
+            <label for="fiscal-pef-serial">Numri serial i PEF</label>
+            <input type="text" id="fiscal-pef-serial" class="mono" placeholder="p.sh. PEF-00012345" autocomplete="off">
+            <p class="hub-field-note">Numri serial i Pajisjes Elektronike Fiskale (PEF) — shfaqet në Raportin X dhe Z.</p>
           </div>
         </div>
         <label class="hub-check hub-fiscal-check">
@@ -737,6 +789,21 @@
               <tr><th>Ora</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th></tr>
             </thead>
             <tbody id="report-table"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Regjistri i veprimeve (Audit log)</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-audit-log-refresh">Rifresko</button>
+        </div>
+        <p class="links-hint">Çdo ndryshim çmimi te menuja regjistrohet automatikisht këtu — çmimi i vjetër, i ri, kush e ndryshoi dhe kur.</p>
+        <div class="overflow-x">
+          <table>
+            <thead>
+              <tr><th>Koha</th><th>Veprimi</th><th>Artikulli</th><th>Detajet</th><th>Kush</th></tr>
+            </thead>
+            <tbody id="audit-log-body"></tbody>
           </table>
         </div>
       </div>

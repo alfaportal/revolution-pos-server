@@ -508,6 +508,37 @@ async function loadReport() {
     : '<tr><td colspan="4" style="color:var(--muted)">—</td></tr>';
 }
 
+const AUDIT_ACTION_LABELS = {
+  menu_price_change: "Ndryshim çmimi",
+};
+
+function auditActionDetails(entry) {
+  if (entry.action === "menu_price_change") {
+    const d = entry.details || {};
+    return `${euro(d.old_price)} → ${euro(d.new_price)}`;
+  }
+  return JSON.stringify(entry.details || {});
+}
+
+async function loadAuditLog() {
+  const body = document.getElementById("audit-log-body");
+  if (!body) return;
+  try {
+    const { entries } = await api("/api/owner/audit-log?limit=100");
+    body.innerHTML = (entries || []).length
+      ? entries.map(e => `<tr>
+          <td>${fmtTime(e.created_at)}</td>
+          <td>${AUDIT_ACTION_LABELS[e.action] || escHtml(e.action)}</td>
+          <td>${escHtml(e.target_label || "—")}</td>
+          <td>${escHtml(auditActionDetails(e))}</td>
+          <td>${escHtml(e.actor_email || "—")}</td>
+        </tr>`).join("")
+      : '<tr><td colspan="5" style="color:var(--muted)">Nuk ka veprime të regjistruara.</td></tr>';
+  } catch {
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Gabim gjatë ngarkimit.</td></tr>';
+  }
+}
+
 function formatLicenseKey(raw) {
   const clean = String(raw || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 16);
   const parts = [];
@@ -590,17 +621,40 @@ const VAT_LABELS = {
   E: "E — Tjeter",
 };
 
+let currentReportMode = "Z";
+
 function zReportDate() {
   const el = document.getElementById("zreport-date");
   return el?.value || new Date().toISOString().slice(0, 10);
+}
+
+function reportApiPath() {
+  return currentReportMode === "X" ? "x-report" : "z-report";
+}
+
+function applyReportModeUi() {
+  const isX = currentReportMode === "X";
+  const title = document.getElementById("zreport-title");
+  if (title) title.textContent = isX ? "Raporti X (i përkohshëm)" : "Raporti Ditor (Z-Report)";
+  const cashSection = document.getElementById("zreport-cash-section");
+  if (cashSection) cashSection.classList.toggle("hidden", isX);
+  const closeBtn = document.getElementById("btn-zreport-close");
+  if (closeBtn) closeBtn.classList.toggle("hidden", isX);
+  const btnX = document.getElementById("btn-report-view-x");
+  const btnZ = document.getElementById("btn-report-view-z");
+  if (btnX) btnX.classList.toggle("btn-primary", isX);
+  if (btnZ) btnZ.classList.toggle("btn-primary", !isX);
 }
 
 function renderZReport(report) {
   currentZReport = report;
   const summary = document.getElementById("zreport-summary");
   if (summary) {
+    const range = report.receipt_number_range || {};
     summary.innerHTML = `
       <div class="zreport-stat"><div class="lbl">Kuponë fiskalë</div><div class="val">${report.coupon_count ?? 0}</div></div>
+      <div class="zreport-stat"><div class="lbl">Rangu i kuponëve</div><div class="val">${range.from || "—"} – ${range.to || "—"}</div></div>
+      <div class="zreport-stat"><div class="lbl">Nr. Serial PEF</div><div class="val">${report.pef_serial_number || "—"}</div></div>
       <div class="zreport-stat"><div class="lbl">Qarkullimi ditor</div><div class="val">${euro(report.turnover_total)}</div></div>
       <div class="zreport-stat"><div class="lbl">Totali pa TVSH</div><div class="val">${euro(report.turnover_net)}</div></div>
       <div class="zreport-stat"><div class="lbl">TVSH total</div><div class="val">${euro(report.turnover_vat)}</div></div>
@@ -618,6 +672,43 @@ function renderZReport(report) {
     }).join("");
     vatEl.innerHTML = `<strong>TVSH breakdown (A–E)</strong>
       <table><thead><tr><th>Kategoria</th><th>Neto</th><th>TVSH</th><th>Bruto</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  const openingEl = document.getElementById("zreport-opening-float");
+  if (openingEl) openingEl.value = report.opening_float != null ? Number(report.opening_float).toFixed(2) : "";
+  const closingEl = document.getElementById("zreport-closing-actual");
+  if (closingEl) closingEl.value = report.closing_cash_actual != null ? Number(report.closing_cash_actual).toFixed(2) : "";
+  const reasonEl = document.getElementById("zreport-diff-reason");
+  if (reasonEl) reasonEl.value = report.cash_difference_reason || "";
+
+  const cashSummaryEl = document.getElementById("zreport-cash-summary");
+  if (cashSummaryEl) {
+    if (report.opening_float == null) {
+      cashSummaryEl.innerHTML = '<p style="color:var(--muted)">Vendosni paranë e nisjes së arkës për ditën për të parë barazimin.</p>';
+    } else {
+      const diff = report.cash_difference;
+      cashSummaryEl.innerHTML = `
+        <div class="zreport-stat"><div class="lbl">Paraja e nisjes</div><div class="val">${euro(report.opening_float)}</div></div>
+        <div class="zreport-stat"><div class="lbl">Paraja e pritshme</div><div class="val">${euro(report.expected_closing_cash)}</div></div>
+        ${report.closing_cash_actual != null ? `<div class="zreport-stat"><div class="lbl">Paraja e numëruar</div><div class="val">${euro(report.closing_cash_actual)}</div></div>` : ""}
+        ${diff != null ? `<div class="zreport-stat"><div class="lbl">Diferenca</div><div class="val">${euro(diff)}</div></div>` : ""}`;
+    }
+  }
+
+  const categoryEl = document.getElementById("zreport-by-category");
+  if (categoryEl) {
+    const rows = report.by_category || [];
+    categoryEl.innerHTML = rows.length
+      ? rows.map(c => `<tr><td>${c.category}</td><td class="num">${euro(c.total)}</td></tr>`).join("")
+      : '<tr><td colspan="2" style="color:var(--muted)">Nuk ka të dhëna.</td></tr>';
+  }
+
+  const waiterEl = document.getElementById("zreport-by-waiter");
+  if (waiterEl) {
+    const rows = report.by_waiter || [];
+    waiterEl.innerHTML = rows.length
+      ? rows.map(w => `<tr><td>${w.waiter_name}</td><td class="num">${w.order_count}</td><td class="num">${euro(w.total_sales)}</td></tr>`).join("")
+      : '<tr><td colspan="3" style="color:var(--muted)">Nuk ka të dhëna.</td></tr>';
   }
 
   const salesEl = document.getElementById("zreport-sales");
@@ -657,10 +748,11 @@ async function loadZReportHistory() {
 }
 
 async function loadZReport() {
+  applyReportModeUi();
   const date = zReportDate();
-  const { report } = await api(`/api/owner/z-report?date=${encodeURIComponent(date)}`);
+  const { report } = await api(`/api/owner/${reportApiPath()}?date=${encodeURIComponent(date)}`);
   renderZReport(report);
-  await loadZReportHistory();
+  if (currentReportMode === "Z") await loadZReportHistory();
 }
 
 async function loadFiscalSettings() {
@@ -670,11 +762,13 @@ async function loadFiscalSettings() {
     const com = document.getElementById("fiscal-com");
     const op = document.getElementById("fiscal-operator");
     const model = document.getElementById("fiscal-model");
+    const pefSerial = document.getElementById("fiscal-pef-serial");
     const enabled = document.getElementById("fiscal-enabled");
     if (nr) nr.value = settings.fiscal_nr || "";
     if (com) com.value = settings.fiscal_com_port || "";
     if (op) op.value = settings.fiscal_operator_name || "";
     if (model) model.value = settings.fiscal_device_model || "";
+    if (pefSerial) pefSerial.value = settings.pef_serial_number || "";
     if (enabled) enabled.checked = settings.fiscal_enabled !== false;
     await loadFiscalDiagnostics();
     await loadRegisterSwitchState();
@@ -848,7 +942,7 @@ async function exportZReport(format) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(
-    `/api/owner/z-report/export?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`,
+    `/api/owner/${reportApiPath()}/export?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`,
     { headers, credentials: "include" },
   );
   if (!res.ok) {
@@ -864,7 +958,7 @@ async function exportZReport(format) {
   }
   const a = document.createElement("a");
   a.href = url;
-  a.download = `z-report-${date}.csv`;
+  a.download = `${reportApiPath()}-${date}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -874,7 +968,7 @@ async function printZReport() {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(
-    `/api/owner/z-report/export?date=${encodeURIComponent(date)}&format=html`,
+    `/api/owner/${reportApiPath()}/export?date=${encodeURIComponent(date)}&format=html`,
     { headers, credentials: "include" },
   );
   if (!res.ok) throw new Error("Nuk u gjenerua raporti për printim.");
@@ -917,7 +1011,7 @@ function renderMenuTable() {
   if (!body) return;
   const items = ownerMenuCache.items || [];
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
     return;
   }
 
@@ -939,6 +1033,15 @@ function renderMenuTable() {
         <input type="text" class="menu-edit-category" list="menu-category-list" value="${escAttr(item.category)}">
       </td>
       <td><input type="number" class="menu-edit-price menu-price-input" min="0" step="0.01" value="${Number(item.price).toFixed(2)}"></td>
+      <td>
+        <select class="menu-edit-vat">
+          <option value="A" ${item.vat_category === "A" ? "selected" : ""}>A — 18%</option>
+          <option value="B" ${item.vat_category === "B" ? "selected" : ""}>B — 8%</option>
+          <option value="C" ${item.vat_category === "C" ? "selected" : ""}>C — 0%</option>
+          <option value="D" ${item.vat_category === "D" ? "selected" : ""}>D — Përjashtuar</option>
+          <option value="E" ${item.vat_category === "E" ? "selected" : ""}>E — Tjetër</option>
+        </select>
+      </td>
       <td><span class="menu-status ${item.active ? "active" : "inactive"}">${item.active ? "Aktiv" : "Joaktiv"}</span></td>
       <td>
         <div class="menu-row-actions">
@@ -1047,6 +1150,7 @@ async function saveMenuRow(row) {
   const name = row.querySelector(".menu-edit-name")?.value?.trim();
   const category = row.querySelector(".menu-edit-category")?.value?.trim();
   const price = Number(row.querySelector(".menu-edit-price")?.value);
+  const vat_category = row.querySelector(".menu-edit-vat")?.value;
   if (!name || !category) {
     setMenuMsg("Emri dhe kategoria janë të detyrueshme.", false);
     return;
@@ -1055,7 +1159,7 @@ async function saveMenuRow(row) {
     setMenuMsg("");
     const { item, synced_at } = await api(`/api/owner/menu/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ name, category, price }),
+      body: JSON.stringify({ name, category, price, vat_category }),
     });
     const idx = ownerMenuCache.items.findIndex(i => i.id === id);
     if (idx >= 0) ownerMenuCache.items[idx] = item;
@@ -2096,7 +2200,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
-    if (tab.dataset.tab === "raportet") loadReport();
+    if (tab.dataset.tab === "raportet") { loadReport(); loadAuditLog(); }
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "stoku") {
       loadOwnerInventory?.();
@@ -2121,19 +2225,51 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-raport").addEventListener("click", loadReport);
+document.getElementById("btn-audit-log-refresh")?.addEventListener("click", loadAuditLog);
 document.getElementById("btn-filter-orders").addEventListener("click", loadOrders);
 document.getElementById("filter-waiter").addEventListener("change", loadOrders);
 document.getElementById("filter-table").addEventListener("change", loadOrders);
 
 document.getElementById("btn-zreport-refresh")?.addEventListener("click", loadZReport);
 document.getElementById("zreport-date")?.addEventListener("change", loadZReport);
+document.getElementById("btn-report-view-x")?.addEventListener("click", () => {
+  currentReportMode = "X";
+  loadZReport().catch(err => alert(err.message));
+});
+document.getElementById("btn-report-view-z")?.addEventListener("click", () => {
+  currentReportMode = "Z";
+  loadZReport().catch(err => alert(err.message));
+});
+document.getElementById("btn-zreport-opening-save")?.addEventListener("click", async () => {
+  const date = zReportDate();
+  const opening_float = Number(document.getElementById("zreport-opening-float")?.value);
+  if (!Number.isFinite(opening_float) || opening_float < 0) {
+    alert("Shkruani një shumë të vlefshme për paranë e nisjes.");
+    return;
+  }
+  try {
+    await api("/api/owner/z-report/opening-float", {
+      method: "PUT",
+      body: JSON.stringify({ date, opening_float }),
+    });
+    await loadZReport();
+  } catch (err) {
+    alert(err.message);
+  }
+});
 document.getElementById("btn-zreport-close")?.addEventListener("click", async () => {
   const date = zReportDate();
+  const closing_cash_actual = document.getElementById("zreport-closing-actual")?.value;
+  const cash_difference_reason = document.getElementById("zreport-diff-reason")?.value?.trim() || "";
   if (!confirm(`Mbyll ditën ${date} dhe ruaj raportin ditor?`)) return;
   try {
     await api("/api/owner/z-report/close", {
       method: "POST",
-      body: JSON.stringify({ date }),
+      body: JSON.stringify({
+        date,
+        closing_cash_actual: closing_cash_actual === "" ? null : Number(closing_cash_actual),
+        cash_difference_reason,
+      }),
     });
     await loadZReport();
     alert("Raporti ditor u ruajt.");
@@ -2170,6 +2306,7 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
         fiscal_com_port: document.getElementById("fiscal-com")?.value?.trim() || "",
         fiscal_operator_name: document.getElementById("fiscal-operator")?.value?.trim() || "",
         fiscal_device_model: document.getElementById("fiscal-model")?.value?.trim() || "",
+        pef_serial_number: document.getElementById("fiscal-pef-serial")?.value?.trim() || "",
         fiscal_enabled: document.getElementById("fiscal-enabled")?.checked !== false,
       }),
     });
@@ -2219,6 +2356,7 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
   const name = document.getElementById("menu-add-name")?.value?.trim();
   const category = document.getElementById("menu-add-category")?.value?.trim();
   const price = Number(document.getElementById("menu-add-price")?.value);
+  const vat_category = document.getElementById("menu-add-vat")?.value || "A";
   if (!name || !category) {
     setMenuMsg("Shkruani emrin dhe kategorinë.", false);
     return;
@@ -2227,7 +2365,7 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     setMenuMsg("");
     const { item, synced_at } = await api("/api/owner/menu", {
       method: "POST",
-      body: JSON.stringify({ name, category, price }),
+      body: JSON.stringify({ name, category, price, vat_category }),
     });
     ownerMenuCache.items.push(item);
     if (!ownerMenuCache.categories.includes(item.category)) {

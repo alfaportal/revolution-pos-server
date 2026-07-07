@@ -1,6 +1,8 @@
 const { getSupabase } = require("../db");
 const { buildMenuCategories } = require("./menuCatalogService");
 const { validateImageDataUrl } = require("../lib/imageDataUrl");
+const { normalizeVatCategory } = require("../lib/vatCategories");
+const { logOwnerActivity } = require("./ownerAuditService");
 
 const MAX_MENU_PHOTO_BYTES = 512_000;
 const MAX_MENU_PHOTO_CHARS = 700_000;
@@ -20,10 +22,13 @@ function mapOwnerMenuItem(row) {
     name: row.name,
     category: row.category,
     price: Number(row.price),
+    vat_category: normalizeVatCategory(row.vat_category),
     active: row.active !== false,
     has_photo: Boolean(String(row.photo || "").trim()),
   };
 }
+
+const MENU_ITEM_SELECT = "id, local_id, name, category, price, vat_category, active, photo";
 
 async function touchMenuSync(clientId) {
   const db = getSupabase();
@@ -75,6 +80,33 @@ async function ensureCategory(clientId, categoryName) {
   return name;
 }
 
+/** Rikthen artikujt e shitjes me vat_category të AKTUALIT të menusë (jo atë
+ * që dërgoi klienti, i cili s'e mban fare këtë fushë) — pa këtë, çdo shitje
+ * do llogaritej me kategorinë e paracaktuar (A/18%), pavarësisht cilësimit
+ * real të artikullit. Përputhet me local_id (menu_id), pastaj me emrin. */
+async function enrichItemsWithVatCategory(clientId, items) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return list;
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("pos_menu_items")
+    .select("local_id, name, vat_category")
+    .eq("client_id", clientId);
+  if (error || !data) return list;
+
+  const byLocalId = new Map(data.map(r => [Number(r.local_id), r.vat_category]));
+  const byName = new Map(data.map(r => [String(r.name || "").trim().toLowerCase(), r.vat_category]));
+
+  return list.map(it => {
+    if (it.vat_category) return it;
+    const menuId = Number(it.menu_id ?? it.id ?? it.local_id);
+    const cat = (Number.isFinite(menuId) && byLocalId.has(menuId))
+      ? byLocalId.get(menuId)
+      : byName.get(String(it.name || "").trim().toLowerCase());
+    return cat ? { ...it, vat_category: cat } : it;
+  });
+}
+
 async function nextLocalId(clientId) {
   const db = getSupabase();
   const { data } = await db
@@ -92,7 +124,7 @@ async function listOwnerMenu(clientId) {
   const [{ data: items }, { data: categories }, { data: settings }] = await Promise.all([
     db
       .from("pos_menu_items")
-      .select("id, local_id, name, category, price, active, photo")
+      .select(MENU_ITEM_SELECT)
       .eq("client_id", clientId)
       .order("category")
       .order("name"),
@@ -130,6 +162,7 @@ async function addMenuItem(clientId, body) {
     name,
     category,
     price,
+    vat_category: normalizeVatCategory(body.vat_category),
     active: true,
   };
   if (Object.prototype.hasOwnProperty.call(body, "photo") && body.photo) {
@@ -139,7 +172,7 @@ async function addMenuItem(clientId, body) {
   const { data, error } = await db
     .from("pos_menu_items")
     .insert(row)
-    .select("id, local_id, name, category, price, active, photo")
+    .select(MENU_ITEM_SELECT)
     .single();
   if (error) throw error;
 
@@ -187,11 +220,11 @@ async function getOwnerMenuItemPhoto(clientId, itemId) {
   return { buffer, mime };
 }
 
-async function updateMenuItem(clientId, itemId, body) {
+async function updateMenuItem(clientId, itemId, body, actorEmail = "") {
   const db = getSupabase();
   const { data: existing, error: findErr } = await db
     .from("pos_menu_items")
-    .select("id")
+    .select("id, name, price")
     .eq("id", itemId)
     .eq("client_id", clientId)
     .maybeSingle();
@@ -210,6 +243,9 @@ async function updateMenuItem(clientId, itemId, body) {
   if (body.price != null) {
     patch.price = Math.max(0, Number(body.price) || 0);
   }
+  if (body.vat_category != null) {
+    patch.vat_category = normalizeVatCategory(body.vat_category);
+  }
   if (body.active != null) {
     patch.active = Boolean(body.active);
   }
@@ -227,9 +263,20 @@ async function updateMenuItem(clientId, itemId, body) {
     .update(patch)
     .eq("id", itemId)
     .eq("client_id", clientId)
-    .select("id, local_id, name, category, price, active, photo")
+    .select(MENU_ITEM_SELECT)
     .single();
   if (error) throw error;
+
+  if (patch.price != null && Number(existing.price) !== Number(patch.price)) {
+    await logOwnerActivity(clientId, {
+      actorEmail,
+      action: "menu_price_change",
+      targetType: "menu_item",
+      targetId: itemId,
+      targetLabel: existing.name,
+      details: { old_price: Number(existing.price), new_price: Number(patch.price) },
+    });
+  }
 
   const synced_at = await touchMenuSync(clientId);
   return {
@@ -258,4 +305,5 @@ module.exports = {
   getOwnerMenuItemPhoto,
   getKitchenMenuItemPhoto,
   touchMenuSync,
+  enrichItemsWithVatCategory,
 };

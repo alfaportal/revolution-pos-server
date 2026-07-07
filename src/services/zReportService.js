@@ -59,11 +59,56 @@ async function getCumulativeTurnover(clientId, beforeDate) {
   return Math.round((data || []).reduce((s, r) => s + Number(r.total_gross), 0) * 100) / 100;
 }
 
+/** Shitjet sipas kategorisë së menusë (jo kategoria TVSH A-E) — kundrejt
+ * emrit të artikullit te pos_menu_items, njësoj si dashboard-i i pronarit. */
+async function getCategoryBreakdown(clientId, salesDetail) {
+  const db = getSupabase();
+  const { data: menuItems } = await db
+    .from("pos_menu_items")
+    .select("name, category")
+    .eq("client_id", clientId);
+  const catByName = new Map(
+    (menuItems || []).map(m => [String(m.name || "").trim().toLowerCase(), m.category || "Të tjera"]),
+  );
+  const totals = {};
+  for (const s of salesDetail) {
+    for (const it of s.items || []) {
+      const cat = catByName.get(String(it.name || "").trim().toLowerCase()) || "Të tjera";
+      const rev = (Number(it.price) || 0) * (Number(it.quantity) || 1);
+      totals[cat] = (totals[cat] || 0) + rev;
+    }
+  }
+  return Object.entries(totals)
+    .map(([category, total]) => ({ category, total: Math.round(total * 100) / 100 }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function getWaiterBreakdown(salesDetail) {
+  const byWaiter = new Map();
+  for (const s of salesDetail) {
+    const key = s.waiter_name || "—";
+    const prev = byWaiter.get(key) || { waiter_name: key, order_count: 0, total_sales: 0 };
+    prev.order_count += 1;
+    prev.total_sales = Math.round((prev.total_sales + s.total) * 100) / 100;
+    byWaiter.set(key, prev);
+  }
+  return [...byWaiter.values()].sort((a, b) => b.total_sales - a.total_sales);
+}
+
+/** Rangu i numrave të kuponëve fiskalë të ditës — kronologjik (parë..fundit),
+ * jo domosdoshmërisht rendit numerik, pasi numrat i cakton arka fiskale. */
+function getReceiptNumberRange(salesDetail) {
+  const nums = salesDetail.map(s => s.receipt_number).filter(Boolean);
+  if (!nums.length) return { from: "", to: "", count: 0 };
+  return { from: nums[0], to: nums[nums.length - 1], count: nums.length };
+}
+
 async function buildDailyZReport(clientId, dateStr) {
   const date = dateStr || todayISO();
   const settings = await getFiscalSettings(clientId);
   const receipts = await fetchDayFiscalReceipts(clientId, date);
   const sales = await fetchDayClosedSales(clientId, date);
+  const stored = await getStoredZReport(clientId, date);
 
   const totals = sumVatBreakdowns(receipts);
   const couponCount = receipts.filter(r => r.status === "printed" || r.status === "manual").length;
@@ -95,10 +140,18 @@ async function buildDailyZReport(clientId, dateStr) {
     payment_totals[s.payment_method] = Math.round((payment_totals[s.payment_method] + s.total) * 100) / 100;
   }
 
+  const cashRegisterBalanceRounded = Math.round(cashRegisterBalance * 100) / 100;
+  const openingFloat = stored?.opening_float != null ? Number(stored.opening_float) : null;
+  const expectedClosingCash = openingFloat != null
+    ? Math.round((openingFloat + cashRegisterBalanceRounded) * 100) / 100
+    : null;
+
   return {
+    report_type: "Z",
     report_date: date,
     business_name: settings.business_name,
     fiscal_nr: settings.fiscal_nr,
+    pef_serial_number: settings.pef_serial_number || "",
     responsible_person: settings.fiscal_operator_name || settings.business_name,
     coupon_count: couponCount,
     turnover_total: totals.totalGross,
@@ -106,14 +159,37 @@ async function buildDailyZReport(clientId, dateStr) {
     turnover_vat: totals.totalVat,
     vat_breakdown: totals.breakdown,
     vat_categories: VAT_CATEGORIES,
-    cash_register_balance: Math.round(cashRegisterBalance * 100) / 100,
+    cash_register_balance: cashRegisterBalanceRounded,
     cumulative_turnover: cumulativeTurnover,
     cumulative_before: cumulativeBefore,
     sales: salesDetail,
     payment_totals,
+    by_category: await getCategoryBreakdown(clientId, salesDetail),
+    by_waiter: getWaiterBreakdown(salesDetail),
+    receipt_number_range: getReceiptNumberRange(salesDetail),
+    opening_float: openingFloat,
+    closing_cash_actual: stored?.closing_cash_actual != null ? Number(stored.closing_cash_actual) : null,
+    expected_closing_cash: expectedClosingCash,
+    cash_difference: stored?.cash_difference != null ? Number(stored.cash_difference) : null,
+    cash_difference_reason: stored?.cash_difference_reason || "",
+    closed_at: stored?.closed_at || null,
     fiscal_receipts: receipts,
     generated_at: new Date().toISOString(),
   };
+}
+
+/** Raporti X — gjendja e tashme e ditës, e printueshme në çdo kohë, PA
+ * mbyllur/arkivuar asgjë (nuk shkruan te daily_z_reports). Rikthen krejt
+ * llogaritjet e njëjta si Z-Report, thjesht heq fushat e barazimit të arkës
+ * (ato i takojnë vetëm mbylljes përfundimtare të ditës). */
+async function buildDailyXReport(clientId, dateStr) {
+  const z = await buildDailyZReport(clientId, dateStr);
+  const {
+    opening_float, closing_cash_actual, expected_closing_cash,
+    cash_difference, cash_difference_reason, closed_at,
+    ...rest
+  } = z;
+  return { ...rest, report_type: "X", is_closed: Boolean(closed_at) };
 }
 
 async function getStoredZReport(clientId, dateStr) {
@@ -127,9 +203,28 @@ async function getStoredZReport(clientId, dateStr) {
   return data;
 }
 
-async function saveDailyZReport(clientId, dateStr, { close = false } = {}) {
+async function saveDailyZReport(clientId, dateStr, {
+  close = false,
+  closing_cash_actual = null,
+  cash_difference_reason = null,
+} = {}) {
   const report = await buildDailyZReport(clientId, dateStr);
   const db = getSupabase();
+
+  let closingCashActual = report.closing_cash_actual;
+  let cashDifference = report.cash_difference;
+  let reason = report.cash_difference_reason;
+
+  if (close) {
+    if (closing_cash_actual != null) closingCashActual = Number(closing_cash_actual);
+    if (cash_difference_reason != null) reason = String(cash_difference_reason).trim().slice(0, 500);
+    if (closingCashActual != null && report.opening_float != null) {
+      cashDifference = Math.round(
+        (closingCashActual - (report.opening_float + report.cash_register_balance)) * 100,
+      ) / 100;
+    }
+  }
+
   const row = {
     client_id: clientId,
     report_date: report.report_date,
@@ -143,6 +238,10 @@ async function saveDailyZReport(clientId, dateStr, { close = false } = {}) {
     responsible_person: report.responsible_person,
     fiscal_nr: report.fiscal_nr,
     sales_json: report.sales,
+    opening_float: report.opening_float,
+    closing_cash_actual: closingCashActual,
+    cash_difference: cashDifference,
+    cash_difference_reason: reason,
     closed_at: close ? new Date().toISOString() : null,
   };
 
@@ -152,7 +251,47 @@ async function saveDailyZReport(clientId, dateStr, { close = false } = {}) {
     .select()
     .single();
   if (error) throw error;
-  return { ...report, stored: data, closed: close };
+  return {
+    ...report,
+    closing_cash_actual: data.closing_cash_actual != null ? Number(data.closing_cash_actual) : null,
+    cash_difference: data.cash_difference != null ? Number(data.cash_difference) : null,
+    cash_difference_reason: data.cash_difference_reason || "",
+    closed_at: data.closed_at || null,
+    stored: data,
+    closed: close,
+  };
+}
+
+/** Vendos paranë e nisjes së arkës për një ditë — thirret në fillim të ditës,
+ * para se Z-Report të mbyllet. Nuk prek fusha të tjera nëse rreshti ekziston. */
+async function setOpeningFloat(clientId, dateStr, openingFloat) {
+  const date = dateStr || todayISO();
+  const amount = Number(openingFloat);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error("Paraja e nisjes duhet të jetë 0 ose më shumë.");
+  }
+  const db = getSupabase();
+  const { data: existing } = await db
+    .from("daily_z_reports")
+    .select("client_id")
+    .eq("client_id", clientId)
+    .eq("report_date", date)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await db
+      .from("daily_z_reports")
+      .update({ opening_float: amount })
+      .eq("client_id", clientId)
+      .eq("report_date", date);
+    if (error) throw error;
+  } else {
+    const { error } = await db
+      .from("daily_z_reports")
+      .insert({ client_id: clientId, report_date: date, opening_float: amount });
+    if (error) throw error;
+  }
+  return buildDailyZReport(clientId, date);
 }
 
 async function listZReportHistory(clientId, limit = 60) {
@@ -169,11 +308,13 @@ async function listZReportHistory(clientId, limit = 60) {
 
 function zReportToCsv(report) {
   const lines = [];
-  lines.push("Raporti Ditor (Z-Report)");
+  lines.push(report.report_type === "X" ? "Raporti X (i përkohshëm)" : "Raporti Ditor (Z-Report)");
   lines.push(`Biznesi,${csvEsc(report.business_name)}`);
   lines.push(`Nr.Fisk,${csvEsc(report.fiscal_nr)}`);
+  lines.push(`Nr. Serial PEF,${csvEsc(report.pef_serial_number)}`);
   lines.push(`Data,${report.report_date}`);
   lines.push(`Kuponë fiskalë,${report.coupon_count}`);
+  lines.push(`Rangu i kuponëve,${csvEsc(report.receipt_number_range?.from)} - ${csvEsc(report.receipt_number_range?.to)}`);
   lines.push(`Qarkullimi total (€),${report.turnover_total}`);
   lines.push(`Totali pa TVSH (€),${report.turnover_net}`);
   lines.push(`TVSH total (€),${report.turnover_vat}`);
@@ -181,12 +322,31 @@ function zReportToCsv(report) {
   lines.push(`Qarkullimi kumulativ (€),${report.cumulative_turnover}`);
   lines.push(`Pagesa Cash (€),${report.payment_totals?.cash ?? 0}`);
   lines.push(`Pagesa Kartë (€),${report.payment_totals?.karte ?? 0}`);
+  if (report.report_type !== "X") {
+    lines.push(`Paraja e nisjes (€),${report.opening_float ?? ""}`);
+    lines.push(`Paraja e pritshme (€),${report.expected_closing_cash ?? ""}`);
+    lines.push(`Paraja e numëruar (€),${report.closing_cash_actual ?? ""}`);
+    lines.push(`Diferenca (€),${report.cash_difference ?? ""}`);
+    lines.push(`Arsyeja e diferencës,${csvEsc(report.cash_difference_reason)}`);
+  }
   lines.push("");
   lines.push("TVSH breakdown");
   lines.push("Kategoria,Neto,VAT,Bruto");
   for (const k of VAT_KEYS) {
     const v = report.vat_breakdown?.[k] || { net: 0, vat: 0, gross: 0 };
     lines.push(`${k},${v.net},${v.vat},${v.gross}`);
+  }
+  lines.push("");
+  lines.push("Shitjet sipas kategorisë");
+  lines.push("Kategoria,Totali");
+  for (const c of report.by_category || []) {
+    lines.push(`${csvEsc(c.category)},${c.total}`);
+  }
+  lines.push("");
+  lines.push("Shitjet sipas kamarierit");
+  lines.push("Kamarieri,Porosi,Totali");
+  for (const w of report.by_waiter || []) {
+    lines.push(`${csvEsc(w.waiter_name)},${w.order_count},${w.total_sales}`);
   }
   lines.push("");
   lines.push("Shitjet");
@@ -229,8 +389,26 @@ function zReportToHtml(report) {
       <td>${escHtml(s.payment_status || "")}</td>
     </tr>`).join("");
 
+  const categoryRows = (report.by_category || []).map(c =>
+    `<tr><td>${escHtml(c.category)}</td><td>${c.total.toFixed(2)} €</td></tr>`).join("");
+
+  const waiterRows = (report.by_waiter || []).map(w =>
+    `<tr><td>${escHtml(w.waiter_name)}</td><td>${w.order_count}</td><td>${w.total_sales.toFixed(2)} €</td></tr>`).join("");
+
+  const cashBox = report.opening_float != null ? `
+<div class="box"><strong>Barazimi i arkës</strong>
+  <div class="grid">
+    <div>Paraja e nisjes: ${report.opening_float.toFixed(2)} €</div>
+    <div>Paraja e pritshme: ${(report.expected_closing_cash ?? 0).toFixed(2)} €</div>
+    ${report.closing_cash_actual != null ? `<div>Paraja e numëruar: ${report.closing_cash_actual.toFixed(2)} €</div>` : ""}
+    ${report.cash_difference != null ? `<div>Diferenca: ${report.cash_difference.toFixed(2)} €</div>` : ""}
+  </div>
+  ${report.cash_difference_reason ? `<div class="meta">Arsyeja: ${escHtml(report.cash_difference_reason)}</div>` : ""}
+</div>` : "";
+
+  const isX = report.report_type === "X";
   return `<!DOCTYPE html><html lang="sq"><head><meta charset="UTF-8">
-<title>Z-Report ${report.report_date}</title>
+<title>${isX ? "X-Report" : "Z-Report"} ${report.report_date}</title>
 <style>
 body{font-family:Arial,sans-serif;padding:24px;color:#111}
 h1{margin:0 0 4px} .meta{color:#444;margin-bottom:16px}
@@ -242,10 +420,11 @@ th{background:#f5f5f5}
 .total{font-size:1.2em;font-weight:bold}
 @media print{body{padding:12px}}
 </style></head><body>
-<h1>RAPORTI DITOR (Z-REPORT)</h1>
-<div class="meta">${escHtml(report.business_name)} · Nr.Fisk: ${escHtml(report.fiscal_nr)} · ${report.report_date}</div>
+<h1>${isX ? "RAPORTI X (I PËRKOHSHËM)" : "RAPORTI DITOR (Z-REPORT)"}</h1>
+<div class="meta">${escHtml(report.business_name)} · Nr.Fisk: ${escHtml(report.fiscal_nr)}${report.pef_serial_number ? ` · PEF: ${escHtml(report.pef_serial_number)}` : ""} · ${report.report_date}</div>
 <div class="grid">
   <div><strong>Kuponë fiskalë:</strong> ${report.coupon_count}</div>
+  <div><strong>Rangu i kuponëve:</strong> ${escHtml(report.receipt_number_range?.from || "—")} – ${escHtml(report.receipt_number_range?.to || "—")}</div>
   <div><strong>Qarkullimi ditor:</strong> ${report.turnover_total.toFixed(2)} €</div>
   <div><strong>Totali pa TVSH:</strong> ${report.turnover_net.toFixed(2)} €</div>
   <div><strong>TVSH total:</strong> ${report.turnover_vat.toFixed(2)} €</div>
@@ -258,6 +437,13 @@ th{background:#f5f5f5}
 <div class="box"><strong>TVSH breakdown (A–E)</strong>
 <table><thead><tr><th>Kategoria</th><th>Neto</th><th>TVSH</th><th>Bruto</th></tr></thead>
 <tbody>${vatRows}</tbody></table></div>
+<div class="box"><strong>Shitjet sipas kategorisë</strong>
+<table><thead><tr><th>Kategoria</th><th>Totali</th></tr></thead>
+<tbody>${categoryRows || "<tr><td colspan='2'>—</td></tr>"}</tbody></table></div>
+<div class="box"><strong>Shitjet sipas kamarierit</strong>
+<table><thead><tr><th>Kamarieri</th><th>Porosi</th><th>Totali</th></tr></thead>
+<tbody>${waiterRows || "<tr><td colspan='3'>—</td></tr>"}</tbody></table></div>
+${cashBox}
 <div class="box"><strong>Shitjet e ditës</strong>
 <table><thead><tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Pagesa</th><th>Kupon</th><th>Statusi</th></tr></thead>
 <tbody>${salesRows || "<tr><td colspan='7'>—</td></tr>"}</tbody></table></div>
@@ -271,7 +457,9 @@ function escHtml(s) {
 
 module.exports = {
   buildDailyZReport,
+  buildDailyXReport,
   saveDailyZReport,
+  setOpeningFloat,
   getStoredZReport,
   listZReportHistory,
   zReportToCsv,

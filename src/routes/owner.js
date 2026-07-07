@@ -15,7 +15,9 @@ const {
 } = require("../services/licenseService");
 const {
   buildDailyZReport,
+  buildDailyXReport,
   saveDailyZReport,
+  setOpeningFloat,
   listZReportHistory,
   zReportToCsv,
   zReportToHtml,
@@ -32,6 +34,7 @@ const {
   deleteMenuItem,
   getOwnerMenuItemPhoto,
 } = require("../services/menuService");
+const { listOwnerActivity } = require("../services/ownerAuditService");
 const {
   listCatalogForOwner,
   addItemsFromCatalog,
@@ -311,6 +314,18 @@ router.get("/reports", async (req, res) => {
   }
 });
 
+router.get("/audit-log", async (req, res) => {
+  try {
+    const entries = await listOwnerActivity(req.user.client_id, {
+      limit: Number(req.query.limit) || 100,
+      action: req.query.action || "",
+    });
+    res.json({ ok: true, entries });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
 router.get("/license", async (req, res) => {
   try {
     res.json({
@@ -383,6 +398,38 @@ router.put("/register-switch/mode", async (req, res) => {
   }
 });
 
+router.get("/x-report", async (req, res) => {
+  try {
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const report = await buildDailyXReport(req.user.client_id, date);
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/x-report/export", async (req, res) => {
+  try {
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const format = String(req.query.format || "csv").toLowerCase();
+    const report = await buildDailyXReport(req.user.client_id, date);
+
+    if (format === "html" || format === "pdf") {
+      const html = zReportToHtml(report);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="x-report-${date}.html"`);
+      return res.send(html);
+    }
+
+    const csv = zReportToCsv(report);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="x-report-${date}.csv"`);
+    res.send("\uFEFF" + csv);
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
 router.get("/z-report", async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().slice(0, 10);
@@ -396,7 +443,21 @@ router.get("/z-report", async (req, res) => {
 router.post("/z-report/close", async (req, res) => {
   try {
     const date = req.body?.date || new Date().toISOString().slice(0, 10);
-    const report = await saveDailyZReport(req.user.client_id, date, { close: true });
+    const report = await saveDailyZReport(req.user.client_id, date, {
+      close: true,
+      closing_cash_actual: req.body?.closing_cash_actual,
+      cash_difference_reason: req.body?.cash_difference_reason,
+    });
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.put("/z-report/opening-float", async (req, res) => {
+  try {
+    const date = req.body?.date || new Date().toISOString().slice(0, 10);
+    const report = await setOpeningFloat(req.user.client_id, date, req.body?.opening_float);
     res.json({ ok: true, report });
   } catch (e) {
     res.status(400).json({ gabim: e.message });
@@ -485,7 +546,7 @@ router.get("/menu/:id/photo", async (req, res) => {
 
 router.patch("/menu/:id", async (req, res) => {
   try {
-    const result = await updateMenuItem(req.user.client_id, req.params.id, req.body);
+    const result = await updateMenuItem(req.user.client_id, req.params.id, req.body, req.user.email);
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

@@ -3,6 +3,7 @@ const { findLicenseByKey, normalizeKey } = require("./licenseService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
 const { normalizeItems, syncSaleFromPos } = require("./salesService");
 const { computeItemsVat } = require("../lib/vatCategories");
+const { enrichItemsWithVatCategory } = require("./menuService");
 
 async function getFiscalSettings(clientId) {
   const db = getSupabase();
@@ -29,6 +30,7 @@ async function getFiscalSettings(clientId) {
     fiscal_enabled: settings?.fiscal_enabled !== false,
     fiscal_operator_name: settings?.fiscal_operator_name || "",
     fiscal_device_model: settings?.fiscal_device_model || "",
+    pef_serial_number: settings?.pef_serial_number || "",
     default_vat_category: "A",
   };
 }
@@ -44,6 +46,9 @@ async function updateFiscalSettings(clientId, body) {
   }
   if (body.fiscal_device_model != null) {
     patch.fiscal_device_model = String(body.fiscal_device_model).trim();
+  }
+  if (body.pef_serial_number != null) {
+    patch.pef_serial_number = String(body.pef_serial_number).trim();
   }
   if (body.tvsh_nr != null) patch.tvsh_nr = String(body.tvsh_nr).trim();
   if (body.nui != null) patch.nui = String(body.nui).trim();
@@ -87,7 +92,8 @@ async function processFiscalPayment(body) {
 
   const cashGiven = Number(body.cash_given ?? body.para_te_gatshme ?? body.total) || 0;
   const total = Number(body.total) || items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const vat = computeItemsVat(items, body.default_vat_category || "A");
+  const vatItems = await enrichItemsWithVatCategory(clientId, items);
+  const vat = computeItemsVat(vatItems, body.default_vat_category || "A");
 
   const fiscalResult = body.fiscal_result || {};
   const registerConnected = body.register_connected !== false
@@ -238,7 +244,8 @@ async function getFiscalPrintPayload(body) {
   const license = await resolveLicense(body);
   const settings = await getFiscalSettings(license.client_id);
   const items = normalizeItems(body.items);
-  const vat = computeItemsVat(items, body.default_vat_category || "A");
+  const vatItems = await enrichItemsWithVatCategory(license.client_id, items);
+  const vat = computeItemsVat(vatItems, body.default_vat_category || "A");
 
   return {
     ok: true,
