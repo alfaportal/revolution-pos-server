@@ -23,8 +23,7 @@ const {
 const { getFiscalSettings, updateFiscalSettings, getFiscalDiagnostics } = require("../services/fiscalService");
 const {
   getRegisterSwitchState,
-  setRegisterCodes,
-  applyRegisterCode,
+  setRegisterMode,
 } = require("../services/registerSwitchService");
 const {
   listOwnerMenu,
@@ -375,9 +374,9 @@ router.get("/register-switch", async (req, res) => {
   }
 });
 
-router.patch("/register-switch/codes", async (req, res) => {
+router.put("/register-switch/mode", async (req, res) => {
   try {
-    const state = await setRegisterCodes(req.user.client_id, req.body);
+    const state = await setRegisterMode(req.user.client_id, req.body?.mode, req.user.email);
     res.json({ ok: true, ...state });
   } catch (e) {
     res.status(400).json({ gabim: e.message });

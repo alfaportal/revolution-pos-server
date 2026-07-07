@@ -681,25 +681,29 @@ async function loadFiscalSettings() {
   } catch { /* */ }
 }
 
-function setRegisterModeBadge(mode, configured) {
+function registerModeLabel(mode) {
+  if (mode === "fiscal") return "Fiskale";
+  if (mode === "thermal") return "Termike";
+  return "Automatik";
+}
+
+function setRegisterModeBadge(state) {
   const el = document.getElementById("register-mode-badge");
+  const select = document.getElementById("register-mode-select");
+  if (select) select.value = state.mode || "auto";
   if (!el) return;
-  if (!configured) {
-    el.className = "fiscal-conn-badge unknown";
-    el.textContent = "Kodet nuk janë vendosur";
-    return;
-  }
-  const isFiscal = String(mode || "").toLowerCase() === "fiscal";
-  el.className = "fiscal-conn-badge " + (isFiscal ? "connected" : "disconnected");
-  el.textContent = isFiscal ? "Fiskale" : "Termike";
+  const mode = state.mode || "auto";
+  el.className = "fiscal-conn-badge " + (mode === "fiscal" ? "connected" : mode === "thermal" ? "disconnected" : "unknown");
+  const who = state.updated_by ? ` — ${state.updated_by}` : "";
+  el.textContent = registerModeLabel(mode) + who;
 }
 
 async function loadRegisterSwitchState() {
   try {
     const data = await api("/api/owner/register-switch");
-    setRegisterModeBadge(data.active_coupon_type, data.codes_configured);
+    setRegisterModeBadge(data);
   } catch {
-    setRegisterModeBadge("thermal", false);
+    setRegisterModeBadge({ mode: "auto" });
   }
 }
 
@@ -2182,55 +2186,25 @@ document.getElementById("btn-fiscal-save")?.addEventListener("click", async () =
   }
 });
 
-document.getElementById("btn-register-codes-save")?.addEventListener("click", async () => {
-  const msg = document.getElementById("register-codes-msg");
-  const fiscal = document.getElementById("register-code-fiscal")?.value?.trim() || "";
-  const thermal = document.getElementById("register-code-thermal")?.value?.trim() || "";
+document.getElementById("btn-register-mode-save")?.addEventListener("click", async () => {
+  const msg = document.getElementById("register-mode-msg");
+  const select = document.getElementById("register-mode-select");
+  const mode = select?.value || "auto";
   if (msg) {
     msg.textContent = "";
     msg.className = "owner-license-msg";
   }
-  if (!fiscal && !thermal) {
-    if (msg) {
-      msg.textContent = "Shkruani të paktën një kod.";
-      msg.className = "owner-license-msg err";
-    }
-    return;
-  }
-  if (fiscal && !/^\d{4,6}$/.test(fiscal)) {
-    if (msg) {
-      msg.textContent = "Kodi fiskale duhet 4–6 shifra.";
-      msg.className = "owner-license-msg err";
-    }
-    return;
-  }
-  if (thermal && !/^\d{4,6}$/.test(thermal)) {
-    if (msg) {
-      msg.textContent = "Kodi termike duhet 4–6 shifra.";
-      msg.className = "owner-license-msg err";
-    }
-    return;
-  }
-  if (fiscal && thermal && fiscal === thermal) {
-    if (msg) {
-      msg.textContent = "Kodet duhet të jenë të ndryshme.";
-      msg.className = "owner-license-msg err";
-    }
+  if (!confirm(`Ndrysho modalitetin e faturës në "${registerModeLabel(mode)}" për të gjithë kamarierët?`)) {
     return;
   }
   try {
-    const body = {};
-    if (fiscal) body.fiscal_code = fiscal;
-    if (thermal) body.thermal_code = thermal;
-    const data = await api("/api/owner/register-switch/codes", {
-      method: "PATCH",
-      body: JSON.stringify(body),
+    const data = await api("/api/owner/register-switch/mode", {
+      method: "PUT",
+      body: JSON.stringify({ mode }),
     });
-    if (document.getElementById("register-code-fiscal")) document.getElementById("register-code-fiscal").value = "";
-    if (document.getElementById("register-code-thermal")) document.getElementById("register-code-thermal").value = "";
-    setRegisterModeBadge(data.active_coupon_type, data.codes_configured);
+    setRegisterModeBadge(data);
     if (msg) {
-      msg.textContent = "Kodet u ruajtën.";
+      msg.textContent = "U ruajt!";
       msg.className = "owner-license-msg ok";
     }
   } catch (err) {

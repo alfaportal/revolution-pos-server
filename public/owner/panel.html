@@ -566,10 +566,9 @@
       </div>
 
       <div class="card" style="margin-top:1rem">
-        <div class="card-title">Kodet e arkës</div>
+        <div class="card-title">Modaliteti i faturës (arka)</div>
         <p class="owner-fiscal-intro">
-          Vendosni dy kode sekretë (4–6 shifra). Kamarieri i fut në tastierë të panelit — sistemi ndërron arkën pa e treguar modalitetin.
-          Vetëm ju i shihni dhe i ndryshoni këtu.
+          Zgjidhni cili printer/arkë përdoret për faturat e mbylljes së tavolinave. Ndryshimi zbatohet menjëherë për të gjithë kamarierët.
         </p>
         <div class="fiscal-status-row" style="margin-bottom:0.75rem">
           <span class="fiscal-status-label">Arka aktive tani</span>
@@ -577,20 +576,18 @@
         </div>
         <div class="hub-fiscal-form">
           <div class="hub-fiscal-field">
-            <label for="register-code-fiscal">Kod fiskale</label>
-            <input type="password" id="register-code-fiscal" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="4–6 shifra">
-            <p class="hub-field-note">Kodi që aktivizon arkën fiskale ATK.</p>
-          </div>
-          <div class="hub-fiscal-field">
-            <label for="register-code-thermal">Kod termike</label>
-            <input type="password" id="register-code-thermal" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password" placeholder="4–6 shifra">
-            <p class="hub-field-note">Kodi që aktivizon printerin termik.</p>
+            <label for="register-mode-select">Modaliteti aktiv</label>
+            <select id="register-mode-select">
+              <option value="auto">Automatik — kamarieri zgjedh çdo herë</option>
+              <option value="thermal">Gjithmonë Termik — për të gjithë kamarierët</option>
+              <option value="fiscal">Gjithmonë Fiskal (ATK) — për të gjithë kamarierët</option>
+            </select>
           </div>
         </div>
         <div class="hub-fiscal-actions">
-          <button type="button" class="btn btn-primary" id="btn-register-codes-save">Ruaj kodet</button>
+          <button type="button" class="btn btn-primary" id="btn-register-mode-save">Ruaj modalitetin</button>
         </div>
-        <div id="register-codes-msg" class="owner-license-msg"></div>
+        <div id="register-mode-msg" class="owner-license-msg"></div>
       </div>
     </div>
 
@@ -1032,7 +1029,7 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=33"></script>
+  <script src="/js/owner.js?v=34"></script>
   <script src="/js/owner-locations.js?v=1"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
