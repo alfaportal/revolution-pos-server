@@ -4,6 +4,7 @@ const { requirePackageFeature } = require("../middleware/packageTier");
 const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling, buildOnlineSlotLayout } = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
+const { getRegisterSwitchState } = require("../services/registerSwitchService");
 const { getStaffBrandingForClient } = require("../lib/staffBranding");
 const { getWaiterByWebToken, getWaiterById, getWaiterByName } = require("../services/waiterPinService");
 const { getAssignmentState } = require("../services/waiterTablesService");
@@ -216,6 +217,18 @@ router.post("/:slug/orders/:orderId/ready", resolveKitchenClient, requirePackage
     res.json({ ok: true, order });
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+// Vetëm LEXIM — modaliteti i arkës vendoset EKSKLUZIVISHT nga pronari te
+// /api/owner/register-switch/mode (JWT i pronarit). Kjo lejon POS-in lokal
+// (KAFENE) ta lexojë periodikisht dhe ta zbatojë te printimi.
+router.get("/:slug/register-mode", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
+  try {
+    const state = await getRegisterSwitchState(req.kitchenClient.id);
+    res.json({ ok: true, ...state });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
   }
 });
 
