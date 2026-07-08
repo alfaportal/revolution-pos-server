@@ -428,6 +428,11 @@
   margin-bottom: 0.65rem;
 }
 
+.order-card-actions {
+  margin-top: 0.65rem;
+  text-align: right;
+}
+
 .order-items-table {
   width: 100%;
   border-collapse: collapse;

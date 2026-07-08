@@ -8,7 +8,15 @@ const {
   getOwnerReport,
   getClientById,
   getLiveTablesForOwner,
+  voidOwnerOrder,
 } = require("../services/salesService");
+const {
+  EXPENSE_CATEGORIES,
+  listOwnerExpenses,
+  createOwnerExpense,
+  updateOwnerExpense,
+  deleteOwnerExpense,
+} = require("../services/ownerExpenseService");
 const {
   getOwnerLicenseView,
   verifyOwnerLicenseKey,
@@ -292,6 +300,19 @@ router.get("/orders", async (req, res) => {
   }
 });
 
+router.post("/orders/:id/void", async (req, res) => {
+  try {
+    const result = await voidOwnerOrder(req.user.client_id, req.params.id, {
+      reason: req.body?.reason,
+      note: req.body?.note,
+      actorEmail: req.user.email,
+    });
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
 router.get("/tables/live", async (req, res) => {
   try {
     const live = await getLiveTablesForOwner(req.user.client_id);
@@ -323,6 +344,46 @@ router.get("/audit-log", async (req, res) => {
     res.json({ ok: true, entries });
   } catch (e) {
     res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/expenses", async (req, res) => {
+  try {
+    const expenses = await listOwnerExpenses(req.user.client_id, {
+      from: req.query.from,
+      to: req.query.to,
+      limit: req.query.limit,
+    });
+    res.json({ ok: true, expenses, categories: EXPENSE_CATEGORIES });
+  } catch (e) {
+    res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.post("/expenses", async (req, res) => {
+  try {
+    const expense = await createOwnerExpense(req.user.client_id, req.body, req.user.email);
+    res.status(201).json({ ok: true, expense });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.patch("/expenses/:id", async (req, res) => {
+  try {
+    const expense = await updateOwnerExpense(req.user.client_id, req.params.id, req.body, req.user.email);
+    res.json({ ok: true, expense });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.delete("/expenses/:id", async (req, res) => {
+  try {
+    const result = await deleteOwnerExpense(req.user.client_id, req.params.id, req.user.email);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 

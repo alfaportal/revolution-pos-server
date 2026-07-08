@@ -208,6 +208,9 @@ function renderOrderCard(o) {
       ${o.receipt_number ? `<span>🧾 ${o.receipt_number}</span>` : ""}
     </div>
     ${renderItemsTable(o.items_json)}
+    <div class="order-card-actions">
+      <button type="button" class="btn btn-ghost btn-sm" data-void-order="${o.id}" data-void-table="${o.table_number || ""}" data-void-total="${o.total}" data-void-receipt="${escHtml(o.receipt_number || "")}">Anulo faturën</button>
+    </div>
   </div>`;
 }
 
@@ -478,7 +481,71 @@ async function loadOrders() {
     return;
   }
   el.innerHTML = orders.map(renderOrderCard).join("");
+  el.querySelectorAll("[data-void-order]").forEach(btn => {
+    btn.addEventListener("click", () => openVoidOrderModal({
+      id: btn.dataset.voidOrder,
+      table_number: btn.dataset.voidTable,
+      total: btn.dataset.voidTotal,
+      receipt_number: btn.dataset.voidReceipt,
+    }));
+  });
 }
+
+let voidOrderTarget = null;
+
+function setVoidOrderModalMsg(text, ok) {
+  const msg = document.getElementById("void-order-modal-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function openVoidOrderModal(order) {
+  voidOrderTarget = order;
+  const summary = document.getElementById("void-order-summary");
+  if (summary) {
+    const parts = [];
+    if (order.table_number) parts.push(`Tavolina ${order.table_number}`);
+    if (order.receipt_number) parts.push(order.receipt_number);
+    parts.push(euro(order.total));
+    summary.textContent = parts.join(" · ");
+  }
+  document.getElementById("void-order-reason").value = "customer_returned";
+  document.getElementById("void-order-note").value = "";
+  setVoidOrderModalMsg("");
+  document.getElementById("void-order-modal")?.classList.remove("hidden");
+}
+
+function closeVoidOrderModal() {
+  voidOrderTarget = null;
+  document.getElementById("void-order-modal")?.classList.add("hidden");
+}
+
+async function saveVoidOrderFromModal() {
+  if (!voidOrderTarget) return;
+  const btn = document.getElementById("btn-void-order-save");
+  if (btn) btn.disabled = true;
+  setVoidOrderModalMsg("Duke anuluar…", true);
+  try {
+    await api(`/api/owner/orders/${encodeURIComponent(voidOrderTarget.id)}/void`, {
+      method: "POST",
+      body: JSON.stringify({
+        reason: document.getElementById("void-order-reason")?.value,
+        note: document.getElementById("void-order-note")?.value?.trim(),
+      }),
+    });
+    closeVoidOrderModal();
+    await loadOrders();
+  } catch (err) {
+    setVoidOrderModalMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+document.getElementById("void-order-close")?.addEventListener("click", closeVoidOrderModal);
+document.getElementById("void-order-backdrop")?.addEventListener("click", closeVoidOrderModal);
+document.getElementById("btn-void-order-save")?.addEventListener("click", saveVoidOrderFromModal);
 
 async function loadReport() {
   const nga = document.getElementById("raport-nga").value;
@@ -510,14 +577,27 @@ async function loadReport() {
 
 const AUDIT_ACTION_LABELS = {
   menu_price_change: "Ndryshim çmimi",
+  order_voided: "Faturë e anuluar",
+  expense_added: "Shpenzim i shtuar",
+  expense_updated: "Shpenzim i ndryshuar",
+  expense_deleted: "Shpenzim i fshirë",
 };
 
 function auditActionDetails(entry) {
+  const d = entry.details || {};
   if (entry.action === "menu_price_change") {
-    const d = entry.details || {};
     return `${euro(d.old_price)} → ${euro(d.new_price)}`;
   }
-  return JSON.stringify(entry.details || {});
+  if (entry.action === "order_voided") {
+    return `${d.reason_label || d.reason || "—"}${d.note ? ` — ${d.note}` : ""}`;
+  }
+  if (entry.action === "expense_added" || entry.action === "expense_deleted") {
+    return `${euro(d.amount)}${d.description ? ` — ${d.description}` : ""}`;
+  }
+  if (entry.action === "expense_updated") {
+    return `${euro(d.before?.amount)} → ${euro(d.after?.amount ?? d.before?.amount)}`;
+  }
+  return JSON.stringify(d);
 }
 
 async function loadAuditLog() {
@@ -538,6 +618,86 @@ async function loadAuditLog() {
     body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Gabim gjatë ngarkimit.</td></tr>';
   }
 }
+
+const EXPENSE_CATEGORY_LABELS = {
+  pastrim: "Pastrim",
+  sherbime: "Shërbime",
+  papritur: "Shpenzim i papritur",
+  tjeter: "Tjetër",
+};
+
+function setExpensesMsg(text, ok) {
+  const msg = document.getElementById("expenses-msg");
+  if (!msg) return;
+  msg.textContent = text || "";
+  msg.className = "owner-license-msg" + (text ? (ok ? " ok" : " err") : "");
+}
+
+function renderExpensesList(expenses) {
+  const body = document.getElementById("expenses-list-body");
+  if (!body) return;
+  body.innerHTML = expenses.length
+    ? expenses.map(e => `<tr>
+        <td>${fmtDateSq(e.expense_date)}</td>
+        <td>${EXPENSE_CATEGORY_LABELS[e.category] || escHtml(e.category)}</td>
+        <td>${euro(e.amount)}</td>
+        <td>${escHtml(e.description || "—")}</td>
+        <td>${escHtml(e.entered_by || "—")}</td>
+        <td><button type="button" class="btn btn-ghost btn-sm" data-expense-delete="${e.id}">Fshi</button></td>
+      </tr>`).join("")
+    : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka shpenzime të regjistruara.</td></tr>';
+  body.querySelectorAll("[data-expense-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteExpense(btn.dataset.expenseDelete));
+  });
+}
+
+async function loadExpenses() {
+  try {
+    const { expenses } = await api("/api/owner/expenses?limit=100");
+    renderExpensesList(expenses || []);
+  } catch (err) {
+    setExpensesMsg(err.message, false);
+  }
+}
+
+async function addExpense() {
+  const btn = document.getElementById("btn-expense-add");
+  if (btn) btn.disabled = true;
+  setExpensesMsg("Duke ruajtur…", true);
+  try {
+    await api("/api/owner/expenses", {
+      method: "POST",
+      body: JSON.stringify({
+        category: document.getElementById("expense-category")?.value,
+        amount: Number(document.getElementById("expense-amount")?.value),
+        description: document.getElementById("expense-description")?.value?.trim(),
+        expense_date: document.getElementById("expense-date")?.value,
+      }),
+    });
+    document.getElementById("expense-amount").value = "";
+    document.getElementById("expense-description").value = "";
+    setExpensesMsg("Shpenzimi u shtua.", true);
+    await loadExpenses();
+  } catch (err) {
+    setExpensesMsg(err.message, false);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function deleteExpense(id) {
+  if (!confirm("Fshi këtë shpenzim?")) return;
+  try {
+    await api(`/api/owner/expenses/${encodeURIComponent(id)}`, { method: "DELETE" });
+    await loadExpenses();
+  } catch (err) {
+    setExpensesMsg(err.message, false);
+  }
+}
+
+const expenseDateInput = document.getElementById("expense-date");
+if (expenseDateInput) expenseDateInput.value = new Date().toISOString().slice(0, 10);
+document.getElementById("btn-expense-add")?.addEventListener("click", addExpense);
 
 function formatLicenseKey(raw) {
   const clean = String(raw || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 16);
@@ -2200,7 +2360,7 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.querySelectorAll(".panel-section").forEach(p => p.classList.add("hidden"));
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
-    if (tab.dataset.tab === "raportet") { loadReport(); loadAuditLog(); }
+    if (tab.dataset.tab === "raportet") { loadReport(); loadAuditLog(); loadExpenses(); }
     if (tab.dataset.tab === "porosite") loadOrders();
     if (tab.dataset.tab === "stoku") {
       loadOwnerInventory?.();

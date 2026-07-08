@@ -793,11 +793,48 @@
         </div>
       </div>
       <div class="card">
+        <div class="card-title">Shpenzimet e vogla ditore</div>
+        <p class="links-hint">Pastrim, shërbime, shpenzime të papritura — jashtë blerjeve të stokut.</p>
+        <div class="filter-row menu-add-row">
+          <div>
+            <label for="expense-category">Kategoria</label>
+            <select id="expense-category">
+              <option value="pastrim">Pastrim</option>
+              <option value="sherbime">Shërbime</option>
+              <option value="papritur">Shpenzim i papritur</option>
+              <option value="tjeter" selected>Tjetër</option>
+            </select>
+          </div>
+          <div>
+            <label for="expense-amount">Shuma (€)</label>
+            <input type="number" id="expense-amount" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label for="expense-date">Data</label>
+            <input type="date" id="expense-date">
+          </div>
+        </div>
+        <div class="hub-fiscal-field">
+          <label for="expense-description">Përshkrimi</label>
+          <input type="text" id="expense-description" maxlength="500" placeholder="p.sh. blerje materiale pastrimi">
+        </div>
+        <div id="expenses-msg" class="owner-license-msg"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-expense-add">Shto shpenzimin</button>
+        <div class="overflow-x" style="margin-top:1rem">
+          <table>
+            <thead>
+              <tr><th>Data</th><th>Kategoria</th><th>Shuma</th><th>Përshkrimi</th><th>Kush</th><th></th></tr>
+            </thead>
+            <tbody id="expenses-list-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-title card-title-row">
           <span>Regjistri i veprimeve (Audit log)</span>
           <button type="button" class="btn btn-ghost btn-sm" id="btn-audit-log-refresh">Rifresko</button>
         </div>
-        <p class="links-hint">Çdo ndryshim çmimi te menuja regjistrohet automatikisht këtu — çmimi i vjetër, i ri, kush e ndryshoi dhe kur.</p>
+        <p class="links-hint">Çmimet e ndryshuara, faturat e anuluara dhe shpenzimet regjistrohen automatikisht këtu — kush, kur dhe detajet.</p>
         <div class="overflow-x">
           <table>
             <thead>
@@ -977,6 +1014,32 @@
       </div>
       <div id="reservation-modal-msg" class="owner-license-msg"></div>
       <button type="button" class="btn btn-primary" id="btn-reservation-save">Ruaj rezervimin</button>
+    </div>
+  </div>
+
+  <div id="void-order-modal" class="owner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="void-order-title">
+    <div class="owner-modal-backdrop" id="void-order-backdrop"></div>
+    <div class="owner-modal-card">
+      <div class="owner-modal-head">
+        <h2 id="void-order-title">Anulo faturën</h2>
+        <button type="button" class="owner-modal-close" id="void-order-close" aria-label="Mbyll">×</button>
+      </div>
+      <p class="links-hint" id="void-order-summary"></p>
+      <div class="hub-fiscal-field">
+        <label for="void-order-reason">Arsyeja e anulimit</label>
+        <select id="void-order-reason">
+          <option value="customer_returned">Klienti e ktheu porosinë</option>
+          <option value="wrong_order">Porosi e gabuar</option>
+          <option value="staff_error">Gabim i stafit</option>
+          <option value="other">Tjetër</option>
+        </select>
+      </div>
+      <div class="hub-fiscal-field">
+        <label for="void-order-note">Shënim shtesë (opsional)</label>
+        <textarea id="void-order-note" rows="2" maxlength="300" placeholder="p.sh. detaje shtesë..."></textarea>
+      </div>
+      <div id="void-order-modal-msg" class="owner-license-msg"></div>
+      <button type="button" class="btn btn-primary" id="btn-void-order-save">Konfirmo anulimin</button>
     </div>
   </div>
 

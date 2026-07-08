@@ -2,6 +2,15 @@ const bcrypt = require("bcryptjs");
 const { getSupabase } = require("../db");
 const { findLicenseByKey, normalizeKey } = require("./licenseService");
 const { assertLicenseUsable } = require("../lib/licenseEnforcement");
+const { logOwnerActivity } = require("./ownerAuditService");
+
+/** Arsyet e lejuara për anulimin e një fature të printuar (owner panel). */
+const VOID_REASONS = {
+  customer_returned: "Klienti e ktheu porosinë",
+  wrong_order: "Porosi e gabuar",
+  staff_error: "Gabim i stafit",
+  other: "Tjetër",
+};
 
 function dateRanges() {
   const now = new Date();
@@ -942,6 +951,63 @@ async function getClientById(clientId) {
   return data;
 }
 
+/** Anulim ("void") i një fature të mbyllur/printuar tashmë — kërkon arsye,
+ * regjistrohet te owner_activity_log. Nuk fshin/prek rreshtin te sales_orders
+ * përveç status → 'cancelled' (asnjë kolonë e re, sipas Rregullit #11). */
+async function voidOwnerOrder(clientId, orderId, { reason, note = "", actorEmail = "" } = {}) {
+  const reasonKey = VOID_REASONS[reason] ? reason : null;
+  if (!reasonKey) {
+    throw new Error("Zgjidhni një arsye të vlefshme për anulimin.");
+  }
+  const db = getSupabase();
+  const { data: order, error: findErr } = await db
+    .from("sales_orders")
+    .select("id, table_number, total, receipt_number, status, closed_at, waiter_name")
+    .eq("client_id", clientId)
+    .eq("id", orderId)
+    .maybeSingle();
+  if (findErr) throw findErr;
+  if (!order) throw new Error("Porosia nuk u gjet.");
+  if (order.status !== "closed") {
+    throw new Error("Vetëm faturat e mbyllura (të printuara) mund të anulohen këtu.");
+  }
+
+  const { data: updated, error } = await db
+    .from("sales_orders")
+    .update({ status: "cancelled" })
+    .eq("client_id", clientId)
+    .eq("id", orderId)
+    .eq("status", "closed")
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!updated) {
+    throw new Error("Fatura u ndryshua tashmë nga dikush tjetër. Rifreskoni listën.");
+  }
+
+  await logOwnerActivity(clientId, {
+    actorEmail,
+    action: "order_voided",
+    targetType: "sales_order",
+    targetId: orderId,
+    targetLabel: order.table_number
+      ? `Tavolina ${order.table_number} — ${Number(order.total).toFixed(2)}€`
+      : (order.receipt_number || orderId),
+    details: {
+      reason: reasonKey,
+      reason_label: VOID_REASONS[reasonKey],
+      note: String(note || "").trim().slice(0, 300),
+      table_number: order.table_number,
+      total: order.total,
+      receipt_number: order.receipt_number,
+      closed_at: order.closed_at,
+      waiter_name: order.waiter_name,
+    },
+  });
+
+  return { voided: true, order: updated };
+}
+
 module.exports = {
   normalizeItems,
   mergeOrderItems,
@@ -958,4 +1024,6 @@ module.exports = {
   listClosedWebWaiterSalesForPos,
   listAllClosedSalesForPosRebuild,
   getClientById,
+  voidOwnerOrder,
+  VOID_REASONS,
 };
