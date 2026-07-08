@@ -31,7 +31,7 @@ async function getActiveTableOrders(clientId) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
-    .select("id, table_number, waiter_name, waiter_id, status, total, ordered_at, items_json, local_order_id, device_id")
+    .select("id, table_number, waiter_name, waiter_id, status, total, ordered_at, items_json, local_order_id, device_id, accepted_by_waiter_id, accepted_by_waiter_name")
     .eq("client_id", clientId)
     .in("status", ["ordered", "ready"])
     .order("ordered_at", { ascending: true });
@@ -177,6 +177,9 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
       waiter_id: row.waiter_id || null,
       total: row.total,
       active_items: normalizeItems(row.items_json),
+      device_id: row.device_id || null,
+      accepted_by_waiter_id: row.accepted_by_waiter_id || null,
+      accepted_by_waiter_name: row.accepted_by_waiter_name || null,
     });
   }
   const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);

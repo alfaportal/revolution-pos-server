@@ -24,6 +24,9 @@ function buildTablesFromAreas(areas, fallbackTableCount, activeByTable) {
           waiter_id: active?.waiter_id || null,
           order_total: active ? Number(active.total) : 0,
           active_items: active?.active_items || [],
+          device_id: active?.device_id || null,
+          accepted_by_waiter_id: active?.accepted_by_waiter_id || null,
+          accepted_by_waiter_name: active?.accepted_by_waiter_name || null,
         });
       }
       if (tables.length) {
@@ -44,6 +47,9 @@ function buildTablesFromAreas(areas, fallbackTableCount, activeByTable) {
         waiter_id: active?.waiter_id || null,
         order_total: active ? Number(active.total) : 0,
         active_items: active?.active_items || [],
+        device_id: active?.device_id || null,
+        accepted_by_waiter_id: active?.accepted_by_waiter_id || null,
+        accepted_by_waiter_name: active?.accepted_by_waiter_name || null,
       });
     }
     if (allTables.length) {

@@ -742,6 +742,11 @@
         const slot = (onlineSlots || []).find(s => Number(s.slot) === slotNum);
         if (!slot || slot.status !== "accepted" || !slot.order) return;
         if (String(slot.order.id) !== orderId) return;
+        const owner = foreignAcceptedOwner(slot.order.accepted_by_waiter_id, slot.order.accepted_by_waiter_name);
+        if (owner) {
+          showSuccessToast(`Kjo porosi i përket kamarierit ${owner}. Vetëm ai/ajo mund ta mbyllë.`);
+          return;
+        }
         renderOnlineCloseModal(slot.order, slot);
       });
     });
@@ -1025,6 +1030,19 @@
     return false;
   }
 
+  /** Për porosi online (QR/Takeaway/Delivery) të pranuara: kthen emrin e kamarierit
+   * që e pranoi nëse NUK jam unë, përndryshe null (mund ta mbyll). */
+  function foreignAcceptedOwner(acceptedId, acceptedName) {
+    const aid = String(acceptedId || "").trim().toLowerCase();
+    const aname = String(acceptedName || "").trim();
+    if (!aid && !aname) return null;
+    const myId = String(activeWaiter?.id || "").trim().toLowerCase();
+    const myName = String(activeWaiter?.name || "").trim().toLowerCase();
+    if (aid && myId && aid === myId) return null;
+    if (aname && myName && aname.toLowerCase() === myName) return null;
+    return aname || "kamarieri tjetër";
+  }
+
   async function autoAcceptOwnOrder(orderId) {
     if (!orderId || handledAcceptIds.has(orderId)) return;
     handledAcceptIds.add(orderId);
@@ -1280,6 +1298,12 @@
 
   async function closeOnlineAcceptedOrder(order, paymentMethod, btnCash, btnCard) {
     if (!order?.id || tableClosing) return;
+    const owner = foreignAcceptedOwner(order.accepted_by_waiter_id, order.accepted_by_waiter_name);
+    if (owner) {
+      closeOnlineCloseModal();
+      showSuccessToast(`Kjo porosi i përket kamarierit ${owner}. Vetëm ai/ajo mund ta mbyllë.`);
+      return;
+    }
     tableClosing = true;
     const prevCash = btnCash?.textContent || "Cash";
     const prevCard = btnCard?.textContent || "Kartë";
@@ -1833,6 +1857,13 @@
     if (!tableNumber || !canPayTable(tableNumber)) {
       showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
       return;
+    }
+    if (inferTableOrderSource(table).code === "qr") {
+      const owner = foreignAcceptedOwner(table.accepted_by_waiter_id, table.accepted_by_waiter_name);
+      if (owner) {
+        showErr(err, `Kjo porosi i përket kamarierit ${owner}. Vetëm ai/ajo mund ta mbyllë.`);
+        return;
+      }
     }
 
     const btnCash = $("btn-pay-cash");
