@@ -28,12 +28,24 @@ function extractKitchenKey(req) {
   return String(req.query.key || req.headers["x-kitchen-key"] || "").trim();
 }
 
+function maskKeyForLog(s) {
+  return s.length <= 12 ? s : `${s.slice(0, 6)}...${s.slice(-6)}`;
+}
+
+function firstDiffIndex(a, b) {
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    if (a[i] !== b[i]) return i;
+  }
+  return a.length === b.length ? -1 : len;
+}
+
 function verifyKitchenKey(client, key) {
   const expected = String(client?.kitchen_key || "").trim();
   if (!expected) return false;
   const provided = String(key || "").trim();
   if (!provided) return false;
-  console.log(`[verifyKitchenKey] DEBUG expected.length=${expected.length} provided.length=${provided.length}`);
+  console.log(`[verifyKitchenKey] DEBUG expected=${maskKeyForLog(expected)} provided=${maskKeyForLog(provided)} firstDiffAt=${firstDiffIndex(expected, provided)}`);
   try {
     return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
   } catch {
