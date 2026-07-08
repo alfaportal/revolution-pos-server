@@ -815,6 +815,10 @@
           </div>
         </div>
         <div class="hub-fiscal-field">
+          <label for="expense-vendor">Emri i firmës *</label>
+          <input type="text" id="expense-vendor" maxlength="200" required placeholder="p.sh. Firma Pastrimi SH.P.K.">
+        </div>
+        <div class="hub-fiscal-field">
           <label for="expense-description">Përshkrimi</label>
           <input type="text" id="expense-description" maxlength="500" placeholder="p.sh. blerje materiale pastrimi">
         </div>
@@ -823,7 +827,7 @@
         <div class="overflow-x" style="margin-top:1rem">
           <table>
             <thead>
-              <tr><th>Data</th><th>Kategoria</th><th>Shuma</th><th>Përshkrimi</th><th>Kush</th><th></th></tr>
+              <tr><th>Data</th><th>Kategoria</th><th>Firma</th><th>Shuma</th><th>Përshkrimi</th><th>Kush</th><th></th></tr>
             </thead>
             <tbody id="expenses-list-body"></tbody>
           </table>

@@ -62,7 +62,7 @@ function latinizeForEscPos(str) {
 
 function appendEscPosCut(buffer) {
   const base = Buffer.isBuffer(buffer) ? buffer : Buffer.alloc(0);
-  return concat(base, feedLines(3), cut(false), cutWithFeed());
+  return concat(base, feedLines(3), cutWithFeed());
 }
 
 /**

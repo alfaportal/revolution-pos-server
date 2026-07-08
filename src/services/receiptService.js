@@ -155,6 +155,10 @@ function buildReceiptPayload(clientId, business, body) {
       ? (String(body.payment_method || "cash").trim().toLowerCase() === "karte" ? "karte" : "cash")
       : "",
     payment_label: slipKind === "final" ? paymentMethodLabel(body.payment_method) : "",
+    tvsh_enabled: slipKind === "final" && !!body.tvsh_enabled,
+    tvsh_percent: Number(body.tvsh_percent) || 0,
+    subtotal: body.subtotal != null ? Number(body.subtotal) : null,
+    vat: body.vat != null ? Number(body.vat) : null,
   };
 }
 
@@ -178,6 +182,11 @@ function formatTotalLine(total, width) {
   const totalVal = `${formatMoney(total)} EUR`;
   const gap = Math.max(1, width - totalLabel.length - totalVal.length);
   return `${totalLabel}${" ".repeat(gap)}${totalVal}`;
+}
+
+function labelValueLine(label, value, width) {
+  const gap = Math.max(1, width - label.length - value.length);
+  return `${label}${" ".repeat(gap)}${value}`;
 }
 
 function formatItemRows(items, width) {
@@ -214,6 +223,12 @@ function buildReceiptLines(receipt) {
   lines.push(...formatItemRows(receipt.items, w));
   lines.push(divider(w));
 
+  if (isFinal && receipt.tvsh_enabled && receipt.subtotal != null) {
+    lines.push(labelValueLine("SUBTOTALI:", `${formatMoney(receipt.subtotal)} EUR`, w));
+  }
+  if (isFinal && receipt.tvsh_enabled && receipt.vat != null) {
+    lines.push(labelValueLine(`TVSH (${receipt.tvsh_percent}%):`, `${formatMoney(receipt.vat)} EUR`, w));
+  }
   lines.push(formatTotalLine(receipt.total, w));
   if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
   lines.push(divider(w));
@@ -252,6 +267,12 @@ function buildMarkedReceiptLines(receipt) {
   lines.push(...formatItemRows(receipt.items, w));
   lines.push(divider(w));
 
+  if (isFinal && receipt.tvsh_enabled && receipt.subtotal != null) {
+    lines.push(labelValueLine("SUBTOTALI:", `${formatMoney(receipt.subtotal)} EUR`, w));
+  }
+  if (isFinal && receipt.tvsh_enabled && receipt.vat != null) {
+    lines.push(labelValueLine(`TVSH (${receipt.tvsh_percent}%):`, `${formatMoney(receipt.vat)} EUR`, w));
+  }
   lines.push(`^R^B${formatTotalLine(receipt.total, w)}`);
   if (receipt.payment_label) lines.push(`Pagesa: ${receipt.payment_label}`);
   lines.push(divider(w));
@@ -328,6 +349,12 @@ function formatReceiptHtml(receipt) {
     <div class="rc-divider"></div>
     <div class="rc-items-compact">${itemLines || '<div class="rc-empty">—</div>'}</div>
     <div class="rc-divider"></div>
+    ${isFinal && receipt.tvsh_enabled && receipt.subtotal != null
+      ? `<div class="rc-item-line"><span>SUBTOTALI:</span><span>${formatMoney(receipt.subtotal)} EUR</span></div>`
+      : ""}
+    ${isFinal && receipt.tvsh_enabled && receipt.vat != null
+      ? `<div class="rc-item-line"><span>TVSH (${receipt.tvsh_percent}%):</span><span>${formatMoney(receipt.vat)} EUR</span></div>`
+      : ""}
     <div class="rc-total">
       <span class="rc-total-label">TOTALI:</span>
       <span class="rc-total-value">${formatMoney(receipt.total)} EUR</span>

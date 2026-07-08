@@ -640,12 +640,13 @@ function renderExpensesList(expenses) {
     ? expenses.map(e => `<tr>
         <td>${fmtDateSq(e.expense_date)}</td>
         <td>${EXPENSE_CATEGORY_LABELS[e.category] || escHtml(e.category)}</td>
+        <td>${escHtml(e.vendor_name || "—")}</td>
         <td>${euro(e.amount)}</td>
         <td>${escHtml(e.description || "—")}</td>
         <td>${escHtml(e.entered_by || "—")}</td>
         <td><button type="button" class="btn btn-ghost btn-sm" data-expense-delete="${e.id}">Fshi</button></td>
       </tr>`).join("")
-    : '<tr><td colspan="6" style="color:var(--muted)">Nuk ka shpenzime të regjistruara.</td></tr>';
+    : '<tr><td colspan="7" style="color:var(--muted)">Nuk ka shpenzime të regjistruara.</td></tr>';
   body.querySelectorAll("[data-expense-delete]").forEach(btn => {
     btn.addEventListener("click", () => deleteExpense(btn.dataset.expenseDelete));
   });
@@ -662,6 +663,11 @@ async function loadExpenses() {
 
 async function addExpense() {
   const btn = document.getElementById("btn-expense-add");
+  const vendorName = document.getElementById("expense-vendor")?.value?.trim();
+  if (!vendorName) {
+    setExpensesMsg("Emri i firmës është i detyrueshëm.", false);
+    return;
+  }
   if (btn) btn.disabled = true;
   setExpensesMsg("Duke ruajtur…", true);
   try {
@@ -670,11 +676,13 @@ async function addExpense() {
       body: JSON.stringify({
         category: document.getElementById("expense-category")?.value,
         amount: Number(document.getElementById("expense-amount")?.value),
+        vendor_name: vendorName,
         description: document.getElementById("expense-description")?.value?.trim(),
         expense_date: document.getElementById("expense-date")?.value,
       }),
     });
     document.getElementById("expense-amount").value = "";
+    document.getElementById("expense-vendor").value = "";
     document.getElementById("expense-description").value = "";
     setExpensesMsg("Shpenzimi u shtua.", true);
     await loadExpenses();

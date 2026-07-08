@@ -28,8 +28,17 @@ function normalizeExpenseDate(raw) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(raw || "")) ? raw : new Date().toISOString().slice(0, 10);
 }
 
+function normalizeVendorName(raw) {
+  const v = String(raw || "").trim().slice(0, 200);
+  if (!v) {
+    throw new Error("Emri i firmës është i detyrueshëm.");
+  }
+  return v;
+}
+
 function expenseLabel(row) {
-  return `${EXPENSE_CATEGORIES[row.category] || row.category} — ${Number(row.amount).toFixed(2)}€`;
+  const vendor = row.vendor_name ? ` (${row.vendor_name})` : "";
+  return `${EXPENSE_CATEGORIES[row.category] || row.category} — ${Number(row.amount).toFixed(2)}€${vendor}`;
 }
 
 async function listOwnerExpenses(clientId, { from = "", to = "", limit = 200 } = {}) {
@@ -54,6 +63,7 @@ async function createOwnerExpense(clientId, body, actorEmail) {
   const amount = normalizeAmount(body?.amount);
   const description = String(body?.description || "").trim().slice(0, 500);
   const expense_date = normalizeExpenseDate(body?.expense_date);
+  const vendor_name = normalizeVendorName(body?.vendor_name);
 
   const db = getSupabase();
   const { data, error } = await db
@@ -65,6 +75,7 @@ async function createOwnerExpense(clientId, body, actorEmail) {
       description,
       entered_by: String(actorEmail || "").trim(),
       expense_date,
+      vendor_name,
     })
     .select()
     .single();
@@ -76,7 +87,7 @@ async function createOwnerExpense(clientId, body, actorEmail) {
     targetType: "expense",
     targetId: data.id,
     targetLabel: expenseLabel(data),
-    details: { category, amount, description, expense_date },
+    details: { category, amount, description, expense_date, vendor_name },
   });
 
   return data;
@@ -98,6 +109,7 @@ async function updateOwnerExpense(clientId, id, body, actorEmail) {
   if (body?.amount != null) patch.amount = normalizeAmount(body.amount);
   if (body?.description != null) patch.description = String(body.description).trim().slice(0, 500);
   if (body?.expense_date != null) patch.expense_date = normalizeExpenseDate(body.expense_date);
+  if (body?.vendor_name != null) patch.vendor_name = normalizeVendorName(body.vendor_name);
 
   const { data, error } = await db
     .from("owner_expenses")
@@ -114,7 +126,7 @@ async function updateOwnerExpense(clientId, id, body, actorEmail) {
     targetType: "expense",
     targetId: id,
     targetLabel: expenseLabel(data),
-    details: { before: { category: existing.category, amount: existing.amount, description: existing.description, expense_date: existing.expense_date }, after: patch },
+    details: { before: { category: existing.category, amount: existing.amount, description: existing.description, expense_date: existing.expense_date, vendor_name: existing.vendor_name }, after: patch },
   });
 
   return data;
@@ -140,7 +152,7 @@ async function deleteOwnerExpense(clientId, id, actorEmail) {
     targetType: "expense",
     targetId: id,
     targetLabel: expenseLabel(existing),
-    details: { category: existing.category, amount: existing.amount, description: existing.description, expense_date: existing.expense_date },
+    details: { category: existing.category, amount: existing.amount, description: existing.description, expense_date: existing.expense_date, vendor_name: existing.vendor_name },
   });
 
   return { deleted: true };
