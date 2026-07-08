@@ -33,6 +33,7 @@ function verifyKitchenKey(client, key) {
   if (!expected) return false;
   const provided = String(key || "").trim();
   if (!provided) return false;
+  console.log(`[verifyKitchenKey] DEBUG expected.length=${expected.length} provided.length=${provided.length}`);
   try {
     return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
   } catch {
