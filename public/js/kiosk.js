@@ -13,8 +13,7 @@
 
   let bootstrap = null;
   let cart = [];
-  let menuGroupFilter = "pije";
-  let groupBarBound = false;
+  let menuGroupFilter = "";
   let orderSubmitting = false;
 
   const $ = id => document.getElementById(id);
@@ -104,13 +103,41 @@
     return url + apiQuery();
   }
 
-  function bindMenuGroupBar() {
-    if (groupBarBound) return;
-    groupBarBound = true;
-    MenuPosUI.bindGroupBar($("menu-group-bar"), group => {
-      menuGroupFilter = group;
-      renderMenu();
-    }, { defaultGroup: "pije" });
+  /** Ndërton tab-at e kategorive dinamikisht nga menuja — jo më vetëm "Pije"/"Ushqim". */
+  function ndertoTabetKategorive() {
+    const bar = $("menu-cat-bar");
+    if (!bar || bar.dataset.built) return;
+    bar.dataset.built = "1";
+    const menu = bootstrap?.menu || [];
+    const categories = [...new Set(menu.map(m => m.category).filter(Boolean))];
+
+    const catOrder = [
+      "pije të nxehta", "pije te nxehta",
+      "pije të ftohta", "pije te ftohta",
+      "birra",
+      "alkohole vera", "alkohole & vera",
+      "ushqime", "ushqim",
+      "ëmbëlsira", "embelsira",
+      "snacks",
+      "tjera",
+    ];
+    categories.sort((a, b) => {
+      let ai = catOrder.indexOf(a.toLowerCase().trim());
+      let bi = catOrder.indexOf(b.toLowerCase().trim());
+      if (ai === -1) ai = 999;
+      if (bi === -1) bi = 999;
+      return ai - bi;
+    });
+
+    if (!categories.length) {
+      bar.innerHTML = "";
+      return;
+    }
+    if (!categories.includes(menuGroupFilter)) menuGroupFilter = categories[0];
+    MenuPosUI.buildCategoryTabs(bar, categories, cat => {
+      menuGroupFilter = cat;
+      renderMenuItems();
+    }, menuGroupFilter);
   }
 
   function renderMenu() {
@@ -121,6 +148,14 @@
       grid.innerHTML = '<p class="hint">Menuja është bosh. Pronari shton artikuj te Menuja në panel, ose sinkronizoni menuën nga POS-i lokal.</p>';
       return;
     }
+    ndertoTabetKategorive();
+    renderMenuItems();
+  }
+
+  function renderMenuItems() {
+    const menu = bootstrap?.menu || [];
+    const grid = $("menu-grid");
+    if (!grid) return;
     MenuPosUI.renderMenuGrid({
       container: grid,
       menuItems: menu,
@@ -155,9 +190,7 @@
     if (venueBar) venueBar.textContent = venue;
     document.title = `${venue} — T${tableNumber}`;
 
-    menuGroupFilter = "pije";
     updateSyncHint();
-    bindMenuGroupBar();
     renderMenu();
     renderCart();
   }
