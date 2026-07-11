@@ -237,6 +237,9 @@ async function sendStockLowAlertEmail({ to, clientName, itemName, quantity, thre
 }
 
 async function sendDailyAiReportEmail({ to, clientName, reportDate, summaryText, payload }) {
+  const { AI_ENABLED } = require("../lib/aiConfig");
+  if (!AI_ENABLED) return { skipped: true, reason: "ai_disabled" };
+
   const revenue = Number(payload?.sales?.total_revenue || 0);
   const orders = Number(payload?.sales?.order_count || 0);
   const profit = Number(payload?.profit?.profit ?? revenue);

@@ -1,5 +1,11 @@
 const { trimEnv } = require("./env");
 
+/**
+ * Master switch për të gjitha funksionet AI.
+ * Vendos true për ta riaktivizuar (Pako 5). Kodi mbetet; vetëm ky flag ndryshon.
+ */
+const AI_ENABLED = false;
+
 function pickProvider() {
   const explicit = trimEnv("AI_PROVIDER").toLowerCase();
   if (explicit === "openai" || explicit === "anthropic") return explicit;
@@ -9,8 +15,9 @@ function pickProvider() {
   return "";
 }
 
-/** AI i ndalur përkohësisht — vendos AI_PAUSED=0 në .env për ta riaktivizuar. */
+/** AI i ndalur — AI_ENABLED=false ose AI_PAUSED=1 në .env. */
 function isAiPaused() {
+  if (!AI_ENABLED) return true;
   const v = trimEnv("AI_PAUSED");
   if (v === "0" || v.toLowerCase() === "false") return false;
   if (v === "1" || v.toLowerCase() === "true") return true;
@@ -18,7 +25,7 @@ function isAiPaused() {
 }
 
 function isAiEnabled() {
-  if (isAiPaused()) return false;
+  if (!AI_ENABLED || isAiPaused()) return false;
   return getAiConfig().ready;
 }
 
@@ -50,4 +57,4 @@ function getAiConfig() {
   return { provider: "", ready: false, apiKey: "", model: "", maxTokens: 1024 };
 }
 
-module.exports = { getAiConfig, pickProvider, isAiPaused, isAiEnabled };
+module.exports = { AI_ENABLED, getAiConfig, pickProvider, isAiPaused, isAiEnabled };
