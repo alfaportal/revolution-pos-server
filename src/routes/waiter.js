@@ -12,6 +12,7 @@ const {
 const { getKitchenMenuItemPhoto } = require("../services/menuService");
 const { verifyKasaSessionToken } = require("../lib/kasaSession");
 const { getWaiterById } = require("../services/waiterPinService");
+const { sendShiftCloseEmailForClient } = require("../services/shiftCloseEmailService");
 
 const router = express.Router();
 
@@ -127,6 +128,17 @@ router.post("/:slug/orders/close", resolveKitchenClient, requirePackageFeature("
     res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/** Raport ditor te pronari pas mbylljes së ndërrimit (thirret nga KAFENE, fire-and-forget). */
+router.post("/:slug/shift-close-email", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const result = await sendShiftCloseEmailForClient(req.kitchenClient, req.body || {});
+    res.json(result);
+  } catch (e) {
+    console.warn("[shift-close-email]", e.message);
+    res.status(500).json({ ok: false, gabim: e.message || "Email dështoi." });
   }
 });
 

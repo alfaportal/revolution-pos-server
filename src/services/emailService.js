@@ -273,6 +273,73 @@ async function sendDailyAiReportEmail({ to, clientName, reportDate, summaryText,
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendShiftCloseReportEmail({
+  to,
+  clientName,
+  waiterName,
+  shiftDate,
+  totalSales,
+  orderCount,
+  cashTotal,
+  cardTotal,
+  lowStockItems,
+}) {
+  const restaurant = String(clientName || "Lokal").trim() || "Lokal";
+  const dateLabel = String(shiftDate || "").trim() || "—";
+  const total = Number(totalSales) || 0;
+  const orders = Number(orderCount) || 0;
+  const cash = Number(cashTotal) || 0;
+  const card = Number(cardTotal) || 0;
+  const low = Array.isArray(lowStockItems) ? lowStockItems : [];
+
+  const subject = `Raporti ditor - ${restaurant} - ${dateLabel}`;
+
+  const lowStockLines = low.map(item => {
+    const name = String(item?.name || "Artikull").trim() || "Artikull";
+    const qty = Number(item?.stock_qty ?? item?.quantity ?? 0);
+    return `- ${name}: ${qty} copë`;
+  });
+
+  const textParts = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Kamarieri: ${String(waiterName || "—").trim() || "—"}`,
+    `Data: ${dateLabel}`,
+    `Pazari total: ${total.toFixed(2)} €`,
+    `Porosi: ${orders}`,
+    `Cash: ${cash.toFixed(2)} € | Kartë: ${card.toFixed(2)} €`,
+  ];
+  if (lowStockLines.length) {
+    textParts.push("", "Stoku i ulët:", ...lowStockLines);
+  }
+  const text = textParts.join("\n");
+
+  const lowStockHtml = lowStockLines.length
+    ? `<p style="margin-top:16px"><strong>Stoku i ulët:</strong></p>
+       <ul>${low
+         .map(item => {
+           const name = escapeHtmlEmail(String(item?.name || "Artikull").trim() || "Artikull");
+           const qty = Number(item?.stock_qty ?? item?.quantity ?? 0);
+           return `<li>${name}: ${qty} copë</li>`;
+         })
+         .join("")}</ul>`
+    : "";
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p>
+      <strong>Kamarieri:</strong> ${escapeHtmlEmail(String(waiterName || "—").trim() || "—")}<br>
+      <strong>Data:</strong> ${escapeHtmlEmail(dateLabel)}<br>
+      <strong>Pazari total:</strong> ${total.toFixed(2)} €<br>
+      <strong>Porosi:</strong> ${orders}<br>
+      <strong>Cash:</strong> ${cash.toFixed(2)} € | <strong>Kartë:</strong> ${card.toFixed(2)} €
+    </p>
+    ${lowStockHtml}
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 async function sendSupplySuggestionEmail({
   to,
   clientName,
@@ -341,5 +408,6 @@ module.exports = {
   sendAdminTrialExpiryAlertEmail,
   sendStockLowAlertEmail,
   sendDailyAiReportEmail,
+  sendShiftCloseReportEmail,
   sendSupplySuggestionEmail,
 };
