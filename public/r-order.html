@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#c2410c">
   <title>Porosit online</title>
-  <link rel="stylesheet" href="/css/r.css?v=10">
+  <link rel="stylesheet" href="/css/r.css?v=11">
 </head>
 <body class="order-page">
   <div id="screen-loading" class="screen active">
@@ -29,7 +29,15 @@
     </header>
 
     <main class="order-main">
-      <section class="order-panel">
+      <section class="order-panel order-panel-menu">
+        <h2 class="order-panel-title">Menuja</h2>
+        <div class="cat-nav-wrap order-cat-nav">
+          <nav class="cat-nav" id="order-cat-nav"></nav>
+        </div>
+        <div id="order-menu-grid" class="order-menu-grid"></div>
+      </section>
+
+      <section class="order-panel order-panel-details">
         <h2 class="order-panel-title">Të dhënat tuaja</h2>
         <div class="order-type-toggle" role="group" aria-label="Lloji i porosisë">
           <button type="button" class="order-type-btn active" data-type="takeaway">Marrje (Takeaway)</button>
@@ -52,14 +60,6 @@
             </button>
           </div>
         </div>
-      </section>
-
-      <section class="order-panel">
-        <h2 class="order-panel-title">Menuja</h2>
-        <div class="cat-nav-wrap order-cat-nav">
-          <nav class="cat-nav" id="order-cat-nav"></nav>
-        </div>
-        <div id="order-menu-grid" class="order-menu-grid"></div>
       </section>
     </main>
 

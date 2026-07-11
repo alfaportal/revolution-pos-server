@@ -900,40 +900,42 @@ body.menu-lightbox-open {
   .hero { padding: 3.25rem 1.5rem 3.75rem; min-height: 340px; }
 }
 
-/* Public order page (/r/:slug/order) */
+/* Public order page (/r/:slug/order) — menu first, compact header */
 body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
 
 .order-header {
   background: linear-gradient(160deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: #fff;
-  padding: 1rem 1rem 1.25rem;
+  padding: 0.55rem 1rem 0.65rem;
 }
 
 .order-back-link {
   display: inline-block;
   color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.15rem;
 }
 
 .order-header h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .order-subtitle {
-  margin: 0.35rem 0 0;
-  font-size: 0.88rem;
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
   opacity: 0.9;
+  line-height: 1.3;
 }
 
 .order-main {
   max-width: 640px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.65rem 0.85rem 1rem;
 }
 
 .order-panel {
@@ -941,12 +943,16 @@ body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 1rem;
-  margin-bottom: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.order-panel-menu {
+  margin-top: 0;
 }
 
 .order-panel-title {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 800;
 }
@@ -955,7 +961,7 @@ body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.65rem;
 }
 
 .order-type-btn {
