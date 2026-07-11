@@ -137,17 +137,17 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
   }
 }
 
-/* Hero */
+/* Hero — kompakt që menuja të shihet pa scroll */
 .hero {
   position: relative;
   overflow: hidden;
   background: linear-gradient(155deg, var(--burgundy) 0%, var(--accent) 52%, #9a3412 100%);
   color: #fff;
-  padding: 2.75rem 1.25rem 3.25rem;
+  padding: 1.15rem 1rem 1.35rem;
   text-align: center;
-  min-height: 280px;
+  min-height: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
 }
 
@@ -192,33 +192,33 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
 }
 
 .hero-logo-wrap {
-  margin-bottom: 1rem;
+  margin-bottom: 0.45rem;
 }
 
 .hero-logo {
-  width: 92px;
-  height: 92px;
-  border-radius: 22px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   object-fit: cover;
   background: #fff;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
-  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  border: 2px solid rgba(255, 255, 255, 0.85);
 }
 
 .hero h1 {
   margin: 0;
   font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(1.85rem, 6vw, 2.65rem);
+  font-size: clamp(1.35rem, 5vw, 1.85rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   text-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
 .hero-desc {
-  margin: 0.75rem 0 0;
-  font-size: 0.98rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.88rem;
   opacity: 0.94;
-  line-height: 1.6;
+  line-height: 1.4;
   max-width: 34ch;
   margin-left: auto;
   margin-right: auto;
@@ -228,13 +228,13 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1.15rem;
-  padding: 0.85rem 1.65rem;
+  margin-top: 0.65rem;
+  padding: 0.55rem 1.25rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   color: var(--burgundy);
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   text-decoration: none;
   box-shadow: 0 10px 28px rgba(201, 162, 39, 0.38);
   animation: heroCtaPulse 2.8s ease-in-out infinite;
@@ -257,11 +257,11 @@ body.pwa-banner-visible { padding-top: 4.5rem; }
   50% { box-shadow: 0 14px 36px rgba(232, 197, 71, 0.52); }
 }
 
-/* Info */
+/* Info — poshtë menusë (pa overlap negativ me hero) */
 .info-section {
   max-width: 680px;
-  margin: -1.75rem auto 0;
-  padding: 0 1rem 1.5rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 1.25rem;
   position: relative;
   z-index: 1;
 }
@@ -421,7 +421,7 @@ a.info-card-link:active {
 
 .daily-offer-banner {
   max-width: 640px;
-  margin: 0.75rem auto 0;
+  margin: 0.45rem auto 0;
   padding: 0 1rem;
 }
 
@@ -562,11 +562,11 @@ a.info-card-link:active {
   line-height: 1.45;
 }
 
-/* Menu — faqja publike */
+/* Menu — faqja publike (menjëherë pas hero) */
 .menu-section {
   max-width: 680px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 6.5rem;
+  padding: 0.75rem 1rem 1rem;
 }
 
 .section-title {
@@ -897,45 +897,43 @@ body.menu-lightbox-open {
 
 @media (min-width: 640px) {
   .info-grid { grid-template-columns: 1fr 1fr; }
-  .hero { padding: 3.25rem 1.5rem 3.75rem; min-height: 340px; }
+  .hero { padding: 1.35rem 1.5rem 1.5rem; min-height: 0; }
 }
 
-/* Public order page (/r/:slug/order) — menu first, compact header */
+/* Public order page (/r/:slug/order) */
 body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
 
 .order-header {
   background: linear-gradient(160deg, var(--accent) 0%, var(--accent-dark) 100%);
   color: #fff;
-  padding: 0.55rem 1rem 0.65rem;
+  padding: 1rem 1rem 1.25rem;
 }
 
 .order-back-link {
   display: inline-block;
   color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.35rem;
 }
 
 .order-header h1 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  line-height: 1.25;
 }
 
 .order-subtitle {
-  margin: 0.2rem 0 0;
-  font-size: 0.8rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
   opacity: 0.9;
-  line-height: 1.3;
 }
 
 .order-main {
   max-width: 640px;
   margin: 0 auto;
-  padding: 0.65rem 0.85rem 1rem;
+  padding: 1rem;
 }
 
 .order-panel {
@@ -943,16 +941,12 @@ body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 0.75rem 0.85rem;
-  margin-bottom: 0.65rem;
-}
-
-.order-panel-menu {
-  margin-top: 0;
+  padding: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .order-panel-title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   font-size: 1rem;
   font-weight: 800;
 }
@@ -961,7 +955,7 @@ body.order-page { padding-bottom: calc(12rem + var(--safe-bottom)); }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.85rem;
 }
 
 .order-type-btn {
