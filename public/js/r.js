@@ -172,6 +172,50 @@
   }
 
   let activeMenuCategory = "";
+  let pageOrderUrl = "";
+
+  function queueOrderItem(item) {
+    try {
+      sessionStorage.setItem("r_pending_item", JSON.stringify({
+        name: item.name,
+        price: Number(item.price) || 0,
+      }));
+    } catch { /* private mode */ }
+  }
+
+  function goToOrderWithItem(item) {
+    queueOrderItem(item);
+    if (pageOrderUrl) {
+      window.location.assign(pageOrderUrl);
+      return;
+    }
+    const hero = document.getElementById("hero-order-btn");
+    if (hero?.href) window.location.assign(hero.href);
+  }
+
+  function onPublicMenuItemClick(item) {
+    const desc = String(item?.description || "").trim();
+    const add = () => goToOrderWithItem(item);
+    if (window.MenuPosUI?.handleItemSelect) {
+      MenuPosUI.handleItemSelect(item, null, {
+        onSelect: add,
+        formatEuro: euro,
+        getPhotoUrl: it => String(it.photo_url || "").trim(),
+        theme: "dark",
+      });
+      return;
+    }
+    if (desc && window.MenuPosUI?.openItemDetailModal) {
+      MenuPosUI.openItemDetailModal(item, {
+        formatEuro: euro,
+        getPhotoUrl: it => String(it.photo_url || "").trim(),
+        theme: "dark",
+        onAdd: add,
+      });
+      return;
+    }
+    add();
+  }
 
   function renderMenuCards(menu, category) {
     const wrap = document.getElementById("menu-sections");
@@ -183,41 +227,45 @@
       return;
     }
 
-    wrap.innerHTML = `<div class="pub-menu-grid">${items.map(it => {
+    wrap.innerHTML = `<div class="pub-menu-grid">${items.map((it, idx) => {
       try {
         const price = Number(it.price);
         const safePrice = Number.isFinite(price) ? price : 0;
         const gold = safePrice >= 5;
         const photoUrl = String(it.photo_url || "").trim();
         const media = photoUrl
-          ? `<button type="button" class="pub-menu-media pub-menu-photo-btn menu-item-photo-btn" data-photo="${escapeAttr(photoUrl)}" data-name="${escapeAttr(it.name)}" aria-label="Shiko foton e ${escapeAttr(it.name)}">
-              <img src="${escapeAttr(photoUrl)}" alt="" loading="lazy" width="120" height="120">
-            </button>`
+          ? `<div class="pub-menu-media"><img src="${escapeAttr(photoUrl)}" alt="" loading="lazy" width="120" height="120"></div>`
           : `<div class="pub-menu-media pub-menu-emoji" aria-hidden="true">${menuItemEmoji(it)}</div>`;
         return `
-          <article class="pub-menu-card">
+          <button type="button" class="pub-menu-card" data-idx="${idx}" aria-label="${escapeAttr(it.name)}">
             ${media}
             <div class="pub-menu-body">
               <h3 class="pub-menu-name">${escapeHtml(it.name)}</h3>
               <span class="pub-menu-price${gold ? " is-gold" : ""}">${euro(safePrice)}</span>
             </div>
-          </article>`;
+          </button>`;
       } catch {
         return "";
       }
     }).filter(Boolean).join("")}</div>`;
 
-    bindMenuPhotoLightbox();
-    wrap.querySelectorAll(".pub-menu-photo-btn img").forEach(img => {
+    wrap.querySelectorAll(".pub-menu-card img").forEach(img => {
       img.addEventListener("error", () => {
-        const btn = img.closest(".pub-menu-photo-btn");
-        const name = btn?.getAttribute("data-name") || "";
-        const ph = document.createElement("div");
-        ph.className = "pub-menu-media pub-menu-emoji";
-        ph.setAttribute("aria-hidden", "true");
-        ph.textContent = menuItemEmoji({ name });
-        btn?.replaceWith(ph);
+        const media = img.closest(".pub-menu-media");
+        if (!media) return;
+        const name = img.closest(".pub-menu-card")?.getAttribute("aria-label") || "";
+        media.className = "pub-menu-media pub-menu-emoji";
+        media.setAttribute("aria-hidden", "true");
+        media.textContent = menuItemEmoji({ name });
       }, { once: true });
+    });
+
+    wrap.querySelectorAll(".pub-menu-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const idx = Number(card.dataset.idx);
+        const item = items[idx];
+        if (item) onPublicMenuItemClick(item);
+      });
     });
     observeReveal(wrap.querySelectorAll(".pub-menu-card"));
   }
@@ -570,16 +618,17 @@
   }
 
   function bindOrderLinks(orderUrl) {
+    pageOrderUrl = String(orderUrl || "").trim();
     const orderBar = document.getElementById("order-bar");
     const orderBtn = document.getElementById("btn-order");
     const heroBtn = document.getElementById("hero-order-btn");
     if (!orderBar || !orderBtn) return;
 
-    if (orderUrl) {
-      orderBtn.href = orderUrl;
+    if (pageOrderUrl) {
+      orderBtn.href = pageOrderUrl;
       orderBar.hidden = false;
       if (heroBtn) {
-        heroBtn.href = orderUrl;
+        heroBtn.href = pageOrderUrl;
         heroBtn.classList.remove("hidden");
       }
     } else {

@@ -283,6 +283,18 @@
     updateDeliveryFieldVisibility();
   }
 
+  function consumePendingItem() {
+    try {
+      const raw = sessionStorage.getItem("r_pending_item");
+      if (!raw) return;
+      sessionStorage.removeItem("r_pending_item");
+      const item = JSON.parse(raw);
+      if (item?.name) {
+        addToCart({ name: String(item.name), price: Number(item.price) || 0 });
+      }
+    } catch { /* ignore */ }
+  }
+
   function renderPage(data) {
     pageData = data;
     document.title = `Porosit — ${data.name || "Restorant"}`;
@@ -300,6 +312,7 @@
     activeCategory = MenuCatalog.pickDefaultCategory(data);
     renderCategories();
     renderMenu();
+    consumePendingItem();
     renderCart();
     showScreen("screen-order");
   }
