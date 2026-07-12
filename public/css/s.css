@@ -764,23 +764,34 @@ body.pwa-banner-visible .shop-order-bar { bottom: 88px; }
 
 .order-cat-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
   margin-bottom: 0.75rem;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: thin;
+  padding: 0.25rem 0;
 }
 
 .order-cat-nav button {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0.45rem 1rem;
+  border: none;
   border-radius: 999px;
-  background: var(--bg);
+  background: #2d2d44;
+  color: #fff;
   cursor: pointer;
   font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .order-cat-nav button.active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: #ff6b35;
+  border-color: transparent;
   color: #fff;
 }
 

@@ -211,18 +211,7 @@
       btn.type = "button";
       btn.className = "menu-cat-tab";
       btn.dataset.category = cat;
-
-      const icon = document.createElement("span");
-      icon.className = "menu-tab-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = categoryIcon(cat);
-
-      const label = document.createElement("span");
-      label.className = "menu-tab-label";
-      label.textContent = cat;
-
-      btn.appendChild(icon);
-      btn.appendChild(label);
+      btn.textContent = cat;
       wrap.appendChild(btn);
     });
 
@@ -255,20 +244,16 @@
   function ensureGroupBarIcons(barEl) {
     if (!barEl) return;
     barEl.querySelectorAll(".menu-group-btn").forEach(btn => {
-      const group = btn.dataset.group || "pije";
-      const icons = { pije: "🥤", ushqim: "🍽️" };
-      if (btn.querySelector(".menu-tab-icon")) return;
-      const label = btn.textContent.trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim() || group;
-      btn.textContent = "";
-      const icon = document.createElement("span");
-      icon.className = "menu-tab-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = icons[group] || "📋";
-      const text = document.createElement("span");
-      text.className = "menu-tab-label";
-      text.textContent = label;
-      btn.appendChild(icon);
-      btn.appendChild(text);
+      const icon = btn.querySelector(".menu-tab-icon");
+      if (icon) icon.remove();
+      const label = btn.querySelector(".menu-tab-label");
+      if (label) {
+        btn.textContent = label.textContent.trim();
+      } else {
+        btn.textContent = String(btn.textContent || "")
+          .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+          .trim() || (btn.dataset.group || "");
+      }
     });
   }
 

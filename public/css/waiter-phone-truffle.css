@@ -223,7 +223,7 @@ body::-webkit-scrollbar,
 #menu-cat-bar {
   display: flex !important;
   flex-wrap: nowrap !important;
-  overflow-x: auto !important;
+  overflow-x: scroll !important;
   overflow-y: hidden !important;
   gap: 0.4rem;
   margin: 0.55rem 0.65rem 0 !important;
@@ -233,22 +233,29 @@ body::-webkit-scrollbar,
   box-shadow: none !important;
   border-radius: 0 !important;
   grid-template-columns: none !important;
-  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: thin !important;
 }
 
 .menu-group-bar::-webkit-scrollbar,
 #menu-cat-bar::-webkit-scrollbar,
 .menu-cat-tabs::-webkit-scrollbar {
-  display: none !important;
-  height: 0 !important;
+  height: 4px !important;
+  display: block !important;
 }
 
 .menu-cat-tabs {
   display: flex !important;
   flex-wrap: nowrap !important;
   gap: 0.4rem;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow-x: scroll !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: thin;
   padding: 0.2rem 0;
 }
 

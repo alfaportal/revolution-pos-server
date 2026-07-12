@@ -255,10 +255,7 @@
     nav.innerHTML = cats.map(cat => {
       const enc = encodeURIComponent(cat);
       const active = cat === activeMenuCategory ? " active" : "";
-      return `<button type="button" data-cat="${enc}" class="cat-tab${active}">
-        <span class="cat-tab-icon" aria-hidden="true">${categoryEmoji(cat)}</span>
-        <span class="cat-tab-label">${escapeHtml(cat)}</span>
-      </button>`;
+      return `<button type="button" data-cat="${enc}" class="cat-tab${active}">${escapeHtml(cat)}</button>`;
     }).join("");
 
     renderMenuCards(list, activeMenuCategory);
