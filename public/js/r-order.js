@@ -217,10 +217,15 @@
             formatEuro: euro,
             getPhotoUrl: it => it.photo_url || "",
             theme: "dark",
+            alwaysModal: true,
           });
-        } else if (String(item.description || "").trim()) {
-          // fallback minimal nëse menu-pos nuk u ngarkua
-          add();
+        } else if (window.MenuPosUI?.openItemDetailModal) {
+          MenuPosUI.openItemDetailModal(item, {
+            formatEuro: euro,
+            getPhotoUrl: it => it.photo_url || "",
+            theme: "dark",
+            onAdd: add,
+          });
         } else {
           add();
         }

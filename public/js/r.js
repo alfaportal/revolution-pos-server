@@ -194,7 +194,6 @@
   }
 
   function onPublicMenuItemClick(item) {
-    const desc = String(item?.description || "").trim();
     const add = () => goToOrderWithItem(item);
     if (window.MenuPosUI?.handleItemSelect) {
       MenuPosUI.handleItemSelect(item, null, {
@@ -202,10 +201,11 @@
         formatEuro: euro,
         getPhotoUrl: it => String(it.photo_url || "").trim(),
         theme: "dark",
+        alwaysModal: true,
       });
       return;
     }
-    if (desc && window.MenuPosUI?.openItemDetailModal) {
+    if (window.MenuPosUI?.openItemDetailModal) {
       MenuPosUI.openItemDetailModal(item, {
         formatEuro: euro,
         getPhotoUrl: it => String(it.photo_url || "").trim(),

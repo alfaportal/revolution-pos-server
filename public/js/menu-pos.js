@@ -175,10 +175,6 @@
   function openItemDetailModal(item, { formatEuro, getPhotoUrl, onAdd, theme } = {}) {
     closeItemDetailModal();
     const desc = String(item?.description || "").trim();
-    if (!desc) {
-      onAdd?.(item);
-      return;
-    }
     let photo = "";
     if (typeof getPhotoUrl === "function") photo = String(getPhotoUrl(item) || "").trim();
     if (!photo && item?.photo_url) photo = String(item.photo_url).trim();
@@ -196,7 +192,7 @@
         ${photo ? `<div class="menu-item-detail-photo"><img src="${escModal(photo)}" alt=""></div>` : ""}
         <h3 class="menu-item-detail-name">${escModal(item.name)}</h3>
         <div class="menu-item-detail-price">${escModal(priceTxt)}</div>
-        <p class="menu-item-detail-desc">${escModal(desc)}</p>
+        ${desc ? `<p class="menu-item-detail-desc">${escModal(desc)}</p>` : ""}
         <button type="button" class="menu-item-detail-add">Shto në porosi</button>
       </div>`;
     document.body.appendChild(root);
@@ -209,10 +205,12 @@
   }
 
   function handleItemSelect(item, btn, opts = {}) {
-    const desc = String(item?.description || "").trim();
-    if (!desc) {
-      opts.onSelect?.(item, btn);
-      return;
+    if (!opts.alwaysModal) {
+      const desc = String(item?.description || "").trim();
+      if (!desc) {
+        opts.onSelect?.(item, btn);
+        return;
+      }
     }
     openItemDetailModal(item, {
       formatEuro: opts.formatEuro,
