@@ -129,16 +129,14 @@ function mapMenuItemForPos(row) {
 }
 
 function sortMenuRowsLikePos(rows) {
-  /* Same as POS SQLite: ORDER BY category, name (binary) — Ç/Ë after A–Z, so teas after coffees. */
+  /* Match desktop POS (Windows SQLite/NLS): en-like name order — Çaj after Americano, before Cappuccino. */
   return [...(rows || [])].sort((a, b) => {
     const ca = String(a.category || "");
     const cb = String(b.category || "");
-    if (ca < cb) return -1;
-    if (ca > cb) return 1;
-    const na = String(a.name || "");
-    const nb = String(b.name || "");
-    if (na < nb) return -1;
-    if (na > nb) return 1;
+    const catCmp = ca.localeCompare(cb, "en");
+    if (catCmp !== 0) return catCmp;
+    const nameCmp = String(a.name || "").localeCompare(String(b.name || ""), "en");
+    if (nameCmp !== 0) return nameCmp;
     return (Number(a.local_id) || 0) - (Number(b.local_id) || 0);
   });
 }

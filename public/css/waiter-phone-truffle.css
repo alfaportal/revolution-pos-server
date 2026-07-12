@@ -368,6 +368,59 @@ body::-webkit-scrollbar,
   color: #94a3b8 !important;
 }
 
+/* Force order screen dark (overrides menu-pos light --menu-bg) */
+#screen-order,
+#screen-order .order-main,
+#screen-order .waiter-main,
+#screen-order .menu-pos-wrap,
+#screen-order .menu-photo-grid {
+  background: #1a1a2e !important;
+}
+
+#screen-order .waiter-header {
+  background: #1e1e2e !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+}
+
+#screen-order .waiter-header h1,
+#screen-order .waiter-header .sub,
+#screen-order .kiosk-hint {
+  color: #fff !important;
+}
+
+.menu-item-btn .cmimi,
+.menu-item-btn .cmimi-badge,
+.menu-item-btn .cmimi-badge.is-gold {
+  color: #ff6b35 !important;
+}
+
+/* Kiosk / QR send button */
+#screen-order .btn-primary,
+#screen-order #btn-send,
+.cart-bar .btn-primary {
+  background: #ff6b35 !important;
+  border: none !important;
+  border-radius: 14px !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.35);
+}
+
+#screen-order .btn-primary:active,
+#screen-order #btn-send:active {
+  background: #e85a28 !important;
+}
+
+.cart-total,
+#cart-total {
+  color: #fff !important;
+}
+
+#cart-total {
+  color: #ff6b35 !important;
+}
+
 /* ─── Cart bar / Dërgo ─── */
 .cart-bar {
   background: #1e1e2e !important;
