@@ -97,7 +97,7 @@
     photoWrap.appendChild(ph);
   }
 
-  function createMenuItemButton(item, { onSelect, disabled, formatEuro, getPhotoUrl }) {
+  function createMenuItemButton(item, { onSelect, disabled, formatEuro, getPhotoUrl, alwaysModal }) {
     const soldOut = Boolean(item.out_of_stock || item.sold_out);
     const photoUrl = (typeof getPhotoUrl === "function" ? getPhotoUrl(item) : "")
       || (itemHasPhoto(item) ? defaultPhotoUrl(item) : "");
@@ -155,6 +155,7 @@
           formatEuro,
           getPhotoUrl,
           theme: "dark",
+          alwaysModal: !!alwaysModal,
         });
       });
     }
@@ -228,6 +229,7 @@
     disabled,
     formatEuro,
     getPhotoUrl,
+    alwaysModal,
   }) {
     if (!container) return;
     container.innerHTML = "";
@@ -250,6 +252,7 @@
           disabled,
           formatEuro,
           getPhotoUrl,
+          alwaysModal,
         });
         if (btn) grid.appendChild(btn);
       } catch (err) {
