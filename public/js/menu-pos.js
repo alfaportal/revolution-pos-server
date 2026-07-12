@@ -348,7 +348,7 @@
   root.MenuPosUI = {
     categoryMatchesGroup,
     categoryIcon,
-    isDrinkCategory,
+    isDrinkCategory: isDrinkCat,
     itemEmoji,
     renderMenuGrid,
     renderMenuSections: renderMenuGrid,

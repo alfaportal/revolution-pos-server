@@ -680,19 +680,32 @@
   position: absolute;
   top: 0.55rem;
   right: 0.65rem;
-  width: 36px;
-  height: 36px;
+  z-index: 20;
+  width: 40px;
+  height: 40px;
+  min-width: 36px;
+  min-height: 36px;
   border: none;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.08);
+  background: #fff;
   color: #111827;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  font-weight: 700;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 .menu-item-detail-modal.is-dark .menu-item-detail-close {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+.menu-item-detail-close:hover {
+  background: #f3f4f6;
+  color: #000;
 }
 .menu-item-detail-photo {
   width: 100%;

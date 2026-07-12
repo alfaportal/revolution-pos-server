@@ -195,24 +195,28 @@
 
   function onPublicMenuItemClick(item) {
     const add = () => goToOrderWithItem(item);
-    if (window.MenuPosUI?.handleItemSelect) {
-      MenuPosUI.handleItemSelect(item, null, {
-        onSelect: add,
-        formatEuro: euro,
-        getPhotoUrl: it => String(it.photo_url || "").trim(),
-        theme: "dark",
-        alwaysModal: true,
-      });
-      return;
-    }
-    if (window.MenuPosUI?.openItemDetailModal) {
-      MenuPosUI.openItemDetailModal(item, {
-        formatEuro: euro,
-        getPhotoUrl: it => String(it.photo_url || "").trim(),
-        theme: "dark",
-        onAdd: add,
-      });
-      return;
+    try {
+      if (window.MenuPosUI?.openItemDetailModal) {
+        MenuPosUI.openItemDetailModal(item, {
+          formatEuro: euro,
+          getPhotoUrl: it => String(it.photo_url || "").trim(),
+          theme: "dark",
+          onAdd: add,
+        });
+        return;
+      }
+      if (window.MenuPosUI?.handleItemSelect) {
+        MenuPosUI.handleItemSelect(item, null, {
+          onSelect: add,
+          formatEuro: euro,
+          getPhotoUrl: it => String(it.photo_url || "").trim(),
+          theme: "dark",
+          alwaysModal: true,
+        });
+        return;
+      }
+    } catch (err) {
+      console.error("[public-page] product-modal:", err);
     }
     add();
   }
