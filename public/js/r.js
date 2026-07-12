@@ -232,12 +232,17 @@
     indicator.style.transform = `translateX(${btnRect.left - navRect.left + nav.scrollLeft}px)`;
   }
 
+  /** Si QR/panel: id (local_id) — Espresso… pastaj Çaj, jo alfabet locale. */
+  function menuSortedLikePanel(menu) {
+    return (menu || []).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }
+
   function renderMenu(categories, menu) {
     const nav = document.getElementById("cat-nav");
     const wrap = document.getElementById("menu-sections");
     if (!nav || !wrap) return;
 
-    const list = Array.isArray(menu) ? menu : [];
+    const list = menuSortedLikePanel(Array.isArray(menu) ? menu : []);
     const cats = categories?.length
       ? categories.filter(Boolean)
       : [...new Set(list.map(i => i?.category).filter(Boolean))];

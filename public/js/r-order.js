@@ -37,6 +37,11 @@
     return String(s ?? "").replace(/"/g, "&quot;");
   }
 
+  /** Si QR/panel: id (local_id) — Espresso… pastaj Çaj. */
+  function menuSortedLikePanel(menu) {
+    return (menu || []).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }
+
   function applyTheme(color) {
     if (!color) return;
     document.documentElement.style.setProperty("--accent", color);
@@ -167,7 +172,7 @@
     const grid = document.getElementById("order-menu-grid");
     if (!grid || !pageData) return;
 
-    const menu = pageData.menu || [];
+    const menu = menuSortedLikePanel(pageData.menu || []);
     if (!menu.length) {
       grid.innerHTML = '<p class="order-menu-empty">Menuja nuk është e disponueshme.</p>';
       return;
