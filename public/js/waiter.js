@@ -859,8 +859,28 @@
     renderPendingOnlineBanner();
   }
 
+  /** Si paneli: kategoritë nga POS (sort_order), jo catOrder hardkoduar. */
+  function orderedMenuCategories(menu) {
+    const present = new Set((menu || []).map(m => String(m.category || "").trim()).filter(Boolean));
+    const fromApi = (bootstrap?.categories || [])
+      .map(c => String(c || "").trim())
+      .filter(c => c && present.has(c));
+    if (fromApi.length) {
+      for (const c of present) {
+        if (!fromApi.includes(c)) fromApi.push(c);
+      }
+      return fromApi;
+    }
+    return [...present];
+  }
+
+  /** Si paneli/seed: id (local_id) — Espresso… pastaj Çaj, jo alfabet me locale. */
+  function menuSortedLikePanel(menu) {
+    return (menu || []).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }
+
   function renderMenu() {
-    const menu = bootstrap?.menu || [];
+    const menu = menuSortedLikePanel(bootstrap?.menu || []);
     const grid = $("menu-grid");
     if (!grid) return;
     if (!menu.length) {
@@ -868,35 +888,18 @@
       return;
     }
 
-    // Ndërto tab-bar nëse nuk ekziston ende
     var tabBar = grid.parentElement.querySelector("#menu-cat-bar");
     if (!tabBar) {
       tabBar = document.createElement("div");
       tabBar.id = "menu-cat-bar";
       grid.parentElement.insertBefore(tabBar, grid);
-      var categories = [...new Set(menu.map(function(m){ return m.category; }).filter(Boolean))];
-
-      // Radhit kategorit në renditje logjike
-      var catOrder = [
-        "pije të nxehta", "pije te nxehta",
-        "pije të ftohta", "pije te ftohta",
-        "birra",
-        "alkohole vera", "alkohole & vera",
-        "ushqime", "ushqim",
-        "ëmbëlsira", "embelsira",
-        "snacks",
-        "tjera"
-      ];
-      categories.sort(function(a, b) {
-        var ai = catOrder.indexOf(a.toLowerCase().trim());
-        var bi = catOrder.indexOf(b.toLowerCase().trim());
-        if (ai === -1) ai = 999;
-        if (bi === -1) bi = 999;
-        return ai - bi;
-      });
-
-      if (categories.length) {
-        menuGroupFilter = categories[0];
+    }
+    var categories = orderedMenuCategories(menu);
+    if (categories.length) {
+      if (!categories.includes(menuGroupFilter)) menuGroupFilter = categories[0];
+      var catKey = categories.join("\0");
+      if (tabBar.dataset.catKey !== catKey) {
+        tabBar.dataset.catKey = catKey;
         MenuPosUI.buildCategoryTabs(tabBar, categories, function(cat) {
           menuGroupFilter = cat;
           renderMenuItems();
@@ -907,7 +910,7 @@
   }
 
   function renderMenuItems() {
-    var menu = bootstrap?.menu || [];
+    var menu = menuSortedLikePanel(bootstrap?.menu || []);
     var grid = $("menu-grid");
     if (!grid) return;
     MenuPosUI.renderMenuGrid({

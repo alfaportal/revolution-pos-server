@@ -103,37 +103,42 @@
     return url + apiQuery();
   }
 
-  /** Ndërton tab-at e kategorive dinamikisht nga menuja — jo më vetëm "Pije"/"Ushqim". */
+  /** Si paneli: kategoritë nga POS (sort_order), jo catOrder hardkoduar. */
+  function orderedMenuCategories(menu) {
+    const present = new Set((menu || []).map(m => String(m.category || "").trim()).filter(Boolean));
+    const fromApi = (bootstrap?.categories || [])
+      .map(c => String(c || "").trim())
+      .filter(c => c && present.has(c));
+    if (fromApi.length) {
+      for (const c of present) {
+        if (!fromApi.includes(c)) fromApi.push(c);
+      }
+      return fromApi;
+    }
+    return [...present];
+  }
+
+  /** Si paneli/seed: id (local_id) — Espresso… pastaj Çaj. */
+  function menuSortedLikePanel(menu) {
+    return (menu || []).slice().sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }
+
+  /** Ndërton tab-at e kategorive si në panel (POS sort_order). */
   function ndertoTabetKategorive() {
     const bar = $("menu-cat-bar");
-    if (!bar || bar.dataset.built) return;
-    bar.dataset.built = "1";
-    const menu = bootstrap?.menu || [];
-    const categories = [...new Set(menu.map(m => m.category).filter(Boolean))];
-
-    const catOrder = [
-      "pije të nxehta", "pije te nxehta",
-      "pije të ftohta", "pije te ftohta",
-      "birra",
-      "alkohole vera", "alkohole & vera",
-      "ushqime", "ushqim",
-      "ëmbëlsira", "embelsira",
-      "snacks",
-      "tjera",
-    ];
-    categories.sort((a, b) => {
-      let ai = catOrder.indexOf(a.toLowerCase().trim());
-      let bi = catOrder.indexOf(b.toLowerCase().trim());
-      if (ai === -1) ai = 999;
-      if (bi === -1) bi = 999;
-      return ai - bi;
-    });
+    if (!bar) return;
+    const menu = menuSortedLikePanel(bootstrap?.menu || []);
+    const categories = orderedMenuCategories(menu);
 
     if (!categories.length) {
       bar.innerHTML = "";
+      delete bar.dataset.catKey;
       return;
     }
     if (!categories.includes(menuGroupFilter)) menuGroupFilter = categories[0];
+    const catKey = categories.join("\0");
+    if (bar.dataset.catKey === catKey) return;
+    bar.dataset.catKey = catKey;
     MenuPosUI.buildCategoryTabs(bar, categories, cat => {
       menuGroupFilter = cat;
       renderMenuItems();
@@ -141,7 +146,7 @@
   }
 
   function renderMenu() {
-    const menu = bootstrap?.menu || [];
+    const menu = menuSortedLikePanel(bootstrap?.menu || []);
     const grid = $("menu-grid");
     if (!grid) return;
     if (!menu.length) {
@@ -153,7 +158,7 @@
   }
 
   function renderMenuItems() {
-    const menu = bootstrap?.menu || [];
+    const menu = menuSortedLikePanel(bootstrap?.menu || []);
     const grid = $("menu-grid");
     if (!grid) return;
     MenuPosUI.renderMenuGrid({
