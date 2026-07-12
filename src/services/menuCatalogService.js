@@ -1,10 +1,25 @@
 const { getSupabase } = require("../db");
 const { isVisibleOnWebMenu, isOutOfStock } = require("../lib/stockHelpers");
 const { getCatalogFlatMap, normMenuName } = require("../data/menuCatalogTemplate");
+const { normalizeStockPhotoPath } = require("../lib/menuStockPhoto");
 
 let _catalogPhotoByName = null;
+let _seedStockByName = null;
+
+function seedStockPhotoByName(name) {
+  if (!_seedStockByName) {
+    try {
+      _seedStockByName = require("../data/menuStockPhotoMap.json");
+    } catch {
+      _seedStockByName = {};
+    }
+  }
+  return _seedStockByName[normMenuName(name)] || "";
+}
 
 function catalogPhotoByName(name) {
+  const seed = seedStockPhotoByName(name);
+  if (seed) return seed;
   if (!_catalogPhotoByName) {
     _catalogPhotoByName = new Map();
     for (const item of getCatalogFlatMap().values()) {
@@ -14,6 +29,33 @@ function catalogPhotoByName(name) {
     }
   }
   return _catalogPhotoByName.get(normMenuName(name)) || "";
+}
+
+/** Attach has_photo + photo_url for QR / takeaway / waiter clients. */
+function attachClientPhoto(item, row, { slug = "", channel = "menu" } = {}) {
+  const photo = String(row?.photo || "").trim();
+  const stockPath = normalizeStockPhotoPath(photo);
+  if (stockPath) {
+    return { ...item, has_photo: true, photo_url: stockPath };
+  }
+  if (/^https?:\/\//i.test(photo)) {
+    return { ...item, has_photo: true, photo_url: photo };
+  }
+  if (photo && slug) {
+    return {
+      ...item,
+      has_photo: true,
+      photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
+    };
+  }
+  if (photo) {
+    return { ...item, has_photo: true };
+  }
+  const templatePhoto = catalogPhotoByName(item.name);
+  if (templatePhoto) {
+    return { ...item, has_photo: true, photo_url: templatePhoto };
+  }
+  return { ...item, has_photo: false, photo_url: null };
 }
 
 function buildMenuCategories(dbCategories, menuItems) {
@@ -33,22 +75,22 @@ function buildMenuCategories(dbCategories, menuItems) {
   return merged;
 }
 
-function mapMenuItemForWeb(row) {
-  return {
+function mapMenuItemForWeb(row, photoOpts = {}) {
+  const item = {
     id: row.local_id,
     name: row.name,
     category: String(row.category || "").trim(),
     price: Number(row.price),
-    has_photo: Boolean(String(row.photo || "").trim()),
   };
+  return attachClientPhoto(item, row, photoOpts);
 }
 
-function mapMenuItemForShop(row) {
+function mapMenuItemForShop(row, photoOpts = {}) {
   const outOfStock = isOutOfStock(row);
   const compareAt = row.compare_at_price != null ? Number(row.compare_at_price) : null;
   const price = Number(row.price);
   const onSale = compareAt != null && compareAt > price;
-  return {
+  const item = {
     id: row.local_id,
     name: row.name,
     description: String(row.description || "").trim(),
@@ -57,25 +99,14 @@ function mapMenuItemForShop(row) {
     price,
     compare_at_price: compareAt,
     on_sale: onSale,
-    has_photo: Boolean(String(row.photo || "").trim()),
     out_of_stock: outOfStock,
     sold_out_label: outOfStock ? "Mbaroi" : null,
   };
+  return attachClientPhoto(item, row, photoOpts);
 }
 
 function mapMenuItemForKitchen(row, { slug, channel = "waiter" } = {}) {
-  const item = mapMenuItemForWeb(row);
-  if (item.has_photo && slug) {
-    return {
-      ...item,
-      photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
-    };
-  }
-  const templatePhoto = catalogPhotoByName(item.name);
-  if (templatePhoto) {
-    return { ...item, has_photo: true, photo_url: templatePhoto };
-  }
-  return item;
+  return mapMenuItemForWeb(row, { slug, channel });
 }
 
 function mapMenuItemForPos(row) {
@@ -147,17 +178,7 @@ async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug =
 
 async function getClientShopCatalog(clientId, { activeOnly = true, pageSlug = "" } = {}) {
   const { settings, categories, menu } = await loadMenuCatalogRows(clientId, { activeOnly });
-  const enc = pageSlug ? encodeURIComponent(pageSlug) : "";
-  const mapItem = row => {
-    const item = mapMenuItemForShop(row);
-    if (item.has_photo && enc) {
-      return {
-        ...item,
-        photo_url: `/api/s/${enc}/menu/${item.id}/photo`,
-      };
-    }
-    return item;
-  };
+  const mapItem = row => mapMenuItemForShop(row, { slug: pageSlug, channel: "s" });
   return {
     shop_name: settings?.restaurant_name || "",
     synced_at: settings?.synced_at || null,

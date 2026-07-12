@@ -97,16 +97,39 @@
     photoWrap.appendChild(ph);
   }
 
-  function createMenuItemButton(item, { onSelect, disabled, formatEuro }) {
+  function createMenuItemButton(item, { onSelect, disabled, formatEuro, getPhotoUrl }) {
     const soldOut = Boolean(item.out_of_stock || item.sold_out);
+    const photoUrl = (typeof getPhotoUrl === "function" ? getPhotoUrl(item) : "")
+      || (itemHasPhoto(item) ? defaultPhotoUrl(item) : "");
+
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "menu-item-btn" + (soldOut ? " menu-item-sold-out-btn" : "");
+    btn.className = "menu-item-btn"
+      + (soldOut ? " menu-item-sold-out-btn" : "")
+      + (photoUrl ? " has-photo" : "");
     btn.disabled = !!disabled || soldOut;
     btn.setAttribute("aria-label", `${item.name}, ${formatEuro(item.price)}`);
 
     const card = document.createElement("div");
-    card.className = "menu-item-card";
+    card.className = "menu-item-card" + (photoUrl ? " has-photo" : "");
+
+    if (photoUrl) {
+      const wrap = document.createElement("div");
+      wrap.className = "menu-item-photo-wrap";
+      const img = document.createElement("img");
+      img.className = "menu-item-photo";
+      img.src = photoUrl;
+      img.alt = item.name || "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.onerror = () => {
+        wrap.remove();
+        card.classList.remove("has-photo");
+        btn.classList.remove("has-photo");
+      };
+      wrap.appendChild(img);
+      card.appendChild(wrap);
+    }
 
     const meta = document.createElement("div");
     meta.className = "menu-item-meta";

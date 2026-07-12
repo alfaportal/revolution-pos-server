@@ -184,13 +184,19 @@
       return;
     }
 
-    grid.innerHTML = items.map(it => `
-      <button type="button" class="order-menu-item" data-name="${escapeAttr(it.name)}" data-price="${it.price}">
+    grid.innerHTML = items.map(it => {
+      const photoUrl = String(it.photo_url || "").trim();
+      const photo = photoUrl
+        ? `<span class="order-menu-item-photo"><img src="${escapeAttr(photoUrl)}" alt="" loading="lazy" decoding="async"></span>`
+        : "";
+      return `
+      <button type="button" class="order-menu-item${photoUrl ? " has-photo" : ""}" data-name="${escapeAttr(it.name)}" data-price="${it.price}">
+        ${photo}
         <span class="order-menu-item-name">${escapeHtml(it.name)}</span>
         <span class="order-menu-item-price">${euro(it.price)}</span>
         <span class="order-menu-item-add">+ Shto</span>
-      </button>
-    `).join("");
+      </button>`;
+    }).join("");
 
     grid.querySelectorAll(".order-menu-item").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -200,6 +206,13 @@
         });
         showFormError("");
       });
+      const img = btn.querySelector(".order-menu-item-photo img");
+      if (img) {
+        img.addEventListener("error", () => {
+          img.closest(".order-menu-item-photo")?.remove();
+          btn.classList.remove("has-photo");
+        });
+      }
     });
   }
 

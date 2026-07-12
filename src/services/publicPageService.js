@@ -232,9 +232,13 @@ async function getPublicRestaurantPage(slug, baseUrl) {
   const settings = await loadSettings(client.id);
   if (settings?.public_enabled === false) return null;
 
-  const menuData = await getClientMenuCatalog(client.id, { activeOnly: true });
   const creds = await ensureKitchenCredentials(client);
   const pageSlug = creds.kitchen_slug || client.id;
+  const menuData = await getClientMenuCatalog(client.id, {
+    activeOnly: true,
+    kitchenSlug: pageSlug,
+    channel: "r",
+  });
 
   const base = String(baseUrl || "").replace(/\/+$/, "");
   let order_url = null;
@@ -262,12 +266,7 @@ async function getPublicRestaurantPage(slug, baseUrl) {
     logo_url: settings?.public_logo ? `/api/r/${encodeURIComponent(pageSlug)}/logo` : null,
     theme_color: String(settings?.public_theme_color || "#c2410c").trim(),
     categories: menuData.categories,
-    menu: (menuData.menu || []).map(item => ({
-      ...item,
-      photo_url: item.has_photo
-        ? `/api/r/${encodeURIComponent(pageSlug)}/menu/${item.id}/photo`
-        : null,
-    })),
+    menu: menuData.menu || [],
     order_url,
     public_url: `${base}/r/${encodeURIComponent(pageSlug)}`,
     ...settingsProfileFields(settings, pageSlug, "r"),
@@ -657,6 +656,9 @@ async function getMenuItemPhotoResponse(slug, localId) {
     .eq("active", true)
     .maybeSingle();
   if (error) throw error;
+  const { stockPhotoFilePayload } = require("../lib/menuStockPhoto");
+  const stock = stockPhotoFilePayload(data?.photo);
+  if (stock) return stock;
   const buffer = imageBufferFromDataUrl(data?.photo, MAX_MENU_PHOTO_BYTES);
   const mime = imageMimeFromDataUrl(data?.photo, MAX_MENU_PHOTO_BYTES);
   if (!buffer || !mime) return null;

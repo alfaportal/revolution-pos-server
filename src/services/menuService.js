@@ -196,6 +196,9 @@ async function getKitchenMenuItemPhoto(clientId, localId) {
     .maybeSingle();
   if (error) throw error;
   if (!data?.photo) return null;
+  const { stockPhotoFilePayload } = require("../lib/menuStockPhoto");
+  const stock = stockPhotoFilePayload(data.photo);
+  if (stock) return stock;
   const { imageBufferFromDataUrl, imageMimeFromDataUrl } = require("../lib/imageDataUrl");
   const buffer = imageBufferFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
   const mime = imageMimeFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
@@ -213,6 +216,9 @@ async function getOwnerMenuItemPhoto(clientId, itemId) {
     .maybeSingle();
   if (error) throw error;
   if (!data?.photo) return null;
+  const { stockPhotoFilePayload } = require("../lib/menuStockPhoto");
+  const stock = stockPhotoFilePayload(data.photo);
+  if (stock) return stock;
   const { imageBufferFromDataUrl, imageMimeFromDataUrl } = require("../lib/imageDataUrl");
   const buffer = imageBufferFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
   const mime = imageMimeFromDataUrl(data.photo, MAX_MENU_PHOTO_BYTES);
