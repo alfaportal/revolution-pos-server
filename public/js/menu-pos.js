@@ -148,8 +148,78 @@
     btn.appendChild(card);
 
     if (soldOut) btn.classList.add("is-sold-out");
-    if (!soldOut) btn.addEventListener("click", () => onSelect(item, btn));
+    if (!soldOut) {
+      btn.addEventListener("click", () => {
+        handleItemSelect(item, btn, {
+          onSelect,
+          formatEuro,
+          getPhotoUrl,
+          theme: "dark",
+        });
+      });
+    }
     return btn;
+  }
+
+  function escModal(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function closeItemDetailModal() {
+    document.getElementById("menu-item-detail-modal")?.remove();
+  }
+
+  function openItemDetailModal(item, { formatEuro, getPhotoUrl, onAdd, theme } = {}) {
+    closeItemDetailModal();
+    const desc = String(item?.description || "").trim();
+    if (!desc) {
+      onAdd?.(item);
+      return;
+    }
+    let photo = "";
+    if (typeof getPhotoUrl === "function") photo = String(getPhotoUrl(item) || "").trim();
+    if (!photo && item?.photo_url) photo = String(item.photo_url).trim();
+    if (!photo && itemHasPhoto(item)) photo = defaultPhotoUrl(item);
+    const priceTxt = typeof formatEuro === "function"
+      ? formatEuro(item.price)
+      : (Number(item.price || 0).toFixed(2) + " €");
+    const root = document.createElement("div");
+    root.id = "menu-item-detail-modal";
+    root.className = "menu-item-detail-modal" + (theme === "light" ? "" : " is-dark");
+    root.innerHTML = `
+      <div class="menu-item-detail-backdrop" data-close="1"></div>
+      <div class="menu-item-detail-card" role="dialog" aria-modal="true">
+        <button type="button" class="menu-item-detail-close" data-close="1" aria-label="Mbyll">×</button>
+        ${photo ? `<div class="menu-item-detail-photo"><img src="${escModal(photo)}" alt=""></div>` : ""}
+        <h3 class="menu-item-detail-name">${escModal(item.name)}</h3>
+        <div class="menu-item-detail-price">${escModal(priceTxt)}</div>
+        <p class="menu-item-detail-desc">${escModal(desc)}</p>
+        <button type="button" class="menu-item-detail-add">Shto në porosi</button>
+      </div>`;
+    document.body.appendChild(root);
+    const close = () => closeItemDetailModal();
+    root.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", close));
+    root.querySelector(".menu-item-detail-add")?.addEventListener("click", () => {
+      close();
+      onAdd?.(item);
+    });
+  }
+
+  function handleItemSelect(item, btn, opts = {}) {
+    const desc = String(item?.description || "").trim();
+    if (!desc) {
+      opts.onSelect?.(item, btn);
+      return;
+    }
+    openItemDetailModal(item, {
+      formatEuro: opts.formatEuro,
+      getPhotoUrl: opts.getPhotoUrl,
+      theme: opts.theme || "dark",
+      onAdd: () => opts.onSelect?.(item, btn),
+    });
   }
 
   function renderMenuGrid({
@@ -286,6 +356,9 @@
     renderMenuSections: renderMenuGrid,
     buildCategoryTabs,
     bindGroupBar,
+    openItemDetailModal,
+    handleItemSelect,
+    closeItemDetailModal,
     flashButton(btn) {
       if (!btn) return;
       btn.classList.add("menu-item-flash");

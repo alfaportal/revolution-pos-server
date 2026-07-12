@@ -190,7 +190,7 @@
         ? `<span class="order-menu-item-photo"><img src="${escapeAttr(photoUrl)}" alt="" loading="lazy" decoding="async"></span>`
         : "";
       return `
-      <button type="button" class="order-menu-item${photoUrl ? " has-photo" : ""}" data-name="${escapeAttr(it.name)}" data-price="${it.price}">
+      <button type="button" class="order-menu-item${photoUrl ? " has-photo" : ""}" data-id="${escapeAttr(it.id)}" data-name="${escapeAttr(it.name)}" data-price="${it.price}" data-desc="${escapeAttr(it.description || "")}" data-photo="${escapeAttr(photoUrl)}">
         ${photo}
         <span class="order-menu-item-name">${escapeHtml(it.name)}</span>
         <span class="order-menu-item-price">${euro(it.price)}</span>
@@ -200,11 +200,30 @@
 
     grid.querySelectorAll(".order-menu-item").forEach(btn => {
       btn.addEventListener("click", () => {
-        addToCart({
+        const item = {
+          id: btn.getAttribute("data-id"),
           name: btn.getAttribute("data-name") || "",
           price: Number(btn.getAttribute("data-price")),
-        });
-        showFormError("");
+          description: btn.getAttribute("data-desc") || "",
+          photo_url: btn.getAttribute("data-photo") || "",
+        };
+        const add = () => {
+          addToCart({ name: item.name, price: item.price });
+          showFormError("");
+        };
+        if (window.MenuPosUI?.handleItemSelect) {
+          MenuPosUI.handleItemSelect(item, btn, {
+            onSelect: add,
+            formatEuro: euro,
+            getPhotoUrl: it => it.photo_url || "",
+            theme: "dark",
+          });
+        } else if (String(item.description || "").trim()) {
+          // fallback minimal nëse menu-pos nuk u ngarkua
+          add();
+        } else {
+          add();
+        }
       });
       const img = btn.querySelector(".order-menu-item-photo img");
       if (img) {

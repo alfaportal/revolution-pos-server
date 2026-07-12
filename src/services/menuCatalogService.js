@@ -81,6 +81,7 @@ function mapMenuItemForWeb(row, photoOpts = {}) {
     name: row.name,
     category: String(row.category || "").trim(),
     price: Number(row.price),
+    description: String(row.description || "").trim(),
   };
   return attachClientPhoto(item, row, photoOpts);
 }
