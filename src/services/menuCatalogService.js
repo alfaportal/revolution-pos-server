@@ -128,6 +128,21 @@ function mapMenuItemForPos(row) {
   };
 }
 
+function sortMenuRowsLikePos(rows) {
+  /* Same as POS SQLite: ORDER BY category, name (binary) — Ç/Ë after A–Z, so teas after coffees. */
+  return [...(rows || [])].sort((a, b) => {
+    const ca = String(a.category || "");
+    const cb = String(b.category || "");
+    if (ca < cb) return -1;
+    if (ca > cb) return 1;
+    const na = String(a.name || "");
+    const nb = String(b.name || "");
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+    return (Number(a.local_id) || 0) - (Number(b.local_id) || 0);
+  });
+}
+
 async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
   const db = getSupabase();
   let menuQuery = db
@@ -136,8 +151,7 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
       "local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold, description, sku, compare_at_price",
     )
     .eq("client_id", clientId)
-    .order("category")
-    .order("name");
+    .order("local_id");
   if (activeOnly) menuQuery = menuQuery.eq("active", true);
 
   const [{ data: settings }, { data: categories }, { data: menu }, { data: staff }, { data: areas }] =
@@ -157,7 +171,7 @@ async function loadMenuCatalogRows(clientId, { activeOnly = false } = {}) {
         .order("sort_order"),
     ]);
 
-  return { settings, categories, menu, staff, areas };
+  return { settings, categories, menu: sortMenuRowsLikePos(menu), staff, areas };
 }
 
 async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug = "", channel = "kiosk" } = {}) {
