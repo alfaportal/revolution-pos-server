@@ -3,6 +3,32 @@ const { isVisibleOnWebMenu, isOutOfStock } = require("../lib/stockHelpers");
 const { getCatalogFlatMap, normMenuName } = require("../data/menuCatalogTemplate");
 const { normalizeStockPhotoPath } = require("../lib/menuStockPhoto");
 
+/** FR → SQ for waiter phone / QR / takeaway display only (POS catalog untouched). */
+let _menuFrToSq = null;
+let _menuFrToSqLower = null;
+function menuFrToSqMap() {
+  if (!_menuFrToSq) {
+    try {
+      _menuFrToSq = require("../data/menuFrToSq.json");
+    } catch {
+      _menuFrToSq = {};
+    }
+    _menuFrToSqLower = {};
+    for (const [fr, sq] of Object.entries(_menuFrToSq)) {
+      _menuFrToSqLower[fr.toLowerCase()] = sq;
+    }
+  }
+  return _menuFrToSq;
+}
+function toSqMenuLabel(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return s;
+  const map = menuFrToSqMap();
+  if (map[s]) return map[s];
+  const lower = _menuFrToSqLower[s.toLowerCase()];
+  return lower || s;
+}
+
 let _catalogPhotoByName = null;
 let _seedStockByName = null;
 
@@ -14,7 +40,13 @@ function seedStockPhotoByName(name) {
       _seedStockByName = {};
     }
   }
-  return _seedStockByName[normMenuName(name)] || "";
+  const raw = String(name || "").trim();
+  if (!raw) return "";
+  return (
+    _seedStockByName[normMenuName(raw)] ||
+    _seedStockByName[normMenuName(toSqMenuLabel(raw))] ||
+    ""
+  );
 }
 
 function catalogPhotoByName(name) {
@@ -28,10 +60,24 @@ function catalogPhotoByName(name) {
       }
     }
   }
-  return _catalogPhotoByName.get(normMenuName(name)) || "";
+  const raw = String(name || "").trim();
+  return (
+    _catalogPhotoByName.get(normMenuName(raw)) ||
+    _catalogPhotoByName.get(normMenuName(toSqMenuLabel(raw))) ||
+    ""
+  );
 }
 
 /** Attach has_photo + photo_url for QR / takeaway / waiter clients. */
+function resolveClientStockPhoto(item, row) {
+  return (
+    catalogPhotoByName(item?.name) ||
+    catalogPhotoByName(row?.name) ||
+    catalogPhotoByName(toSqMenuLabel(row?.name)) ||
+    ""
+  );
+}
+
 function attachClientPhoto(item, row, { slug = "", channel = "menu" } = {}) {
   const photo = String(row?.photo || "").trim();
   const stockPath = normalizeStockPhotoPath(photo);
@@ -41,19 +87,17 @@ function attachClientPhoto(item, row, { slug = "", channel = "menu" } = {}) {
   if (/^https?:\/\//i.test(photo)) {
     return { ...item, has_photo: true, photo_url: photo };
   }
+  /* DB may have blob/base64/legacy photo flags without a public URL — use studio stock. */
+  const templatePhoto = resolveClientStockPhoto(item, row);
+  if (templatePhoto) {
+    return { ...item, has_photo: true, photo_url: templatePhoto };
+  }
   if (photo && slug) {
     return {
       ...item,
       has_photo: true,
       photo_url: `/api/${channel}/${encodeURIComponent(slug)}/menu/${item.id}/photo`,
     };
-  }
-  if (photo) {
-    return { ...item, has_photo: true };
-  }
-  const templatePhoto = catalogPhotoByName(item.name);
-  if (templatePhoto) {
-    return { ...item, has_photo: true, photo_url: templatePhoto };
   }
   return { ...item, has_photo: false, photo_url: null };
 }
@@ -78,8 +122,8 @@ function buildMenuCategories(dbCategories, menuItems) {
 function mapMenuItemForWeb(row, photoOpts = {}) {
   const item = {
     id: row.local_id,
-    name: row.name,
-    category: String(row.category || "").trim(),
+    name: toSqMenuLabel(row.name),
+    category: toSqMenuLabel(row.category),
     price: Number(row.price),
     description: String(row.description || "").trim(),
   };
@@ -93,10 +137,10 @@ function mapMenuItemForShop(row, photoOpts = {}) {
   const onSale = compareAt != null && compareAt > price;
   const item = {
     id: row.local_id,
-    name: row.name,
+    name: toSqMenuLabel(row.name),
     description: String(row.description || "").trim(),
     sku: String(row.sku || "").trim(),
-    category: String(row.category || "").trim(),
+    category: toSqMenuLabel(row.category),
     price,
     compare_at_price: compareAt,
     on_sale: onSale,
@@ -179,12 +223,17 @@ async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug =
     kitchenSlug
       ? mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })
       : mapMenuItemForWeb(row);
+  const mappedMenu = (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem);
+  const sqCategories = (categories || []).map((c) => ({
+    ...c,
+    name: toSqMenuLabel(c.name),
+  }));
   return {
     restaurant_name: settings?.restaurant_name || "",
     table_count: Math.min(30, Math.max(1, Number(settings?.table_count) || 10)),
     synced_at: settings?.synced_at || null,
-    categories: buildMenuCategories(categories, menu),
-    menu: (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem),
+    categories: buildMenuCategories(sqCategories, mappedMenu),
+    menu: mappedMenu,
     staff: (staff || []).map(s => s.name),
   };
 }
@@ -192,11 +241,16 @@ async function getClientMenuCatalog(clientId, { activeOnly = true, kitchenSlug =
 async function getClientShopCatalog(clientId, { activeOnly = true, pageSlug = "" } = {}) {
   const { settings, categories, menu } = await loadMenuCatalogRows(clientId, { activeOnly });
   const mapItem = row => mapMenuItemForShop(row, { slug: pageSlug, channel: "s" });
+  const mappedProducts = (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem);
+  const sqCategories = (categories || []).map((c) => ({
+    ...c,
+    name: toSqMenuLabel(c.name),
+  }));
   return {
     shop_name: settings?.restaurant_name || "",
     synced_at: settings?.synced_at || null,
-    categories: buildMenuCategories(categories, menu),
-    products: (menu || []).filter(row => !activeOnly || isVisibleOnWebMenu(row)).map(mapItem),
+    categories: buildMenuCategories(sqCategories, mappedProducts),
+    products: mappedProducts,
   };
 }
 
