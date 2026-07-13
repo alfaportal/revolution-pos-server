@@ -141,6 +141,24 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/license/ack-factory-reset — POS konfirmon që e ka marrë urdhrin e rivendosjes
+ */
+router.post("/ack-factory-reset", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key } = req.body || {};
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+    const { ackFactoryResetByKey } = require("../services/licenseService");
+    const result = await ackFactoryResetByKey(key);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
  * POST /api/v1/license/emergency-unlock — Master PIN (online) ose kod ditor (offline backup)
  * Body: { master_pin?, emergency_code?, device_id, app_type?, hostname? }
  */

@@ -17,6 +17,7 @@ const {
   unblockLicense,
   resetLicenseDevice,
   regenerateKitchenAccess,
+  requestFactoryResetForClient,
   getDashboardStats,
   generateLicenseKey,
   generateDeviceId,
@@ -381,6 +382,33 @@ router.post("/clients/:id/regenerate-kitchen-access", asyncHandler(async (req, r
     });
   } catch (e) {
     const msg = logRouteError("admin:POST /clients/:id/regenerate-kitchen-access", e);
+    res.status(400).json({ gabim: msg });
+  }
+}));
+
+/** Urdhëron POS-in e klientit: Rivendos si të re (fshin të dhënat lokale). */
+router.post("/clients/:id/factory-reset", asyncHandler(async (req, res) => {
+  try {
+    const confirm = String(req.body?.confirm || "").trim();
+    if (confirm !== "RIVENDOS") {
+      return res.status(400).json({ gabim: "Duhet të shkruani saktë RIVENDOS." });
+    }
+    const result = await requestFactoryResetForClient(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_factory_reset",
+      targetType: "client",
+      targetId: req.params.id,
+      details: result,
+    });
+    res.json({
+      ok: true,
+      ...result,
+      message:
+        "Urdhri u dërgua. POS-i (nëse është online) rivendoset brenda ~30–60 sekondave.",
+    });
+  } catch (e) {
+    const msg = logRouteError("admin:POST /clients/:id/factory-reset", e);
     res.status(400).json({ gabim: msg });
   }
 }));

@@ -1324,6 +1324,32 @@ function bindTableActions(scope) {
   scope.querySelectorAll("[data-edit-client]").forEach(btn => {
     btn.onclick = () => openEditClient(btn.dataset.editClient);
   });
+  scope.querySelectorAll("[data-factory-reset-client]").forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.factoryResetClient;
+      const c = clientsCache.find(x => String(x.id) === String(id));
+      const name = c?.emri || "klientin";
+      const typed = prompt(
+        `Rivendos POS për "${name}" si të ri?\n\nFshin të dhënat LOKALE te kompjuteri i kafenesë (jo cloud).\nShkruani RIVENDOS për të konfirmuar:`,
+      );
+      if (String(typed || "").trim() !== "RIVENDOS") {
+        if (typed != null) alert("Anuluar — duhet RIVENDOS saktë.");
+        return;
+      }
+      try {
+        btn.disabled = true;
+        const r = await api(`/api/admin/clients/${id}/factory-reset`, {
+          method: "POST",
+          body: JSON.stringify({ confirm: "RIVENDOS" }),
+        });
+        alert(r.message || "Urdhri u dërgua. POS rivendoset brenda ~1 minute.");
+      } catch (e) {
+        alert(e.message || "Rivendosja dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
   scope.querySelectorAll("[data-edit-license]").forEach(btn => {
     btn.onclick = () => openEditLicense(btn.dataset.editLicense);
   });
@@ -1662,6 +1688,7 @@ async function loadClients() {
         <td class="actions col-actions" data-label="Veprime">
           <button class="btn btn-primary btn-sm" data-manage-client="${c.id}">Menaxho</button>
           <button class="btn btn-ghost btn-sm" data-edit-client="${c.id}">Ndrysho</button>
+          <button class="btn btn-accent btn-sm" data-factory-reset-client="${c.id}" title="Rivendos POS lokal si të ri">Rivendos</button>
           <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Fshi</button>
         </td>
       </tr>`).join("")

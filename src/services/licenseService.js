@@ -335,6 +335,8 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
     message,
+    force_factory_reset: Boolean(license.force_factory_reset_at),
+    force_factory_reset_at: license.force_factory_reset_at || null,
     terminal_warning: warning,
     terminal_code: terminalAccess.code || null,
     terminals_active: terminalSummary.active_terminal_count,
@@ -812,6 +814,29 @@ async function resetLicenseDevice(id) {
   return data;
 }
 
+/** Super Admin: urdhëron POS që të bëjë Rivendos si të re (lokalisht). */
+async function requestFactoryResetForClient(clientId) {
+  const id = String(clientId || "").trim();
+  if (!id) throw new Error("ID e klientit mungon.");
+  const db = getSupabase();
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("licenses")
+    .update({ force_factory_reset_at: now, updated_at: now })
+    .eq("client_id", id)
+    .select("id, celesi");
+  if (error) throw error;
+  return { ok: true, licenses_flagged: (data || []).length, at: now };
+}
+
+/** POS: pas urdhrit, pastro flag-un që të mos përsëritet. */
+async function ackFactoryResetByKey(celesi) {
+  const license = await findLicenseByKey(celesi);
+  if (!license) throw new Error("Liçenca nuk u gjet.");
+  await patchLicenseMeta(license.id, { force_factory_reset_at: null });
+  return { ok: true, license_id: license.id };
+}
+
 async function findUserByEmail(email) {
   const db = getSupabase();
   const { data, error } = await db
@@ -1041,6 +1066,8 @@ module.exports = {
   blockLicense,
   unblockLicense,
   resetLicenseDevice,
+  requestFactoryResetForClient,
+  ackFactoryResetByKey,
   findUserByEmail,
   verifyUserPassword,
   todayISO,
