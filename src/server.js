@@ -1,5 +1,6 @@
 require("./lib/env");
 
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
@@ -148,6 +149,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Never serve the root waiter-manifest with start_url "/" or "/waiter/" —
+// PWA install must use /waiter/:slug/manifest.json (injected in waiter.html).
+app.get("/waiter-manifest.json", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.status(404).type("application/manifest+json").json({
+    error: "Use /waiter/:slug/manifest.json?key=...",
+  });
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 app.get(ADMIN_PATH, (_req, res) => {
@@ -205,6 +215,7 @@ app.get("/waiter/:slug/manifest.json", (req, res) => {
   if (key) q.set("key", key);
   if (w) q.set("w", w);
   const qs = q.toString();
+  // Must include slug (+ key) — bare /waiter/ causes Express "Cannot GET /waiter/"
   const startUrl = `/waiter/${slug}${qs ? `?${qs}` : ""}`;
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.type("application/manifest+json");
@@ -241,9 +252,41 @@ app.get("/waiter/:slug/manifest.json", (req, res) => {
   });
 });
 
-app.get("/waiter/:slug", (_req, res) => {
+app.get(["/waiter", "/waiter/"], (_req, res) => {
+  res
+    .status(404)
+    .type("html")
+    .send(`<!DOCTYPE html><html lang="sq"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kamarieri</title></head><body style="font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:1.5rem;line-height:1.5;text-align:center"><h1>Linku i kamarierit mungon</h1><p>Hapni linkun e plotë nga paneli i pronarit (me <code>/waiter/emri-lokalit?key=...</code>), pastaj shtojeni në ekranin kryesor.</p><p>Mos instaloni PWA nga faqja kryesore.</p></body></html>`);
+});
+
+app.get("/waiter/:slug", (req, res) => {
+  const slug = String(req.params.slug || "").trim();
+  const key = String(req.query.key || "").trim();
+  const w = String(req.query.w || "").trim();
+  const manQ = new URLSearchParams();
+  if (key) manQ.set("key", key);
+  if (w) manQ.set("w", w);
+  const manifestHref = `/waiter/${encodeURIComponent(slug)}/manifest.json${
+    manQ.toString() ? `?${manQ.toString()}` : ""
+  }`;
+
+  const filePath = path.join(__dirname, "../public/waiter.html");
+  let html;
+  try {
+    html = fs.readFileSync(filePath, "utf8");
+  } catch (err) {
+    console.error("[waiter] failed to read waiter.html:", formatError(err));
+    return res.status(500).type("text").send("Gabim serveri.");
+  }
+
+  // Inject absolute manifest BEFORE the browser can race-fetch a wrong start_url
+  html = html.replace(
+    /<link\s+rel="manifest"[^>]*>/i,
+    `<link rel="manifest" href="${manifestHref}">`,
+  );
+
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/waiter.html"));
+  res.type("html").send(html);
 });
 
 app.get("/r/:slug/manifest.json", manifestHandler);
