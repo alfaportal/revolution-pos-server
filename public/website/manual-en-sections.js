@@ -15,7 +15,6 @@ window.MANUAL_EN_SECTIONS = {
             </ul>
           </li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Owner sign-in screen on phone</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -30,7 +29,6 @@ window.MANUAL_EN_SECTIONS = {
           <li><strong>Kitchen display:</strong> Open the KDS link on the kitchen screen: <code>/kitchen/[slug]?key=...</code>. Leave it open — orders refresh automatically.</li>
           <li><strong>Table kiosk:</strong> Customers scan the table QR code (see section 4). Link: <code>/kiosk/[slug]?key=...&amp;table=N</code>.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Owner panel and POS application on computer</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -46,7 +44,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Enter the code, set a <strong>new password</strong> (min. 6 characters), and confirm.</li>
           <li>Tap <strong>«Save and sign in»</strong> — you will be signed in to the panel automatically.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Password reset form</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -69,7 +66,6 @@ window.MANUAL_EN_SECTIONS = {
           </li>
           <li>Click <strong>«Add»</strong>. The item appears in the list immediately and becomes available on POS/tablet.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>«Add item» form in the panel</small></div>
 
         <h3>How to change prices</h3>
         <ol class="steps">
@@ -90,7 +86,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The preview appears immediately. Click <strong>«Save»</strong> to store it.</li>
           <li>Photos appear on the restaurant <strong>public page</strong> (<code>/r/:slug</code>) when customers browse the menu online.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Item photo upload and display on the public page</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -104,7 +99,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>To reactivate: click <strong>«Activate»</strong>.</li>
           <li>To delete permanently: click <strong>«Delete»</strong> and confirm. This action cannot be undone.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Hide, Activate, and Delete buttons in the menu list</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -127,7 +121,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Click <strong>«Add waiter»</strong>.</li>
           <li>The waiter appears in the list with status «Active». You can reset the PIN anytime with the <strong>«Reset PIN»</strong> button.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Waiter add form with PIN</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -142,7 +135,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The table list appears (T1, T2, …) according to the areas you configured (Dining room, Terrace, etc.).</li>
           <li>After an order or receipt, the screen <strong>locks automatically after 5 seconds</strong> — the next waiter must enter their own PIN.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>PIN sign-in screen and table list</small></div>
 
         <h3>How to place an order from the tablet</h3>
         <ol class="steps">
@@ -153,7 +145,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Tap <strong>«Send order»</strong> (or equivalent). The order goes to the <strong>kitchen (KDS)</strong> and/or <strong>bar</strong>.</li>
           <li>You can add more items to the same table without closing it — just send additional orders.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Waiter menu, cart, and send button</small></div>
 
         <h3>How to close a table and print the receipt</h3>
         <ol class="steps">
@@ -164,7 +155,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The system closes the order, generates the receipt, and opens the browser print dialog.</li>
           <li>Choose the printer (58mm or 80mm thermal) and print. The table becomes <strong>available</strong> for new customers.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Closing the table and printing the receipt</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -183,7 +173,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Click <strong>«Print QR codes»</strong> to print all codes on one page.</li>
           <li>Cut and place each QR on the corresponding table (elastic band, table holder, sticker).</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>QR code grid and printing for tables</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -199,7 +188,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The order goes to the bar/kitchen. Staff brings it to the correct table.</li>
           <li>Payment and receipt are usually handled at the end by the waiter or at the register — the kiosk only takes the order.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Kiosk screen on the customer's phone</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -218,7 +206,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The source is shown with an icon: 📱 Waiter, 🪑 Table (kiosk), 🛵 Delivery, 🥡 Takeaway.</li>
           <li>New orders are highlighted visually until you read them.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>KDS screen with several active orders</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -232,7 +219,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The order is removed from the active order list — the waiter/staff knows it can be brought to the table.</li>
           <li>Repeat for each completed order.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>«Ready ✅» button on the order ticket</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -251,7 +237,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>You see: total revenue, chart by day, and a table of each transaction (time, table, waiter, total).</li>
           <li>For a quick daily view, also check the statistics at the top of the panel (after sign-in).</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Reports tab with date filter and sales table</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -266,7 +251,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>At end of day, click <strong>«Close day»</strong> to finalize the daily report (Z-Report).</li>
           <li>View <strong>Daily history</strong> below for past days' reports.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Z-Report summary and «Close day» button</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -284,8 +268,7 @@ window.MANUAL_EN_SECTIONS = {
             </ul>
           </li>
           <li>Save the file on your computer or send it to your accountant.</li>
-        </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Print, Export CSV, and Export HTML buttons</small></div>`,
+        </ol>`,
 
   faqja: `<span class="section-num">Section 7</span>
         <h2>PUBLIC PAGE</h2>
@@ -299,7 +282,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The preview appears immediately. Click <strong>«Save public page»</strong> at the bottom of the form.</li>
           <li>The logo appears on the public page and as an icon when customers add the page to their phone (PWA).</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Logo upload and public page preview</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -314,7 +296,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Click <strong>«Save public page»</strong>.</li>
           <li>Hours appear on the public page in the <em>«Opening hours»</em> section.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Weekly hours grid and display on the public page</small></div>
 
         <h3>How to enable online delivery</h3>
         <ol class="steps">
@@ -326,7 +307,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Customers choose <strong>Delivery</strong> or <strong>Takeaway</strong>, fill in name, phone, and (for delivery) address.</li>
           <li>The order goes automatically to the <strong>bar</strong> and <strong>kitchen</strong> with the Delivery/Takeaway label.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Public page with «Order now» button and delivery form</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -343,7 +323,6 @@ window.MANUAL_EN_SECTIONS = {
           <li><strong>Method 2 — With administrator help:</strong> Contact Revolution Invest support. The administrator sends a reset email from the Super Admin panel (Owners tab → Reset Password).</li>
           <li>After changing, sign out and sign in again with the new password on all devices.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>«Forgot password?» link and reset email</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -359,7 +338,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>After verification, POS continues in emergency mode until the server connection is restored.</li>
           <li>Restore internet as soon as possible and verify the license normally — emergency mode is logged in the activity log.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Emergency code in Super Admin and unlock screen on POS</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -383,7 +361,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The <strong>Quantity</strong> and <strong>Alert threshold</strong> fields become editable.</li>
           <li>Click <strong>«Save»</strong> on that item's row to save the change.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Inventory tab with «Track stock» checkbox enabled</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -402,7 +379,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Click <strong>«Save»</strong> after every change.</li>
           <li>Changes sync to POS and tablets within ~15 seconds.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Quantity and Alert threshold fields in the inventory list</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -417,7 +393,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Confirm — quantity updates and status changes (e.g. from «Out of stock» to «OK»).</li>
           <li>The item returns automatically to the menu on POS and tablet.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>«Restock» button and new quantity dialog</small></div>
 
         <h3>What happens when stock reaches zero</h3>
         <ol class="steps">
@@ -432,7 +407,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Customers and staff <strong>do not see</strong> the item until you restock.</li>
           <li>After restocking, the item returns without needing to activate it manually on the Menu tab.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Item with «Out of stock» status and absence from POS menu</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -446,7 +420,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The email is sent to the registered owner address (<code>/owner/login</code>) or business email.</li>
           <li>The <strong>Inventory</strong> tab shows a badge if there are items on alert — check the panel daily.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Low stock notification email and badge on Inventory tab</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -465,7 +438,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>Backup computer with POS installed = <strong>1 terminal</strong></li>
         </ul>
         <p>Waiter tablets, the kitchen display, and the kiosk <strong>do not</strong> count as terminals — only the desktop POS application.</p>
-        <div class="photo-placeholder">[PHOTO]<small>Two POS computers with different device IDs</small></div>
 
         <h3 id="terminalet-shiko">How to view active terminals</h3>
         <ol class="steps">
@@ -480,7 +452,6 @@ window.MANUAL_EN_SECTIONS = {
           </li>
           <li>The device ID also appears under <strong>Admin → License</strong> on the POS computer after activation.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>License tab with active terminals list</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
@@ -499,7 +470,6 @@ window.MANUAL_EN_SECTIONS = {
           <li>The owner panel shows the warning: <strong>«You have reached the terminal limit»</strong>.</li>
           <li>Existing POS units (within the limit) continue to work normally — only the extra terminal is blocked.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Limit warning on panel and message on POS</small></div>
 
         <div class="box box-warning">
           <div class="box-title">⚠️ Warning</div>
@@ -511,17 +481,129 @@ window.MANUAL_EN_SECTIONS = {
           <li>Contact <strong>Revolution Invest</strong> to increase the number of terminals on your license.</li>
           <li>You can reach us via:
             <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>WhatsApp</strong> — from the page <a href="/#kontakt" style="color:#7dd3fc;text-decoration:underline">revolution-pos.com/#kontakt</a></li>
-              <li><strong>Email:</strong> <a href="mailto:info@revolution-pos.com" style="color:#7dd3fc;text-decoration:underline">info@revolution-pos.com</a></li>
+              <li><strong>Phone / WhatsApp:</strong> <a href="tel:+38343555294" style="color:#7dd3fc;text-decoration:underline">+383 43 555 294</a> · <a href="https://wa.me/38343555294" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline">WhatsApp</a> · page <a href="/#kontakt" style="color:#7dd3fc;text-decoration:underline">revolution-pos.com/#kontakt</a></li>
+              <li><strong>Email:</strong> <a href="mailto:revolutioninvest05@gmail.com" style="color:#7dd3fc;text-decoration:underline">revolutioninvest05@gmail.com</a></li>
             </ul>
           </li>
           <li>Provide the venue name and how many extra terminals you need (e.g. «I want 2 terminals instead of 1»).</li>
           <li>The administrator updates the license — after refresh, you can activate POS on the new device without blocking.</li>
         </ol>
-        <div class="photo-placeholder">[PHOTO]<small>Contact form on the Revolution Invest website</small></div>
 
         <div class="box box-tip">
           <div class="box-title">💡 Tip</div>
           <p>License price = base price + (extra terminals × price per terminal). Package details are discussed with the Revolution Invest team before activation.</p>
+        </div>`,
+
+  kontabilisti: `<span class="section-num">Section 11</span>
+        <h2>ACCOUNTANT BOOKS</h2>
+        <p>The <strong>Accountant</strong> module (Full package) opens from the POS admin panel. There you manage the sales ledger, expenses, VAT report, and export for your accountant. In the owner web panel (<code>/owner/login</code> → <strong>Reports</strong> tab) you also find daily petty expenses and the audit log.</p>
+
+        <h3 id="kontabilisti-hap">How to open accountant books from the admin panel</h3>
+        <ol class="steps">
+          <li>Open the <strong>Revolution Invest POS</strong> app on the register computer.</li>
+          <li>Sign in to <strong>Admin</strong> (with administrator rights).</li>
+          <li>In the left menu / top tabs, select <strong>«Accountant»</strong> (Kontabilisti).</li>
+          <li>You will see three blocks: <strong>Sales ledger</strong>, <strong>Purchases/expenses ledger</strong>, and <strong>VAT report</strong>.</li>
+        </ol>
+        <div class="box box-tip">
+          <div class="box-title">💡 Tip</div>
+          <p>If you do not see the «Accountant» tab, your package does not include it (Full only). Contact Revolution Invest for an upgrade.</p>
+        </div>
+
+        <h3 id="kontabilisti-shpenzim">How to record expenses</h3>
+        <ol class="steps">
+          <li>Under <strong>Purchases/expenses ledger</strong>, click <strong>«+ New expense»</strong>.</li>
+          <li>Fill in:
+            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
+              <li><strong>Date</strong></li>
+              <li><strong>Company name</strong></li>
+              <li><strong>Description</strong></li>
+              <li><strong>Category</strong> — Rent, Cleaning, Services, Payroll, Unexpected, Other</li>
+              <li><strong>Amount (€)</strong></li>
+            </ul>
+          </li>
+          <li>Click <strong>«Save expense»</strong>. The row appears with who recorded it.</li>
+          <li><em>Web alternative:</em> <code>https://revolution-pos.com/owner/login</code> → <strong>Reports</strong> → <strong>Daily petty expenses</strong>.</li>
+        </ol>
+
+        <h3 id="kontabilisti-raport">How to view income and expense reports</h3>
+        <ol class="steps">
+          <li><strong>Income (sales ledger):</strong> set the date range → <strong>Filter</strong>. See date, invoice no., items, amount, VAT rate, VAT, and payment method.</li>
+          <li><strong>Expenses:</strong> filter the same period in the purchases/expenses ledger.</li>
+          <li><strong>On the web:</strong> owner panel → <strong>Reports</strong> → «Revenue» with date filter → <strong>Show</strong>.</li>
+        </ol>
+
+        <h3 id="kontabilisti-audit">How to view the audit trail</h3>
+        <ol class="steps">
+          <li><strong>On POS:</strong> Admin → <strong>Journal</strong> (Ditari) → <strong>«Activity register (who used the program)»</strong>. Choose the period and click <strong>Search</strong>.</li>
+          <li><strong>On the web:</strong> <code>/owner/login</code> → <strong>Reports</strong> → <strong>Activity register (Audit log)</strong> → <strong>Refresh</strong>.</li>
+          <li>You see price changes, voided invoices, expenses, and other actions — with time, action, details, and who did it.</li>
+        </ol>
+
+        <h3 id="kontabilisti-tvsh">How to generate a fiscal VAT report</h3>
+        <ol class="steps">
+          <li>Under <strong>VAT report</strong>, select the <strong>month</strong>.</li>
+          <li>Click <strong>Filter</strong>.</li>
+          <li>See rates (e.g. <strong>0%</strong>, <strong>8%</strong>, <strong>18%</strong>) with net sales, VAT collected, and gross sales.</li>
+          <li>Use <strong>Export PDF</strong> or <strong>Export CSV</strong> for a ready document.</li>
+        </ol>
+
+        <h3 id="kontabilisti-eksport">How to export data for your accountant</h3>
+        <ol class="steps">
+          <li><strong>Sales ledger:</strong> filter the period → <strong>Export CSV</strong> or <strong>Export PDF</strong>.</li>
+          <li><strong>Purchases/expenses:</strong> same — CSV or PDF.</li>
+          <li><strong>VAT report:</strong> CSV or PDF for the selected month.</li>
+          <li>Send the files to your accountant.</li>
+        </ol>
+        <div class="box box-tip">
+          <div class="box-title">💡 Tip</div>
+          <p>CSV opens easily in Excel. PDF is ready to print or archive.</p>
+        </div>`,
+
+  ndihma: `<span class="section-num">Section 12</span>
+        <h2>HELP &amp; SUPPORT</h2>
+        <p>We are available <strong>24 hours a day, 7 days a week</strong>. Any technical issue, install, printer, sync, or license — contact us and we fix it, with no extra charge for standard support.</p>
+
+        <h3 id="ndihma-kontakt">How to contact us: phone, WhatsApp, email</h3>
+        <ol class="steps">
+          <li><strong>Phone:</strong> <a href="tel:+38343555294" style="color:#7dd3fc;text-decoration:underline">+383 43 555 294</a></li>
+          <li><strong>WhatsApp:</strong> <a href="https://wa.me/38343555294" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline">wa.me/38343555294</a> — send a screenshot of the error.</li>
+          <li><strong>Email:</strong> <a href="mailto:revolutioninvest05@gmail.com" style="color:#7dd3fc;text-decoration:underline">revolutioninvest05@gmail.com</a></li>
+          <li><strong>Website:</strong> <a href="/#kontakt" style="color:#7dd3fc;text-decoration:underline">revolution-pos.com/#kontakt</a> or the <strong>24/7 Support</strong> section on the home page.</li>
+          <li>Owner panel: <a href="https://revolution-pos.com/owner/login" style="color:#7dd3fc;text-decoration:underline">https://revolution-pos.com/owner/login</a></li>
+        </ol>
+
+        <h3 id="ndihma-anydesk">Remote support with AnyDesk — how it works</h3>
+        <ol class="steps">
+          <li>Download and open <strong>AnyDesk</strong> on the POS computer (from <a href="https://anydesk.com" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline">anydesk.com</a>).</li>
+          <li>Send us your AnyDesk ID via WhatsApp or phone.</li>
+          <li>Accept the connection request when it appears on screen.</li>
+          <li>Our technician connects remotely, fixes the issue, and explains what was done.</li>
+        </ol>
+        <div class="box box-warning">
+          <div class="box-title">⚠️ Warning</div>
+          <p>Do not accept AnyDesk requests from unknown people. Connect only with the Revolution Invest team.</p>
+        </div>
+
+        <h3 id="ndihma-update">Automatic updates</h3>
+        <ol class="steps">
+          <li>The POS app checks for a new version when online.</li>
+          <li>When an update is available, a notification appears — download and install (usually a few clicks).</li>
+          <li>After install, reopen the app. Local data is kept; you do not need to re-enter the menu or tables.</li>
+          <li>If the update fails, contact us — we can install it remotely via AnyDesk.</li>
+        </ol>
+
+        <h3 id="ndihma-bug">How to report a problem or bug</h3>
+        <ol class="steps">
+          <li>Write briefly: <em>what you were doing</em>, <em>what you expected</em>, <em>what happened</em>.</li>
+          <li>Add a <strong>screenshot</strong> of the error or screen.</li>
+          <li>Include: venue name, POS version (if known), and whether it happens on phone, web panel, or register.</li>
+          <li>Send via WhatsApp <a href="https://wa.me/38343555294" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;text-decoration:underline">+383 43 555 294</a> or email <a href="mailto:revolutioninvest05@gmail.com" style="color:#7dd3fc;text-decoration:underline">revolutioninvest05@gmail.com</a>.</li>
+          <li>We confirm receipt and notify you when it is fixed.</li>
+        </ol>
+        <div class="box box-tip">
+          <div class="box-title">💡 Tip</div>
+          <p>More detail (step by step + photo) means we find and fix the issue faster.</p>
         </div>`
+
 };

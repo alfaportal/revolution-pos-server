@@ -17,7 +17,7 @@ window.SITE_STRINGS = {
     "nav.langLabel": "Gjuha",
 
     "cta.startFree": "Fillo Falas",
-    "cta.start3Months": "Fillo 3 Muaj Falas",
+    "cta.start3Months": "Fillo 7 Ditë Falas",
     "cta.viewDemo": "Shiko Demo",
     "cta.choosePackage": "Zgjidh Pakon",
     "cta.contactUs": "Na Kontaktoni",
@@ -112,7 +112,7 @@ window.SITE_STRINGS = {
     "support247.desc":
       "Jemi në dispozicion 24 orë, 7 ditë në javë. Çdo problem që keni, na kontaktoni dhe e rregullojmë menjëherë — pa pagesë shtesë. Mbështetje nga distanca me AnyDesk, përditësime automatike, dhe mirëmbajtje e vazhdueshme.",
 
-    "contact.title": "Filloni sot — provë 3 muaj falas",
+    "contact.title": "Filloni sot — provë 7 ditë falas",
     "contact.subtitle":
       "Na kontaktoni për instalim, demo live dhe zgjedhjen e pakos së duhur për restorantin ose kafenen tuaj.",
     "contact.direct": "Kontakt i drejtpërdrejtë",
@@ -131,7 +131,7 @@ window.SITE_STRINGS = {
     "wa.custom": "Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.",
     "wa.support": "Përshëndetje, kam nevojë për mbështetje teknike për Revolution Invest POS.",
     "wa.formIntro": "Përshëndetje, jam {name} ({phone}).",
-    "wa.formSuffix": "Dëshiroj Revolution Invest POS — 3 muaj falas.",
+    "wa.formSuffix": "Dëshiroj Revolution Invest POS — 7 ditë falas.",
   },
   en: {
     "meta.title": "Revolution Invest POS — POS System for Restaurants & Cafés",
@@ -151,7 +151,7 @@ window.SITE_STRINGS = {
     "nav.langLabel": "Language",
 
     "cta.startFree": "Start Free",
-    "cta.start3Months": "Start 3 Months Free",
+    "cta.start3Months": "Start 7 Days Free",
     "cta.viewDemo": "View Demo",
     "cta.choosePackage": "Choose Plan",
     "cta.contactUs": "Contact Us",
@@ -246,7 +246,7 @@ window.SITE_STRINGS = {
     "support247.desc":
       "We are available 24 hours a day, 7 days a week. Whatever issue you have, contact us and we fix it immediately — at no extra cost. Remote support via AnyDesk, automatic updates, and continuous maintenance.",
 
-    "contact.title": "Start today — 3 months free trial",
+    "contact.title": "Start today — 7 days free trial",
     "contact.subtitle":
       "Contact us for installation, a live demo, and choosing the right plan for your restaurant or café.",
     "contact.direct": "Direct contact",
@@ -265,6 +265,6 @@ window.SITE_STRINGS = {
     "wa.custom": "Hello, I would like to discuss a tailored solution.",
     "wa.support": "Hello, I need technical support for Revolution Invest POS.",
     "wa.formIntro": "Hello, I'm {name} ({phone}).",
-    "wa.formSuffix": "I want Revolution Invest POS — 3 months free.",
+    "wa.formSuffix": "I want Revolution Invest POS — 7 days free.",
   },
 };
