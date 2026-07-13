@@ -1,7 +1,7 @@
 /** URL publike e aplikacionit (domain prod) dhe kontakt mbështetjeje. */
 
 const DEFAULT_PUBLIC_ORIGIN = "https://revolution-pos.com";
-const DEFAULT_SUPPORT_PHONE = "+383 44 123 456";
+const DEFAULT_SUPPORT_PHONE = "+383 43 555 294";
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
