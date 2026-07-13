@@ -1,7 +1,10 @@
 const { getSupabase } = require("../db");
 const { isVisibleOnWebMenu, isOutOfStock } = require("../lib/stockHelpers");
 const { getCatalogFlatMap, normMenuName } = require("../data/menuCatalogTemplate");
-const { normalizeStockPhotoPath } = require("../lib/menuStockPhoto");
+const {
+  normalizeStockPhotoPath,
+  stockPhotoFilePayload,
+} = require("../lib/menuStockPhoto");
 
 /** FR → SQ for waiter phone / QR / takeaway display only (POS catalog untouched). */
 let _menuFrToSq = null;
@@ -26,7 +29,20 @@ function toSqMenuLabel(raw) {
   const map = menuFrToSqMap();
   if (map[s]) return map[s];
   const lower = _menuFrToSqLower[s.toLowerCase()];
-  return lower || s;
+  if (lower) return lower;
+  // Accent-insensitive fallback (e.g. vegetarien ≈ végétarien)
+  const folded = s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  for (const [fr, sq] of Object.entries(map)) {
+    const frFold = fr
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (frFold === folded) return sq;
+  }
+  return s;
 }
 
 let _catalogPhotoByName = null;
@@ -80,15 +96,16 @@ function resolveClientStockPhoto(item, row) {
 
 function attachClientPhoto(item, row, { slug = "", channel = "menu" } = {}) {
   const photo = String(row?.photo || "").trim();
+  const templatePhoto = resolveClientStockPhoto(item, row);
+
   const stockPath = normalizeStockPhotoPath(photo);
-  if (stockPath) {
+  if (stockPath && stockPhotoFilePayload(photo)) {
     return { ...item, has_photo: true, photo_url: stockPath };
   }
   if (/^https?:\/\//i.test(photo)) {
     return { ...item, has_photo: true, photo_url: photo };
   }
-  /* DB may have blob/base64/legacy photo flags without a public URL — use studio stock. */
-  const templatePhoto = resolveClientStockPhoto(item, row);
+  /* Prefer studio stock over broken/legacy DB photo blobs. */
   if (templatePhoto) {
     return { ...item, has_photo: true, photo_url: templatePhoto };
   }
@@ -125,7 +142,7 @@ function mapMenuItemForWeb(row, photoOpts = {}) {
     name: toSqMenuLabel(row.name),
     category: toSqMenuLabel(row.category),
     price: Number(row.price),
-    description: String(row.description || "").trim(),
+    description: toSqMenuLabel(String(row.description || "").trim()) || String(row.description || "").trim(),
   };
   return attachClientPhoto(item, row, photoOpts);
 }
@@ -138,7 +155,7 @@ function mapMenuItemForShop(row, photoOpts = {}) {
   const item = {
     id: row.local_id,
     name: toSqMenuLabel(row.name),
-    description: String(row.description || "").trim(),
+    description: toSqMenuLabel(String(row.description || "").trim()) || String(row.description || "").trim(),
     sku: String(row.sku || "").trim(),
     category: toSqMenuLabel(row.category),
     price,

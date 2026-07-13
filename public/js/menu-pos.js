@@ -123,7 +123,9 @@
       img.loading = "lazy";
       img.decoding = "async";
       img.onerror = () => {
-        wrap.remove();
+        img.remove();
+        wrap.innerHTML = "";
+        createPlaceholder(item, wrap);
         card.classList.remove("has-photo");
         btn.classList.remove("has-photo");
       };

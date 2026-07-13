@@ -756,6 +756,8 @@
     if (!item?.photo_url) return "";
     const url = String(item.photo_url);
     if (/^https?:\/\//i.test(url)) return url;
+    // Static studio photos must not get ?key= (breaks some caches / proxies)
+    if (url.startsWith("/menu-stock/")) return url;
     return url + apiQuery();
   }
 
