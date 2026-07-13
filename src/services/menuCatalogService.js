@@ -48,6 +48,15 @@ function toSqMenuLabel(raw) {
 let _catalogPhotoByName = null;
 let _seedStockByName = null;
 
+function foldKey(s) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ë/g, "e")
+    .replace(/ç/g, "c");
+}
+
 function seedStockPhotoByName(name) {
   if (!_seedStockByName) {
     try {
@@ -58,11 +67,21 @@ function seedStockPhotoByName(name) {
   }
   const raw = String(name || "").trim();
   if (!raw) return "";
-  return (
-    _seedStockByName[normMenuName(raw)] ||
-    _seedStockByName[normMenuName(toSqMenuLabel(raw))] ||
-    ""
-  );
+  const sq = toSqMenuLabel(raw);
+  const candidates = [
+    normMenuName(raw),
+    normMenuName(sq),
+    normMenuName(raw.replace(/^(pizzas?|pica)\s+/i, "")),
+    normMenuName(sq.replace(/^(pizzas?|pica)\s+/i, "")),
+  ];
+  for (const c of candidates) {
+    if (c && _seedStockByName[c]) return _seedStockByName[c];
+  }
+  const foldedWanted = new Set(candidates.map(foldKey).filter(Boolean));
+  for (const [k, v] of Object.entries(_seedStockByName)) {
+    if (foldedWanted.has(foldKey(k))) return v;
+  }
+  return "";
 }
 
 function catalogPhotoByName(name) {
@@ -98,16 +117,17 @@ function attachClientPhoto(item, row, { slug = "", channel = "menu" } = {}) {
   const photo = String(row?.photo || "").trim();
   const templatePhoto = resolveClientStockPhoto(item, row);
 
+  // Always prefer local studio stock when we have a matching file (broken https/API blobs are common).
+  if (templatePhoto && stockPhotoFilePayload(templatePhoto)) {
+    return { ...item, has_photo: true, photo_url: templatePhoto };
+  }
+
   const stockPath = normalizeStockPhotoPath(photo);
   if (stockPath && stockPhotoFilePayload(photo)) {
     return { ...item, has_photo: true, photo_url: stockPath };
   }
   if (/^https?:\/\//i.test(photo)) {
     return { ...item, has_photo: true, photo_url: photo };
-  }
-  /* Prefer studio stock over broken/legacy DB photo blobs. */
-  if (templatePhoto) {
-    return { ...item, has_photo: true, photo_url: templatePhoto };
   }
   if (photo && slug) {
     return {
