@@ -2,7 +2,7 @@
   "name": "Revolution Invest POS — Kamarieri",
   "short_name": "Kamarieri",
   "description": "Paneli i kamarierit — Revolution Invest POS",
-  "start_url": ".",
+  "start_url": "/waiter/",
   "scope": "/waiter/",
   "display": "standalone",
   "orientation": "portrait-primary",

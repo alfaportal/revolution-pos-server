@@ -197,6 +197,50 @@ app.get("/kitchen/:slug", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
+app.get("/waiter/:slug/manifest.json", (req, res) => {
+  const slug = encodeURIComponent(String(req.params.slug || "").trim());
+  const key = String(req.query.key || "").trim();
+  const w = String(req.query.w || "").trim();
+  const q = new URLSearchParams();
+  if (key) q.set("key", key);
+  if (w) q.set("w", w);
+  const qs = q.toString();
+  const startUrl = `/waiter/${slug}${qs ? `?${qs}` : ""}`;
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.type("application/manifest+json");
+  res.json({
+    name: "Revolution Invest POS — Kamarieri",
+    short_name: "Kamarieri",
+    description: "Paneli i kamarierit — Revolution Invest POS",
+    start_url: startUrl,
+    scope: "/waiter/",
+    display: "standalone",
+    orientation: "portrait-primary",
+    theme_color: "#0f1b3d",
+    background_color: "#0f1b3d",
+    icons: [
+      {
+        src: "/logo-source.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/logo-source.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+    ],
+  });
+});
+
 app.get("/waiter/:slug", (_req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/waiter.html"));

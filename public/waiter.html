@@ -7,7 +7,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kamarieri">
-  <link rel="manifest" href="/waiter-manifest.json">
+  <link rel="manifest" id="waiter-pwa-manifest" href="/waiter-manifest.json">
+  <script>
+    (function () {
+      var parts = location.pathname.split("/").filter(Boolean);
+      if (parts[0] !== "waiter" || !parts[1]) return;
+      var pageQ = new URLSearchParams(location.search);
+      var manQ = new URLSearchParams();
+      if (pageQ.get("key")) manQ.set("key", pageQ.get("key"));
+      if (pageQ.get("w")) manQ.set("w", pageQ.get("w"));
+      var href = "/waiter/" + encodeURIComponent(parts[1]) + "/manifest.json";
+      if (manQ.toString()) href += "?" + manQ.toString();
+      var link = document.getElementById("waiter-pwa-manifest");
+      if (link) link.setAttribute("href", href);
+    })();
+  </script>
   <link rel="icon" type="image/png" href="/logo-source.png">
   <link rel="apple-touch-icon" href="/logo-source.png">
   <title>Kamarieri — Revolution Invest POS</title>
