@@ -395,6 +395,9 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
           order_id: data?.id,
           status: finalStatus,
           ...(tableNum >= 1 ? { table_number: tableNum } : {}),
+          ...(finalStatus === "closed"
+            ? { payment_method: body.payment_method || data?.payment_method || "cash" }
+            : {}),
         });
         if (finalStatus === "closed" && tableNum >= 1) {
           kds.notifyKitchenUpdate(license.client_id, {
