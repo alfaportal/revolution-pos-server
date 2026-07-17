@@ -582,8 +582,10 @@ function openEditClient(id) {
     <input name="emri" required value="${esc(c.emri)}">
     <label>Tipi</label>
     <select name="tipi">
-      <option value="restorant" ${c.tipi === "restorant" ? "selected" : ""}>Restorant</option>
       <option value="kafene" ${c.tipi === "kafene" ? "selected" : ""}>Kafene</option>
+      <option value="restorant" ${c.tipi === "restorant" ? "selected" : ""}>Restorant</option>
+      <option value="bar" ${c.tipi === "bar" ? "selected" : ""}>Bar</option>
+      <option value="market" ${c.tipi === "market" ? "selected" : ""}>Market</option>
       <option value="dyqan" ${c.tipi === "dyqan" ? "selected" : ""}>Dyqan</option>
       <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
     </select>

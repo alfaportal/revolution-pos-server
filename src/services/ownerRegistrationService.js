@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { createClient, createLicense } = require("./licenseService");
 const { createOwner } = require("./userService");
+const { assertClientTipi, appTypeFromClientTipi } = require("../utils/businessTipi");
 
 function isOwnerRegistrationEnabled() {
   return Boolean(String(process.env.OWNER_REGISTRATION_CODE || "").trim());
@@ -35,21 +36,16 @@ async function registerOwnerWithCode(body, baseUrl) {
   const ownerEmail = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "").trim();
   const bizEmri = String(body.emri_biznesit || body.emri_biznesi || "").trim();
-  const tipi = String(body.tipi || "restorant").trim().toLowerCase();
+  const tipi = assertClientTipi(body.tipi || "restorant");
 
   if (!ownerEmri) throw new Error("Emri i pronarit është i detyrueshëm.");
   if (!ownerEmail) throw new Error("Email i pronarit është i detyrueshëm.");
   if (!password || password.length < 6) {
     throw new Error("Fjalëkalimi min. 6 karaktere.");
   }
-  if (!bizEmri) throw new Error("Emri i kafenes/restorantit është i detyrueshëm.");
+  if (!bizEmri) throw new Error("Emri i biznesit është i detyrueshëm.");
 
-  const allowedTipi = ["restorant", "kafene", "tjeter", "dyqan"];
-  if (!allowedTipi.includes(tipi)) {
-    throw new Error("Tipi i biznesit duhet të jetë restorant, kafene ose dyqan.");
-  }
-
-  const appType = tipi === "kafene" ? "kafene" : tipi === "dyqan" ? "restorant" : "restorant";
+  const appType = appTypeFromClientTipi(tipi);
 
   let client = null;
   let license = null;

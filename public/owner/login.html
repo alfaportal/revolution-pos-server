@@ -53,9 +53,15 @@
     let mode = "login";
 
     function clientTypeLabel(tipi) {
-      if (tipi === "kafene") return "Kafene";
-      if (tipi === "restorant") return "Restorant";
-      return "";
+      const labels = {
+        kafene: "Kafene",
+        restorant: "Restorant",
+        bar: "Bar",
+        market: "Market",
+        dyqan: "Dyqan",
+        tjeter: "Tjetër",
+      };
+      return labels[tipi] || "";
     }
 
     function applyBranding(data) {
@@ -75,7 +81,10 @@
         ? `${typeLbl} · shitjet dhe raportet tuaja`
         : "Shitjet, raportet dhe tavolinat live — nga telefoni.";
       if (data.client_type === "kafene") iconEl.textContent = "☕";
+      else if (data.client_type === "bar") iconEl.textContent = "🍹";
+      else if (data.client_type === "market" || data.client_type === "dyqan") iconEl.textContent = "🛒";
       else if (data.client_type === "restorant") iconEl.textContent = "🍽️";
+      else iconEl.textContent = "🏪";
     }
 
     async function loadBrandingForEmail(email) {

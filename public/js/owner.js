@@ -252,15 +252,17 @@ async function loadClient() {
   ownerPackageFeatures = features || {};
   if (client) {
     document.getElementById("biz-name").textContent = client.emri || "Paneli i pronarit";
-    const typeLbl = client.tipi === "kafene"
-      ? "Kafene"
-      : client.tipi === "restorant"
-        ? "Restorant"
-        : client.tipi === "dyqan"
-          ? "Dyqan"
-          : viewAll
-            ? "Të gjitha"
-            : "Lokali";
+    const tipiLabels = {
+      kafene: "Kafene",
+      restorant: "Restorant",
+      bar: "Bar",
+      market: "Market",
+      dyqan: "Dyqan",
+      tjeter: "Tjetër",
+    };
+    const typeLbl = viewAll
+      ? "Të gjitha"
+      : (tipiLabels[client.tipi] || "Lokali");
     document.getElementById("biz-sub").textContent =
       viewAll
         ? `Përmbledhje e ${data.location_count || 0} lokaleve`

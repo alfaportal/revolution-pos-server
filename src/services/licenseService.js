@@ -440,23 +440,19 @@ async function listLicenses() {
 }
 
 async function createClient(body) {
+  const { assertClientTipi } = require("../utils/businessTipi");
   const db = getSupabase();
   const row = {
     emri: String(body.emri || "").trim(),
     adresa: String(body.adresa || "").trim(),
     telefoni: String(body.telefoni || "").trim(),
     email: String(body.email || "").trim(),
-    tipi: body.tipi || "restorant",
+    tipi: assertClientTipi(body.tipi || "restorant"),
     package_tier: normalizePackageTier(body.package_tier),
     kitchen_slug: generateKitchenSlug(body.emri || "lokal"),
     kitchen_key: generateKitchenKey(),
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
-
-  const allowed = ["restorant", "kafene", "tjeter", "dyqan"];
-  if (!allowed.includes(row.tipi)) {
-    throw new Error(`Tipi i pavlefshëm: ${row.tipi}`);
-  }
 
   const { data, error } = await db.from("clients").insert(row).select().single();
   if (error) {
@@ -484,9 +480,8 @@ async function updateClient(id, body) {
     if (!patch.emri) throw new Error("Emri i klientit është i detyrueshëm.");
   }
   if (body.tipi != null) {
-    const allowed = ["restorant", "kafene", "tjeter", "dyqan"];
-    if (!allowed.includes(body.tipi)) throw new Error(`Tipi i pavlefshëm: ${body.tipi}`);
-    patch.tipi = body.tipi;
+    const { assertClientTipi } = require("../utils/businessTipi");
+    patch.tipi = assertClientTipi(body.tipi);
   }
   if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
   if (body.email != null) patch.email = String(body.email).trim();
@@ -652,15 +647,12 @@ async function createLicense(body) {
 
   if (!body.client_id) throw new Error("client_id mungon.");
 
+  const { appTypeFromClientTipi } = require("../utils/businessTipi");
   let appType = body.app_type ? String(body.app_type).trim().toLowerCase() : "";
   const allowedApp = ["restorant", "kafene"];
   if (!allowedApp.includes(appType)) {
     const { data: client } = await db.from("clients").select("tipi").eq("id", body.client_id).maybeSingle();
-    if (client?.tipi && allowedApp.includes(client.tipi)) {
-      appType = client.tipi;
-    } else {
-      appType = "restorant";
-    }
+    appType = client?.tipi ? appTypeFromClientTipi(client.tipi) : "restorant";
   }
 
   const row = {
