@@ -314,6 +314,16 @@ async function submitWaiterOrder(clientId, body) {
     console.warn("[inventory] waiter deduct failed:", err.message);
   }
 
+  console.log("[waiter/orders] saved", {
+    id: saved?.id,
+    clientId,
+    table: tableNumber,
+    device: saved?.device_id || WEB_DEVICE,
+    waiter: waiter.name,
+    items: newItems.length,
+    total,
+  });
+
   if (saved?.id) {
     try {
       const { updateOrdersAcceptance, isOrderAccepted } = require("../lib/salesOrderSelect");
@@ -333,6 +343,7 @@ async function submitWaiterOrder(clientId, body) {
           device_id: WEB_DEVICE,
           accepted_by: waiter.name,
         });
+        console.log("[waiter/orders] SSE notified", { order_id: saved.id, status: "ordered" });
         const { data: refreshed } = await getSupabase()
           .from("sales_orders")
           .select("*")
