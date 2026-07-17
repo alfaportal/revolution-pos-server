@@ -11,8 +11,22 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=14", { scope: "/waiter/" })
-      .then((reg) => reg.update?.())
+    navigator.serviceWorker.register("/sw.js?v=15", { scope: "/waiter/" })
+      .then((reg) => {
+        reg.update?.();
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        reg.addEventListener?.("updatefound", () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener("statechange", () => {
+            if (sw.state === "installed" && navigator.serviceWorker.controller) {
+              sw.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+      })
       .catch(() => {});
   }
 
@@ -1471,10 +1485,12 @@
     }
   }
 
-  // Ri-kërko wake lock kur faqja kthehet visible (pas tab switch)
+  // Ri-kërko wake lock + rifresko gjendjen kur faqja kthehet visible (pa reload faqeje)
   document.addEventListener("visibilitychange", function() {
     if (document.visibilityState === "visible" && activeWaiter) {
       requestWakeLock();
+      connectWaiterSse();
+      refreshWaiterLiveState().catch(() => {});
     }
   });
 
@@ -2024,7 +2040,14 @@
       showSuccessToast(sentMsg);
       scheduleIdleLock();
       suppressOrderAlertOnce = true;
-      await refreshBootstrap();
+      // Kthehu te tavolinat — pa nevojë për refresh manual të faqes
+      showScreen("screen-tables");
+      try {
+        await refreshBootstrap();
+      } catch {
+        refreshWaiterLiveState().catch(() => {});
+      }
+      connectWaiterSse();
     } catch (e) {
       if (window.OfflineQueue && isNetworkError(e)) {
         try {

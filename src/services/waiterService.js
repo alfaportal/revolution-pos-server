@@ -325,7 +325,14 @@ async function submitWaiterOrder(clientId, body) {
           waiterName: waiter.name,
         });
         const { notifyKitchenUpdate } = require("./kdsEvents");
-        notifyKitchenUpdate(clientId, { order_id: saved.id, status: "accepted", accepted_by: waiter.name });
+        // status "ordered" (jo "accepted") — KAFENE SSE nuk e markon si printed/purged para import+print
+        notifyKitchenUpdate(clientId, {
+          order_id: saved.id,
+          table_number: tableNumber,
+          status: "ordered",
+          device_id: WEB_DEVICE,
+          accepted_by: waiter.name,
+        });
         const { data: refreshed } = await getSupabase()
           .from("sales_orders")
           .select("*")

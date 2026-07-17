@@ -1,0 +1,18 @@
+---
+description: Future stronger KAFENE/POS protection — build when user asks
+alwaysApply: true
+---
+
+# Mbrojtje më e fortë (E ARDHME — mos e bëj tani)
+
+Përdoruesi (13 Jul 2026) tha: **për momentin e lëmë** me mbrojtjen aktuale (Start.vbs launcher + asar + obfuscation + folder lock + licencë cloud).
+
+Kur të thotë **“tani ndërto mbrojtjen më të fortë”** / “forco mbrojtjen”, ofro plan + prit konfirmim (Rregulli #9), pastaj ndërto një nga:
+
+1. Licencë më e rreptë (1 PC = 1 çelës më fort, offline më i shkurtër)
+2. Setup vetëm nga ne (jo download publik i lirë)
+3. Update vetëm nga cloud
+
+**VeraCrypt kit (13 Jul 2026):** u krijua `restaurant-system/KAFENE/veracrypt-deploy/` (skripta + README). **Mos prek** funksionet e app-it kur punon me këtë kit — vetëm wrapper.
+
+**Mos prek** sync/close/printer pa leje.

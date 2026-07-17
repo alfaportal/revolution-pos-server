@@ -62,8 +62,38 @@ router.post("/:slug/login", resolveKitchenClient, requirePackageFeature("waiter"
   }
 });
 
-router.get("/:slug/online-orders/pending", resolveKitchenClient, requirePackageFeature("waiter"), (req, res) => {
-  res.json({ ok: true, pending: 0, has_pending: false, orders: [], connected: true });
+/**
+ * Fallback për KAFENE (kur license online-orders dështon).
+ * Kthen të gjitha porositë mobile përfshi WEB-WAITER — POS i importon dhe printon.
+ * PRANO nga telefoni mbetet i bllokuar (POST accept → 403).
+ */
+router.get("/:slug/online-orders/pending", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const {
+      listBarMobileOrderedForPos,
+      listPendingOnlineOrders,
+    } = require("../services/onlineOrdersService");
+    const allOrders = await listBarMobileOrderedForPos(req.kitchenClient.id);
+    const pending = await listPendingOnlineOrders(req.kitchenClient.id);
+    res.json({
+      ok: true,
+      pending: pending.length,
+      has_pending: pending.length > 0,
+      // KAFENE fetchOnlineOrdersViaKitchen përdor `orders` si all_orders
+      orders: allOrders,
+      all_orders: allOrders,
+      connected: true,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      gabim: e.message,
+      pending: 0,
+      has_pending: false,
+      orders: [],
+      all_orders: [],
+    });
+  }
 });
 
 router.post("/:slug/online-orders/accept", resolveKitchenClient, requirePackageFeature("waiter"), (req, res) => {

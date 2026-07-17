@@ -1,5 +1,5 @@
 /* Revolution POS — Service Worker (waiter + static assets) */
-const CACHE_NAME = "ri-pos-offline-v14";
+const CACHE_NAME = "ri-pos-offline-v15";
 
 const PRECACHE_URLS = [
   "/logo-source.png",
@@ -39,6 +39,13 @@ self.addEventListener("activate", (event) => {
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
+});
+
+// Forco aktivizimin e SW të ri (pas deploy) pa pritur mbylljen e tab-ave
+self.addEventListener("message", (event) => {
+  if (event?.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 async function cacheFirst(request) {

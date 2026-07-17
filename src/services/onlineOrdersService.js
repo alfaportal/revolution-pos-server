@@ -6,7 +6,7 @@ const {
   acknowledgeBarOrders,
   isInRefusalGrace,
 } = require("./kdsService");
-const { isCustomerBarOrder, orderSourceLabel } = require("../lib/orderSource");
+const { isCustomerBarOrder, isBarMobileOrder, orderSourceLabel } = require("../lib/orderSource");
 const { isOrderAccepted } = require("../lib/salesOrderSelect");
 const { verifyWaiterPin } = require("./waiterPinService");
 const { getSupabase } = require("../db");
@@ -14,17 +14,23 @@ const { getSupabase } = require("../db");
 function formatOrderForPos(row) {
   const src = orderSourceLabel(row);
   const handler = String(row.accepted_by_waiter_name || "").trim();
+  const waiterName = String(row.waiter_name || "").trim();
   const accepted = isOrderAccepted(row);
   const inGrace = isInRefusalGrace(row);
+  const items = normalizeItems(row.items_json);
   return {
     id: row.id,
     table_number: Number(row.table_number) || 0,
-    customer_label: String(row.waiter_name || "").trim(),
+    customer_label: waiterName,
+    waiter_name: waiterName,
+    waiter_id: row.waiter_id || null,
+    local_order_id: row.local_order_id || null,
     source: src.code,
     source_label: src.label,
     source_icon: src.icon,
     device_id: row.device_id || "",
-    items: normalizeItems(row.items_json),
+    items,
+    items_json: items,
     total: Number(row.total) || 0,
     ordered_at: row.ordered_at,
     status: row.status || "ordered",
@@ -33,6 +39,8 @@ function formatOrderForPos(row) {
     refused_at: row.refused_at || null,
     order_expires_at: row.order_expires_at || null,
     accepted_by: handler,
+    accepted_by_waiter_name: handler,
+    accepted_by_waiter_id: row.accepted_by_waiter_id || null,
     accepted_at: row.accepted_at || null,
     handler_label: handler || null,
   };
@@ -52,10 +60,15 @@ async function listPendingOnlineOrders(clientId) {
     .map(formatOrderForPos);
 }
 
+/**
+ * Të gjitha porositë mobile për POS (QR/kiosk/public + WEB-WAITER).
+ * WEB-WAITER duhet këtu — KAFENE auto-import + print kuponin nga all_orders.
+ * Alarmi PRANO/REFUZO mbetet te listPendingOnlineOrders (vetëm klientët).
+ */
 async function listBarMobileOrderedForPos(clientId) {
   if (!clientId) return [];
   const rows = await loadPosOnlineOrderRows(clientId);
-  return rows.filter(isCustomerBarOrder).map(formatOrderForPos);
+  return rows.filter(isBarMobileOrder).map(formatOrderForPos);
 }
 
 async function countPendingOnlineOrders(clientId) {
