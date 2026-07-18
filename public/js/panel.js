@@ -43,6 +43,47 @@ function apiUrl(path) {
   return `${window.location.origin}${path}`;
 }
 
+/** Llojet hospitality — sync me src/utils/businessTipi.js (ADMIN_CLIENT_TIPI). */
+const ADMIN_CLIENT_TIPI_OPTIONS = [
+  ["kafene", "Kafene"],
+  ["restorant", "Restorant"],
+  ["bar", "Bar"],
+  ["pub_lounge", "Pub/Lounge"],
+  ["piceri", "Piceri"],
+  ["fast_food", "Fast Food"],
+  ["kebab", "Kebab"],
+  ["pasticeri", "Pastiçeri/Ëmbëltore"],
+  ["akullore", "Akullore"],
+  ["gjeltore", "Gjeltore"],
+];
+
+const CLIENT_TIPI_LABELS = Object.fromEntries([
+  ...ADMIN_CLIENT_TIPI_OPTIONS,
+  ["market", "Market"],
+  ["dyqan", "Dyqan"],
+  ["tjeter", "Tjetër"],
+]);
+
+function labelForClientTipi(tipi) {
+  const t = String(tipi || "").trim().toLowerCase();
+  return CLIENT_TIPI_LABELS[t] || tipi || "—";
+}
+
+/** Options për select Tipi; nëse tipi aktual është legacy, shtohet që të mbetet i zgjedhur. */
+function clientTipiOptionsHtml(selectedTipi) {
+  const sel = String(selectedTipi || "").trim().toLowerCase();
+  const opts = [...ADMIN_CLIENT_TIPI_OPTIONS];
+  if (sel && !opts.some(([v]) => v === sel)) {
+    opts.push([sel, labelForClientTipi(sel)]);
+  }
+  return opts
+    .map(
+      ([value, label]) =>
+        `<option value="${esc(value)}" ${sel === value ? "selected" : ""}>${esc(label)}</option>`,
+    )
+    .join("");
+}
+
 function publicOrigin() {
   return String(publicAppOrigin || "https://revolution-pos.com").replace(/\/+$/, "");
 }
@@ -580,12 +621,7 @@ function openEditClient(id) {
     <input name="emri" required value="${esc(c.emri)}">
     <label>Tipi</label>
     <select name="tipi">
-      <option value="kafene" ${c.tipi === "kafene" ? "selected" : ""}>Kafene</option>
-      <option value="restorant" ${c.tipi === "restorant" ? "selected" : ""}>Restorant</option>
-      <option value="bar" ${c.tipi === "bar" ? "selected" : ""}>Bar</option>
-      <option value="market" ${c.tipi === "market" ? "selected" : ""}>Market</option>
-      <option value="dyqan" ${c.tipi === "dyqan" ? "selected" : ""}>Dyqan</option>
-      <option value="tjeter" ${c.tipi === "tjeter" ? "selected" : ""}>Tjetër</option>
+      ${clientTipiOptionsHtml(c.tipi)}
     </select>
     <label>Pakoja</label>
     <div id="modal-package-tier-wrap" class="package-tier-picker"></div>
@@ -1640,7 +1676,7 @@ async function loadClients() {
   }));
   const lmSel = document.getElementById("lm-client");
   const clientOpts = clientsCache.length
-    ? clientsCache.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
+    ? clientsCache.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(labelForClientTipi(c.tipi))})</option>`).join("")
     : "";
   const clientSelectHtml = clientsCache.length
     ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + clientOpts
@@ -1659,7 +1695,7 @@ async function loadClients() {
   tbl.innerHTML = displayClients.length
     ? displayClients.map(c => `<tr>
         <td data-label="Emri"><strong>${esc(c.emri)}</strong>${trialBadgeHtml(c.id)}${stockBadgeHtml(c.id)}</td>
-        <td data-label="Tipi">${esc(c.tipi)}</td>
+        <td data-label="Tipi">${esc(labelForClientTipi(c.tipi))}</td>
         <td data-label="Pakoja">
           <div
             class="package-tier-picker package-tier-picker--inline"

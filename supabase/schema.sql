@@ -11,7 +11,11 @@ CREATE TABLE IF NOT EXISTS clients (
   telefoni    TEXT DEFAULT '',
   email       TEXT DEFAULT '',
   tipi        TEXT NOT NULL DEFAULT 'restorant'
-              CHECK (tipi IN ('restorant', 'kafene', 'tjeter', 'dyqan', 'bar', 'market')),
+              CHECK (tipi IN (
+                'kafene', 'restorant', 'bar', 'pub_lounge', 'piceri',
+                'fast_food', 'kebab', 'pasticeri', 'akullore', 'gjeltore',
+                'market', 'dyqan', 'tjeter'
+              )),
   kitchen_slug TEXT,
   kitchen_key  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
