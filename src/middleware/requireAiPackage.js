@@ -1,4 +1,4 @@
-const { getClientById } = require("../services/licenseService");
+const { getClientById } = require("../services/salesService");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
 const { assertAiTokenLimit } = require("../services/aiTokenLimitService");
 const { resolveRestaurantId } = require("./trackAiUsage");

@@ -146,6 +146,10 @@
     document.getElementById("invoice-scan-modal")?.classList.add("hidden");
   }
 
+  window.openInvoiceScanModal = () => {
+    openInvoiceScanModal().catch(err => setInvoiceScanStatus(err.message, false));
+  };
+
   async function runInvoiceScan() {
     const file = document.getElementById("invoice-scan-file")?.files?.[0];
     if (!file) {

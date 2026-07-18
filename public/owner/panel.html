@@ -69,6 +69,10 @@
         <span class="nav-icon" aria-hidden="true">📋</span>
         <span class="nav-label">Stoku</span>
       </button>
+      <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="ai" id="tab-ai-hub" hidden>
+        <span class="nav-icon" aria-hidden="true">✨</span>
+        <span class="nav-label">AI</span>
+      </button>
       <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="ai-raporte" id="tab-ai-reports" hidden>
         <span class="nav-icon" aria-hidden="true">📈</span>
         <span class="nav-label">Raporte AI</span>
@@ -184,7 +188,7 @@
         <div class="card-title card-title-row">
           <span>Përbërësit (inventari)</span>
           <div class="card-title-actions">
-            <button type="button" class="btn btn-ghost btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>Skano Faturë</button>
+            <button type="button" class="btn btn-ghost btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>📷 Skanoj Faturë</button>
             <button type="button" class="btn btn-primary btn-sm" id="btn-ingredient-add">Shto përbërës</button>
           </div>
         </div>
@@ -619,6 +623,21 @@
 
     </div>
 
+    <div id="panel-ai" class="panel-section hidden">
+      <div class="card ai-hub-card">
+        <div class="card-title">AI</div>
+        <p class="links-hint" style="margin-top:0">Skanim faturash, kamarierët, stoku dhe tokenët.</p>
+        <div id="owner-ai-usage" class="links-hint" style="margin:0.5rem 0 0.75rem">Duke ngarkuar tokenët…</div>
+        <button type="button" class="btn btn-primary" id="btn-ai-hub-scan-invoice" style="width:100%">
+          📷 Skanoj Faturë
+        </button>
+        <p class="links-hint" style="margin-top:0.75rem;margin-bottom:0">
+          Hap kamerën ose zgjidh foto nga galeria → AI lexon produktet → konfirmo → stoku përditësohet.
+        </p>
+      </div>
+      <div id="owner-ai-modules"></div>
+    </div>
+
     <div id="panel-ai-raporte" class="panel-section hidden">
       <div class="card">
         <div class="card-title card-title-row">
@@ -683,10 +702,15 @@
           </div>
         </div>
         <p class="links-hint">
-          Bisedoni me AI në shqip — di shitjet e sotme, stokun dhe raportet e lokalit.
-          Përdorni mikrofonin për pyetje me zë; përgjigja lexohet automatikisht (Text-to-Speech).
-          Vetëm <strong>Pako 5</strong>.
+          Bisedoni me AI në shqip — shitjet, stoku, kamarierët. Zgjidhni kategori për kontekst më të saktë.
+          Vetëm <strong>Pako 4 (AI)</strong>.
         </p>
+        <div class="filter-row" id="ai-assistant-categories" style="margin-bottom:0.5rem;gap:0.35rem;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary btn-sm ai-cat-chip active" data-ai-cat="general">Të gjitha</button>
+          <button type="button" class="btn btn-ghost btn-sm ai-cat-chip" data-ai-cat="shitjet">Shitjet</button>
+          <button type="button" class="btn btn-ghost btn-sm ai-cat-chip" data-ai-cat="stoku">Stoku</button>
+          <button type="button" class="btn btn-ghost btn-sm ai-cat-chip" data-ai-cat="kamarieret">Kamarierët</button>
+        </div>
         <div id="ai-assistant-messages" class="ai-assistant-messages">
           <div class="ai-chat-bubble ai-chat-bubble-assistant">
             Përshëndetje! Jam asistenti juaj — pyetni për shitjet, stokun ose raportet e sotme.
@@ -1068,10 +1092,10 @@
         <h2 id="invoice-scan-title">Skano faturën e furnizuesit</h2>
         <button type="button" class="owner-modal-close" id="invoice-scan-close" aria-label="Mbyll">×</button>
       </div>
-      <p class="links-hint">Ngarkoni foto të faturës së blerjes. AI nxjerr artikujt (emër, sasi, njësi, çmim) — pas konfirmimit stoku përditësohet në cloud.</p>
+      <p class="links-hint">Kamera ose galeri — AI nxjerr artikujt (emër, sasi, njësi, çmim). Pas konfirmimit stoku përditësohet.</p>
       <div class="menu-scan-upload">
-        <label class="btn btn-ghost btn-sm" for="invoice-scan-file">Zgjidh foto</label>
-        <input type="file" id="invoice-scan-file" accept="image/png,image/jpeg,image/jpg,image/webp" hidden>
+        <label class="btn btn-ghost btn-sm" for="invoice-scan-file">📷 Kamera / Galeri</label>
+        <input type="file" id="invoice-scan-file" accept="image/*" capture="environment" hidden>
         <button type="button" class="btn btn-primary btn-sm" id="btn-invoice-scan-run" disabled>Skano</button>
       </div>
       <div id="invoice-scan-preview-wrap" class="menu-scan-preview-wrap hidden">
@@ -1104,7 +1128,7 @@
             <tbody id="invoice-scan-items-body"></tbody>
           </table>
         </div>
-        <button type="button" class="btn btn-primary" id="btn-invoice-scan-apply" style="margin-top:0.75rem">Konfirmo dhe përditëso stokun</button>
+        <button type="button" class="btn btn-primary" id="btn-invoice-scan-apply" style="margin-top:0.75rem">Regjistro në Stok</button>
       </div>
     </div>
   </div>
@@ -1147,7 +1171,8 @@
   <script src="/js/owner-invoice-scan.js?v=1"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
-  <script src="/js/owner-ai-assistant.js?v=1"></script>
+  <script src="/js/owner-ai-assistant.js?v=2"></script>
+  <script src="/js/owner-ai-modules.js?v=1"></script>
   <script src="/js/owner-notifications.js?v=1"></script>
 </body>
 </html>

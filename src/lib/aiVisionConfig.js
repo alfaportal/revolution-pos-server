@@ -8,7 +8,7 @@ function getAnthropicVisionConfig() {
     model:
       trimEnv("ANTHROPIC_VISION_MODEL") ||
       trimEnv("ANTHROPIC_MODEL") ||
-      "claude-3-5-haiku-latest",
+      "claude-sonnet-4-6",
     maxTokens: Math.min(
       8192,
       Math.max(512, Number(process.env.AI_SCAN_MAX_TOKENS) || 4096),

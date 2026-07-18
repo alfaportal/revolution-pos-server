@@ -355,29 +355,29 @@ let trialAlertsCache = [];
 let stockAlertsCache = [];
 let modalState = null;
 
-/** Fallback — same as src/lib/packages.js (used when tier cache is empty or stale). */
+/** Fallback — same as src/lib/packages.js + packageTierMap (used when tier cache is empty or stale). */
 const TIER_FEATURES = {
-  pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false, online_orders: false },
-  pako_2: { pos: true, owner_panel: true, website: true, mobile: false, kds: true, kiosk: true, waiter: true, online_orders: false },
-  pako_3: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: false },
+  pako_1: { pos: true, owner_panel: true, website: true, mobile: false, kds: false, kiosk: false, waiter: false, online_orders: false, ai: false },
+  pako_2: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true, ai: false },
+  pako_3: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: false, ai: false },
   pako_4: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true, ai: false },
   pako_5: { pos: true, owner_panel: true, website: true, mobile: true, kds: true, kiosk: true, waiter: true, online_orders: true, ai: true },
 };
 
 function normalizeTierId(tier) {
-  const t = String(tier || "pako_1").trim().toLowerCase().replace(/\./g, "_");
+  const t = String(tier || "pako_3").trim().toLowerCase().replace(/\./g, "_");
   const legacy = { pako_1_1: "pako_3", pako_2_1: "pako_4" };
   const mapped = legacy[t] || t;
-  return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_1";
+  return Object.prototype.hasOwnProperty.call(TIER_FEATURES, mapped) ? mapped : "pako_3";
 }
 
-/** Pako 1–4 në Super Admin (pako_1 legacy vetëm nëse klienti e ka). */
-const ADMIN_TIER_ORDER = ["pako_2", "pako_3", "pako_4", "pako_5"];
+/** Pako 1–4 në Super Admin (ID legacy sipas package-tier-map). */
+const ADMIN_TIER_ORDER = ["pako_3", "pako_4", "pako_2", "pako_5"];
 const TIER_SHORT_LABELS = {
   pako_1: "Legacy",
-  pako_2: "Pako 1",
-  pako_3: "Pako 2",
-  pako_4: "Pako 3",
+  pako_2: "Pako 3",
+  pako_3: "Pako 1",
+  pako_4: "Pako 2",
   pako_5: "Pako 4",
 };
 
@@ -389,7 +389,7 @@ function adminTierIdsForPicker(currentTier) {
 }
 
 function packageTierPickerHtml(selected, { fieldName = "package_tier", fieldId = "", compact = false } = {}) {
-  const sel = normalizeTierId(selected || "pako_2");
+  const sel = normalizeTierId(selected || "pako_3");
   const ids = adminTierIdsForPicker(sel);
   const hiddenId = fieldId ? ` id="${escAttr(fieldId)}"` : "";
   const buttons = ids.map(id => {
@@ -439,11 +439,11 @@ function readPackageTierValue(containerOrId) {
   const el = typeof containerOrId === "string"
     ? document.getElementById(containerOrId)
     : containerOrId;
-  if (!el) return "pako_2";
+  if (!el) return "pako_3";
   const hidden = el.matches('input[type="hidden"]')
     ? el
     : el.querySelector('input[type="hidden"][name="package_tier"]');
-  return normalizeTierId(hidden?.value || "pako_2");
+  return normalizeTierId(hidden?.value || "pako_3");
 }
 
 async function saveClientPackageTier(clientId, tierId, container) {
@@ -470,7 +470,7 @@ async function saveClientPackageTier(clientId, tierId, container) {
 async function loadPackageTiers() {
   const { tiers } = await api("/api/admin/package-tiers");
   packageTiersCache = tiers || [];
-  mountPackageTierPicker(document.getElementById("c-package-tier"), "pako_2");
+  mountPackageTierPicker(document.getElementById("c-package-tier"), "pako_3");
 }
 
 function packageTierLabel(id) {
@@ -489,7 +489,7 @@ function readModalPackageTier(fd) {
   if (wrap) return readPackageTierValue(wrap);
   const el = document.getElementById("modal-package-tier");
   const value = (el?.value || fd.get("package_tier") || "").trim();
-  return normalizeTierId(value || "pako_2");
+  return normalizeTierId(value || "pako_3");
 }
 
 function mergeClientIntoCache(updatedClient) {
@@ -2255,7 +2255,10 @@ async function loadAiUsage() {
           <td data-label="Tokens">${Number(row.tokens_total || 0).toLocaleString("sq-AL")}</td>
           <td data-label="Kosto EUR">${fmtEur(row.cost_eur_total)}</td>
           <td data-label="Limit">${limitLabel}${limitHint}</td>
-          <td data-label="Detaje"><button type="button" class="btn btn-ghost btn-sm" data-ai-usage-toggle="${idx}">Breakdown</button></td>
+          <td data-label="Detaje">
+            <button type="button" class="btn btn-ghost btn-sm" data-ai-usage-toggle="${idx}">Breakdown</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-ai-invoice="${escAttr(row.restaurant_id || "")}">PDF faturë</button>
+          </td>
         </tr>
         <tr class="ai-usage-detail hidden" data-ai-usage-detail="${idx}">
           <td colspan="6">
@@ -2274,6 +2277,35 @@ async function loadAiUsage() {
       const idx = btn.dataset.aiUsageToggle;
       const detail = tbl.querySelector(`[data-ai-usage-detail="${idx}"]`);
       detail?.classList.toggle("hidden");
+    });
+  });
+
+  tbl.querySelectorAll("[data-ai-invoice]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const restaurantId = btn.dataset.aiInvoice;
+      if (!restaurantId) return;
+      const monthVal = document.getElementById("ai-usage-month")?.value || currentMonthValue();
+      try {
+        const res = await fetch(
+          apiUrl(
+            `/api/super/ai-usage/invoice-pdf?restaurant_id=${encodeURIComponent(restaurantId)}&month=${encodeURIComponent(monthVal)}`,
+          ),
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+        );
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.gabim || `HTTP ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ai-invoice-${monthVal}-${restaurantId.slice(0, 8)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        showMsg("ai-usage-msg", err.message || String(err), false);
+      }
     });
   });
 

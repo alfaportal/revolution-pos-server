@@ -53,7 +53,7 @@ async function registerOwnerWithCode(body, baseUrl) {
     client = await createClient({
       emri: bizEmri,
       tipi,
-      package_tier: body.package_tier || "pako_1",
+      package_tier: body.package_tier || "pako_3",
       email: ownerEmail,
     });
 

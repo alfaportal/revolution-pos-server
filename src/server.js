@@ -40,6 +40,7 @@ const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startRefusedOrdersExpiryJob } = require("./jobs/expireRefusedOrders");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
+const { startAiWeeklyReportCron } = require("./jobs/aiWeeklyReports");
 const { startSupplySuggestionCron } = require("./jobs/supplySuggestions");
 const { startNotificationDailyCron } = require("./jobs/notificationDailyReports");
 const { startCloudHealthMonitor } = require("./jobs/cloudHealthMonitor");
@@ -391,6 +392,7 @@ async function start() {
   startRefusedOrdersExpiryJob();
   startTrialNotificationCron();
   startAiDailyReportCron();
+  startAiWeeklyReportCron();
   startSupplySuggestionCron();
   startNotificationDailyCron();
   startCloudHealthMonitor();

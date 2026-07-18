@@ -4,8 +4,11 @@ const AI_FEATURES = [
   "scan_menu",
   "scan_invoice",
   "daily_report",
+  "weekly_report",
   "chat",
   "supply_suggestion",
+  "stock_predict",
+  "waiter_rating",
   "profit_forecast",
 ];
 
@@ -18,8 +21,11 @@ const FEATURE_LABELS = {
   scan_menu: "Skanim menu",
   scan_invoice: "Skanim fature",
   daily_report: "Raport ditor AI",
+  weekly_report: "Raport javor AI",
   chat: "Chat / asistent",
   supply_suggestion: "Sugjerime furnizimi",
+  stock_predict: "Parashikim stoku",
+  waiter_rating: "Vlerësim kamarierësh",
   profit_forecast: "Parashikim fitimi",
 };
 
@@ -29,7 +35,10 @@ const COST_EUR_PER_1K = {
   scan_invoice: Number(process.env.AI_COST_EUR_PER_1K_SCAN) || 0.0023,
   chat: Number(process.env.AI_COST_EUR_PER_1K_CHAT) || 0.00025,
   daily_report: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+  weekly_report: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
   supply_suggestion: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+  stock_predict: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
+  waiter_rating: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
   profit_forecast: Number(process.env.AI_COST_EUR_PER_1K_REPORT) || 0.00025,
 };
 

@@ -189,9 +189,43 @@ function aiUsageDetailRowsToCsv(rows) {
   return `${header}\n${detailLines.join("\n")}\n`;
 }
 
+async function getAiUsageForRestaurant(restaurantId, { month } = {}) {
+  const summary = await listAiUsageSummary({ month });
+  const id = String(restaurantId || "").trim();
+  const row = (summary.rows || []).find((r) => String(r.restaurant_id) === id);
+  if (!row) {
+    return {
+      ok: true,
+      month: summary.month,
+      restaurant_id: id,
+      calls: 0,
+      tokens_total: 0,
+      cost_eur_total: 0,
+      token_limit: null,
+      tokens_remaining: null,
+      breakdown: emptyBreakdown(),
+      table_missing: !!summary.table_missing,
+    };
+  }
+  return {
+    ok: true,
+    month: summary.month,
+    restaurant_id: row.restaurant_id,
+    local_name: row.local_name,
+    calls: row.calls,
+    tokens_total: row.tokens_total,
+    cost_eur_total: row.cost_eur_total,
+    token_limit: row.token_limit,
+    tokens_remaining: row.tokens_remaining,
+    breakdown: row.breakdown,
+    table_missing: !!summary.table_missing,
+  };
+}
+
 module.exports = {
   parseMonthParam,
   listAiUsageSummary,
+  getAiUsageForRestaurant,
   aiUsageRowsToCsv,
   aiUsageDetailRowsToCsv,
   FEATURE_LABELS,

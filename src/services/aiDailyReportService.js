@@ -456,6 +456,7 @@ async function getProfitForecastForClient(clientId, clientName) {
 module.exports = {
   REPORT_TZ,
   getZonedParts,
+  aggregateTopItems,
   buildDailyReportPayload,
   estimateDailyProfit,
   listEligibleClients,

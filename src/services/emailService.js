@@ -398,6 +398,83 @@ async function sendSupplySuggestionEmail({
   return deliverEmail({ to, subject, text, html });
 }
 
+async function sendLowStockCriticalEmail({ to, clientName, items, analysisText }) {
+  const { AI_ENABLED } = require("../lib/aiConfig");
+  if (!AI_ENABLED) return { skipped: true, reason: "ai_disabled" };
+
+  const list = (items || [])
+    .map(
+      (i) =>
+        `- ${i.name}: stok ${i.current_quantity} ${i.unit || ""}` +
+        (i.recommend_order ? ` → porositi ${i.recommend_order}` : ""),
+    )
+    .join("\n");
+
+  const subject = `⚠ Stok kritik — ${clientName || "Lokali"} — Revolution POS`;
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    "Produktet kritike po mbarojnë:",
+    list || "—",
+    "",
+    analysisText || "",
+    "",
+    "Hapni panelin e pronarit → AI → Parashikim stoku.",
+  ].join("\n");
+
+  const htmlItems = (items || [])
+    .map(
+      (i) =>
+        `<li><strong>${escapeHtmlEmail(i.name)}</strong> — ${Number(i.current_quantity)} ${escapeHtmlEmail(i.unit || "")}` +
+        (i.recommend_order ? ` · porositi <strong>${Number(i.recommend_order)}</strong>` : "") +
+        `</li>`,
+    )
+    .join("");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p><strong>Alert stoku kritik</strong></p>
+    <ul>${htmlItems}</ul>
+    ${analysisText ? `<p style="white-space:pre-wrap;margin-top:12px">${escapeHtmlEmail(analysisText)}</p>` : ""}
+    <p style="margin-top:16px;color:#666;font-size:13px">Paneli i pronarit → AI → Parashikim stoku.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendWeeklyAiReportEmail({ to, clientName, weekStart, weekEnd, summaryText, payload }) {
+  const { AI_ENABLED } = require("../lib/aiConfig");
+  if (!AI_ENABLED) return { skipped: true, reason: "ai_disabled" };
+
+  const revenue = Number(payload?.this_week?.total || 0);
+  const prev = Number(payload?.prev_week?.total || 0);
+  const subject = `Raporti AI javor — ${weekStart} → ${weekEnd} — Revolution POS`;
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Raporti javor ${weekStart} – ${weekEnd}:`,
+    "",
+    summaryText || "—",
+    "",
+    `Shitje këtë javë: ${revenue.toFixed(2)} €`,
+    `Java e kaluar: ${prev.toFixed(2)} €`,
+    "",
+    "Hapni panelin e pronarit → Raporte AI / AI për historikun.",
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p><strong>Raporti AI javor</strong> (${escapeHtmlEmail(weekStart)} – ${escapeHtmlEmail(weekEnd)})</p>
+    <p style="white-space:pre-wrap;line-height:1.5">${escapeHtmlEmail(summaryText || "—")}</p>
+    <p style="margin-top:16px">
+      <strong>Kjo javë:</strong> ${revenue.toFixed(2)} €<br>
+      <strong>Java e kaluar:</strong> ${prev.toFixed(2)} €
+    </p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   deliverEmail,
@@ -413,4 +490,6 @@ module.exports = {
   sendDailyAiReportEmail,
   sendShiftCloseReportEmail,
   sendSupplySuggestionEmail,
+  sendLowStockCriticalEmail,
+  sendWeeklyAiReportEmail,
 };

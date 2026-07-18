@@ -834,6 +834,105 @@ router.post("/supply-suggestions/send-email", requireAiPackage, async (req, res)
   }
 });
 
+router.get("/ai-waiter-rating", requireAiPackage, async (req, res) => {
+  try {
+    const { analyzeWaiterRatings, computeWaiterRefuseStats } = require("../services/aiWaiterRatingService");
+    const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+    if (String(req.query.analyze || "") === "1") {
+      const result = await analyzeWaiterRatings(req.user.client_id, {
+        days,
+        force: String(req.query.force || "") === "1",
+      });
+      return res.json(result);
+    }
+    const stats = await computeWaiterRefuseStats(req.user.client_id, { days });
+    res.json({ ok: true, ...stats });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-waiter-rating/analyze", requireAiPackage, async (req, res) => {
+  try {
+    const { analyzeWaiterRatings } = require("../services/aiWaiterRatingService");
+    const days = Math.min(90, Math.max(7, Number(req.body?.days) || 30));
+    const result = await analyzeWaiterRatings(req.user.client_id, {
+      days,
+      force: !!req.body?.force,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-stock-predict", requireAiPackage, async (req, res) => {
+  try {
+    const { buildStockPredictPayload, generateStockPredict } = require("../services/aiStockPredictService");
+    const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+    if (String(req.query.analyze || "") === "1") {
+      const client = await getClientById(req.user.client_id);
+      const result = await generateStockPredict(req.user.client_id, client?.emri || "", {
+        days,
+        sendEmail: String(req.query.email || "") === "1",
+      });
+      return res.json(result);
+    }
+    const payload = await buildStockPredictPayload(req.user.client_id, { days });
+    res.json({ ok: true, ...payload });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-stock-predict/analyze", requireAiPackage, async (req, res) => {
+  try {
+    const { generateStockPredict } = require("../services/aiStockPredictService");
+    const client = await getClientById(req.user.client_id);
+    const days = Math.min(90, Math.max(7, Number(req.body?.days) || 30));
+    const result = await generateStockPredict(req.user.client_id, client?.emri || "", {
+      days,
+      sendEmail: req.body?.send_email !== false,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.get("/ai-weekly-reports", requireAiPackage, async (req, res) => {
+  try {
+    const { listWeeklyReports } = require("../services/aiWeeklyReportService");
+    const reports = await listWeeklyReports(req.user.client_id, {
+      limit: Number(req.query.limit) || 12,
+    });
+    res.json({ ok: true, reports });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/ai-weekly-reports/generate", requireAiPackage, async (req, res) => {
+  try {
+    const {
+      generateWeeklyReportForClient,
+      mondayOf,
+      addDays,
+    } = require("../services/aiWeeklyReportService");
+    const client = await getClientById(req.user.client_id);
+    const today = getZonedParts().date;
+    const weekStart =
+      String(req.body?.week_start || "").trim() || addDays(mondayOf(today), -7);
+    const result = await generateWeeklyReportForClient(client, weekStart, {
+      sendEmail: !!req.body?.send_email,
+      force: !!req.body?.force,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
 router.get("/ai-assistant/history", requireAiPackage, async (req, res) => {
   try {
     const messages = await listChatHistory(req.user.client_id, { limit: 40 });
@@ -860,9 +959,10 @@ router.post("/ai-assistant/chat", requireAiPackage, async (req, res) => {
     }
 
     const clientId = req.user.client_id;
+    const category = String(req.body?.category || "general").trim() || "general";
     const [historyRows, context] = await Promise.all([
       listChatHistory(clientId, { limit: 20 }),
-      buildOwnerChatContext(clientId),
+      buildOwnerChatContext(clientId, { category }),
     ]);
 
     const history = historyRows.map(row => ({
@@ -880,6 +980,7 @@ router.post("/ai-assistant/chat", requireAiPackage, async (req, res) => {
     res.json({
       ok: true,
       reply: result.reply,
+      category,
       usage: {
         tokens_used: result.tokensUsed,
         provider: result.provider,

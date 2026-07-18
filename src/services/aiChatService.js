@@ -119,8 +119,8 @@ function getOwnerChatConfig() {
     provider: "anthropic",
     ready: true,
     apiKey: anthropicKey,
-    model: trimEnv("ANTHROPIC_MODEL") || "claude-3-5-haiku-latest",
-    maxTokens: Math.min(4096, Math.max(256, Number(process.env.AI_CHAT_MAX_TOKENS) || 1024)),
+    model: trimEnv("ANTHROPIC_MODEL") || "claude-sonnet-4-6",
+    maxTokens: Math.min(8192, Math.max(256, Number(process.env.AI_CHAT_MAX_TOKENS) || 2048)),
   };
 }
 

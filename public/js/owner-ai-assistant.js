@@ -1,7 +1,8 @@
-/** Owner panel — Asistent AI (chat + zë, pako_5) */
+/** Owner panel — Asistent AI (chat + zë + kategori, Pako 4) */
 (function () {
   let recognition = null;
   let listening = false;
+  let activeCategory = "general";
 
   function esc(text) {
     return String(text || "")
@@ -145,7 +146,7 @@
     try {
       const data = await api("/api/owner/ai-assistant/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, category: activeCategory }),
       });
       const reply = String(data.reply || "").trim() || "Nuk u mor përgjigje.";
       appendBubble(reply, "assistant");
@@ -207,6 +208,18 @@
   document.getElementById("btn-ai-assistant-mic")?.addEventListener("click", toggleMic);
   document.getElementById("btn-ai-assistant-clear")?.addEventListener("click", () => {
     clearHistory().catch(err => setMsg(err.message, false));
+  });
+
+  document.querySelectorAll(".ai-cat-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      activeCategory = btn.dataset.aiCat || "general";
+      document.querySelectorAll(".ai-cat-chip").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.classList.toggle("btn-primary", on);
+        b.classList.toggle("btn-ghost", !on);
+      });
+    });
   });
 
   if (window.speechSynthesis) {

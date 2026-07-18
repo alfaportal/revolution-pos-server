@@ -2689,6 +2689,41 @@ async function importScannedMenuItems() {
   }
 }
 
+async function refreshOwnerAiUsage() {
+  const el = document.getElementById("owner-ai-usage");
+  if (!el) return;
+  try {
+    const u = await api("/api/ai/usage");
+    el.textContent =
+      `Tokenë këtë muaj: ${Number(u.tokens_total || 0).toLocaleString("sq-AL")} · ` +
+      `Kosto: ${Number(u.cost_eur_total || 0).toFixed(4)} € · Thirrje: ${Number(u.calls || 0)}`;
+  } catch (err) {
+    el.textContent = err.message || "Tokenët nuk u lexuan.";
+  }
+}
+window.refreshOwnerAiUsage = refreshOwnerAiUsage;
+window.ownerApi = api;
+
+function applyAiHubTab(data) {
+  const tab = document.getElementById("tab-ai-hub");
+  if (!tab || !data) return;
+  const active = !!data.enabled;
+  const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
+  if (active || needsUpgrade) {
+    tab.removeAttribute("hidden");
+    tab.classList.remove("hidden");
+    tab.classList.toggle("ai-feature-locked", !active && needsUpgrade);
+    tab.title = active ? "AI" : (window.AI_UPGRADE_MSG || "Kontaktoni Revolution POS për upgrade");
+  } else {
+    tab.setAttribute("hidden", "");
+    tab.classList.add("hidden");
+  }
+  if (active) {
+    refreshOwnerAiUsage().catch(() => {});
+    window.refreshOwnerAiModules?.().catch(() => {});
+  }
+}
+
 async function applyAiUiState() {
   const root = document.getElementById("ai-chat-root");
   const scanBtn = document.getElementById("btn-menu-scan-ai");
@@ -2716,6 +2751,7 @@ async function applyAiUiState() {
         scanBtn.classList.remove("ai-feature-locked");
       }
     }
+    applyAiHubTab(data);
     window.applyInvoiceScanAiButton?.(data);
     window.applyAiReportsTab?.(data);
     window.applySupplySuggestionsSection?.(data);
@@ -2726,6 +2762,7 @@ async function applyAiUiState() {
     fab?.classList.add("hidden");
     scanBtn?.setAttribute("hidden", "");
     document.getElementById("btn-invoice-scan-ai")?.setAttribute("hidden", "");
+    document.getElementById("tab-ai-hub")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-reports")?.setAttribute("hidden", "");
     document.getElementById("tab-ai-assistant")?.setAttribute("hidden", "");
     document.getElementById("tab-notifications")?.setAttribute("hidden", "");
@@ -2870,4 +2907,22 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
       /* poll — mos nxirr jashtë */
     }
   }, 3000);
+
+  /* Pakoja AI nga Naseri — zbato menjëherë pa restart */
+  setInterval(() => {
+    applyAiUiState().catch(() => {});
+  }, 12000);
+
+  document.getElementById("btn-ai-hub-scan-invoice")?.addEventListener("click", () => {
+    const hubTab = document.getElementById("tab-ai-hub");
+    if (hubTab?.classList.contains("ai-feature-locked")) {
+      alert(typeof AI_UPGRADE_MSG !== "undefined" ? AI_UPGRADE_MSG : "Kontaktoni Revolution POS për upgrade");
+      return;
+    }
+    if (typeof window.openInvoiceScanModal === "function") {
+      window.openInvoiceScanModal();
+      return;
+    }
+    document.getElementById("btn-invoice-scan-ai")?.click();
+  });
 })();
