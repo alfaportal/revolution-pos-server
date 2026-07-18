@@ -211,6 +211,15 @@ async function apiGenerateLicenseKey() {
   return celesi;
 }
 
+/** LICENSE_KEY nga HARDWARE_ID — i njëjti si generate-license.js (SHA256). */
+async function apiGenerateHardwareLicenseKey(hardwareId) {
+  const data = await api("/api/super/generate-license-key", {
+    method: "POST",
+    body: JSON.stringify({ hardwareId: String(hardwareId || "").trim() }),
+  });
+  return data.licenseKey || data.celesi || "";
+}
+
 async function apiGenerateDeviceId() {
   const { device_id } = await api("/api/admin/licenses/generate-device-id");
   return device_id;
@@ -2647,26 +2656,49 @@ document.getElementById("form-client").addEventListener("submit", async e => {
 });
 
 document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () => {
+  const hwEl = document.getElementById("lm-device-id");
+  const keyEl = document.getElementById("lm-celesi");
+  const hardwareId = String(hwEl?.value || "").trim();
+  if (!hardwareId) {
+    showMsg("msg-license-mobile", "Fut ID-në e pajisjes (HARDWARE_ID) që ta dërgoi klienti.", false);
+    hwEl?.focus();
+    return;
+  }
+  const btn = document.getElementById("btn-lm-gen-key");
+  if (btn) btn.disabled = true;
   try {
-    document.getElementById("lm-celesi").value = await apiGenerateLicenseKey();
+    const licenseKey = await apiGenerateHardwareLicenseKey(hardwareId);
+    if (keyEl) {
+      keyEl.value = licenseKey;
+      keyEl.focus();
+      keyEl.select();
+    }
+    showMsg(
+      "msg-license-mobile",
+      `Kodi u gjenerua.\nLICENSE_KEY: ${licenseKey}\n\nKopjoja klientit me WhatsApp/SMS.`,
+      true,
+    );
   } catch (err) {
-    alert(err.message || "Gjenerimi dështoi.");
+    showMsg("msg-license-mobile", err.message || "Gjenerimi dështoi.", false);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 });
 
-document.getElementById("btn-lm-gen-device")?.addEventListener("click", async () => {
-  try {
-    document.getElementById("lm-device-id").value = await apiGenerateDeviceId();
-  } catch (err) {
-    alert(err.message || "Gjenerimi dështoi.");
+document.getElementById("btn-lm-copy-key")?.addEventListener("click", async () => {
+  const key = String(document.getElementById("lm-celesi")?.value || "").trim();
+  if (!key) {
+    showMsg("msg-license-mobile", "Nuk ka kod për të kopjuar. Së pari Gjenero kod.", false);
+    return;
   }
-});
-
-document.getElementById("btn-lm-gen-both")?.addEventListener("click", async () => {
   try {
-    await fillLicensePair("lm-celesi", "lm-device-id");
-  } catch (err) {
-    alert(err.message || "Gjenerimi dështoi.");
+    await navigator.clipboard.writeText(key);
+    showMsg("msg-license-mobile", `U kopjua: ${key}`, true);
+  } catch {
+    const el = document.getElementById("lm-celesi");
+    el?.focus();
+    el?.select();
+    showMsg("msg-license-mobile", "Përzgjidhni kodin dhe kopjoni (Ctrl+C).", true);
   }
 });
 

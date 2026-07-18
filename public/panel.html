@@ -111,23 +111,20 @@
 
         <div class="card license-quick-create admin-only-card">
           <div class="card-title">Krijo / Ruaj liçencë</div>
-          <p class="field-hint" style="margin-bottom:0.75rem">Një formë — shkruaj ose gjenero çelësin dhe ID-në, pastaj Ruaj.</p>
+          <p class="field-hint" style="margin-bottom:0.75rem">Fut ID-në nga ekrani i klientit → <strong>Gjenero kod</strong> → kopjoja klientit (WhatsApp/SMS). Pastaj Ruaj.</p>
           <div id="msg-license-mobile" class="alert hidden"></div>
           <form id="form-license-mobile">
             <label>Klienti *</label>
             <select id="lm-client" required></select>
-            <label>Çelësi i licencës</label>
+            <label>ID e pajisjes (HARDWARE_ID nga klienti)</label>
+            <input type="text" id="lm-device-id" class="mono" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+            <button type="button" class="btn btn-accent" id="btn-lm-gen-key" style="margin:0.5rem 0;width:100%">Gjenero kod</button>
+            <label>Çelësi i licencës (LICENSE_KEY)</label>
             <div class="link-actions">
-              <input type="text" id="lm-celesi" class="mono" placeholder="Shkruaj ose Gjenero" autocomplete="off" autocapitalize="characters" spellcheck="false">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-key">Gjenero</button>
+              <input type="text" id="lm-celesi" class="mono" placeholder="Gjenerohet automatikisht" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-copy-key" title="Kopjo">Kopjo</button>
             </div>
-            <label>ID e pajisjes</label>
-            <div class="link-actions">
-              <input type="text" id="lm-device-id" class="mono" placeholder="Shkruaj ose Gjenero ID" autocomplete="off" autocapitalize="characters" spellcheck="false">
-              <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-device">Gjenero ID</button>
-            </div>
-            <button type="button" class="btn btn-ghost" id="btn-lm-gen-both" style="margin:0.5rem 0;width:100%">Gjenero çiftin (Kod + ID)</button>
-            <button type="submit" class="btn btn-primary" style="width:100%">Ruaj / Krijo liçencën</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.75rem">Ruaj / Krijo liçencën</button>
           </form>
         </div>
 

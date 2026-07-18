@@ -5,10 +5,37 @@ const { listAiUsageSummary, aiUsageRowsToCsv, aiUsageDetailRowsToCsv } = require
 const { buildAiUsageInvoicePdf } = require("../services/aiBillingPdfService");
 const { getClientById } = require("../services/salesService");
 const { packageLabel } = require("../lib/packages");
+const {
+  generateHardwareLicenseKey,
+  normalizeHardwareId,
+  formatGrouped16,
+} = require("../lib/hardwareLicense");
 
 const router = express.Router();
 
 router.use(authRequired, superAdminOnly);
+
+/**
+ * Gjenero LICENSE_KEY nga HARDWARE_ID i klientit (telefoni i Super Admin).
+ * Body: { hardwareId: "XXXX-XXXX-XXXX-XXXX" }
+ * → { licenseKey: "XXXX-XXXX-XXXX-XXXX" }
+ */
+router.post(
+  "/generate-license-key",
+  asyncHandler(async (req, res) => {
+    const hardwareId = req.body?.hardwareId || req.body?.hardware_id || "";
+    try {
+      const licenseKey = generateHardwareLicenseKey(hardwareId);
+      res.json({
+        ok: true,
+        licenseKey,
+        hardwareId: formatGrouped16(normalizeHardwareId(hardwareId)),
+      });
+    } catch (e) {
+      res.status(400).json({ ok: false, gabim: e.message || String(e) });
+    }
+  }),
+);
 
 router.get(
   "/ai-usage",
