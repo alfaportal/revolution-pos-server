@@ -2724,6 +2724,8 @@ function applyAiHubTab(data) {
   }
 }
 
+let _ownerLastPackageTier = "";
+
 async function applyAiUiState() {
   const root = document.getElementById("ai-chat-root");
   const scanBtn = document.getElementById("btn-menu-scan-ai");
@@ -2732,6 +2734,13 @@ async function applyAiUiState() {
     const data = await api("/api/ai/status");
     const active = !!data.enabled;
     const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
+    const nextTier = String(data.package_tier || "").trim();
+    if (nextTier && nextTier !== _ownerLastPackageTier) {
+      console.log("[owner] Pako e re nga cloud:", nextTier, "| package_ai:", !!data.package_ai);
+      _ownerLastPackageTier = nextTier;
+      /* Linqet waiter/kds/kiosk varen nga features — rifresko pa restart */
+      loadClient().catch(() => {});
+    }
     root?.classList.toggle("hidden", !active);
     applyAiFeatureLock(fab, data);
     if (scanBtn) {
@@ -2908,7 +2917,7 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
     }
   }, 3000);
 
-  /* Pakoja AI nga Naseri — zbato menjëherë pa restart */
+  /* Pakoja nga Naseri (PATCH) — AI + linqe, pa restart (12s) */
   setInterval(() => {
     applyAiUiState().catch(() => {});
   }, 12000);

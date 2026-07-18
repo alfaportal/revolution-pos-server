@@ -1,6 +1,6 @@
 const { getSupabase } = require("../db");
 const { clientHasFeature } = require("../lib/packages");
-const { getClientById } = require("./licenseService");
+const { getClientById } = require("./salesService");
 const { listInventoryAlerts } = require("./inventoryService");
 const { buildDailyReportPayload } = require("./aiDailyReportService");
 const { getZonedParts, listEligibleClients } = require("./aiDailyReportService");

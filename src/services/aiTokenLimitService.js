@@ -1,5 +1,5 @@
 const { getSupabase } = require("../db");
-const { getClientById } = require("./licenseService");
+const { getClientById } = require("./salesService");
 const { parseMonthParam } = require("./aiUsageReportService");
 
 async function getClientMonthlyTokenUsage(restaurantId, month) {
