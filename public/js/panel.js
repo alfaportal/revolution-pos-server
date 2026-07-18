@@ -293,18 +293,6 @@ function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id"
     </div>`;
 }
 
-async function prepareLicenseCreateForm() {
-  const keyEl = document.getElementById("ld-celesi");
-  const devEl = document.getElementById("ld-device-id");
-  if (!keyEl || !devEl) return;
-  if (keyEl.value.trim() && devEl.value.trim()) return;
-  try {
-    await fillLicensePair("ld-celesi", "ld-device-id");
-  } catch {
-    /* ignore */
-  }
-}
-
 function licenseTerminalFieldsHtml(l, { prefix = "license-edit" } = {}) {
   const maxVal = Number(l?.max_terminals) || 1;
   const baseVal = Number(l?.base_price) || 0;
@@ -1481,7 +1469,6 @@ function activateAdminTab(tabId) {
   document.getElementById(`panel-${tabId}`)?.classList.remove("hidden");
   if (tabId === "licensat") {
     loadLicenses().catch(() => {});
-    prepareLicenseCreateForm().catch(() => {});
     startLicensesPoll();
   } else {
     stopLicensesPoll();
@@ -1643,17 +1630,15 @@ async function loadClients() {
     package_tier: normalizeTierId(c.package_tier),
   }));
   const lmSel = document.getElementById("lm-client");
-  const ldSel = document.getElementById("ld-client");
   const clientOpts = clientsCache.length
     ? clientsCache.map(c => `<option value="${c.id}">${esc(c.emri)} (${esc(c.tipi)})</option>`).join("")
     : "";
   const clientSelectHtml = clientsCache.length
     ? '<option value="" disabled selected hidden>Zgjidh klientin…</option>' + clientOpts
     : '<option value="" disabled selected>— Shto klient së pari (+ Shto) —</option>';
-  for (const sel of [lmSel, ldSel]) {
-    if (!sel) continue;
-    sel.innerHTML = clientSelectHtml;
-    sel.disabled = !clientsCache.length;
+  if (lmSel) {
+    lmSel.innerHTML = clientSelectHtml;
+    lmSel.disabled = !clientsCache.length;
   }
   const tbl = document.getElementById("tbl-clients");
   let displayClients = clientsCache;
@@ -2662,31 +2647,10 @@ document.getElementById("form-client").addEventListener("submit", async e => {
 });
 
 document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () => {
-  const { celesi } = await api("/api/admin/licenses/generate-key");
-  document.getElementById("lm-celesi").value = celesi;
-});
-
-document.getElementById("btn-ld-gen-key")?.addEventListener("click", async () => {
   try {
-    document.getElementById("ld-celesi").value = await apiGenerateLicenseKey();
+    document.getElementById("lm-celesi").value = await apiGenerateLicenseKey();
   } catch (err) {
-    alert(err.message);
-  }
-});
-
-document.getElementById("btn-ld-gen-device")?.addEventListener("click", async () => {
-  try {
-    document.getElementById("ld-device-id").value = await apiGenerateDeviceId();
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-document.getElementById("btn-ld-gen-both")?.addEventListener("click", async () => {
-  try {
-    await fillLicensePair("ld-celesi", "ld-device-id");
-  } catch (err) {
-    alert(err.message);
+    alert(err.message || "Gjenerimi dështoi.");
   }
 });
 
@@ -2694,7 +2658,7 @@ document.getElementById("btn-lm-gen-device")?.addEventListener("click", async ()
   try {
     document.getElementById("lm-device-id").value = await apiGenerateDeviceId();
   } catch (err) {
-    alert(err.message);
+    alert(err.message || "Gjenerimi dështoi.");
   }
 });
 
@@ -2702,7 +2666,7 @@ document.getElementById("btn-lm-gen-both")?.addEventListener("click", async () =
   try {
     await fillLicensePair("lm-celesi", "lm-device-id");
   } catch (err) {
-    alert(err.message);
+    alert(err.message || "Gjenerimi dështoi.");
   }
 });
 
@@ -2754,50 +2718,6 @@ document.getElementById("form-license-mobile")?.addEventListener("submit", async
     });
   } catch (err) {
     showMsg("msg-license-mobile", err.message, false);
-  }
-});
-
-document.getElementById("form-license-desktop")?.addEventListener("submit", async e => {
-  e.preventDefault();
-  const clientSel = document.getElementById("ld-client");
-  if (!clientSel?.value) {
-    showMsg("msg-license-desktop", "Zgjidhni klientin.", false);
-    return;
-  }
-  const client = clientsCache.find(c => c.id === clientSel.value);
-  const appType = client?.tipi === "kafene" ? "kafene" : "restorant";
-  const celesi = document.getElementById("ld-celesi")?.value?.trim();
-  if (!celesi) {
-    showMsg("msg-license-desktop", "Gjeneroni ose shkruani çelësin e licencës.", false);
-    return;
-  }
-  let deviceId = document.getElementById("ld-device-id")?.value?.trim() || "";
-  if (!deviceId) {
-    try {
-      deviceId = await apiGenerateDeviceId();
-      const devEl = document.getElementById("ld-device-id");
-      if (devEl) devEl.value = deviceId;
-    } catch (err) {
-      showMsg("msg-license-desktop", err.message, false);
-      return;
-    }
-  }
-  try {
-    await submitLicenseForm({
-      clientId: clientSel.value,
-      appType,
-      celesi,
-      muaj: Number(document.getElementById("ld-muaj")?.value) || 12,
-      deviceId,
-      msgId: "msg-license-desktop",
-      resetFields: () => {
-        document.getElementById("ld-celesi").value = "";
-        const devEl = document.getElementById("ld-device-id");
-        if (devEl) devEl.value = "";
-      },
-    });
-  } catch (err) {
-    showMsg("msg-license-desktop", err.message, false);
   }
 });
 

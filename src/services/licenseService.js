@@ -162,6 +162,43 @@ async function provisionLicenseDevice(id, opts = {}) {
   return { celesi: lic.celesi, device_id: deviceId, created: true };
 }
 
+async function findLicenseByDeviceId(deviceId) {
+  const id = normalizeDeviceId(deviceId);
+  if (!id) return null;
+  const db = getSupabase();
+  const select =
+    "*, clients(id, emri, adresa, telefoni, email, tipi, package_tier, kitchen_slug, kitchen_key)";
+
+  const { data: byPrimary, error } = await db
+    .from("licenses")
+    .select(select)
+    .eq("device_id", id)
+    .order("last_activated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (byPrimary) return byPrimary;
+
+  try {
+    const { data: term, error: termErr } = await db
+      .from("license_terminals")
+      .select("license_id")
+      .eq("device_id", id)
+      .order("last_seen_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (termErr || !term?.license_id) return null;
+    const { data: lic } = await db
+      .from("licenses")
+      .select(select)
+      .eq("id", term.license_id)
+      .maybeSingle();
+    return lic || null;
+  } catch {
+    return null;
+  }
+}
+
 async function findLicenseByKey(celesi) {
   const db = getSupabase();
   const normalized = normalizeKey(celesi);
@@ -321,6 +358,7 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   return {
     valid: true,
     license_id: license.id,
+    celesi: license.celesi,
     client_id: license.client_id,
     client_name: license.clients?.emri || "",
     kitchen_slug: kitchenSlug,
@@ -1047,6 +1085,7 @@ async function getDashboardStats() {
 module.exports = {
   normalizeKey,
   findLicenseByKey,
+  findLicenseByDeviceId,
   generateLicenseKey,
   generateDeviceId,
   provisionLicenseDevice,

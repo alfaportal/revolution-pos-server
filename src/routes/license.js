@@ -122,13 +122,36 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
       return res.status(400).json({ ok: false, valid: false, gabim: "Mungon çelësi i licencës." });
     }
 
-    const result = await validateLicense({
+    let result = await validateLicense({
       celesi: key,
       device_id,
       app_type,
       hostname,
       client_ip: clientIp(req),
     });
+
+    // Admini ndryshoi çelësin në cloud — gjej licencën sipas device_id dhe kthe çelësin e ri
+    if (!result.valid && result.code === "NOT_FOUND" && device_id) {
+      const { findLicenseByDeviceId } = require("../services/licenseService");
+      const byDevice = await findLicenseByDeviceId(device_id);
+      if (byDevice && byDevice.celesi) {
+        result = await validateLicense({
+          celesi: byDevice.celesi,
+          device_id,
+          app_type,
+          hostname,
+          client_ip: clientIp(req),
+        });
+        if (result.valid) {
+          result.celesi_updated = byDevice.celesi;
+          result.celesi = byDevice.celesi;
+        }
+      }
+    }
+
+    if (result.valid && result.celesi && String(result.celesi).toUpperCase() !== String(key).toUpperCase()) {
+      result.celesi_updated = result.celesi;
+    }
 
     res.status(result.valid ? 200 : 403).json({
       ok: result.valid,
