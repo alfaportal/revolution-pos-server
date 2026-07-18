@@ -96,6 +96,16 @@ async function computeWaiterRefuseStats(clientId, { days = 30 } = {}) {
     }
   }
 
+  const { listRecentRefusalReasons } = require("./orderRefusalService");
+  const recentReasons = await listRecentRefusalReasons(clientId, { days, limit: 80 }).catch(() => []);
+  const reasonsByWaiter = new Map();
+  for (const r of recentReasons) {
+    const key = String(r.waiter_name || "").trim() || "unknown";
+    if (!reasonsByWaiter.has(key)) reasonsByWaiter.set(key, []);
+    const arr = reasonsByWaiter.get(key);
+    if (arr.length < 5) arr.push(r.reason);
+  }
+
   const waiters = [...byWaiter.values()]
     .map((w) => {
       const refuse_rate =
@@ -111,6 +121,7 @@ async function computeWaiterRefuseStats(clientId, { days = 30 } = {}) {
         .map(([name, qty]) => ({ name, quantity: qty }));
       /** Vlerësim 1–10: më pak refuzime = më mirë */
       const rating = Math.max(1, Math.min(10, Math.round(10 - refuse_rate / 10)));
+      const reasonKey = String(w.waiter_name || w.waiter_id || "").trim();
       return {
         waiter_id: w.waiter_id,
         waiter_name: w.waiter_name,
@@ -121,6 +132,7 @@ async function computeWaiterRefuseStats(clientId, { days = 30 } = {}) {
         rating,
         peak_refuse_hour_utc: peakHour ? Number(peakHour[0]) : null,
         top_refused_products: topProducts,
+        recent_refuse_reasons: reasonsByWaiter.get(reasonKey) || reasonsByWaiter.get(String(w.waiter_id || "")) || [],
       };
     })
     .sort((a, b) => b.refuse_rate_percent - a.refuse_rate_percent || b.refuse_events - a.refuse_events);
@@ -142,6 +154,8 @@ async function analyzeWaiterRatings(clientId, { days = 30, force = false } = {})
   await ensureAiExtraSchema();
 
   const stats = await computeWaiterRefuseStats(clientId, { days });
+  const { listRecentRefusalReasons } = require("./orderRefusalService");
+  const recentReasons = await listRecentRefusalReasons(clientId, { days, limit: 40 }).catch(() => []);
   const periodEnd = stats.period_end;
   const periodStart = (() => {
     const d = new Date(`${periodEnd}T12:00:00Z`);
@@ -175,10 +189,13 @@ async function analyzeWaiterRatings(clientId, { days = 30, force = false } = {})
   const ai = await anthropicText({
     system:
       "Je analist i Revolution POS. Analizon performancën e kamarierëve nga refuzimet e porosive. " +
-      "Shkruaj në shqip, 5–10 fjali, pa markdown. Tregoni kush refuzon më shumë, në çfarë ore, dhe cilat produkte.",
+      "Shkruaj në shqip, 5–10 fjali, pa markdown. Tregoni kush refuzon më shumë, në çfarë ore, cilat produkte, " +
+      "dhe arsyet tipike të refuzimit (nëse jepen).",
     prompt:
       `Analizo këto statistika të kamarierëve (refuzime vs porosi) për ${days} ditët e fundit:\n` +
-      JSON.stringify({ waiters: stats.waiters.slice(0, 20), totals: stats.totals }, null, 2),
+      JSON.stringify({ waiters: stats.waiters.slice(0, 20), totals: stats.totals }, null, 2) +
+      `\n\nArsyet e fundit të refuzimit (kamarier → arsye → artikuj):\n` +
+      JSON.stringify(recentReasons.slice(0, 25), null, 2),
     temperature: 0.3,
   });
 

@@ -510,7 +510,9 @@ router.get("/licenses/generate-device-id", (_req, res) => {
 
 router.post("/licenses/:id/provision-device", asyncHandler(async (req, res) => {
   try {
-    const result = await provisionLicenseDevice(req.params.id);
+    // Super Admin: force=true (default) → gjenero ID të ri kurdo
+    const force = req.body?.force !== false;
+    const result = await provisionLicenseDevice(req.params.id, { force });
     res.json({ ok: true, ...result });
   } catch (e) {
     const msg = logRouteError("admin:POST /licenses/:id/provision-device", e);

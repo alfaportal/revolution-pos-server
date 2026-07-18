@@ -77,22 +77,63 @@ async function generateWeeklyReportForClient(client, weekStart, { sendEmail = tr
   }
 
   const payload = await buildWeeklyPayload(clientId, weekStart);
-  const ai = await anthropicText({
-    system:
-      "Je analist i Revolution POS. Shkruan raporte javore profesionale në shqip për pronarë. " +
-      "Përfshi: shitjet, top produkte, trend vs java e kaluar, 2–3 rekomandime. Pa markdown.",
-    prompt:
-      `Raport javor për ${client.emri || "lokalin"} (${weekStart} – ${weekEnd}):\n` +
-      JSON.stringify(payload, null, 2),
-    temperature: 0.35,
-    maxTokens: 2500,
-  });
+  if (!Number(payload.this_week?.order_count) && !Number(payload.this_week?.total)) {
+    const summary =
+      "Nuk ka shitje për analizë për këtë javë. Mbyllni porosi gjatë javës, pastaj gjeneroni raportin.";
+    const { data: emptyRow } = await db
+      .from("ai_weekly_reports")
+      .upsert(
+        {
+          restaurant_id: clientId,
+          week_start: weekStart,
+          week_end: weekEnd,
+          report_json: payload,
+          summary_text: summary,
+          tokens_used: 0,
+          email_sent_at: null,
+        },
+        { onConflict: "restaurant_id,week_start" },
+      )
+      .select("*")
+      .maybeSingle();
+    return {
+      ok: true,
+      no_data: true,
+      cached: false,
+      report: emptyRow || {
+        week_start: weekStart,
+        week_end: weekEnd,
+        summary_text: summary,
+        report_json: payload,
+      },
+    };
+  }
+
+  let ai;
+  try {
+    ai = await anthropicText({
+      system:
+        "Je analist i Revolution POS. Shkruan raporte javore profesionale në shqip për pronarë. " +
+        "Përfshi: shitjet, top produkte, trend vs java e kaluar, 2–3 rekomandime. Pa markdown.",
+      prompt:
+        `Raport javor për ${client.emri || "lokalin"} (${weekStart} – ${weekEnd}):\n` +
+        JSON.stringify(payload, null, 2),
+      temperature: 0.35,
+      maxTokens: 2500,
+    });
+  } catch (err) {
+    const msg = String(err.message || err);
+    if (/ANTHROPIC_API_KEY/i.test(msg)) {
+      throw new Error("ANTHROPIC_API_KEY mungon në Railway. Vendoseni te Variables dhe ridëploy.");
+    }
+    throw new Error(`Raporti javor AI dështoi: ${msg}`);
+  }
 
   await insertAiUsageLog({
     restaurantId: clientId,
     feature: "weekly_report",
     tokensUsed: ai.tokensUsed,
-  });
+  }).catch((e) => console.warn("[weekly-report] usage log:", e.message));
 
   let emailSentAt = null;
   if (sendEmail && isEmailConfigured()) {

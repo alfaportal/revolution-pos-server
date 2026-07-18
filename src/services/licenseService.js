@@ -140,8 +140,9 @@ function generateDeviceId() {
   return crypto.randomBytes(6).toString("hex").toUpperCase();
 }
 
-async function provisionLicenseDevice(id) {
+async function provisionLicenseDevice(id, opts = {}) {
   const db = getSupabase();
+  const force = opts.force === true;
   const { data: lic, error } = await db
     .from("licenses")
     .select("id, celesi, device_id")
@@ -151,7 +152,8 @@ async function provisionLicenseDevice(id) {
   if (!lic) throw new Error("Liçenca nuk u gjet.");
 
   const existing = normalizeDeviceId(lic.device_id);
-  if (existing) {
+  // Super Admin: force=true → gjenero ID të ri edhe nëse ekziston
+  if (existing && !force) {
     return { celesi: lic.celesi, device_id: existing, created: false };
   }
 
@@ -655,11 +657,16 @@ async function createLicense(body) {
     appType = client?.tipi ? appTypeFromClientTipi(client.tipi) : "restorant";
   }
 
+  const rawKey = String(body.celesi || "").trim();
+  const celesi = rawKey
+    ? normalizeKey(rawKey) || rawKey.toUpperCase().replace(/\s+/g, "")
+    : generateLicenseKey();
+
   const row = {
     client_id: body.client_id,
     app_type: appType,
-    celesi: normalizeKey(body.celesi) || generateLicenseKey(),
-    device_id: String(body.device_id || "").trim().toUpperCase(),
+    celesi,
+    device_id: String(body.device_id || "").trim().toUpperCase().replace(/\s+/g, ""),
     statusi: body.statusi || "aktive",
     data_fillimit: start,
     data_skadimit: body.data_skadimit || addMonthsISO(start, months),
@@ -684,6 +691,7 @@ async function updateLicense(id, body) {
     patch.statusi = body.statusi;
   }
   if (body.device_id != null) {
+    // Super Admin: çdo vlerë e lirë (pa limit gjatësie / formati)
     patch.device_id = String(body.device_id).trim().toUpperCase().replace(/\s+/g, "");
     patch.last_validation_error = "";
     if (patch.device_id) {
@@ -691,10 +699,10 @@ async function updateLicense(id, body) {
     }
   }
   if (body.celesi != null) {
-    const celesi = normalizeKey(body.celesi);
-    if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(celesi)) {
-      throw new Error("Kodi i licencës duhet XXXX-XXXX-XXXX-XXXX (16 shkronja/numra).");
-    }
+    // Super Admin: çelës i plotë i editueshëm — pa regex / pa format të detyruar
+    const raw = String(body.celesi || "").trim();
+    if (!raw) throw new Error("Çelësi i licencës nuk mund të jetë bosh.");
+    const celesi = normalizeKey(raw) || raw.toUpperCase().replace(/\s+/g, "");
     const dup = await findLicenseByKey(celesi);
     if (dup && dup.id !== id) {
       throw new Error("Ky kod licencë përdoret tashmë nga një klient tjetër.");

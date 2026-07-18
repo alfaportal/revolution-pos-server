@@ -1250,18 +1250,74 @@
     }
   }
 
+  function pickRefuseReason() {
+    return new Promise((resolve) => {
+      const existing = document.getElementById("refuse-reason-modal");
+      if (existing) existing.remove();
+      const presets = [
+        "Shumë i zënë",
+        "Mungon artikulli",
+        "Mbyllje / pushim",
+        "Tavolina e gabuar",
+      ];
+      const wrap = document.createElement("div");
+      wrap.id = "refuse-reason-modal";
+      wrap.setAttribute("role", "dialog");
+      wrap.style.cssText = "position:fixed;inset:0;z-index:12000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:1rem;";
+      wrap.innerHTML = `
+        <div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:1rem 1.1rem;box-shadow:0 12px 40px rgba(0,0,0,.25)">
+          <h3 style="margin:0 0 .75rem;font-size:1.1rem">Pse e refuzoni?</h3>
+          <div id="refuse-reason-btns" style="display:flex;flex-direction:column;gap:.45rem"></div>
+          <input id="refuse-reason-other" type="text" maxlength="300" placeholder="Arsye tjetër…"
+            style="width:100%;margin-top:.65rem;padding:.55rem .7rem;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem;box-sizing:border-box" />
+          <div style="display:flex;gap:.5rem;margin-top:.85rem">
+            <button type="button" id="refuse-reason-cancel" style="flex:1;padding:.65rem;border:none;border-radius:8px;background:#e5e7eb;font-weight:600">Anulo</button>
+            <button type="button" id="refuse-reason-ok" style="flex:1;padding:.65rem;border:none;border-radius:8px;background:#dc2626;color:#fff;font-weight:700">REFUZO</button>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+      let chosen = "";
+      const btns = wrap.querySelector("#refuse-reason-btns");
+      presets.forEach((label) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = label;
+        b.style.cssText = "padding:.65rem;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-weight:600;text-align:left";
+        b.onclick = () => {
+          chosen = label;
+          wrap.querySelector("#refuse-reason-other").value = "";
+          btns.querySelectorAll("button").forEach((x) => { x.style.borderColor = "#e5e7eb"; x.style.background = "#f9fafb"; });
+          b.style.borderColor = "#dc2626";
+          b.style.background = "#fef2f2";
+        };
+        btns.appendChild(b);
+      });
+      const finish = (val) => { wrap.remove(); resolve(val); };
+      wrap.querySelector("#refuse-reason-cancel").onclick = () => finish(null);
+      wrap.querySelector("#refuse-reason-ok").onclick = () => {
+        const other = String(wrap.querySelector("#refuse-reason-other").value || "").trim();
+        finish(other || chosen || "Pa arsye");
+      };
+      wrap.addEventListener("click", (e) => { if (e.target === wrap) finish(null); });
+    });
+  }
+
   async function refuseIncomingOrder(orderId, btn) {
+    const reason = await pickRefuseReason();
+    if (reason == null) return;
     if (btn) { btn.disabled = true; btn.textContent = "…"; }
     const refuseUrl = `/api/kds/${encodeURIComponent(slug)}/orders/${encodeURIComponent(orderId)}/refuse${apiQuery()}`;
-    console.log("[waiter] REFUZO click", { orderId, url: refuseUrl });
+    console.log("[waiter] REFUZO click", { orderId, url: refuseUrl, reason });
     try {
-      const data = await api(refuseUrl, { method: "POST", body: JSON.stringify(acceptWaiterAuthBody()) });
+      const body = { ...acceptWaiterAuthBody(), reason };
+      const data = await api(refuseUrl, { method: "POST", body: JSON.stringify(body) });
       console.log("[waiter] REFUZO response", {
         orderId,
         refuse_mode: data.refuse_mode,
         status: data.status,
         refused_at: data.order?.refused_at,
         order_expires_at: data.order?.order_expires_at,
+        refuse_reason: data.refuse_reason || reason,
       });
       if (data.refuse_mode !== "grace_v2") {
         console.warn("[waiter] REFUZO: server nuk përdor grace_v2 — redeploy i nevojshëm!");

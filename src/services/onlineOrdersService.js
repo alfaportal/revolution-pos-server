@@ -76,7 +76,7 @@ async function countPendingOnlineOrders(clientId) {
   return orders.length;
 }
 
-async function refusePendingOnlineOrder(clientId, orderId, { pin = "" } = {}) {
+async function refusePendingOnlineOrder(clientId, orderId, { pin = "", reason = "" } = {}) {
   const id = String(orderId || "").trim();
   if (!id) {
     const err = new Error("Mungon porosia.");
@@ -96,6 +96,7 @@ async function refusePendingOnlineOrder(clientId, orderId, { pin = "" } = {}) {
   const order = await refuseBarOrderWithGrace(clientId, id, {
     waiterId: handler.id,
     waiterName: handler.name,
+    reason,
   });
 
   return {
@@ -107,6 +108,7 @@ async function refusePendingOnlineOrder(clientId, orderId, { pin = "" } = {}) {
     refuse_mode: "grace_v2",
     grace_minutes: 2,
     refused_by: handler.name,
+    refuse_reason: order.refuse_reason || reason || "",
   };
 }
 

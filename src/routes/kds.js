@@ -186,15 +186,18 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
       return res.status(400).json({ ok: false, gabim: "Mungon identifikimi i kamarierit." });
     }
     const { refuseBarOrderWithGrace } = require("../services/kdsService");
+    const reason = String(req.body?.reason || req.body?.refuse_reason || "").trim();
     const order = await refuseBarOrderWithGrace(client.id, orderId, {
       waiterId: waiter.id,
       waiterName: waiter.name,
+      reason,
     });
     console.log("[refuse-route] OK", {
       orderId,
       status: order.status,
       refused_at: order.refused_at,
       order_expires_at: order.order_expires_at,
+      refuse_reason: order.refuse_reason || reason,
     });
     res.json({
       ok: true,
@@ -202,6 +205,7 @@ router.post("/:slug/orders/:orderId/refuse", resolveKitchenClient, requirePackag
       status: order.status,
       grace_minutes: 2,
       refuse_mode: "grace_v2",
+      refuse_reason: order.refuse_reason || reason || "",
     });
   } catch (e) {
     console.error("[refuse-route] FAIL", { orderId, error: e.message });

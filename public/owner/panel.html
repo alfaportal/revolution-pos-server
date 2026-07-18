@@ -130,6 +130,23 @@
         </div>
         <div id="orders-list"></div>
       </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Porosi të Refuzuara</div>
+        <p class="links-hint" style="margin-top:0">Kush refuzoi, kur, çka — dhe arsyeja. Përdoret edhe nga AI për vlerësimin e kamarierëve.</p>
+        <div class="filter-row" style="align-items:flex-end;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+          <div>
+            <label for="refuse-from">Nga</label>
+            <input type="date" id="refuse-from">
+          </div>
+          <div>
+            <label for="refuse-to">Deri</label>
+            <input type="date" id="refuse-to">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-refuse-filter">Filtro</button>
+        </div>
+        <div id="refuse-stats" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;font-size:.85rem"></div>
+        <div id="refuse-list"></div>
+      </div>
     </div>
 
     <div id="panel-menuja" class="panel-section hidden">

@@ -834,6 +834,21 @@ router.post("/supply-suggestions/send-email", requireAiPackage, async (req, res)
   }
 });
 
+/** Lista e porosive të refuzuara (arsye + kamarier) — pa AI package */
+router.get("/refused-orders", async (req, res) => {
+  try {
+    const { listRefusedOrders } = require("../services/orderRefusalService");
+    const result = await listRefusedOrders(req.user.client_id, {
+      from: req.query.from,
+      to: req.query.to,
+      limit: Number(req.query.limit) || 100,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
 router.get("/ai-waiter-rating", requireAiPackage, async (req, res) => {
   try {
     const { analyzeWaiterRatings, computeWaiterRefuseStats } = require("../services/aiWaiterRatingService");
@@ -881,7 +896,8 @@ router.get("/ai-stock-predict", requireAiPackage, async (req, res) => {
     const payload = await buildStockPredictPayload(req.user.client_id, { days });
     res.json({ ok: true, ...payload });
   } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
+    console.error("[owner/ai-stock-predict]", e.message || e);
+    res.status(400).json({ ok: false, gabim: e.message || "Nuk ka të dhëna stoku" });
   }
 });
 
@@ -896,7 +912,8 @@ router.post("/ai-stock-predict/analyze", requireAiPackage, async (req, res) => {
     });
     res.json(result);
   } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
+    console.error("[owner/ai-stock-predict/analyze]", e.message || e);
+    res.status(400).json({ ok: false, gabim: e.message || "Nuk ka të dhëna stoku" });
   }
 });
 
@@ -908,7 +925,8 @@ router.get("/ai-weekly-reports", requireAiPackage, async (req, res) => {
     });
     res.json({ ok: true, reports });
   } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
+    console.error("[owner/ai-weekly-reports]", e.message || e);
+    res.status(400).json({ ok: false, gabim: e.message || "Nuk ka shitje për analizë" });
   }
 });
 
@@ -920,6 +938,9 @@ router.post("/ai-weekly-reports/generate", requireAiPackage, async (req, res) =>
       addDays,
     } = require("../services/aiWeeklyReportService");
     const client = await getClientById(req.user.client_id);
+    if (!client) {
+      return res.status(404).json({ ok: false, gabim: "Klienti nuk u gjet." });
+    }
     const today = getZonedParts().date;
     const weekStart =
       String(req.body?.week_start || "").trim() || addDays(mondayOf(today), -7);
@@ -929,7 +950,8 @@ router.post("/ai-weekly-reports/generate", requireAiPackage, async (req, res) =>
     });
     res.json(result);
   } catch (e) {
-    res.status(400).json({ ok: false, gabim: e.message });
+    console.error("[owner/ai-weekly-reports/generate]", e.message || e);
+    res.status(400).json({ ok: false, gabim: e.message || "Nuk ka shitje për analizë" });
   }
 });
 

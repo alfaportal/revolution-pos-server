@@ -432,7 +432,7 @@ async function acceptBarOrder(clientId, orderId, { waiterId = null, waiterName =
   return data;
 }
 
-async function refuseBarOrderWithGraceViaSql(clientId, orderId, wid) {
+async function refuseBarOrderWithGraceViaSql(clientId, orderId, wid, reasonText = "") {
   const pool = getPgPool();
   if (!pool) return null;
 
@@ -444,12 +444,13 @@ async function refuseBarOrderWithGraceViaSql(clientId, orderId, wid) {
          ELSE refused_by_waiter_ids || jsonb_build_array($3::text)
        END,
        refused_at = COALESCE(refused_at, NOW()),
-       order_expires_at = COALESCE(order_expires_at, NOW() + INTERVAL '2 minutes')
+       order_expires_at = COALESCE(order_expires_at, NOW() + INTERVAL '2 minutes'),
+       refuse_reason = COALESCE(NULLIF($4::text, ''), refuse_reason)
      WHERE id = $1::uuid
        AND client_id = $2::uuid
        AND status = 'ordered'
      RETURNING *`,
-    [orderId, clientId, wid],
+    [orderId, clientId, wid, String(reasonText || "").trim()],
   );
   if (!rowCount) return null;
   return rows[0];
@@ -468,12 +469,14 @@ function assertRefusalGraceOrder(row, orderId) {
   );
 }
 
-async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, waiterName = "" } = {}) {
+async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, waiterName = "", reason = "" } = {}) {
   const db = getSupabase();
   const wid = String(waiterId || "").trim();
   if (!wid) throw new Error("Mungon identifikimi i kamarierit.");
+  const { normalizeReason, logRefusalEvent } = require("./orderRefusalService");
+  const reasonText = normalizeReason(reason);
 
-  console.log("REFUZO START", { orderId, clientId, waiterId: wid, waiterName });
+  console.log("REFUZO START", { orderId, clientId, waiterId: wid, waiterName, reason: reasonText });
 
   const { data: order, error: fetchErr } = await db
     .from("sales_orders")
@@ -511,13 +514,17 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
   let data = null;
   let updateVia = null;
   try {
-    data = await refuseBarOrderWithGraceViaSql(clientId, orderId, wid);
+    data = await refuseBarOrderWithGraceViaSql(clientId, orderId, wid, reasonText);
     if (data) updateVia = "sql";
   } catch (err) {
     if (isMissingRefusalColumnError(err)) {
       throw new Error("Mungon migrimi 040_order_refusal_grace.sql në Supabase.");
     }
-    throw err;
+    if (/refuse_reason/i.test(String(err.message || ""))) {
+      /* fallback supabase pa kolonën e re */
+    } else {
+      throw err;
+    }
   }
 
   if (!data) {
@@ -527,13 +534,14 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
     const now = new Date();
     const patch = {
       refused_by_waiter_ids: refusedIds,
+      refuse_reason: reasonText,
     };
     if (!normalized.refused_at) {
       patch.refused_at = now.toISOString();
       patch.order_expires_at = new Date(now.getTime() + REFUSAL_GRACE_MS).toISOString();
     }
 
-    const { data: updated, error } = await db
+    let { data: updated, error } = await db
       .from("sales_orders")
       .update(patch)
       .eq("id", orderId)
@@ -541,6 +549,18 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
       .eq("status", "ordered")
       .select("*")
       .maybeSingle();
+
+    if (error && /refuse_reason/i.test(String(error.message || ""))) {
+      delete patch.refuse_reason;
+      ({ data: updated, error } = await db
+        .from("sales_orders")
+        .update(patch)
+        .eq("id", orderId)
+        .eq("client_id", clientId)
+        .eq("status", "ordered")
+        .select("*")
+        .maybeSingle());
+    }
 
     if (error) {
       if (isMissingRefusalColumnError(error)) {
@@ -553,6 +573,16 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
 
   assertRefusalGraceOrder(data, orderId);
 
+  try {
+    await logRefusalEvent(clientId, data, {
+      waiterId: wid,
+      waiterName: String(waiterName || "").trim() || wid,
+      reason: reasonText,
+    });
+  } catch (logErr) {
+    console.warn("[refuse-grace] logRefusalEvent:", logErr.message || logErr);
+  }
+
   console.log("REFUZO END", {
     orderId,
     updateVia,
@@ -560,14 +590,16 @@ async function refuseBarOrderWithGrace(clientId, orderId, { waiterId = null, wai
     refused_at: data.refused_at,
     order_expires_at: data.order_expires_at,
     refused_by_waiter_ids: data.refused_by_waiter_ids,
+    refuse_reason: reasonText,
   });
 
   notifyKitchenUpdate(clientId, {
     order_id: orderId,
     status: "refusal_grace",
     refused_by: String(waiterName || "").trim() || wid,
+    refuse_reason: reasonText,
   });
-  return normalizeRefusalFields(data);
+  return normalizeRefusalFields({ ...data, refuse_reason: reasonText });
 }
 
 async function expireRefusedOrders() {

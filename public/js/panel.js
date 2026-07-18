@@ -191,10 +191,10 @@ function licenseDeviceCellHtml(l) {
       class="device-id-input mono"
       data-device-input="${l.id}"
       value="${esc(devId)}"
-      placeholder="Gjenero ID ose ngjite nga POS"
+      placeholder="Shkruaj ose Gjenero ID"
       autocomplete="off"
       autocapitalize="characters"
-      maxlength="12"
+      spellcheck="false"
     >
     <div class="device-id-editor-actions">
       <button type="button" class="btn btn-ghost btn-sm" data-gen-device-row="${l.id}">Gjenero ID</button>
@@ -258,9 +258,9 @@ function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id"
   const devId = licenseDeviceId(l);
   return `
     <p class="field-hint license-pair-modal-hint">
-      <strong>Ti vendos kodin dhe ID-në këtu</strong> — shkruaj manualisht ose kliko Gjenero. Ruaj → POS përdor këto vlera.
+      <strong>Super Admin — kontroll i plotë:</strong> ndrysho çelësin dhe ID-në kurdo, shkruaj manualisht ose Gjenero. Ruaj → POS përdor këto vlera.
     </p>
-    <label for="${prefix}-celesi">Kodi i licencës (KODI)</label>
+    <label for="${prefix}-celesi">Çelësi i licencës (KODI)</label>
     <div class="link-actions modal-pair-row">
       <input
         name="${keyName}"
@@ -270,20 +270,21 @@ function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id"
         required
         autocomplete="off"
         autocapitalize="characters"
+        spellcheck="false"
       >
-      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-key">Gjenero kod</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-key">Gjenero</button>
     </div>
-    <label for="${prefix}-device-id"><strong>ID Pajisjes</strong></label>
+    <label for="${prefix}-device-id"><strong>ID e pajisjes</strong></label>
     <div class="link-actions modal-pair-row">
       <input
         name="${deviceName}"
         id="${prefix}-device-id"
         class="mono"
         value="${esc(l.device_id || devId)}"
-        placeholder="Shkruaj ose gjenero ID (12 karaktere)"
+        placeholder="Shkruaj ose Gjenero ID"
         autocomplete="off"
         autocapitalize="characters"
-        maxlength="12"
+        spellcheck="false"
       >
       <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-device">Gjenero ID</button>
     </div>
@@ -1800,12 +1801,13 @@ function bindLicenseDeviceActions(scope) {
       try {
         const res = await api(`/api/admin/licenses/${btn.dataset.provisionDevice}/provision-device`, {
           method: "POST",
+          body: JSON.stringify({ force: true }),
         });
         await loadLicenses();
         const lic = licensesCache.find(x => x.id === btn.dataset.provisionDevice);
         const code = res.celesi || lic?.celesi || "—";
         alert(
-          (res.created ? "ID u gjenerua dhe u ruajt.\n\n" : "ID ekzistonte:\n\n") +
+          "ID e re u gjenerua dhe u ruajt.\n\n" +
           `KODI: ${code}\nID: ${res.device_id}`,
         );
       } catch (err) {
@@ -1818,9 +1820,76 @@ function bindLicenseDeviceActions(scope) {
   });
 }
 
+async function saveLicenseKeyAndDevice(licenseId, celesi, deviceId, btn) {
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Duke ruajtur…";
+    }
+    await api(`/api/admin/licenses/${licenseId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        celesi: String(celesi || "").trim(),
+        device_id: String(deviceId || "").trim(),
+      }),
+    });
+    await loadLicenses();
+    if (btn) {
+      btn.textContent = "U ruajt!";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.restoreLabel || "Ruaj";
+      }, 1200);
+    }
+  } catch (err) {
+    alert(err.message || "Ruajtja dështoi.");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.restoreLabel || "Ruaj";
+    }
+  }
+}
+
 function bindMobileLicenseActions(scope) {
   scope.querySelectorAll("[data-mobile-copy-key]").forEach(btn => {
-    btn.addEventListener("click", () => copyText(btn.dataset.mobileCopyKey, btn));
+    btn.addEventListener("click", () => {
+      const input = scope.querySelector(`[data-mobile-key-input="${btn.dataset.mobileCopyKey}"]`);
+      const key = (input?.value || "").trim();
+      if (key) copyText(key, btn);
+      else alert("Nuk ka çelës.");
+    });
+  });
+  scope.querySelectorAll("[data-mobile-gen-key]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        const input = scope.querySelector(`[data-mobile-key-input="${btn.dataset.mobileGenKey}"]`);
+        const celesi = await apiGenerateLicenseKey();
+        if (input) input.value = celesi;
+      } catch (err) {
+        alert(err.message || "Gjenerimi i çelësit dështoi.");
+      }
+    });
+  });
+  scope.querySelectorAll("[data-mobile-save-key]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.mobileSaveKey;
+      const keyEl = scope.querySelector(`[data-mobile-key-input="${id}"]`);
+      const devEl = scope.querySelector(`[data-mobile-device-input="${id}"]`);
+      if (!keyEl) return;
+      btn.dataset.restoreLabel = "Ruaj çelësin";
+      saveLicenseKeyAndDevice(id, keyEl.value.trim(), (devEl?.value || "").trim(), btn);
+    });
+  });
+  scope.querySelectorAll("[data-mobile-gen-device]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try {
+        const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileGenDevice}"]`);
+        const device_id = await apiGenerateDeviceId();
+        if (input) input.value = device_id;
+      } catch (err) {
+        alert(err.message || "Gjenerimi i ID-së dështoi.");
+      }
+    });
   });
   scope.querySelectorAll("[data-mobile-copy-device]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1835,6 +1904,15 @@ function bindMobileLicenseActions(scope) {
       const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileSaveDevice}"]`);
       if (!input) return;
       saveLicenseDeviceId(btn.dataset.mobileSaveDevice, input.value.trim(), btn);
+    });
+  });
+  scope.querySelectorAll("[data-mobile-save-both]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.mobileSaveBoth;
+      const keyEl = scope.querySelector(`[data-mobile-key-input="${id}"]`);
+      const devEl = scope.querySelector(`[data-mobile-device-input="${id}"]`);
+      btn.dataset.restoreLabel = "Ruaj të dyja";
+      saveLicenseKeyAndDevice(id, (keyEl?.value || "").trim(), (devEl?.value || "").trim(), btn);
     });
   });
   scope.querySelectorAll("[data-mobile-reset-device]").forEach(btn => {
@@ -1894,9 +1972,20 @@ function renderMobileLicenseCards(licenses) {
           <div class="license-mobile-pair">
             <div class="license-mobile-field">
               <label>Çelësi i licencës</label>
-              <code class="mono-value license-key-value">${esc(l.celesi)}</code>
+              <input
+                type="text"
+                class="device-id-input mono license-key-input"
+                data-mobile-key-input="${l.id}"
+                value="${esc(l.celesi || "")}"
+                placeholder="Shkruaj ose Gjenero"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+              >
               <div class="license-mobile-field-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${esc(l.celesi)}">Kopjo çelësin</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-gen-key="${l.id}">Gjenero</button>
+                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-key="${l.id}">Ruaj çelësin</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${l.id}">Kopjo</button>
               </div>
             </div>
             <div class="license-mobile-field">
@@ -1906,12 +1995,15 @@ function renderMobileLicenseCards(licenses) {
                 class="device-id-input mono"
                 data-mobile-device-input="${l.id}"
                 value="${esc(devId)}"
-                placeholder="Pa aktivizuar — shkruani ID nga POS"
+                placeholder="Shkruaj ose Gjenero ID"
                 autocomplete="off"
                 autocapitalize="characters"
+                spellcheck="false"
               >
               <div class="license-mobile-field-actions">
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-gen-device="${l.id}">Gjenero ID</button>
                 <button type="button" class="btn btn-primary btn-sm" data-mobile-save-device="${l.id}">Ruaj ID</button>
+                <button type="button" class="btn btn-accent btn-sm" data-mobile-save-both="${l.id}">Ruaj të dyja</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-device="${l.id}">Kopjo ID</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-mobile-reset-device="${l.id}">Reset ID</button>
               </div>

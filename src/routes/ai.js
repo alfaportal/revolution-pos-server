@@ -148,6 +148,26 @@ router.get(
   }),
 );
 
+/** POS / license-key: lista e refuzimeve (pa AI package — e njëjta e dhënë si paneli i pronarit) */
+router.get(
+  "/refused-orders",
+  licenseApiKeyOptional,
+  aiStaffAuth,
+  asyncHandler(async (req, res) => {
+    const restaurantId = resolveRestaurantId(req);
+    if (!restaurantId) {
+      return res.status(403).json({ ok: false, gabim: "Restoranti nuk u identifikua." });
+    }
+    const { listRefusedOrders } = require("../services/orderRefusalService");
+    const result = await listRefusedOrders(restaurantId, {
+      from: req.query.from,
+      to: req.query.to,
+      limit: Number(req.query.limit) || 100,
+    });
+    res.json(result);
+  }),
+);
+
 /** POS / license-key: vlerësim kamarierësh */
 router.get(
   "/waiter-rating",
@@ -194,19 +214,24 @@ router.get(
   aiStaffAuth,
   requireAiPackage,
   asyncHandler(async (req, res) => {
-    const restaurantId = resolveRestaurantId(req);
-    const { buildStockPredictPayload, generateStockPredict } = require("../services/aiStockPredictService");
-    const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
-    if (String(req.query.analyze || "") === "1") {
-      const client = await getClientById(restaurantId);
-      return res.json(
-        await generateStockPredict(restaurantId, client?.emri || "", {
-          days,
-          sendEmail: String(req.query.email || "") === "1",
-        }),
-      );
+    try {
+      const restaurantId = resolveRestaurantId(req);
+      const { buildStockPredictPayload, generateStockPredict } = require("../services/aiStockPredictService");
+      const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+      if (String(req.query.analyze || "") === "1") {
+        const client = await getClientById(restaurantId);
+        return res.json(
+          await generateStockPredict(restaurantId, client?.emri || "", {
+            days,
+            sendEmail: String(req.query.email || "") === "1",
+          }),
+        );
+      }
+      res.json({ ok: true, ...(await buildStockPredictPayload(restaurantId, { days })) });
+    } catch (e) {
+      console.error("[ai/stock-predict]", e.message || e);
+      res.status(400).json({ ok: false, gabim: e.message || "Nuk ka të dhëna stoku" });
     }
-    res.json({ ok: true, ...(await buildStockPredictPayload(restaurantId, { days })) });
   }),
 );
 
@@ -216,15 +241,20 @@ router.post(
   aiStaffAuth,
   requireAiPackage,
   asyncHandler(async (req, res) => {
-    const restaurantId = resolveRestaurantId(req);
-    const client = await getClientById(restaurantId);
-    const { generateStockPredict } = require("../services/aiStockPredictService");
-    res.json(
-      await generateStockPredict(restaurantId, client?.emri || "", {
-        days: Math.min(90, Math.max(7, Number(req.body?.days) || 30)),
-        sendEmail: req.body?.send_email !== false,
-      }),
-    );
+    try {
+      const restaurantId = resolveRestaurantId(req);
+      const client = await getClientById(restaurantId);
+      const { generateStockPredict } = require("../services/aiStockPredictService");
+      res.json(
+        await generateStockPredict(restaurantId, client?.emri || "", {
+          days: Math.min(90, Math.max(7, Number(req.body?.days) || 30)),
+          sendEmail: req.body?.send_email !== false,
+        }),
+      );
+    } catch (e) {
+      console.error("[ai/stock-predict/analyze]", e.message || e);
+      res.status(400).json({ ok: false, gabim: e.message || "Nuk ka të dhëna stoku" });
+    }
   }),
 );
 
@@ -234,12 +264,17 @@ router.get(
   aiStaffAuth,
   requireAiPackage,
   asyncHandler(async (req, res) => {
-    const restaurantId = resolveRestaurantId(req);
-    const { listWeeklyReports } = require("../services/aiWeeklyReportService");
-    const reports = await listWeeklyReports(restaurantId, {
-      limit: Number(req.query.limit) || 12,
-    });
-    res.json({ ok: true, reports });
+    try {
+      const restaurantId = resolveRestaurantId(req);
+      const { listWeeklyReports } = require("../services/aiWeeklyReportService");
+      const reports = await listWeeklyReports(restaurantId, {
+        limit: Number(req.query.limit) || 12,
+      });
+      res.json({ ok: true, reports });
+    } catch (e) {
+      console.error("[ai/weekly-reports]", e.message || e);
+      res.status(400).json({ ok: false, gabim: e.message || "Nuk ka shitje për analizë" });
+    }
   }),
 );
 
@@ -249,23 +284,31 @@ router.post(
   aiStaffAuth,
   requireAiPackage,
   asyncHandler(async (req, res) => {
-    const restaurantId = resolveRestaurantId(req);
-    const client = await getClientById(restaurantId);
-    const {
-      generateWeeklyReportForClient,
-      mondayOf,
-      addDays,
-    } = require("../services/aiWeeklyReportService");
-    const { getZonedParts } = require("../services/aiDailyReportService");
-    const today = getZonedParts().date;
-    const weekStart =
-      String(req.body?.week_start || "").trim() || addDays(mondayOf(today), -7);
-    res.json(
-      await generateWeeklyReportForClient(client, weekStart, {
-        sendEmail: !!req.body?.send_email,
-        force: !!req.body?.force,
-      }),
-    );
+    try {
+      const restaurantId = resolveRestaurantId(req);
+      const client = await getClientById(restaurantId);
+      if (!client) {
+        return res.status(404).json({ ok: false, gabim: "Klienti nuk u gjet." });
+      }
+      const {
+        generateWeeklyReportForClient,
+        mondayOf,
+        addDays,
+      } = require("../services/aiWeeklyReportService");
+      const { getZonedParts } = require("../services/aiDailyReportService");
+      const today = getZonedParts().date;
+      const weekStart =
+        String(req.body?.week_start || "").trim() || addDays(mondayOf(today), -7);
+      res.json(
+        await generateWeeklyReportForClient(client, weekStart, {
+          sendEmail: !!req.body?.send_email,
+          force: !!req.body?.force,
+        }),
+      );
+    } catch (e) {
+      console.error("[ai/weekly-reports/generate]", e.message || e);
+      res.status(400).json({ ok: false, gabim: e.message || "Nuk ka shitje për analizë" });
+    }
   }),
 );
 

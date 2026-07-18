@@ -102,22 +102,44 @@ async function generateStockPredict(clientId, clientName = "", { days = 30, send
   if (isAiPaused()) throw new Error("AI është i ndalur për momentin.");
 
   const payload = await buildStockPredictPayload(clientId, { days });
+  const hasStock = (payload.critical_items || []).length > 0 || (payload.low_stock_ingredients || []).length > 0;
+  const hasSales = Number(payload.order_count) > 0 || (payload.top_sold || []).length > 0;
+  if (!hasStock && !hasSales) {
+    return {
+      ok: true,
+      no_data: true,
+      ...payload,
+      analysis_text:
+        "Nuk ka të dhëna stoku ose shitjesh për analizë. Shtoni inventar / mbyllni disa porosi, pastaj provo përsëri.",
+      tokens_used: 0,
+      usage: { tokens_used: 0 },
+    };
+  }
 
-  const ai = await anthropicText({
-    system:
-      "Je këshilltar stoku për Revolution POS. Shkruaj në shqip, pa markdown. " +
-      "Trego cilat produkte po mbarojnë, sa duhet porositur, dhe prioritetet.",
-    prompt:
-      `Analizo stokun dhe shitjet e ${days} ditëve për ${clientName || "lokalin"}:\n` +
-      JSON.stringify(payload, null, 2),
-    temperature: 0.3,
-  });
+  let ai;
+  try {
+    ai = await anthropicText({
+      system:
+        "Je këshilltar stoku për Revolution POS. Shkruaj në shqip, pa markdown. " +
+        "Trego cilat produkte po mbarojnë, sa duhet porositur, dhe prioritetet.",
+      prompt:
+        `Analizo stokun dhe shitjet e ${days} ditëve për ${clientName || "lokalin"}:\n` +
+        JSON.stringify(payload, null, 2),
+      temperature: 0.3,
+    });
+  } catch (err) {
+    const msg = String(err.message || err);
+    if (/ANTHROPIC_API_KEY/i.test(msg)) {
+      throw new Error("ANTHROPIC_API_KEY mungon në Railway. Vendoseni te Variables dhe ridëploy.");
+    }
+    throw new Error(`Analiza AI dështoi: ${msg}`);
+  }
 
   await insertAiUsageLog({
     restaurantId: clientId,
     feature: "stock_predict",
     tokensUsed: ai.tokensUsed,
-  });
+  }).catch((e) => console.warn("[stock-predict] usage log:", e.message));
 
   let emailResult = null;
   const critical = payload.critical_items.filter((c) => c.critical);

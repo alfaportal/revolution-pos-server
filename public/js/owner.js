@@ -493,6 +493,61 @@ async function loadOrders() {
   });
 }
 
+function refuseDefaultRange() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return { from: fmt(from), to: fmt(to) };
+}
+
+async function loadRefusedOrders() {
+  const fromEl = document.getElementById("refuse-from");
+  const toEl = document.getElementById("refuse-to");
+  const listEl = document.getElementById("refuse-list");
+  const statsEl = document.getElementById("refuse-stats");
+  if (!listEl) return;
+  if (fromEl && !fromEl.value) {
+    const r = refuseDefaultRange();
+    fromEl.value = r.from;
+    if (toEl) toEl.value = r.to;
+  }
+  const q = new URLSearchParams({ limit: "80" });
+  if (fromEl?.value) q.set("from", fromEl.value);
+  if (toEl?.value) q.set("to", toEl.value);
+  listEl.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Duke ngarkuar…</p>';
+  try {
+    const data = await api(`/api/owner/refused-orders?${q}`);
+    const stats = data.stats || {};
+    if (statsEl) {
+      statsEl.innerHTML = [
+        `<span style="background:#fef2f2;color:#991b1b;padding:.25rem .55rem;border-radius:999px;font-weight:700">Sot: ${stats.today || 0}</span>`,
+        `<span style="background:#fff7ed;color:#9a3412;padding:.25rem .55rem;border-radius:999px;font-weight:700">Java: ${stats.week || 0}</span>`,
+        `<span style="background:#f3f4f6;color:#374151;padding:.25rem .55rem;border-radius:999px;font-weight:700">Muaji: ${stats.month || 0}</span>`,
+      ].join("");
+    }
+    const orders = data.orders || [];
+    if (!orders.length) {
+      listEl.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Nuk ka refuzime në këtë periudhë.</p>';
+      return;
+    }
+    listEl.innerHTML = orders.map((o) => {
+      const table = o.table_number != null ? `Tav. ${o.table_number}` : "Online";
+      return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:.65rem .75rem;margin-bottom:.5rem">
+        <div style="display:flex;justify-content:space-between;gap:.5rem;font-size:.8rem;color:var(--muted)">
+          <span>${escapeHtml(o.date || "")} · ${escapeHtml(o.time || "")}</span>
+          <span>${escapeHtml(table)}</span>
+        </div>
+        <div style="font-weight:700;margin:.2rem 0">${escapeHtml(o.waiter_name || "Kamarier")}</div>
+        <div style="font-size:.88rem;line-height:1.35">${escapeHtml(o.items_summary || "—")}</div>
+        <div style="margin-top:.35rem;font-size:.85rem;color:#991b1b"><strong>Arsyeja:</strong> ${escapeHtml(o.reason || "Pa arsye")}</div>
+      </div>`;
+    }).join("");
+  } catch (err) {
+    listEl.innerHTML = `<p style="color:#b91c1c;font-size:.9rem">${escapeHtml(err.message || "Gabim")}</p>`;
+  }
+}
+
 let voidOrderTarget = null;
 
 function setVoidOrderModalMsg(text, ok) {
@@ -2371,7 +2426,10 @@ document.querySelectorAll(".tab").forEach(tab => {
     document.getElementById(`panel-${tab.dataset.tab}`).classList.remove("hidden");
     if (tab.dataset.tab === "tavolinat") loadLiveTables();
     if (tab.dataset.tab === "raportet") { loadReport(); loadAuditLog(); loadExpenses(); }
-    if (tab.dataset.tab === "porosite") loadOrders();
+    if (tab.dataset.tab === "porosite") {
+      loadOrders();
+      loadRefusedOrders();
+    }
     if (tab.dataset.tab === "stoku") {
       loadOwnerInventory?.();
       loadOwnerStock?.();
@@ -2399,6 +2457,7 @@ document.getElementById("btn-audit-log-refresh")?.addEventListener("click", load
 document.getElementById("btn-filter-orders").addEventListener("click", loadOrders);
 document.getElementById("filter-waiter").addEventListener("change", loadOrders);
 document.getElementById("filter-table").addEventListener("change", loadOrders);
+document.getElementById("btn-refuse-filter")?.addEventListener("click", loadRefusedOrders);
 
 document.getElementById("btn-zreport-refresh")?.addEventListener("click", loadZReport);
 document.getElementById("zreport-date")?.addEventListener("change", loadZReport);

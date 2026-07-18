@@ -481,17 +481,19 @@ router.post("/online-orders/refuse", licenseApiKeyOptional, async (req, res) => 
       : (req.body.order_id ? [req.body.order_id] : []);
     const orderId = String(req.body.order_id || rawIds[0] || "").trim();
     const pin = String(req.body.pin || req.body.waiter_pin || "").trim();
+    const reason = String(req.body.reason || req.body.refuse_reason || "").trim();
 
     if (!orderId) {
       return res.status(400).json({ ok: false, gabim: "Zgjidhni porosinë." });
     }
 
-    const result = await refusePendingOnlineOrder(resolved.clientId, orderId, { pin });
+    const result = await refusePendingOnlineOrder(resolved.clientId, orderId, { pin, reason });
     console.log("[online-orders/refuse] OK", {
       clientId: resolved.clientId,
       orderId,
       refused_by: result.refused_by,
       status: result.status,
+      refuse_reason: result.refuse_reason || reason,
     });
     res.json(result);
   } catch (e) {
@@ -589,6 +591,27 @@ router.post("/reservations/update", licenseApiKeyOptional, async (req, res) => {
       req.body?.status,
     );
     res.json({ ok: true, reservation });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/refused-orders — lista e refuzimeve për panelin e pronarit (POS)
+ */
+router.post("/refused-orders", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const resolved = await resolveLicenseClient(req);
+    if (resolved.error) {
+      return res.status(resolved.error.status).json(resolved.error.body);
+    }
+    const { listRefusedOrders } = require("../services/orderRefusalService");
+    const result = await listRefusedOrders(resolved.clientId, {
+      from: req.body?.from || req.query?.from,
+      to: req.body?.to || req.query?.to,
+      limit: Number(req.body?.limit || req.query?.limit) || 100,
+    });
+    res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }

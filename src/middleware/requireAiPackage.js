@@ -41,7 +41,11 @@ async function requireAiPackage(req, res, next) {
     req.client = client;
     return next();
   } catch (e) {
-    return res.status(500).json({ ok: false, gabim: e.message || "Gabim serveri." });
+    console.error("[requireAiPackage]", e.message || e);
+    return res.status(400).json({
+      ok: false,
+      gabim: e.message || "Gabim gjatë kontrollit të paketës AI.",
+    });
   }
 }
 
