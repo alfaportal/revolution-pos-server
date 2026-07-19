@@ -2,20 +2,21 @@
 <html lang="sq">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Super Admin — Revolution Invest POS</title>
   <meta name="theme-color" content="#1a1a2e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=1">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=2">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
     <div class="login-card">
       <h1>Super Admin</h1>
-      <p>Paneli desktop për Naserin — vetëm Super Admin. Pronarët hyjnë te <code>/owner/login</code>.</p>
+      <p>Paneli i Naserit — telefon &amp; kompjuter. Vetëm Super Admin. Pronarët: <code>/owner/login</code>.</p>
       <div id="login-error" class="alert alert-error hidden"></div>
       <form id="form-login">
         <label for="email">Email</label>
@@ -85,31 +86,29 @@
         <section class="section" id="sec-klientet">
           <div class="card">
             <div class="card-title">
-              <span>Klientët sipas kategorisë</span>
+              <span>Klientët sipas sektorit</span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-clients">Rifresko</button>
             </div>
-            <div id="clients-accordions"></div>
+            <input type="search" class="search-bar" id="clients-search" placeholder="Kërko: berber, piceri, market…" enterkeyhint="search" autocomplete="off">
+            <div id="clients-sectors"></div>
           </div>
         </section>
 
         <!-- LICENCAT -->
         <section class="section" id="sec-licencat">
-          <div class="card">
+          <div class="card gen-box">
             <div class="card-title">Gjenero Kod License</div>
-            <div class="form-grid">
-              <div class="field full">
-                <label for="gen-hw">Hardware ID</label>
-                <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX">
-              </div>
+            <div class="field">
+              <label for="gen-hw">Hardware ID</label>
+              <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" inputmode="text">
             </div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem">
-              <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
-            </div>
-            <p id="gen-result" class="mono" style="margin-top:0.75rem;color:var(--accent)"></p>
+            <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
+            <div id="gen-result" style="color:var(--accent)"></div>
           </div>
           <div class="card">
             <div class="card-title">Lista e licencave</div>
-            <div class="table-wrap">
+            <div class="license-cards mobile-only" id="licenses-cards"></div>
+            <div class="table-wrap desktop-only">
               <table class="sa-table">
                 <thead>
                   <tr>
@@ -274,6 +273,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=1"></script>
+  <script src="/admin/dashboard.js?v=2"></script>
 </body>
 </html>

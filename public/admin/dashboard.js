@@ -2,6 +2,8 @@
 let token = localStorage.getItem("rip_token") || "";
 let currentUser = null;
 let clientsFlat = [];
+let sectorsCache = [];
+let openSectorIds = new Set();
 
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
@@ -127,37 +129,74 @@ async function loadOverview() {
     : `<li style="color:var(--muted)">Nuk ka klientë me probleme.</li>`;
 }
 
-async function loadClients() {
-  const d = await api("/api/super/dashboard/clients");
+function normalizeSearch(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ë/g, "e");
+}
+
+function renderClientsSectors(filterText = "") {
+  const root = document.getElementById("clients-sectors");
+  if (!root) return;
+  const q = normalizeSearch(filterText);
   clientsFlat = [];
-  const root = document.getElementById("clients-accordions");
-  root.innerHTML = (d.groups || [])
-    .map((g, idx) => {
-      clientsFlat.push(...(g.clients || []));
-      const rows = (g.clients || [])
+
+  const html = (sectorsCache || [])
+    .map((s) => {
+      const sectorBlob = normalizeSearch(`${s.num} ${s.label} ${(s.keywords || []).join(" ")}`);
+      const sectorMatch = !q || sectorBlob.includes(q) || q.split(/\s+/).some((w) => w && sectorBlob.includes(w));
+
+      let clients = s.clients || [];
+      if (q) {
+        const nameHits = clients.filter((c) =>
+          normalizeSearch(`${c.emri} ${c.tipi_label} ${c.package_label}`).includes(q),
+        );
+        if (sectorMatch) clients = nameHits.length ? nameHits : clients;
+        else clients = nameHits;
+        if (!clients.length && !sectorMatch) return "";
+      }
+
+      clientsFlat.push(...clients);
+      const isOpen = openSectorIds.has(s.id) || Boolean(q && (sectorMatch || clients.length));
+      const rows = clients
         .map(
           (c) => `<div class="client-row" data-client-id="${esc(c.id)}">
-            <div class="client-ico">${esc(c.icon || "🏪")}</div>
             <div class="client-meta">
               <strong>${esc(c.emri)}</strong>
-              <span>${esc(c.tipi_label)} · ${esc(c.package_label)} · Sot: ${euro(c.sales_today)}</span>
+              <span>${esc(c.tipi_label)} · ${esc(c.package_label)}</span>
             </div>
             <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
           </div>`,
         )
         .join("");
-      return `<div class="accordion ${idx === 0 ? "open" : ""}" data-acc="${esc(g.tipi)}">
-        <button type="button" class="accordion-head">
-          <span>${esc(g.icon || "🏪")} ${esc(g.label)} <span style="color:var(--muted);font-weight:500">(${(g.clients || []).length})</span></span>
-          <span class="acc-chevron">▾</span>
+
+      return `<div class="sector ${isOpen ? "open" : ""}" data-sector-id="${esc(s.id)}">
+        <button type="button" class="sector-head" data-toggle-sector="${esc(s.id)}">
+          <span class="sector-num">${s.num}</span>
+          <span class="sector-label">${esc(s.label)}</span>
+          <span class="sector-count">(${clients.length})</span>
         </button>
-        <div class="accordion-body">${rows || '<p style="color:var(--muted);padding:0.5rem">Nuk ka klientë</p>'}</div>
+        <div class="sector-body">
+          ${rows || '<p style="color:var(--muted);padding:0.75rem;font-size:1.05rem">Nuk ka klientë në këtë sektor.</p>'}
+        </div>
       </div>`;
     })
-    .join("") || '<p style="color:var(--muted)">Nuk ka klientë.</p>';
+    .filter(Boolean)
+    .join("");
 
-  root.querySelectorAll(".accordion-head").forEach((btn) => {
-    btn.addEventListener("click", () => btn.parentElement.classList.toggle("open"));
+  root.innerHTML = html || '<p style="color:var(--muted);font-size:1.1rem;padding:0.5rem">Asnjë rezultat.</p>';
+
+  root.querySelectorAll("[data-toggle-sector]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.toggleSector;
+      const el = btn.closest(".sector");
+      const open = el.classList.toggle("open");
+      if (open) openSectorIds.add(id);
+      else openSectorIds.delete(id);
+    });
   });
   root.querySelectorAll("[data-client-id]").forEach((row) => {
     row.addEventListener("click", () => openClientDetail(row.dataset.clientId));
@@ -165,9 +204,34 @@ async function loadClients() {
 
   const sel = document.getElementById("inv-client");
   if (sel) {
-    sel.innerHTML = clientsFlat
+    const all = (sectorsCache || []).flatMap((s) => s.clients || []);
+    sel.innerHTML = all
       .map((c) => `<option value="${esc(c.id)}">${esc(c.emri)} (${esc(c.tipi_label)})</option>`)
       .join("");
+  }
+}
+
+async function loadClients() {
+  const d = await api("/api/super/dashboard/clients");
+  sectorsCache = d.sectors || d.groups || [];
+  const q = document.getElementById("clients-search")?.value || "";
+  renderClientsSectors(q);
+}
+
+async function copyText(text, btn) {
+  const val = String(text || "").trim();
+  if (!val || val === "—") return;
+  try {
+    await navigator.clipboard.writeText(val);
+    if (btn) {
+      const prev = btn.textContent;
+      btn.textContent = "Kopjuar ✓";
+      setTimeout(() => {
+        btn.textContent = prev;
+      }, 1200);
+    }
+  } catch {
+    prompt("Kopjo:", val);
   }
 }
 
@@ -226,42 +290,103 @@ function closeDrawer() {
   document.getElementById("drawer-root").classList.add("hidden");
 }
 
-async function loadLicenses() {
-  const d = await api("/api/super/dashboard/licenses");
-  const body = document.getElementById("licenses-body");
-  body.innerHTML = (d.licenses || [])
-    .map((l) => {
-      const active = l.statusi === "aktive";
-      return `<tr>
-        <td>${esc(l.client_name)}</td>
-        <td class="mono">${esc(l.hardware_id || "—")}</td>
-        <td class="mono">${esc(l.license_key || "—")}</td>
-        <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
-        <td>${esc(fmtDate(l.activated_at))}</td>
-        <td style="white-space:nowrap">
-          ${
-            active
-              ? `<button type="button" class="btn btn-danger btn-sm" data-block="${esc(l.id)}">Çaktivizo</button>`
-              : `<button type="button" class="btn btn-ok btn-sm" data-unblock="${esc(l.id)}">Riaktivizo</button>`
-          }
-        </td>
-      </tr>`;
-    })
-    .join("") || `<tr><td colspan="6" style="color:var(--muted)">Nuk ka licenca</td></tr>`;
-
-  body.querySelectorAll("[data-block]").forEach((btn) => {
+function bindLicenseActions(root) {
+  if (!root) return;
+  root.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyText(btn.dataset.copy, btn);
+    });
+  });
+  root.querySelectorAll("[data-block]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("Çaktivizo licencën?")) return;
       await api(`/api/super/dashboard/licenses/${btn.dataset.block}/block`, { method: "POST" });
       loadLicenses();
     });
   });
-  body.querySelectorAll("[data-unblock]").forEach((btn) => {
+  root.querySelectorAll("[data-unblock]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await api(`/api/super/dashboard/licenses/${btn.dataset.unblock}/unblock`, { method: "POST" });
       loadLicenses();
     });
   });
+}
+
+async function loadLicenses() {
+  const d = await api("/api/super/dashboard/licenses");
+  const list = d.licenses || [];
+
+  const cards = document.getElementById("licenses-cards");
+  if (cards) {
+    cards.innerHTML = list.length
+      ? list
+          .map((l) => {
+            const active = l.statusi === "aktive";
+            const hw = l.hardware_id || "—";
+            const key = l.license_key || "—";
+            return `<div class="license-card">
+              <h4>${esc(l.client_name)}
+                <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
+              </h4>
+              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.65rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
+              <div class="copy-row">
+                <div class="mono-box"><div style="color:var(--muted);font-size:0.8rem;margin-bottom:0.2rem">Hardware ID</div>${esc(hw)}</div>
+                <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo</button>
+              </div>
+              <div class="copy-row">
+                <div class="mono-box"><div style="color:var(--muted);font-size:0.8rem;margin-bottom:0.2rem">License Key</div>${esc(key)}</div>
+                <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(key)}">Kopjo</button>
+              </div>
+              <div style="margin-top:0.65rem">
+                ${
+                  active
+                    ? `<button type="button" class="btn btn-danger" style="width:100%" data-block="${esc(l.id)}">Çaktivizo</button>`
+                    : `<button type="button" class="btn btn-ok" style="width:100%" data-unblock="${esc(l.id)}">Riaktivizo</button>`
+                }
+              </div>
+            </div>`;
+          })
+          .join("")
+      : `<p style="color:var(--muted);font-size:1.05rem">Nuk ka licenca</p>`;
+    bindLicenseActions(cards);
+  }
+
+  const body = document.getElementById("licenses-body");
+  if (body) {
+    body.innerHTML = list
+      .map((l) => {
+        const active = l.statusi === "aktive";
+        const hw = l.hardware_id || "—";
+        const key = l.license_key || "—";
+        return `<tr>
+          <td>${esc(l.client_name)}</td>
+          <td>
+            <div class="copy-row" style="margin:0">
+              <div class="mono-box" style="padding:0.45rem 0.55rem">${esc(hw)}</div>
+              <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo</button>
+            </div>
+          </td>
+          <td>
+            <div class="copy-row" style="margin:0">
+              <div class="mono-box" style="padding:0.45rem 0.55rem">${esc(key)}</div>
+              <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(key)}">Kopjo</button>
+            </div>
+          </td>
+          <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
+          <td>${esc(fmtDate(l.activated_at))}</td>
+          <td style="white-space:nowrap">
+            ${
+              active
+                ? `<button type="button" class="btn btn-danger btn-sm" data-block="${esc(l.id)}">Çaktivizo</button>`
+                : `<button type="button" class="btn btn-ok btn-sm" data-unblock="${esc(l.id)}">Riaktivizo</button>`
+            }
+          </td>
+        </tr>`;
+      })
+      .join("") || `<tr><td colspan="6" style="color:var(--muted)">Nuk ka licenca</td></tr>`;
+    bindLicenseActions(body);
+  }
 }
 
 async function loadAi() {
@@ -417,15 +542,28 @@ async function boot() {
   document.getElementById("drawer-close").addEventListener("click", closeDrawer);
   document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
 
+  document.getElementById("clients-search")?.addEventListener("input", (e) => {
+    renderClientsSectors(e.target.value);
+  });
+
   document.getElementById("btn-gen-key").addEventListener("click", async () => {
+    const box = document.getElementById("gen-result");
     try {
       const data = await api("/api/super/generate-license-key", {
         method: "POST",
         body: JSON.stringify({ hardwareId: document.getElementById("gen-hw").value.trim() }),
       });
-      document.getElementById("gen-result").textContent = `License Key: ${data.licenseKey}`;
+      const key = data.licenseKey || "";
+      box.innerHTML = `
+        <div class="copy-row" style="margin-top:0.5rem">
+          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">License Key</div>${esc(key)}</div>
+          <button type="button" class="btn btn-primary btn-copy" id="btn-copy-gen-key" data-copy="${esc(key)}">Kopjo</button>
+        </div>`;
+      document.getElementById("btn-copy-gen-key")?.addEventListener("click", (ev) => {
+        copyText(key, ev.currentTarget);
+      });
     } catch (ex) {
-      document.getElementById("gen-result").textContent = ex.message;
+      box.textContent = ex.message;
     }
   });
 

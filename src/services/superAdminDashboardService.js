@@ -9,7 +9,12 @@ const { listClients, listLicenses } = require("./licenseService");
 const { listAiUsageSummary } = require("./aiUsageReportService");
 const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel } = require("../lib/packages");
-const { ADMIN_CLIENT_TIPI, TIPI_LABELS, normalizeClientTipi, labelForTipi } = require("../utils/businessTipi");
+const {
+  CLIENT_SECTORS,
+  normalizeClientTipi,
+  labelForTipi,
+  sectorForTipi,
+} = require("../utils/businessTipi");
 const { buildAiUsageInvoicePdf } = require("./aiBillingPdfService");
 
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
@@ -239,22 +244,19 @@ async function getClientsGrouped() {
     licByClient.get(cid).push(lic);
   }
 
-  const categories = ADMIN_CLIENT_TIPI.map((tipi) => ({
-    tipi,
-    label: TIPI_LABELS[tipi] || tipi,
-    icon: iconForTipi(tipi),
+  const sectors = CLIENT_SECTORS.map((s) => ({
+    num: s.num,
+    id: s.id,
+    label: s.label,
+    tipet: s.tipet,
+    keywords: s.keywords || [],
     clients: [],
   }));
-  const byTipi = new Map(categories.map((c) => [c.tipi, c]));
-  const other = {
-    tipi: "tjeter",
-    label: "Tjetër / Legacy",
-    icon: "🏪",
-    clients: [],
-  };
+  const bySectorId = new Map(sectors.map((s) => [s.id, s]));
 
   for (const c of clients) {
     const tipi = normalizeClientTipi(c.tipi);
+    const sector = sectorForTipi(tipi);
     const lics = licByClient.get(c.id) || [];
     const activeLic = lics.some((l) => l.statusi === "aktive");
     const row = {
@@ -269,14 +271,18 @@ async function getClientsGrouped() {
       email: c.email || "",
       telefoni: c.telefoni || "",
       icon: iconForTipi(tipi),
+      sector_num: sector.num,
+      sector_id: sector.id,
     };
-    if (byTipi.has(tipi)) byTipi.get(tipi).clients.push(row);
-    else other.clients.push(row);
+    const bucket = bySectorId.get(sector.id) || bySectorId.get("other");
+    bucket.clients.push(row);
   }
 
-  const groups = categories.filter((g) => g.clients.length > 0);
-  if (other.clients.length) groups.push(other);
-  return { groups, total: clients.length };
+  return {
+    sectors,
+    groups: sectors, // alias për UI të vjetër
+    total: clients.length,
+  };
 }
 
 function iconForTipi(tipi) {
@@ -291,8 +297,19 @@ function iconForTipi(tipi) {
     pasticeri: "🧁",
     akullore: "🍦",
     gjeltore: "🍗",
+    furre_buke: "🥖",
+    hotel_restorant: "🏨",
+    bar_nate: "🌙",
+    klub: "🎶",
     market: "🛒",
+    minimarket: "🧺",
+    dyqan_rroba: "👕",
+    dyqan_kepuce: "👟",
     dyqan: "🏬",
+    farmaci: "💊",
+    optike: "👓",
+    berber: "💈",
+    sallon_bukurie: "💅",
     tjeter: "🏪",
   };
   return map[normalizeClientTipi(tipi)] || "🏪";

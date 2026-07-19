@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS clients (
               CHECK (tipi IN (
                 'kafene', 'restorant', 'bar', 'pub_lounge', 'piceri',
                 'fast_food', 'kebab', 'pasticeri', 'akullore', 'gjeltore',
-                'market', 'dyqan', 'tjeter'
+                'furre_buke', 'hotel_restorant', 'bar_nate', 'klub',
+                'market', 'minimarket', 'dyqan_rroba', 'dyqan_kepuce', 'dyqan',
+                'farmaci', 'optike', 'berber', 'sallon_bukurie', 'tjeter'
               )),
   kitchen_slug TEXT,
   kitchen_key  TEXT,
