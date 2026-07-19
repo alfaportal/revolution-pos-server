@@ -16,8 +16,7 @@ const {
   getClientDetail,
   getLicensesView,
   getAiUsageDashboard,
-  getSalesReport,
-  reportToCsv,
+  getProblemsReport,
   getSettings,
   updateSettings,
   listBillingInvoices,
@@ -179,23 +178,18 @@ router.get(
   }),
 );
 
+/** Raportet = VETËM probleme (jo shitje). */
 router.get(
   "/dashboard/reports",
-  asyncHandler(async (req, res) => {
-    const report = await getSalesReport({
-      from: req.query.from,
-      to: req.query.to,
-      group: req.query.group || "day",
-    });
-    if (String(req.query.format || "").toLowerCase() === "csv") {
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="raport-shitje-${report.from}-${report.to}.csv"`,
-      );
-      return res.send(reportToCsv(report));
-    }
-    res.json({ ok: true, ...report });
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...(await getProblemsReport()) });
+  }),
+);
+
+router.get(
+  "/dashboard/problems",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...(await getProblemsReport()) });
   }),
 );
 

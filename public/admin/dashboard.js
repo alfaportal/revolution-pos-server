@@ -5,13 +5,47 @@ let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
 
+/** 9 kategoritë — GJITHMONË të dukshme, edhe me (0). */
+const FALLBACK_SECTORS = [
+  {
+    num: 1,
+    id: "hospitality",
+    label: "Kafene / Restorant / Bar / Piceri / Fast Food / Kebab / Pastiçeri / Ëmbëltore / Akullore / Gjeltore",
+    keywords: ["kafene", "restorant", "bar", "piceri", "fast", "food", "kebab", "pasticeri", "embeltore", "akullore", "gjeltore"],
+    clients: [],
+  },
+  { num: 2, id: "bakery", label: "Furrë Buke", keywords: ["furre", "buke"], clients: [] },
+  { num: 3, id: "hotel", label: "Hotel Restorant", keywords: ["hotel"], clients: [] },
+  { num: 4, id: "nightlife", label: "Bar Nate / Klub", keywords: ["nate", "klub"], clients: [] },
+  { num: 5, id: "grocery", label: "Market / Minimarket", keywords: ["market", "minimarket"], clients: [] },
+  { num: 6, id: "fashion", label: "Dyqan Rrobash / Këpucësh", keywords: ["rroba", "kepuce", "dyqan"], clients: [] },
+  { num: 7, id: "health", label: "Farmaci / Optikë", keywords: ["farmaci", "optike"], clients: [] },
+  { num: 8, id: "beauty", label: "Berber / Sallon Bukurie", keywords: ["berber", "sallon"], clients: [] },
+  { num: 9, id: "other", label: "Shërbime të tjera", keywords: ["tjeter", "sherbime"], clients: [] },
+];
+
+function ensureNineSectors(apiSectors) {
+  const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
+  const byNum = new Map((apiSectors || []).map((s) => [Number(s.num), s]));
+  return FALLBACK_SECTORS.map((fb) => {
+    const hit = byId.get(fb.id) || byNum.get(fb.num) || null;
+    return {
+      num: fb.num,
+      id: fb.id,
+      label: fb.label,
+      keywords: hit?.keywords?.length ? hit.keywords : fb.keywords,
+      clients: Array.isArray(hit?.clients) ? hit.clients : [],
+    };
+  });
+}
+
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
-  klientet: ["Klientët", "Të ndarë sipas kategorisë së biznesit"],
+  klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
   licencat: ["Licencat", "Hardware ID, çelësa, aktivizim"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Fatura PDF — paguar / papaguar"],
-  raportet: ["Raportet", "Shitjet dhe krahasimi mes klientëve"],
+  raportet: ["Probleme", "Vetëm probleme — pa shitje"],
   cilesimet: ["Cilësimet", "Admini, çmimet e pakove, AI"],
 };
 
@@ -143,8 +177,10 @@ function renderClientsSectors(filterText = "") {
   if (!root) return;
   const q = normalizeSearch(filterText);
   clientsFlat = [];
+  // GJITHMONË 9 — mos fshih kategoritë bosh
+  const sectors = ensureNineSectors(sectorsCache);
 
-  const html = (sectorsCache || [])
+  const html = sectors
     .map((s) => {
       const sectorBlob = normalizeSearch(`${s.num} ${s.label} ${(s.keywords || []).join(" ")}`);
       const sectorMatch = !q || sectorBlob.includes(q) || q.split(/\s+/).some((w) => w && sectorBlob.includes(w));
@@ -156,6 +192,7 @@ function renderClientsSectors(filterText = "") {
         );
         if (sectorMatch) clients = nameHits.length ? nameHits : clients;
         else clients = nameHits;
+        // Gjatë kërkimit: fsheh vetëm nëse as sektori as klientët nuk përputhen
         if (!clients.length && !sectorMatch) return "";
       }
 
@@ -180,13 +217,14 @@ function renderClientsSectors(filterText = "") {
           <span class="sector-count">(${clients.length})</span>
         </button>
         <div class="sector-body">
-          ${rows || '<p style="color:var(--muted);padding:0.75rem;font-size:1.05rem">Nuk ka klientë në këtë sektor.</p>'}
+          ${rows || '<p style="color:var(--muted);padding:0.75rem;font-size:1.05rem">Nuk ka klientë ende.</p>'}
         </div>
       </div>`;
     })
     .filter(Boolean)
     .join("");
 
+  // Pa kërkim: gjithmonë 9 butona. Me kërkim pa hit: mesazh.
   root.innerHTML = html || '<p style="color:var(--muted);font-size:1.1rem;padding:0.5rem">Asnjë rezultat.</p>';
 
   root.querySelectorAll("[data-toggle-sector]").forEach((btn) => {
@@ -204,7 +242,7 @@ function renderClientsSectors(filterText = "") {
 
   const sel = document.getElementById("inv-client");
   if (sel) {
-    const all = (sectorsCache || []).flatMap((s) => s.clients || []);
+    const all = ensureNineSectors(sectorsCache).flatMap((s) => s.clients || []);
     sel.innerHTML = all
       .map((c) => `<option value="${esc(c.id)}">${esc(c.emri)} (${esc(c.tipi_label)})</option>`)
       .join("");
@@ -212,8 +250,12 @@ function renderClientsSectors(filterText = "") {
 }
 
 async function loadClients() {
-  const d = await api("/api/super/dashboard/clients");
-  sectorsCache = d.sectors || d.groups || [];
+  try {
+    const d = await api("/api/super/dashboard/clients");
+    sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
+  } catch {
+    sectorsCache = ensureNineSectors([]);
+  }
   const q = document.getElementById("clients-search")?.value || "";
   renderClientsSectors(q);
 }
@@ -468,30 +510,70 @@ async function loadBilling() {
   });
 }
 
+function renderProblemList(elId, rows, emptyText) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const list = rows || [];
+  el.innerHTML = list.length
+    ? list
+        .map(
+          (p) => `<li>
+            <div>
+              <strong>${esc(p.emri)}</strong>
+              <div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.at ? ` · ${esc(fmtDate(p.at))}` : ""}</div>
+              <div style="margin-top:0.25rem;font-size:0.9rem">${esc(p.detail || "")}</div>
+            </div>
+          </li>`,
+        )
+        .join("")
+    : `<li style="color:var(--muted)">${esc(emptyText)}</li>`;
+}
+
+const PROBLEM_KIND_LABEL = {
+  program: "Program",
+  offline: "Offline",
+  print: "Print",
+  fiscal: "Fiskale",
+  license: "Licencë",
+};
+
 async function loadReports() {
-  const fromEl = document.getElementById("rep-from");
-  const toEl = document.getElementById("rep-to");
-  if (toEl && !toEl.value) toEl.value = new Date().toISOString().slice(0, 10);
-  if (fromEl && !fromEl.value) {
-    const f = new Date();
-    f.setDate(f.getDate() - 29);
-    fromEl.value = f.toISOString().slice(0, 10);
+  const d = await api("/api/super/dashboard/problems").catch(() =>
+    api("/api/super/dashboard/reports"),
+  );
+  const c = d.counts || {};
+  const set = (id, n) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(n ?? 0);
+  };
+  set("prob-kpi-program", c.program);
+  set("prob-kpi-offline", c.offline_48h);
+  set("prob-kpi-license", c.license_expired);
+  set("prob-kpi-print", c.print_errors);
+  set("prob-kpi-fiscal", c.fiscal_errors);
+
+  renderProblemList("prob-program", d.program, "Nuk ka probleme me programin.");
+  renderProblemList("prob-offline", d.offline_48h, "Nuk ka klientë offline >48h.");
+  renderProblemList("prob-license", d.license_expired, "Nuk ka licenca të skaduara.");
+  renderProblemList("prob-print", d.print_errors, "Nuk ka gabime printimi.");
+  renderProblemList("prob-fiscal", d.fiscal_errors, "Nuk ka gabime fiskale.");
+
+  const body = document.getElementById("prob-history-body");
+  if (body) {
+    const hist = d.history || [];
+    body.innerHTML = hist.length
+      ? hist
+          .map(
+            (h) => `<tr>
+              <td>${esc(fmtDate(h.at))}</td>
+              <td>${esc(h.client_name || "—")}</td>
+              <td><span class="badge badge-warn">${esc(PROBLEM_KIND_LABEL[h.kind] || h.kind || "—")}</span></td>
+              <td>${esc(h.message || h.event || "—")}</td>
+            </tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="4" style="color:var(--muted)">Nuk ka histori problemesh ende.</td></tr>`;
   }
-  const params = new URLSearchParams({
-    from: fromEl.value,
-    to: toEl.value,
-    group: document.getElementById("rep-group").value || "day",
-  });
-  const d = await api(`/api/super/dashboard/reports?${params}`);
-  document.getElementById("rep-total").textContent = euro(d.grand_total);
-  document.getElementById("rep-orders").textContent = String(d.order_count || 0);
-  document.getElementById("rep-clients").textContent = String((d.by_client || []).length);
-  document.getElementById("rep-client-body").innerHTML = (d.by_client || [])
-    .map((r) => `<tr><td>${esc(r.client_name)}</td><td>${r.orders}</td><td>${euro(r.total)}</td></tr>`)
-    .join("") || `<tr><td colspan="3" style="color:var(--muted)">Nuk ka shitje</td></tr>`;
-  document.getElementById("rep-period-body").innerHTML = (d.by_period || [])
-    .map((r) => `<tr><td>${esc(r.period)}</td><td>${r.orders}</td><td>${euro(r.total)}</td></tr>`)
-    .join("") || `<tr><td colspan="3" style="color:var(--muted)">—</td></tr>`;
 }
 
 async function loadSettings() {
@@ -584,22 +666,7 @@ async function boot() {
       alert(ex.message);
     }
   });
-  document.getElementById("btn-rep-load").addEventListener("click", () => loadReports().catch(alert));
-  document.getElementById("btn-rep-csv").addEventListener("click", async () => {
-    const params = new URLSearchParams({
-      from: document.getElementById("rep-from").value,
-      to: document.getElementById("rep-to").value,
-      group: document.getElementById("rep-group").value || "day",
-      format: "csv",
-    });
-    const res = await api(`/api/super/dashboard/reports?${params}`);
-    const text = await res.text();
-    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "raport-shitje.csv";
-    a.click();
-  });
+  document.getElementById("btn-rep-load")?.addEventListener("click", () => loadReports().catch(alert));
   document.getElementById("btn-settings-save").addEventListener("click", async () => {
     try {
       await api("/api/super/dashboard/settings", {

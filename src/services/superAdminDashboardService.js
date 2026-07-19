@@ -11,11 +11,14 @@ const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel } = require("../lib/packages");
 const {
   CLIENT_SECTORS,
+  ADMIN_CLIENT_TIPI,
+  TIPI_LABELS,
   normalizeClientTipi,
   labelForTipi,
   sectorForTipi,
 } = require("../utils/businessTipi");
 const { buildAiUsageInvoicePdf } = require("./aiBillingPdfService");
+const { listSystemFailures } = require("./systemFailureLog");
 
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
 const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json");
@@ -278,9 +281,23 @@ async function getClientsGrouped() {
     bucket.clients.push(row);
   }
 
+  // GJITHMONË 9 sektore — edhe me 0 klientë (mos filtro bosh)
+  const padded = CLIENT_SECTORS.map((def) => {
+    const hit = bySectorId.get(def.id) || { clients: [] };
+    return {
+      num: def.num,
+      id: def.id,
+      label: def.label,
+      tipet: def.tipet,
+      keywords: def.keywords || [],
+      clients: hit.clients || [],
+      count: (hit.clients || []).length,
+    };
+  });
+
   return {
-    sectors,
-    groups: sectors, // alias për UI të vjetër
+    sectors: padded,
+    groups: padded, // alias për UI të vjetër
     total: clients.length,
   };
 }
@@ -562,6 +579,154 @@ function reportToCsv(report) {
   return lines.join("\n");
 }
 
+function classifyFailureEvent(entry) {
+  const blob = `${entry.event || ""} ${entry.message || ""} ${JSON.stringify(entry.detail || {})}`.toLowerCase();
+  if (/fiscal|fiskal|atk|tvsh|nuikf/.test(blob)) return "fiscal";
+  if (/print|printer|esc\/pos|thermal|fatur/.test(blob)) return "print";
+  if (/offline|outage|cloud_offline/.test(blob)) return "offline";
+  return "program";
+}
+
+function matchClientFromFailure(entry, clients) {
+  const msg = String(entry.message || "");
+  const detail = entry.detail || {};
+  const hay = `${msg} ${detail.client_id || ""} ${detail.client_name || ""}`.toLowerCase();
+  for (const c of clients) {
+    const name = String(c.emri || "").toLowerCase();
+    if (name && hay.includes(name)) return c;
+    if (c.id && hay.includes(String(c.id).toLowerCase())) return c;
+  }
+  return null;
+}
+
+/**
+ * Raportet e Super Admin = VETËM probleme (jo shitje).
+ */
+async function getProblemsReport() {
+  const [clients, licenses, stockAlerts] = await Promise.all([
+    listClients(),
+    listLicenses(),
+    listStockAlertsForAdmin().catch(() => []),
+  ]);
+
+  const licByClient = new Map();
+  for (const lic of licenses) {
+    const cid = lic.client_id || lic.clients?.id;
+    if (!cid) continue;
+    if (!licByClient.has(cid)) licByClient.set(cid, []);
+    licByClient.get(cid).push(lic);
+  }
+
+  const stockZeroClientIds = new Set(
+    (stockAlerts || []).filter((a) => (a.out_count || 0) > 0).map((a) => a.client_id),
+  );
+
+  const program = [];
+  const offline_48h = [];
+  const license_expired = [];
+
+  for (const c of clients) {
+    const lics = licByClient.get(c.id) || [];
+    const base = {
+      id: c.id,
+      emri: c.emri,
+      tipi: normalizeClientTipi(c.tipi),
+      tipi_label: labelForTipi(c.tipi),
+    };
+
+    if (lics.some((l) => ["skaduar"].includes(l.statusi))) {
+      license_expired.push({
+        ...base,
+        detail: "Licencë e skaduar",
+        at: lics.find((l) => l.statusi === "skaduar")?.updated_at || null,
+      });
+    }
+    if (lics.some((l) => ["revokuar", "pezulluar"].includes(l.statusi))) {
+      program.push({
+        ...base,
+        detail: "Licencë e bllokuar / pezulluar",
+        at: lics.find((l) => ["revokuar", "pezulluar"].includes(l.statusi))?.updated_at || null,
+      });
+    }
+    if (lics.length && lics.every((l) => isOfflineOver48h(l))) {
+      const seen = lics.map(licenseLastSeen).filter(Boolean).sort().pop() || null;
+      offline_48h.push({
+        ...base,
+        detail: "Offline më shumë se 48 orë",
+        at: seen,
+        last_seen_at: seen,
+      });
+    }
+    if (stockZeroClientIds.has(c.id)) {
+      program.push({
+        ...base,
+        detail: "Probleme me programin (stok zero)",
+        at: null,
+      });
+    }
+  }
+
+  const failures = listSystemFailures(200);
+  const print_errors = [];
+  const fiscal_errors = [];
+  const history = [];
+
+  for (const f of failures) {
+    const kind = classifyFailureEvent(f);
+    const client = matchClientFromFailure(f, clients);
+    const row = {
+      id: client?.id || null,
+      emri: client?.emri || (String(f.message || "").split("—")[0] || "").trim() || "I panjohur",
+      tipi_label: client ? labelForTipi(client.tipi) : "—",
+      detail: f.message || f.event || "Gabim",
+      at: f.at || null,
+      event: f.event || kind,
+      source: f.source || "system",
+      kind,
+    };
+    history.push({
+      at: row.at,
+      client_name: row.emri,
+      client_id: row.id,
+      kind,
+      message: row.detail,
+      event: row.event,
+      source: row.source,
+    });
+    if (kind === "print") print_errors.push(row);
+    else if (kind === "fiscal") fiscal_errors.push(row);
+    else if (kind === "program" && client) {
+      program.push({
+        id: client.id,
+        emri: client.emri,
+        tipi: normalizeClientTipi(client.tipi),
+        tipi_label: labelForTipi(client.tipi),
+        detail: row.detail,
+        at: row.at,
+      });
+    }
+  }
+
+  history.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+
+  return {
+    program,
+    offline_48h,
+    license_expired,
+    print_errors,
+    fiscal_errors,
+    history,
+    counts: {
+      program: program.length,
+      offline_48h: offline_48h.length,
+      license_expired: license_expired.length,
+      print_errors: print_errors.length,
+      fiscal_errors: fiscal_errors.length,
+      history: history.length,
+    },
+  };
+}
+
 async function createBillingInvoice({ restaurant_id, period_from, period_to, services, notes }) {
   const detail = await getClientDetail(restaurant_id);
   const settings = getSettings();
@@ -630,6 +795,7 @@ module.exports = {
   getLicensesView,
   getAiUsageDashboard,
   getSalesReport,
+  getProblemsReport,
   reportToCsv,
   getSettings,
   updateSettings,
