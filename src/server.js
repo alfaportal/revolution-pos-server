@@ -166,6 +166,16 @@ app.get(ADMIN_PATH, (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/panel.html"));
 });
 
+/** Super Admin desktop dashboard (Naser) — vetëm /admin/dashboard */
+app.get(["/admin/dashboard", "/admin/dashboard/"], (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/admin/dashboard.html"));
+});
+
+app.get("/admin", (_req, res) => {
+  res.redirect(302, "/admin/dashboard");
+});
+
 app.get("/panel", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
 });

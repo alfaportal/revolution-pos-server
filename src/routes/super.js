@@ -10,6 +10,23 @@ const {
   normalizeHardwareId,
   formatGrouped16,
 } = require("../lib/hardwareLicense");
+const {
+  getOverview,
+  getClientsGrouped,
+  getClientDetail,
+  getLicensesView,
+  getAiUsageDashboard,
+  getSalesReport,
+  reportToCsv,
+  getSettings,
+  updateSettings,
+  listBillingInvoices,
+  createBillingInvoice,
+  updateBillingInvoiceStatus,
+  buildBillingInvoicePdf,
+} = require("../services/superAdminDashboardService");
+const { blockLicense, unblockLicense } = require("../services/licenseService");
+const { logAdminActivity, activityFromReq } = require("../services/activityLogService");
 
 const router = express.Router();
 
@@ -92,6 +109,143 @@ router.get(
       `attachment; filename="ai-invoice-${summary.month}-${String(restaurantId).slice(0, 8)}.pdf"`,
     );
     res.send(pdf);
+  }),
+);
+
+// ---- Desktop Super Admin dashboard (/admin/dashboard) — endpoint-e të reja ----
+
+router.get(
+  "/dashboard/overview",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...(await getOverview()) });
+  }),
+);
+
+router.get(
+  "/dashboard/clients",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...(await getClientsGrouped()) });
+  }),
+);
+
+router.get(
+  "/dashboard/clients/:id",
+  asyncHandler(async (req, res) => {
+    res.json({ ok: true, ...(await getClientDetail(req.params.id)) });
+  }),
+);
+
+router.get(
+  "/dashboard/licenses",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...(await getLicensesView()) });
+  }),
+);
+
+router.post(
+  "/dashboard/licenses/:id/block",
+  asyncHandler(async (req, res) => {
+    const license = await blockLicense(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_block",
+      targetType: "license",
+      targetId: license.id,
+      targetLabel: license.celesi,
+    }).catch(() => {});
+    res.json({ ok: true, license });
+  }),
+);
+
+router.post(
+  "/dashboard/licenses/:id/unblock",
+  asyncHandler(async (req, res) => {
+    const license = await unblockLicense(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_unblock",
+      targetType: "license",
+      targetId: license.id,
+      targetLabel: license.celesi,
+    }).catch(() => {});
+    res.json({ ok: true, license });
+  }),
+);
+
+router.get(
+  "/dashboard/ai-usage",
+  asyncHandler(async (req, res) => {
+    res.json({ ok: true, ...(await getAiUsageDashboard({ month: req.query.month })) });
+  }),
+);
+
+router.get(
+  "/dashboard/reports",
+  asyncHandler(async (req, res) => {
+    const report = await getSalesReport({
+      from: req.query.from,
+      to: req.query.to,
+      group: req.query.group || "day",
+    });
+    if (String(req.query.format || "").toLowerCase() === "csv") {
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="raport-shitje-${report.from}-${report.to}.csv"`,
+      );
+      return res.send(reportToCsv(report));
+    }
+    res.json({ ok: true, ...report });
+  }),
+);
+
+router.get(
+  "/dashboard/billing/invoices",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, invoices: listBillingInvoices() });
+  }),
+);
+
+router.post(
+  "/dashboard/billing/invoices",
+  asyncHandler(async (req, res) => {
+    const invoice = await createBillingInvoice(req.body || {});
+    res.status(201).json({ ok: true, invoice });
+  }),
+);
+
+router.patch(
+  "/dashboard/billing/invoices/:id",
+  asyncHandler(async (req, res) => {
+    const invoice = updateBillingInvoiceStatus(req.params.id, req.body?.status);
+    res.json({ ok: true, invoice });
+  }),
+);
+
+router.get(
+  "/dashboard/billing/invoices/:id/pdf",
+  asyncHandler(async (req, res) => {
+    const inv = listBillingInvoices().find((x) => x.id === req.params.id);
+    if (!inv) return res.status(404).json({ ok: false, gabim: "Fatura nuk u gjet" });
+    const pdf = buildBillingInvoicePdf(inv);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${inv.id}.pdf"`);
+    res.send(pdf);
+  }),
+);
+
+router.get(
+  "/dashboard/settings",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, settings: getSettings() });
+  }),
+);
+
+router.put(
+  "/dashboard/settings",
+  asyncHandler(async (req, res) => {
+    const settings = updateSettings(req.body || {});
+    res.json({ ok: true, settings });
   }),
 );
 

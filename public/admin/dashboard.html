@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Super Admin — Revolution Invest POS</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=1">
+</head>
+<body>
+  <div id="view-login" class="login-wrap">
+    <div class="login-card">
+      <h1>Super Admin</h1>
+      <p>Paneli desktop për Naserin — vetëm Super Admin. Pronarët hyjnë te <code>/owner/login</code>.</p>
+      <div id="login-error" class="alert alert-error hidden"></div>
+      <form id="form-login">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" placeholder="admin@revolutioninvest.com">
+        <label for="password">Fjalëkalimi</label>
+        <input type="password" id="password" required autocomplete="current-password">
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:1rem">Hyr</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="view-app" class="hidden">
+    <div class="backdrop" id="nav-backdrop"></div>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-mark">RI</div>
+          <div>
+            <h1>Revolution Invest</h1>
+            <span>Super Admin</span>
+          </div>
+        </div>
+        <nav class="nav-list" id="nav-list">
+          <button type="button" class="nav-item active" data-section="pasqyra"><span class="nav-ico">📊</span> Pasqyra</button>
+          <button type="button" class="nav-item" data-section="klientet"><span class="nav-ico">👥</span> Klientët</button>
+          <button type="button" class="nav-item" data-section="licencat"><span class="nav-ico">🔑</span> Licencat</button>
+          <button type="button" class="nav-item" data-section="ai"><span class="nav-ico">🤖</span> AI Usage</button>
+          <button type="button" class="nav-item" data-section="faturimi"><span class="nav-ico">🧾</span> Faturimi</button>
+          <button type="button" class="nav-item" data-section="raportet"><span class="nav-ico">📈</span> Raportet</button>
+          <button type="button" class="nav-item" data-section="cilesimet"><span class="nav-ico">⚙️</span> Cilësimet</button>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="user" id="user-label">—</div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%">Dil</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="topbar">
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <button type="button" class="hamburger" id="btn-hamburger" aria-label="Menu">☰</button>
+            <div>
+              <h2 id="page-title">Pasqyra</h2>
+              <p id="page-sub">Përmbledhje e platformës</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASQYRA -->
+        <section class="section active" id="sec-pasqyra">
+          <div class="kpi-row">
+            <div class="kpi"><div class="lbl">Klientë aktiv</div><div class="val" id="kpi-active">—</div></div>
+            <div class="kpi"><div class="lbl">Shitjet sot</div><div class="val" id="kpi-sales">—</div></div>
+            <div class="kpi warn"><div class="lbl">Me probleme</div><div class="val" id="kpi-problems">—</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Shitjet javore (krejt klientët)</div>
+            <div class="chart" id="chart-weekly"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Klientë me probleme</div>
+            <ul class="problem-list" id="problem-list"></ul>
+          </div>
+        </section>
+
+        <!-- KLIENTËT -->
+        <section class="section" id="sec-klientet">
+          <div class="card">
+            <div class="card-title">
+              <span>Klientët sipas kategorisë</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-clients">Rifresko</button>
+            </div>
+            <div id="clients-accordions"></div>
+          </div>
+        </section>
+
+        <!-- LICENCAT -->
+        <section class="section" id="sec-licencat">
+          <div class="card">
+            <div class="card-title">Gjenero Kod License</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label for="gen-hw">Hardware ID</label>
+                <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX">
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem">
+              <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
+            </div>
+            <p id="gen-result" class="mono" style="margin-top:0.75rem;color:var(--accent)"></p>
+          </div>
+          <div class="card">
+            <div class="card-title">Lista e licencave</div>
+            <div class="table-wrap">
+              <table class="sa-table">
+                <thead>
+                  <tr>
+                    <th>Klienti</th><th>Hardware ID</th><th>License Key</th><th>Statusi</th><th>Aktivizimi</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="licenses-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- AI USAGE -->
+        <section class="section" id="sec-ai">
+          <div class="toolbar">
+            <input type="month" id="ai-month">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-ai-load">Filtro</button>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi"><div class="lbl">Tokena total</div><div class="val" id="ai-tokens-total">—</div></div>
+            <div class="kpi"><div class="lbl">Kosto total</div><div class="val" id="ai-cost-total">—</div></div>
+            <div class="kpi"><div class="lbl">Thirrje</div><div class="val" id="ai-calls-total">—</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Harxhimi i tokenave me kohë</div>
+            <div class="chart" id="chart-ai"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sipas klientit</div>
+            <div class="table-wrap">
+              <table class="sa-table">
+                <thead>
+                  <tr><th>Klienti</th><th>Tokena</th><th>Kosto</th><th>Thirrje</th><th>Data e fundit</th></tr>
+                </thead>
+                <tbody id="ai-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- FATURIMI -->
+        <section class="section" id="sec-faturimi">
+          <div class="card">
+            <div class="card-title">Gjenero faturë</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label for="inv-client">Klienti (ID)</label>
+                <select id="inv-client"></select>
+              </div>
+              <div class="field">
+                <label for="inv-from">Nga</label>
+                <input type="date" id="inv-from">
+              </div>
+              <div class="field">
+                <label for="inv-to">Deri</label>
+                <input type="date" id="inv-to">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-inv-create" style="margin-top:0.75rem">Gjenero faturë</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Faturat</div>
+            <div class="table-wrap">
+              <table class="sa-table">
+                <thead>
+                  <tr><th>Nr</th><th>Klienti</th><th>Periudha</th><th>Totali</th><th>Statusi</th><th></th></tr>
+                </thead>
+                <tbody id="inv-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- RAPORTET -->
+        <section class="section" id="sec-raportet">
+          <div class="card">
+            <div class="toolbar">
+              <input type="date" id="rep-from">
+              <span style="color:var(--muted)">—</span>
+              <input type="date" id="rep-to">
+              <select id="rep-group">
+                <option value="day">Ditë</option>
+                <option value="week">Javë</option>
+                <option value="month">Muaj</option>
+              </select>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-rep-load">Apliko</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-rep-csv">Eksport CSV</button>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi"><div class="lbl">Shitje totale</div><div class="val" id="rep-total">—</div></div>
+              <div class="kpi"><div class="lbl">Porosi</div><div class="val" id="rep-orders">—</div></div>
+              <div class="kpi"><div class="lbl">Klientë</div><div class="val" id="rep-clients">—</div></div>
+            </div>
+            <div class="card-title">Krahasim mes klientëve</div>
+            <div class="table-wrap">
+              <table class="sa-table">
+                <thead><tr><th>Klienti</th><th>Porosi</th><th>Shitje</th></tr></thead>
+                <tbody id="rep-client-body"></tbody>
+              </table>
+            </div>
+            <div class="card-title" style="margin-top:1rem">Sipas periudhës</div>
+            <div class="table-wrap">
+              <table class="sa-table">
+                <thead><tr><th>Periudha</th><th>Porosi</th><th>Shitje</th></tr></thead>
+                <tbody id="rep-period-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- CILËSIMET -->
+        <section class="section" id="sec-cilesimet">
+          <div class="card">
+            <div class="card-title">Të dhënat e adminit &amp; çmimet</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="set-name">Emri i adminit</label>
+                <input id="set-name">
+              </div>
+              <div class="field">
+                <label for="set-email">Email</label>
+                <input id="set-email" type="email">
+              </div>
+              <div class="field">
+                <label for="set-p1">Çmimi Pako 1 (€label>
+                <input id="set-p1" type="number" min="0" step="0.01">
+              </div>
+              <div class="field">
+                <label for="set-p2">Çmimi Pako 2 €</label>
+                <input id="set-p2" type="number" min="0" step="0.01">
+              </div>
+              <div class="field">
+                <label for="set-p3">Çmimi Pako 3 €</label>
+                <input id="set-p3" type="number" min="0" step="0.01">
+              </div>
+              <div class="field">
+                <label for="set-p4">Çmimi Pako 4 €</label>
+                <input id="set-p4" type="number" min="0" step="0.01">
+              </div>
+              <div class="field full">
+                <label for="set-ai">Çmimi AI për 1000 tokena (€)</label>
+                <input id="set-ai" type="number" min="0" step="0.0001">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-settings-save" style="margin-top:0.85rem">Ruaj</button>
+            <div id="settings-msg" class="alert alert-ok hidden" style="margin-top:0.75rem"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="drawer-root" class="hidden">
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <aside class="drawer" id="drawer">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+        <h3 id="drawer-title">Klienti</h3>
+        <button type="button" class="btn btn-ghost btn-sm" id="drawer-close">Mbyll</button>
+      </div>
+      <p class="sub" id="drawer-sub"></p>
+      <div id="drawer-body"></div>
+    </aside>
+  </div>
+
+  <script src="/admin/dashboard.js?v=1"></script>
+</body>
+</html>
