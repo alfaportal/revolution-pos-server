@@ -1,6 +1,7 @@
 /**
  * Llojet e biznesit për clients.tipi — Super Admin (telefon + desktop).
- * Sektoret e numëruara (1–12) për /admin/dashboard.
+ * Sektoret e numëruara (1–9) për /admin/dashboard.
+ * Hospitality = NJË kategori (e njëjta app KAFENE).
  */
 
 /** Tipi individualë që ruhen në DB (për regjistrim). */
@@ -33,90 +34,86 @@ const ADMIN_CLIENT_TIPI = [
 
 const ALLOWED_CLIENT_TIPI = [...ADMIN_CLIENT_TIPI];
 
+/** Tipet hospitality — e njëjta programë (KAFENE). */
+const HOSPITALITY_TIPET = [
+  "kafene",
+  "restorant",
+  "bar",
+  "piceri",
+  "fast_food",
+  "kebab",
+  "pasticeri",
+  "akullore",
+  "gjeltore",
+];
+
 /**
- * Sektoret e numëruara për Klientët në dashboard.
- * Çdo sektor përmban një ose më shumë tipi.
+ * Sektoret e numëruara për Klientët — VETËM 9.
+ * Kategoria 1 = krejt hospitality (jo të ndara).
  */
 const CLIENT_SECTORS = [
   {
     num: 1,
-    id: "hospitality_core",
-    label: "Kafene/Restorant/Bar",
-    tipet: ["kafene", "restorant", "bar"],
-    keywords: ["kafene", "restorant", "bar", "kafe", "restaurant", "cafe"],
+    id: "hospitality",
+    label: "Kafene / Restorant / Bar / Piceri / Fast Food / Kebab / Pastiçeri / Ëmbëltore / Akullore / Gjeltore",
+    tipet: [...HOSPITALITY_TIPET],
+    keywords: [
+      "kafene", "restorant", "bar", "piceri", "fast", "food", "kebab",
+      "pasticeri", "embeltore", "akullore", "gjeltore", "hospitality",
+      "kafe", "restaurant", "pizza", "pastry", "gelato",
+    ],
   },
   {
     num: 2,
-    id: "quick_food",
-    label: "Piceri/Fast Food/Kebab",
-    tipet: ["piceri", "fast_food", "kebab"],
-    keywords: ["piceri", "pizza", "fast", "food", "kebab", "fastfood"],
-  },
-  {
-    num: 3,
-    id: "sweets",
-    label: "Pastiçeri/Ëmbëltore/Akullore",
-    tipet: ["pasticeri", "akullore"],
-    keywords: ["pasticeri", "embeltore", "akullore", "pastry", "gelato", "embeltore"],
-  },
-  {
-    num: 4,
-    id: "poultry",
-    label: "Gjeltore",
-    tipet: ["gjeltore"],
-    keywords: ["gjeltore", "poultry"],
-  },
-  {
-    num: 5,
     id: "bakery",
     label: "Furrë Buke",
     tipet: ["furre_buke"],
     keywords: ["furre", "buke", "bakery", "furra"],
   },
   {
-    num: 6,
+    num: 3,
     id: "hotel",
     label: "Hotel Restorant",
     tipet: ["hotel_restorant"],
     keywords: ["hotel", "hotel restorant"],
   },
   {
-    num: 7,
+    num: 4,
     id: "nightlife",
-    label: "Bar Nate/Klub",
+    label: "Bar Nate / Klub",
     tipet: ["bar_nate", "klub", "pub_lounge"],
     keywords: ["nate", "klub", "club", "pub", "lounge", "nightlife"],
   },
   {
-    num: 8,
+    num: 5,
     id: "grocery",
-    label: "Market/Minimarket",
+    label: "Market / Minimarket",
     tipet: ["market", "minimarket"],
     keywords: ["market", "minimarket", "supermarket"],
   },
   {
-    num: 9,
+    num: 6,
     id: "fashion",
-    label: "Dyqan Rrobash/Këpucësh",
+    label: "Dyqan Rrobash / Këpucësh",
     tipet: ["dyqan_rroba", "dyqan_kepuce", "dyqan"],
     keywords: ["rroba", "kepuce", "dyqan", "fashion", "shoe", "clothing"],
   },
   {
-    num: 10,
+    num: 7,
     id: "health",
-    label: "Farmaci/Optikë",
+    label: "Farmaci / Optikë",
     tipet: ["farmaci", "optike"],
     keywords: ["farmaci", "optike", "pharmacy", "optic"],
   },
   {
-    num: 11,
+    num: 8,
     id: "beauty",
-    label: "Berber/Sallon Bukurie",
+    label: "Berber / Sallon Bukurie",
     tipet: ["berber", "sallon_bukurie"],
     keywords: ["berber", "sallon", "bukurie", "barber", "salon", "beauty"],
   },
   {
-    num: 12,
+    num: 9,
     id: "other",
     label: "Shërbime të tjera",
     tipet: ["tjeter"],
@@ -261,6 +258,7 @@ function sectorForTipi(tipi) {
 module.exports = {
   ADMIN_CLIENT_TIPI,
   ALLOWED_CLIENT_TIPI,
+  HOSPITALITY_TIPET,
   CLIENT_SECTORS,
   TIPI_LABELS,
   TIPI_ALIASES,
