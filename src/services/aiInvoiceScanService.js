@@ -3,16 +3,20 @@ const { isAiPaused } = require("../lib/aiConfig");
 
 const SCAN_PROMPT =
   "Analizo këtë foto të faturës së furnizuesit (faturë shitje/blerje, shqip ose anglisht). " +
-  "Lexo TË GJITHË rreshtat e produkteve nga tabela — asnjë rresht mos e anashkalo (edhe nëse është i fundit ose i vogël). " +
+  "Lexo TË GJITHË rreshtat e produkteve nga tabela — asnjë rresht mos e anashkalo. " +
   "Numëro rreshtat e produkteve në foto dhe kthe SAKTËSISHT të njëjtin numër në items. " +
-  "Për çdo artikull: name = emri i produktit (p.sh. Golden Eagle, Fanta, Uji Mineral); " +
-  "quantity = numri në kolonën Sasia (p.sh. 7 pako = 7, jo totali i pagesës); " +
-  "unit = pako/copë/kg/l sipas faturës (nëse është Pako përdor 'copë'); " +
-  "unit_price = çmimi PËR NJËSI me TVSH (Cmimi me tvsh), JO 'Vlera me tvsh' e rreshtit. " +
-  "supplier = emri i firmës/furnizuesit; invoice_number = numri i faturës; " +
-  "invoice_date = data e faturës në format YYYY-MM-DD (nëse duket). " +
-  "Përgjigju VETËM me JSON valid (pa markdown, pa shpjegim) në këtë format:\n" +
-  '{"supplier":"Emri i furnizuesit","invoice_number":"2026-900","invoice_date":"2026-07-15","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"copë","unit_price":9.50}]}';
+  "Për çdo artikull:\n" +
+  "- name = emri SAKTËSISHT si në faturë (p.sh. Golden Eagle 0.25l, Aria Mineral 0.50l) — MOS invento emra të tjerë\n" +
+  "- quantity = numri në kolonën Sasia (sa PAKO / njësi u blenë)\n" +
+  "- unit = 'pako' nëse Njësia është Pako/Pakë, përndryshe 'copë'/'kg'/'l'\n" +
+  "- unit_price = 'Cmimi me tvsh' (çmimi për 1 pako/njësi), JO 'Vlera me tvsh'\n" +
+  "- pieces_per_pack = sa COPË ka brenda 1 pako:\n" +
+  "  * nëse emri ka '10 cop' / '24 cop' → ai numër;\n" +
+  "  * për pije 0.25l/0.33l/0.5l në pako (pa numër) → zakonisht 24;\n" +
+  "  * nëse është tashmë copë → 1\n" +
+  "supplier, invoice_number, invoice_date (YYYY-MM-DD).\n" +
+  "Përgjigju VETËM me JSON valid (pa markdown):\n" +
+  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2026-900","invoice_date":"2026-07-15","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"pako","unit_price":9.50,"pieces_per_pack":24}]}';
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -21,7 +25,6 @@ function parseNumber(value) {
   let cleaned = String(value ?? "")
     .replace(/\s/g, "")
     .replace(/[^\d.,-]/g, "");
-  // Evropiane: 1.234,56 → 1234.56 | 7,00 → 7.00
   if (cleaned.includes(",") && cleaned.includes(".")) {
     cleaned = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (cleaned.includes(",")) {
@@ -39,9 +42,27 @@ function normalizeUnit(unit) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{M}/gu, "");
-  if (/^(kg|kilogram|kilogramë|kilo|g|gr|gram)$/.test(u)) return "kg";
-  if (/^(l|lt|liter|litër|litra|ml)$/.test(u)) return "l";
+  if (/^(pako|pake|pak|box|carton|kutia|kuti)$/.test(u)) return "pako";
+  if (/^(kg|kilogram|kilograme|kilo|g|gr|gram)$/.test(u)) return "kg";
+  if (/^(l|lt|liter|liter|litra|ml)$/.test(u)) return "l";
   return "copë";
+}
+
+function piecesFromName(name) {
+  const m = String(name || "").match(/(\d+)\s*cop(?:e|ë|a)?\b/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+}
+
+function inferPiecesPerPack(name, unit, explicit) {
+  const e = parseNumber(explicit);
+  if (e != null && e > 0) return Math.max(1, Math.round(e));
+  const fromName = piecesFromName(name);
+  if (fromName) return fromName;
+  const u = normalizeUnit(unit);
+  if (u === "pako") return 24;
+  return 1;
 }
 
 function normalizeInvoiceItems(rawItems) {
@@ -59,7 +80,13 @@ function normalizeInvoiceItems(rawItems) {
     );
     if (!name || quantity == null || quantity <= 0) continue;
 
-    const key = `${name.toLowerCase()}|${quantity}|${unit}`;
+    const pieces_per_pack = inferPiecesPerPack(
+      name,
+      unit,
+      entry?.pieces_per_pack ?? entry?.copa_ne_pako ?? entry?.pieces,
+    );
+
+    const key = `${name.toLowerCase()}|${quantity}|${unit}|${pieces_per_pack}`;
     if (seen.has(key)) continue;
     seen.add(key);
     items.push({
@@ -67,6 +94,7 @@ function normalizeInvoiceItems(rawItems) {
       quantity,
       unit,
       unit_price: unit_price != null && unit_price >= 0 ? unit_price : 0,
+      pieces_per_pack,
     });
   }
 
@@ -140,8 +168,8 @@ async function scanInvoiceFromImage({ mime, base64 }) {
   }
 
   const text = (data.content || [])
-    .filter(block => block.type === "text")
-    .map(block => block.text)
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
     .join("")
     .trim();
 

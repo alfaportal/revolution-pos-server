@@ -20,8 +20,13 @@ function normalizeItems(rawItems) {
       Math.max(0, Number(raw?.unit_price ?? raw?.price ?? raw?.cmimi) || 0),
     );
     const unit = String(raw?.unit || "copë").trim() || "copë";
+    let pieces_per_pack = Math.round(Number(raw?.pieces_per_pack ?? raw?.copa_ne_pako) || 0);
+    if (!(pieces_per_pack > 0)) {
+      const m = name.match(/(\d+)\s*cop/i);
+      pieces_per_pack = m ? Number(m[1]) : /pako/i.test(unit) ? 24 : 1;
+    }
     if (!name || quantity <= 0) continue;
-    out.push({ name, quantity, unit, unit_price });
+    out.push({ name, quantity, unit, unit_price, pieces_per_pack: Math.max(1, pieces_per_pack) });
   }
   return out;
 }
