@@ -16,27 +16,37 @@ function buildAiUsageInvoicePdf({
   costEur,
   calls,
   packageTier,
+  packageContents,
   invoiceNo,
   breakdown = {},
+  showAi = false,
 }) {
   const lines = [
-    "Revolution Invest POS — Fature AI",
-    `Nr: ${invoiceNo || `AI-${month}`}`,
+    "Revolution Invest POS — Fature",
+    `Nr: ${invoiceNo || `INV-${month}`}`,
     `Muaji: ${month}`,
     `Klienti: ${clientName || "—"}`,
     `Pakoja: ${packageTier || "—"}`,
-    "",
-    `Thirrje AI: ${Number(calls || 0)}`,
-    `Tokena: ${Number(tokensTotal || 0).toLocaleString("en-US")}`,
-    `Kosto: ${Number(costEur || 0).toFixed(4)} EUR`,
-    "",
-    "Detaje:",
   ];
+  if (packageContents) {
+    lines.push(`Permban: ${packageContents}`);
+  }
+  lines.push("");
+  lines.push(`Totali: ${Number(costEur || 0).toFixed(2)} EUR`);
+  if (showAi) {
+    lines.push(`AI thirrje/tokena: ${Number(calls || 0)} / ${Number(tokensTotal || 0).toLocaleString("en-US")}`);
+  }
+  lines.push("");
+  lines.push("Detaje:");
 
   for (const [feature, row] of Object.entries(breakdown || {})) {
-    if (!row || !row.calls) continue;
+    if (!row) continue;
+    if (feature === "ai_tokens" && !showAi) continue;
+    if (feature !== "package" && !row.calls && !Number(row.cost_eur)) continue;
+    const label = row.label || feature;
+    const contents = row.contents ? ` (${row.contents})` : "";
     lines.push(
-      `  ${feature}: ${row.calls} thirrje, ${row.tokens || 0} token, ${(row.cost_eur || 0).toFixed(4)} EUR`,
+      `  - ${label}${contents}: ${Number(row.cost_eur || 0).toFixed(2)} EUR`,
     );
   }
 

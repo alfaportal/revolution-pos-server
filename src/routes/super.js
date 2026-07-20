@@ -18,8 +18,10 @@ const {
   getAiUsageDashboard,
   getProblemsReport,
   getSettings,
-  updateSettings,
+  getSettingsAsync,
+  updateSettingsAsync,
   listBillingInvoices,
+  listBillingInvoicesAsync,
   createBillingInvoice,
   updateBillingInvoiceStatus,
   buildBillingInvoicePdf,
@@ -196,7 +198,7 @@ router.get(
 router.get(
   "/dashboard/billing/invoices",
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true, invoices: listBillingInvoices() });
+    res.json({ ok: true, invoices: await listBillingInvoicesAsync() });
   }),
 );
 
@@ -219,7 +221,8 @@ router.patch(
 router.get(
   "/dashboard/billing/invoices/:id/pdf",
   asyncHandler(async (req, res) => {
-    const inv = listBillingInvoices().find((x) => x.id === req.params.id);
+    const all = await listBillingInvoicesAsync();
+    const inv = all.find((x) => x.id === req.params.id) || listBillingInvoices().find((x) => x.id === req.params.id);
     if (!inv) return res.status(404).json({ ok: false, gabim: "Fatura nuk u gjet" });
     const pdf = buildBillingInvoicePdf(inv);
     res.setHeader("Content-Type", "application/pdf");
@@ -231,14 +234,19 @@ router.get(
 router.get(
   "/dashboard/settings",
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true, settings: getSettings() });
+    res.json({ ok: true, settings: await getSettingsAsync() });
   }),
 );
 
 router.put(
   "/dashboard/settings",
   asyncHandler(async (req, res) => {
-    const settings = updateSettings(req.body || {});
+    const body = req.body || {};
+    const settings = await updateSettingsAsync({
+      ...body,
+      _prices_are_marketing: true,
+      package_prices_ui: body.package_prices_ui || body.package_prices || undefined,
+    });
     res.json({ ok: true, settings });
   }),
 );

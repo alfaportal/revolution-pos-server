@@ -8,7 +8,7 @@ const { getSupabase } = require("../db");
 const { listClients, listLicenses } = require("./licenseService");
 const { listAiUsageSummary } = require("./aiUsageReportService");
 const { listStockAlertsForAdmin } = require("./stockService");
-const { packageLabel } = require("../lib/packages");
+const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, featuresForTier } = require("../lib/packages");
 const {
   CLIENT_SECTORS,
   ADMIN_CLIENT_TIPI,
@@ -23,14 +23,18 @@ const { listSystemFailures } = require("./systemFailureLog");
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
 const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json");
 
+/**
+ * Çmimet sipas ID legacy në DB (jo numri marketing).
+ * Pako 1 → pako_3, Pako 2 → pako_4, Pako 3 → pako_2, Pako 4 → pako_5
+ */
 const DEFAULT_SETTINGS = {
   admin_name: "Naser",
   admin_email: "admin@revolutioninvest.com",
   package_prices: {
-    pako_1: 29,
-    pako_2: 49,
-    pako_3: 79,
-    pako_4: 129,
+    pako_3: 150, // Pako 1
+    pako_4: 180, // Pako 2
+    pako_2: 220, // Pako 3 (pa AI)
+    pako_5: 250, // Pako 4 (AI)
   },
   ai_price_per_1k_tokens: 0.0025,
   currency: "EUR",
@@ -55,27 +59,182 @@ function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
 }
 
-function getSettings() {
-  const s = readJsonFile(SETTINGS_PATH, DEFAULT_SETTINGS);
-  s.package_prices = { ...DEFAULT_SETTINGS.package_prices, ...(s.package_prices || {}) };
+/** Normalizo çmimet: UI marketing → ID legacy; mos humb çmime të ruajtura. */
+function normalizePackagePrices(raw = {}) {
+  const out = { ...DEFAULT_SETTINGS.package_prices };
+  const src = raw && typeof raw === "object" ? raw : {};
+  // ID legacy direkte
+  for (const k of ["pako_2", "pako_3", "pako_4", "pako_5", "pako_1"]) {
+    if (src[k] != null && src[k] !== "" && Number.isFinite(Number(src[k]))) {
+      out[k] = Number(src[k]);
+    }
+  }
+  // Nëse admini ruajti me çelësa marketing (pako_1=Pako1…) — mapo te legacy
+  // Vetëm kur nuk ka ende vlerë legacy përkatëse nga UI i vjetër i gabuar:
+  // UI i vjetër shkruante set-p1→pako_1, set-p3→pako_3 (gabim).
+  // Tani UI dërgon marketing_prices ose legacy të sakta.
+  if (src.marketing && typeof src.marketing === "object") {
+    const m = src.marketing;
+    if (m.pako_1 != null) out.pako_3 = Number(m.pako_1);
+    if (m.pako_2 != null) out.pako_4 = Number(m.pako_2);
+    if (m.pako_3 != null) out.pako_2 = Number(m.pako_3);
+    if (m.pako_4 != null) out.pako_5 = Number(m.pako_4);
+  }
+  return out;
+}
+
+function mergeSettings(raw) {
+  const base = structuredClone(DEFAULT_SETTINGS);
+  const s = { ...base, ...(raw || {}) };
+  s.package_prices = normalizePackagePrices(s.package_prices || {});
+  if (s.ai_price_per_1k_tokens != null) {
+    s.ai_price_per_1k_tokens = Number(s.ai_price_per_1k_tokens);
+  }
+  // Për UI: çmimet sipas numrit marketing 1–4
+  s.package_prices_ui = {
+    pako_1: s.package_prices.pako_3,
+    pako_2: s.package_prices.pako_4,
+    pako_3: s.package_prices.pako_2,
+    pako_4: s.package_prices.pako_5,
+  };
+  s.package_catalog = [
+    { id: "pako_3", ui: "pako_1", name: "Pako 1", contents: packageContents("pako_3"), price: s.package_prices.pako_3 },
+    { id: "pako_4", ui: "pako_2", name: "Pako 2", contents: packageContents("pako_4"), price: s.package_prices.pako_4 },
+    { id: "pako_2", ui: "pako_3", name: "Pako 3", contents: packageContents("pako_2"), price: s.package_prices.pako_2 },
+    { id: "pako_5", ui: "pako_4", name: "Pako 4 (AI)", contents: packageContents("pako_5"), price: s.package_prices.pako_5 },
+  ];
   return s;
+}
+
+async function readSettingsFromDb() {
+  try {
+    const db = getSupabase();
+    const { data, error } = await db.from("super_admin_settings").select("settings").eq("id", 1).maybeSingle();
+    if (error || !data?.settings) return null;
+    return data.settings;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSettingsToDb(settings) {
+  try {
+    const db = getSupabase();
+    const { error } = await db.from("super_admin_settings").upsert({
+      id: 1,
+      settings,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) console.warn("[super-admin-settings] db write:", error.message);
+    return !error;
+  } catch (e) {
+    console.warn("[super-admin-settings] db write:", e.message || e);
+    return false;
+  }
+}
+
+function getSettings() {
+  const file = readJsonFile(SETTINGS_PATH, DEFAULT_SETTINGS);
+  return mergeSettings(file);
+}
+
+/** Async — preferon Supabase (mbijeton restart). */
+async function getSettingsAsync() {
+  const fromDb = await readSettingsFromDb();
+  if (fromDb && typeof fromDb === "object") {
+    const merged = mergeSettings(fromDb);
+    // sync lokal për backup
+    try {
+      writeJsonFile(SETTINGS_PATH, {
+        admin_name: merged.admin_name,
+        admin_email: merged.admin_email,
+        package_prices: merged.package_prices,
+        ai_price_per_1k_tokens: merged.ai_price_per_1k_tokens,
+        currency: merged.currency,
+      });
+    } catch {
+      /* ignore */
+    }
+    return merged;
+  }
+  return getSettings();
 }
 
 function updateSettings(patch = {}) {
   const cur = getSettings();
-  const next = {
-    ...cur,
-    ...patch,
+  return updateSettingsSync(cur, patch);
+}
+
+async function updateSettingsAsync(patch = {}) {
+  const cur = await getSettingsAsync();
+  const next = updateSettingsSync(cur, patch);
+  await writeSettingsToDb({
+    admin_name: next.admin_name,
+    admin_email: next.admin_email,
+    package_prices: next.package_prices,
+    ai_price_per_1k_tokens: next.ai_price_per_1k_tokens,
+    currency: next.currency,
+  });
+  return next;
+}
+
+function updateSettingsSync(cur, patch = {}) {
+  const pricePatch = { ...(patch.package_prices || {}) };
+  // Nëse UI dërgon çelësa marketing (pako_1…pako_4 si Pako 1…4), mapo
+  if (patch.package_prices_ui) {
+    pricePatch.marketing = patch.package_prices_ui;
+  } else if (
+    patch.package_prices &&
+    ("pako_1" in patch.package_prices || "pako_2" in patch.package_prices) &&
+    patch._prices_are_marketing
+  ) {
+    pricePatch.marketing = {
+      pako_1: patch.package_prices.pako_1,
+      pako_2: patch.package_prices.pako_2,
+      pako_3: patch.package_prices.pako_3,
+      pako_4: patch.package_prices.pako_4,
+    };
+  }
+
+  const nextRaw = {
+    admin_name: patch.admin_name != null ? patch.admin_name : cur.admin_name,
+    admin_email: patch.admin_email != null ? patch.admin_email : cur.admin_email,
+    currency: patch.currency != null ? patch.currency : cur.currency,
     package_prices: {
       ...cur.package_prices,
-      ...(patch.package_prices || {}),
+      ...pricePatch,
     },
+    ai_price_per_1k_tokens:
+      patch.ai_price_per_1k_tokens != null
+        ? Number(patch.ai_price_per_1k_tokens)
+        : cur.ai_price_per_1k_tokens,
   };
-  if (patch.ai_price_per_1k_tokens != null) {
-    next.ai_price_per_1k_tokens = Number(patch.ai_price_per_1k_tokens) || cur.ai_price_per_1k_tokens;
-  }
-  writeJsonFile(SETTINGS_PATH, next);
+  const next = mergeSettings(nextRaw);
+  writeJsonFile(SETTINGS_PATH, {
+    admin_name: next.admin_name,
+    admin_email: next.admin_email,
+    package_prices: next.package_prices,
+    ai_price_per_1k_tokens: next.ai_price_per_1k_tokens,
+    currency: next.currency,
+  });
   return next;
+}
+
+async function listBillingInvoicesAsync() {
+  try {
+    const db = getSupabase();
+    const { data, error } = await db
+      .from("super_admin_invoices")
+      .select("payload")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (!error && Array.isArray(data) && data.length) {
+      return data.map((r) => r.payload).filter(Boolean);
+    }
+  } catch {
+    /* fallback file */
+  }
+  return listBillingInvoices();
 }
 
 function listBillingInvoices() {
@@ -85,6 +244,24 @@ function listBillingInvoices() {
 
 function saveBillingInvoices(invoices) {
   writeJsonFile(INVOICES_PATH, { invoices });
+}
+
+async function saveBillingInvoiceDb(invoice) {
+  try {
+    const db = getSupabase();
+    await db.from("super_admin_invoices").upsert({
+      id: invoice.id,
+      payload: invoice,
+      created_at: invoice.created_at || new Date().toISOString(),
+    });
+  } catch (e) {
+    console.warn("[super-admin-invoices] db write:", e.message || e);
+  }
+  const all = listBillingInvoices();
+  const idx = all.findIndex((x) => x.id === invoice.id);
+  if (idx >= 0) all[idx] = invoice;
+  else all.unshift(invoice);
+  saveBillingInvoices(all);
 }
 
 function dayStartIso(d = new Date()) {
@@ -269,6 +446,7 @@ async function getClientsGrouped() {
       tipi_label: labelForTipi(c.tipi),
       package_tier: c.package_tier,
       package_label: packageLabel(c.package_tier),
+      package_contents: packageContents(c.package_tier),
       status: c.aktiv === false ? "joaktiv" : activeLic ? "aktiv" : "joaktiv",
       sales_today: Number((salesToday.byClient.get(c.id) || 0).toFixed(2)),
       email: c.email || "",
@@ -729,37 +907,61 @@ async function getProblemsReport() {
 
 async function createBillingInvoice({ restaurant_id, period_from, period_to, services, notes }) {
   const detail = await getClientDetail(restaurant_id);
-  const settings = getSettings();
+  const settings = await getSettingsAsync();
+  const tier = normalizePackageTier(detail.client.package_tier);
+  const feats = featuresForTier(tier);
   const ai = detail.ai_usage || {};
   const packagePrice =
-    Number(settings.package_prices?.[detail.client.package_tier]) ||
-    Number(settings.package_prices?.pako_1) ||
+    Number(settings.package_prices?.[tier]) ||
+    Number(settings.package_prices_ui?.[`pako_${marketingNumFallback(tier)}`]) ||
     0;
-  const tokenCost = Number(ai.cost_eur_total) || 0;
-  const servicesTotal = Array.isArray(services)
-    ? services.reduce((s, x) => s + (Number(x.amount) || 0), 0)
-    : packagePrice;
-  const total = Number((servicesTotal + tokenCost).toFixed(2));
+  const includeAi = Boolean(feats.ai);
+  const tokenCost = includeAi ? Number(ai.cost_eur_total) || 0 : 0;
+  const tokens = includeAi ? ai.tokens_total || 0 : 0;
+  const pkgLabel = packageLabelFull(tier);
+  const defaultServices = [
+    {
+      label: pkgLabel,
+      amount: packagePrice,
+      contents: packageContents(tier),
+    },
+  ];
+  if (includeAi && tokenCost > 0) {
+    defaultServices.push({
+      label: `AI tokena (${Number(tokens).toLocaleString("sq-AL")})`,
+      amount: tokenCost,
+    });
+  }
+  const servicesList = Array.isArray(services) && services.length ? services : defaultServices;
+  const servicesTotal = servicesList.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const total = Number(servicesTotal.toFixed(2));
   const invoice = {
     id: `INV-${Date.now()}`,
     restaurant_id,
     client_name: detail.client.emri,
     period_from: period_from || isoDate(addDays(new Date(), -30)),
     period_to: period_to || isoDate(new Date()),
-    package_tier: detail.client.package_tier,
+    package_tier: tier,
+    package_label: pkgLabel,
+    package_contents: packageContents(tier),
     package_price: packagePrice,
-    ai_tokens: ai.tokens_total || 0,
+    ai_tokens: tokens,
     ai_cost: tokenCost,
-    services: services || [{ label: `Pako ${packageLabel(detail.client.package_tier)}`, amount: packagePrice }],
+    ai_included: includeAi,
+    services: servicesList,
     notes: notes || "",
     total,
     status: "papaguar",
     created_at: new Date().toISOString(),
   };
-  const all = listBillingInvoices();
-  all.unshift(invoice);
-  saveBillingInvoices(all);
+  await saveBillingInvoiceDb(invoice);
   return invoice;
+}
+
+function marketingNumFallback(tier) {
+  const id = normalizePackageTier(tier);
+  const map = { pako_3: 1, pako_4: 2, pako_2: 3, pako_5: 4 };
+  return map[id] || 1;
 }
 
 function updateBillingInvoiceStatus(id, status) {
@@ -769,22 +971,40 @@ function updateBillingInvoiceStatus(id, status) {
   const st = String(status) === "paguar" ? "paguar" : "papaguar";
   all[idx] = { ...all[idx], status: st, updated_at: new Date().toISOString() };
   saveBillingInvoices(all);
+  saveBillingInvoiceDb(all[idx]).catch(() => {});
   return all[idx];
 }
 
 function buildBillingInvoicePdf(invoice) {
+  const includeAi = invoice.ai_included === true && Number(invoice.ai_cost) > 0;
+  const breakdown = {
+    package: {
+      calls: 1,
+      tokens: 0,
+      cost_eur: invoice.package_price,
+      label: invoice.package_label || packageLabelFull(invoice.package_tier),
+      contents: invoice.package_contents || packageContents(invoice.package_tier),
+    },
+  };
+  if (includeAi) {
+    breakdown.ai_tokens = {
+      calls: 1,
+      tokens: invoice.ai_tokens,
+      cost_eur: invoice.ai_cost,
+      label: "AI tokena",
+    };
+  }
   return buildAiUsageInvoicePdf({
     clientName: invoice.client_name,
     month: `${invoice.period_from} — ${invoice.period_to}`,
-    tokensTotal: invoice.ai_tokens,
+    tokensTotal: includeAi ? invoice.ai_tokens : 0,
     costEur: invoice.total,
-    calls: invoice.ai_tokens,
-    packageTier: packageLabel(invoice.package_tier),
+    calls: includeAi ? invoice.ai_tokens : 0,
+    packageTier: invoice.package_label || packageLabelFull(invoice.package_tier),
+    packageContents: invoice.package_contents || packageContents(invoice.package_tier),
     invoiceNo: invoice.id,
-    breakdown: {
-      package: { calls: 1, tokens: 0, cost_eur: invoice.package_price },
-      ai_tokens: { calls: 1, tokens: invoice.ai_tokens, cost_eur: invoice.ai_cost },
-    },
+    breakdown,
+    showAi: includeAi,
   });
 }
 
@@ -798,8 +1018,11 @@ module.exports = {
   getProblemsReport,
   reportToCsv,
   getSettings,
+  getSettingsAsync,
   updateSettings,
+  updateSettingsAsync,
   listBillingInvoices,
+  listBillingInvoicesAsync,
   createBillingInvoice,
   updateBillingInvoiceStatus,
   buildBillingInvoicePdf,

@@ -99,18 +99,26 @@ const TIER_FEATURES = {
 
 const TIER_LABELS = {
   pako_1: "Legacy — POS & faqe",
-  pako_2: "Pako 3 — Full (pa AI)",
-  pako_3: "Pako 1 — Standard (KDS, kamarier, cloud)",
-  pako_4: "Pako 2 — Pro (porosi online)",
-  pako_5: "Pako 4 — AI Profesionale",
+  pako_2: "Pako 3 — Full (POS, KDS, kamarier, cloud, kiosk, porosi online — pa AI)",
+  pako_3: "Pako 1 — Standard (POS, KDS, kamarier, cloud, kiosk)",
+  pako_4: "Pako 2 — Pro (Standard + porosi online)",
+  pako_5: "Pako 4 — AI Profesionale (krejt + AI)",
 };
 
 const TIER_SHORT_LABELS = {
   pako_1: "Legacy",
-  pako_2: "Pako 3",
+  pako_2: "Pako 3 (pa AI)",
   pako_3: "Pako 1",
   pako_4: "Pako 2",
-  pako_5: "Pako 4",
+  pako_5: "Pako 4 (AI)",
+};
+
+const TIER_CONTENTS = {
+  pako_1: "POS, panel pronari, faqe",
+  pako_2: "POS, KDS, kamarier, cloud, kiosk, porosi online — pa AI",
+  pako_3: "POS, KDS, kamarier, cloud, kiosk",
+  pako_4: "POS, KDS, kamarier, cloud, kiosk, porosi online",
+  pako_5: "POS, KDS, kamarier, cloud, kiosk, porosi online, AI",
 };
 
 /** Numri marketing 1–4 për shfaqje. */
@@ -171,7 +179,19 @@ function packageUpgradeMessage(feature) {
 }
 
 function packageLabel(tier) {
-  return labelForTier(tier);
+  const id = normalizePackageTier(tier);
+  return TIER_SHORT_LABELS[id] || labelForTier(tier);
+}
+
+/** Emër i plotë me përmbajtje — për fatura / detaje. */
+function packageLabelFull(tier) {
+  const id = normalizePackageTier(tier);
+  return TIER_LABELS[id] || packageLabel(tier);
+}
+
+function packageContents(tier) {
+  const id = normalizePackageTier(tier);
+  return TIER_CONTENTS[id] || "";
 }
 
 module.exports = {
@@ -182,6 +202,7 @@ module.exports = {
   TIER_FEATURES,
   TIER_LABELS,
   TIER_SHORT_LABELS,
+  TIER_CONTENTS,
   normalizePackageTier,
   featuresForTier,
   clientHasFeature,
@@ -189,6 +210,8 @@ module.exports = {
   AI_UPGRADE_MESSAGE,
   marketingPakoNumber,
   packageLabel,
+  packageLabelFull,
+  packageContents,
   toNewTier,
   toLegacyTier,
   labelForTier,
