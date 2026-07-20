@@ -1109,10 +1109,13 @@
         <h2 id="invoice-scan-title">Skano faturën e furnizuesit</h2>
         <button type="button" class="owner-modal-close" id="invoice-scan-close" aria-label="Mbyll">×</button>
       </div>
-      <p class="links-hint">Kamera ose galeri — AI nxjerr artikujt (emër, sasi, njësi, çmim). Pas konfirmimit stoku përditësohet.</p>
+      <p class="links-hint">Kamera ose galeri — AI nxjerr artikujt (emër, sasi, çmim). Pas konfirmimit stoku përditësohet menjëherë.</p>
       <div class="menu-scan-upload">
-        <label class="btn btn-ghost btn-sm" for="invoice-scan-file">📷 Kamera / Galeri</label>
-        <input type="file" id="invoice-scan-file" accept="image/*" capture="environment" hidden>
+        <label class="btn btn-ghost btn-sm" for="invoice-scan-file-camera">📷 Kamera</label>
+        <input type="file" id="invoice-scan-file-camera" accept="image/*" capture="environment" hidden>
+        <label class="btn btn-ghost btn-sm" for="invoice-scan-file-gallery">📁 Galeri / Album</label>
+        <input type="file" id="invoice-scan-file-gallery" accept="image/*" hidden>
+        <input type="file" id="invoice-scan-file" accept="image/*" hidden>
         <button type="button" class="btn btn-primary btn-sm" id="btn-invoice-scan-run" disabled>Skano</button>
       </div>
       <div id="invoice-scan-preview-wrap" class="menu-scan-preview-wrap hidden">
@@ -1185,7 +1188,7 @@
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
   <script src="/js/owner-inventory.js?v=2"></script>
-  <script src="/js/owner-invoice-scan.js?v=1"></script>
+  <script src="/js/owner-invoice-scan.js?v=2"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
   <script src="/js/owner-ai-assistant.js?v=2"></script>

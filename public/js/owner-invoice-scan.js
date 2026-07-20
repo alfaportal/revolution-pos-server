@@ -2,6 +2,7 @@
 (function () {
   let invoiceScanItems = [];
   let invoiceScanPreviewUrl = null;
+  let invoiceScanFile = null;
   let ingredientsForMatch = [];
 
   function escAttr(s) {
@@ -13,16 +14,56 @@
       .replace(/'/g, "&#39;");
   }
 
-  async function readImageFile(file, maxBytes, label) {
+  /** Kompreso foton që të kalojë limiti i serverit (ishte "request entity too large"). */
+  async function compressImageToDataUrl(file, { maxEdge = 1600, maxBytes = 850_000 } = {}) {
     if (!file) return null;
-    if (file.size > maxBytes) {
-      throw new Error(`${label} max ${Math.round(maxBytes / 1024)} KB.`);
+    const drawToCanvas = async () => {
+      let bitmap = null;
+      try {
+        bitmap = await createImageBitmap(file);
+      } catch {
+        const url = URL.createObjectURL(file);
+        try {
+          const img = await new Promise((resolve, reject) => {
+            const el = new Image();
+            el.onload = () => resolve(el);
+            el.onerror = () => reject(new Error("Nuk u lexua fotoja."));
+            el.src = url;
+          });
+          return { width: img.naturalWidth || img.width, height: img.naturalHeight || img.height, source: img };
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+      const out = { width: bitmap.width, height: bitmap.height, source: bitmap };
+      return out;
+    };
+
+    const { width, height, source } = await drawToCanvas();
+    let w = width || 1200;
+    let h = height || 1200;
+    const scale = Math.min(1, maxEdge / Math.max(w, h, 1));
+    w = Math.max(1, Math.round(w * scale));
+    h = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(source, 0, 0, w, h);
+    if (typeof source.close === "function") source.close();
+
+    let quality = 0.78;
+    let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    while (blob && blob.size > maxBytes && quality > 0.4) {
+      quality -= 0.08;
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
     }
+    if (!blob) throw new Error("Kompresimi i fotos dështoi.");
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => reject(new Error("Nuk u lexua skedari."));
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(blob);
     });
   }
 
@@ -43,17 +84,22 @@
       .trim()
       .toLowerCase()
       .normalize("NFD")
-      .replace(/\p{M}/gu, "");
+      .replace(/\p{M}/gu, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function suggestIngredientId(name) {
     const target = normalizeName(name);
     if (!target || !ingredientsForMatch.length) return "";
-    const exact = ingredientsForMatch.find(i => normalizeName(i.name) === target);
+    const exact = ingredientsForMatch.find((i) => normalizeName(i.name) === target);
     if (exact) return exact.id;
-    const partial = ingredientsForMatch.find(i => {
+    const tokens = target.split(" ").filter((t) => t.length >= 3);
+    const partial = ingredientsForMatch.find((i) => {
       const n = normalizeName(i.name);
-      return n.includes(target) || target.includes(n);
+      if (n.includes(target) || target.includes(n)) return true;
+      return tokens.some((t) => n.includes(t));
     });
     return partial?.id || "";
   }
@@ -62,7 +108,9 @@
     const opts = ['<option value="">— Krijo i ri —</option>'];
     for (const ing of ingredientsForMatch) {
       const sel = ing.id === selectedId ? " selected" : "";
-      opts.push(`<option value="${escAttr(ing.id)}"${sel}>${escAttr(ing.name)} (${escAttr(ing.unit)})</option>`);
+      opts.push(
+        `<option value="${escAttr(ing.id)}"${sel}>${escAttr(ing.name)} (${escAttr(ing.unit)})</option>`,
+      );
     }
     return opts.join("");
   }
@@ -86,7 +134,7 @@
             <select class="invoice-scan-unit" data-idx="${idx}">
               <option value="kg"${item.unit === "kg" ? " selected" : ""}>kg</option>
               <option value="l"${item.unit === "l" ? " selected" : ""}>l</option>
-              <option value="copë"${item.unit === "copë" ? " selected" : ""}>copë</option>
+              <option value="copë"${item.unit !== "kg" && item.unit !== "l" ? " selected" : ""}>copë</option>
             </select>
           </td>
           <td><input type="number" class="invoice-scan-price" data-idx="${idx}" min="0" step="0.01" value="${Number(item.unit_price || 0).toFixed(2)}"></td>
@@ -98,21 +146,23 @@
   }
 
   function readInvoiceScanItemsFromDom() {
-    return invoiceScanItems.map((item, idx) => {
-      const name = document.querySelector(`.invoice-scan-name[data-idx="${idx}"]`)?.value?.trim();
-      const quantity = Number(document.querySelector(`.invoice-scan-qty[data-idx="${idx}"]`)?.value);
-      const unit = document.querySelector(`.invoice-scan-unit[data-idx="${idx}"]`)?.value || "copë";
-      const unit_price = Number(document.querySelector(`.invoice-scan-price[data-idx="${idx}"]`)?.value);
-      const ingredient_id = document.querySelector(`.invoice-scan-match[data-idx="${idx}"]`)?.value || "";
-      return {
-        name: name || item.name,
-        quantity: Number.isFinite(quantity) ? quantity : item.quantity,
-        unit,
-        unit_price: Number.isFinite(unit_price) ? unit_price : item.unit_price,
-        ingredient_id: ingredient_id || null,
-        create_if_missing: !ingredient_id,
-      };
-    }).filter(item => item.name && Number.isFinite(item.quantity) && item.quantity > 0);
+    return invoiceScanItems
+      .map((item, idx) => {
+        const name = document.querySelector(`.invoice-scan-name[data-idx="${idx}"]`)?.value?.trim();
+        const quantity = Number(document.querySelector(`.invoice-scan-qty[data-idx="${idx}"]`)?.value);
+        const unit = document.querySelector(`.invoice-scan-unit[data-idx="${idx}"]`)?.value || "copë";
+        const unit_price = Number(document.querySelector(`.invoice-scan-price[data-idx="${idx}"]`)?.value);
+        const ingredient_id = document.querySelector(`.invoice-scan-match[data-idx="${idx}"]`)?.value || "";
+        return {
+          name: name || item.name,
+          quantity: Number.isFinite(quantity) ? quantity : item.quantity,
+          unit,
+          unit_price: Number.isFinite(unit_price) ? unit_price : item.unit_price,
+          ingredient_id: ingredient_id || null,
+          create_if_missing: !ingredient_id,
+        };
+      })
+      .filter((item) => item.name && Number.isFinite(item.quantity) && item.quantity > 0);
   }
 
   async function loadIngredientsForMatch() {
@@ -126,10 +176,14 @@
 
   async function openInvoiceScanModal() {
     invoiceScanItems = [];
+    invoiceScanFile = null;
     setInvoiceScanStatus("", true);
     document.getElementById("invoice-scan-results")?.classList.add("hidden");
     document.getElementById("invoice-scan-loading")?.classList.add("hidden");
-    document.getElementById("invoice-scan-file").value = "";
+    ["invoice-scan-file", "invoice-scan-file-camera", "invoice-scan-file-gallery"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
     document.getElementById("invoice-scan-supplier").value = "";
     document.getElementById("invoice-scan-number").value = "";
     document.getElementById("btn-invoice-scan-run").disabled = true;
@@ -147,23 +201,63 @@
   }
 
   window.openInvoiceScanModal = () => {
-    openInvoiceScanModal().catch(err => setInvoiceScanStatus(err.message, false));
+    openInvoiceScanModal().catch((err) => setInvoiceScanStatus(err.message, false));
   };
 
-  async function runInvoiceScan() {
-    const file = document.getElementById("invoice-scan-file")?.files?.[0];
+  function onInvoiceFileChosen(file) {
+    const previewWrap = document.getElementById("invoice-scan-preview-wrap");
+    const preview = document.getElementById("invoice-scan-preview");
+    const runBtn = document.getElementById("btn-invoice-scan-run");
     if (!file) {
-      setInvoiceScanStatus("Zgjidhni një foto fillimisht.", false);
+      invoiceScanFile = null;
+      if (runBtn) runBtn.disabled = true;
+      previewWrap?.classList.add("hidden");
+      return;
+    }
+    invoiceScanFile = file;
+    const hidden = document.getElementById("invoice-scan-file");
+    if (hidden) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        hidden.files = dt.files;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (invoiceScanPreviewUrl) URL.revokeObjectURL(invoiceScanPreviewUrl);
+    invoiceScanPreviewUrl = URL.createObjectURL(file);
+    if (preview) preview.src = invoiceScanPreviewUrl;
+    previewWrap?.classList.remove("hidden");
+    if (runBtn) runBtn.disabled = false;
+    invoiceScanItems = [];
+    document.getElementById("invoice-scan-results")?.classList.add("hidden");
+    setInvoiceScanStatus("Foto e gatshme — shtyp Skano.", true);
+  }
+
+  async function runInvoiceScan() {
+    const file =
+      invoiceScanFile ||
+      document.getElementById("invoice-scan-file")?.files?.[0] ||
+      document.getElementById("invoice-scan-file-gallery")?.files?.[0] ||
+      document.getElementById("invoice-scan-file-camera")?.files?.[0];
+    if (!file) {
+      setInvoiceScanStatus("Zgjidhni një foto nga kamera ose galeria.", false);
+      return;
+    }
+    if (!navigator.onLine) {
+      setInvoiceScanStatus("Nuk ka internet. Lidhu dhe provo sërish — skanimi AI kërkon rrjet.", false);
       return;
     }
     const runBtn = document.getElementById("btn-invoice-scan-run");
     const loading = document.getElementById("invoice-scan-loading");
     if (runBtn) runBtn.disabled = true;
     loading?.classList.remove("hidden");
-    setInvoiceScanStatus("", true);
+    setInvoiceScanStatus("Duke kompresuar foton…", true);
     document.getElementById("invoice-scan-results")?.classList.add("hidden");
     try {
-      const photo = await readImageFile(file, 4_000_000, "Foto e faturës");
+      const photo = await compressImageToDataUrl(file);
+      setInvoiceScanStatus("Duke lexuar faturën me AI…", true);
       const data = await api("/api/ai/scan-invoice", {
         method: "POST",
         body: JSON.stringify({ photo }),
@@ -173,11 +267,19 @@
       document.getElementById("invoice-scan-number").value = data.invoice_number || "";
       renderInvoiceScanItems();
       setInvoiceScanStatus(
-        `${invoiceScanItems.length} artikuj u gjetën (${Number(data.usage?.tokens_used || 0).toLocaleString("sq-AL")} tokenë).`,
+        `${invoiceScanItems.length} artikuj u gjetën (${Number(data.usage?.tokens_used || 0).toLocaleString("sq-AL")} tokenë). Kontrollo dhe Regjistro në Stok.`,
         true,
       );
     } catch (err) {
-      setInvoiceScanStatus(err.message, false);
+      const msg = String(err.message || err || "");
+      if (/entity too large|413|payload/i.test(msg)) {
+        setInvoiceScanStatus(
+          "Fotoja është ende shumë e madhe. Provo nga Galeria një foto më të vogël, ose rifoto më afër faturës.",
+          false,
+        );
+      } else {
+        setInvoiceScanStatus(msg, false);
+      }
     } finally {
       loading?.classList.add("hidden");
       if (runBtn) runBtn.disabled = false;
@@ -195,10 +297,22 @@
     const applyBtn = document.getElementById("btn-invoice-scan-apply");
     if (applyBtn) applyBtn.disabled = true;
     setInvoiceScanStatus("Duke përditësuar stokun…", true);
+    const payload = { supplier, invoice_number, items };
     try {
+      if (!navigator.onLine) {
+        const key = "ri_pos_pending_invoice_scans";
+        const q = JSON.parse(localStorage.getItem(key) || "[]");
+        q.push({ ...payload, saved_at: new Date().toISOString() });
+        localStorage.setItem(key, JSON.stringify(q));
+        setInvoiceScanStatus(
+          "Pa internet — fatura u ruajt lokalisht. Do të sinkronizohet kur të vijë rrjeti.",
+          true,
+        );
+        return;
+      }
       const data = await api("/api/owner/inventory/apply-invoice-scan", {
         method: "POST",
-        body: JSON.stringify({ supplier, invoice_number, items }),
+        body: JSON.stringify(payload),
       });
       closeInvoiceScanModal();
       if (typeof window.loadOwnerInventory === "function") {
@@ -213,9 +327,52 @@
         msg.className = "owner-license-msg ok";
       }
     } catch (err) {
+      if (!navigator.onLine || /failed to fetch|network|offline/i.test(String(err.message || ""))) {
+        try {
+          const key = "ri_pos_pending_invoice_scans";
+          const q = JSON.parse(localStorage.getItem(key) || "[]");
+          q.push({ ...payload, saved_at: new Date().toISOString() });
+          localStorage.setItem(key, JSON.stringify(q));
+          setInvoiceScanStatus("Gabim rrjeti — u ruajt për sinkronizim më vonë.", true);
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
       setInvoiceScanStatus(err.message, false);
     } finally {
       if (applyBtn) applyBtn.disabled = false;
+    }
+  }
+
+  async function flushPendingInvoiceScans() {
+    if (!navigator.onLine) return;
+    const key = "ri_pos_pending_invoice_scans";
+    let q = [];
+    try {
+      q = JSON.parse(localStorage.getItem(key) || "[]");
+    } catch {
+      q = [];
+    }
+    if (!Array.isArray(q) || !q.length) return;
+    const remain = [];
+    for (const row of q) {
+      try {
+        await api("/api/owner/inventory/apply-invoice-scan", {
+          method: "POST",
+          body: JSON.stringify({
+            supplier: row.supplier || "",
+            invoice_number: row.invoice_number || "",
+            items: row.items || [],
+          }),
+        });
+      } catch {
+        remain.push(row);
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(remain));
+    if (remain.length < q.length && typeof window.loadOwnerInventory === "function") {
+      window.loadOwnerInventory().catch(() => {});
     }
   }
 
@@ -246,33 +403,28 @@
   window.applyInvoiceScanAiButton = applyInvoiceScanAiButton;
 
   document.getElementById("btn-invoice-scan-ai")?.addEventListener("click", () => {
-    openInvoiceScanModal().catch(err => setInvoiceScanStatus(err.message, false));
+    openInvoiceScanModal().catch((err) => setInvoiceScanStatus(err.message, false));
   });
   document.getElementById("invoice-scan-close")?.addEventListener("click", closeInvoiceScanModal);
   document.getElementById("invoice-scan-backdrop")?.addEventListener("click", closeInvoiceScanModal);
   document.getElementById("btn-invoice-scan-run")?.addEventListener("click", () => {
-    runInvoiceScan().catch(err => setInvoiceScanStatus(err.message, false));
+    runInvoiceScan().catch((err) => setInvoiceScanStatus(err.message, false));
   });
   document.getElementById("btn-invoice-scan-apply")?.addEventListener("click", () => {
-    applyInvoiceScan().catch(err => setInvoiceScanStatus(err.message, false));
+    applyInvoiceScan().catch((err) => setInvoiceScanStatus(err.message, false));
   });
-  document.getElementById("invoice-scan-file")?.addEventListener("change", e => {
-    const file = e.target.files?.[0];
-    const previewWrap = document.getElementById("invoice-scan-preview-wrap");
-    const preview = document.getElementById("invoice-scan-preview");
-    const runBtn = document.getElementById("btn-invoice-scan-run");
-    if (!file) {
-      if (runBtn) runBtn.disabled = true;
-      previewWrap?.classList.add("hidden");
-      return;
-    }
-    if (invoiceScanPreviewUrl) URL.revokeObjectURL(invoiceScanPreviewUrl);
-    invoiceScanPreviewUrl = URL.createObjectURL(file);
-    if (preview) preview.src = invoiceScanPreviewUrl;
-    previewWrap?.classList.remove("hidden");
-    if (runBtn) runBtn.disabled = false;
-    invoiceScanItems = [];
-    document.getElementById("invoice-scan-results")?.classList.add("hidden");
-    setInvoiceScanStatus("", true);
+
+  function bindFileInput(id) {
+    document.getElementById(id)?.addEventListener("change", (e) => {
+      onInvoiceFileChosen(e.target.files?.[0] || null);
+    });
+  }
+  bindFileInput("invoice-scan-file");
+  bindFileInput("invoice-scan-file-camera");
+  bindFileInput("invoice-scan-file-gallery");
+
+  window.addEventListener("online", () => {
+    flushPendingInvoiceScans().catch(() => {});
   });
+  setTimeout(() => flushPendingInvoiceScans().catch(() => {}), 2500);
 })();

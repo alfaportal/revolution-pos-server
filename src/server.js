@@ -61,7 +61,7 @@ const PORT = Number(process.env.PORT) || 8080;
 app.set("trust proxy", 1);
 
 app.use(corsMiddleware);
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "12mb" }));
 app.use(jsonErrorHandler);
 app.use(cookieParser());
 app.use(requestLogger);

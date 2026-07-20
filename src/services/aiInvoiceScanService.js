@@ -2,10 +2,15 @@ const { getAnthropicVisionConfig } = require("../lib/aiVisionConfig");
 const { isAiPaused } = require("../lib/aiConfig");
 
 const SCAN_PROMPT =
-  "Analizo këtë foto të faturës së furnizuesit (faturë blerje, dërgesë magazinë). " +
-  "Ekstrakto furnizuesin, numrin e faturës dhe të gjithë artikujt e dukshëm me emër, sasi, njësi dhe çmim për njësi. " +
+  "Analizo këtë foto të faturës së furnizuesit (faturë shitje/blerje, shqip ose anglisht). " +
+  "Lexo TË GJITHË rreshtat e produkteve nga tabela (Produkti / Emri, Sasia, Njësia, Çmimi). " +
+  "Për çdo artikull: name = emri i produktit (p.sh. Golden Eagle, Fanta, Uji Mineral); " +
+  "quantity = numri në kolonën Sasia (p.sh. 7 pako = 7, jo totali i pagesës); " +
+  "unit = pako/copë/kg/l sipas faturës (nëse është Pako përdor 'copë'); " +
+  "unit_price = çmimi PËR NJËSI me TVSH (Cmimi me tvsh), JO 'Vlera me tvsh' e rreshtit. " +
+  "Mos harro asnjë rresht të dukshëm. " +
   "Përgjigju VETËM me JSON valid (pa markdown, pa shpjegim) në këtë format:\n" +
-  '{"supplier":"Emri i furnizuesit","invoice_number":"BL-123","items":[{"name":"Miell T500","quantity":10,"unit":"kg","unit_price":0.85}]}';
+  '{"supplier":"Emri i furnizuesit","invoice_number":"2026-900","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"copë","unit_price":9.50}]}';
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
