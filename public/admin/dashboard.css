@@ -359,6 +359,41 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   background: var(--panel);
 }
 .license-card h4 { margin: 0 0 0.65rem; font-size: 1.15rem; }
+.lic-field-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lic-edit-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  min-height: 48px;
+}
+.lic-edit-input:focus {
+  outline: none;
+  border-color: var(--accent-2, #ff8555);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.25);
+}
+.lic-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+.lic-card-actions .btn { width: 100%; min-height: 48px; font-size: 1.05rem; }
 .copy-row {
   display: flex;
   gap: 0.5rem;
