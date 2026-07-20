@@ -252,13 +252,54 @@ async function apiGenerateLicenseKey() {
   return celesi;
 }
 
-/** LICENSE_KEY nga HARDWARE_ID — i njëjti si generate-license.js (SHA256). */
+/** LICENSE_KEY nga HARDWARE_ID — i njëjti si generate-license.js / Aktivizo KAFENE. */
 async function apiGenerateHardwareLicenseKey(hardwareId) {
-  const data = await api("/api/super/generate-license-key", {
-    method: "POST",
-    body: JSON.stringify({ hardwareId: String(hardwareId || "").trim() }),
+  const hw = String(hardwareId || "").trim();
+  if (!hw) throw new Error("Fut ID e pajisjes (HARDWARE_ID) nga ekrani i klientit.");
+  // Prefero /api/admin (panel Super Admin); fallback /api/super (dashboard)
+  try {
+    const data = await api("/api/admin/licenses/generate-hardware-key", {
+      method: "POST",
+      body: JSON.stringify({ hardwareId: hw }),
+    });
+    return data.licenseKey || data.celesi || "";
+  } catch {
+    const data = await api("/api/super/generate-license-key", {
+      method: "POST",
+      body: JSON.stringify({ hardwareId: hw }),
+    });
+    return data.licenseKey || data.celesi || "";
+  }
+}
+
+function formatHwIdInput(raw) {
+  const hex = String(raw || "")
+    .replace(/[^a-fA-F0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 16);
+  if (hex.length <= 4) return hex;
+  if (hex.length <= 8) return `${hex.slice(0, 4)}-${hex.slice(4)}`;
+  if (hex.length <= 12) return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}`;
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+}
+
+function bindHwIdAutoFormat(el) {
+  if (!el || el.dataset.hwFormatBound === "1") return;
+  el.dataset.hwFormatBound = "1";
+  el.addEventListener("input", () => {
+    const start = el.selectionStart;
+    const before = el.value;
+    const next = formatHwIdInput(el.value);
+    if (next === before) return;
+    el.value = next;
+    try {
+      const diff = next.length - before.length;
+      const pos = Math.max(0, (start || 0) + diff);
+      el.setSelectionRange(pos, pos);
+    } catch {
+      /* ignore */
+    }
   });
-  return data.licenseKey || data.celesi || "";
 }
 
 async function apiGenerateDeviceId() {
@@ -278,10 +319,17 @@ async function fillLicensePair(keyInputId, deviceInputId) {
 function bindLicenseModalPairActions({ keyId, deviceId, genKeyId, genDeviceId, genBothId }) {
   const modal = document.getElementById("modal-form");
   if (!modal) return;
+  bindHwIdAutoFormat(modal.querySelector(`#${deviceId}`));
   modal.querySelector(`#${genKeyId}`)?.addEventListener("click", async e => {
     e.preventDefault();
     try {
-      document.getElementById(keyId).value = await apiGenerateLicenseKey();
+      const hw = String(document.getElementById(deviceId)?.value || "").trim();
+      if (!hw) {
+        alert("Shkruaj ID e pajisjes (nga ekrani Aktivizo KAFENE), pastaj Gjenero kodin.");
+        document.getElementById(deviceId)?.focus();
+        return;
+      }
+      document.getElementById(keyId).value = await apiGenerateHardwareLicenseKey(hw);
     } catch (err) {
       alert(err.message || "Gjenerimi i kodit dështoi.");
     }
@@ -297,7 +345,13 @@ function bindLicenseModalPairActions({ keyId, deviceId, genKeyId, genDeviceId, g
   modal.querySelector(`#${genBothId}`)?.addEventListener("click", async e => {
     e.preventDefault();
     try {
-      await fillLicensePair(keyId, deviceId);
+      const hwEl = document.getElementById(deviceId);
+      let hw = String(hwEl?.value || "").trim();
+      if (!hw) {
+        hw = await apiGenerateDeviceId();
+        if (hwEl) hwEl.value = hw;
+      }
+      document.getElementById(keyId).value = await apiGenerateHardwareLicenseKey(hw);
     } catch (err) {
       alert(err.message || "Gjenerimi dështoi.");
     }
@@ -308,9 +362,25 @@ function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id"
   const devId = licenseDeviceId(l);
   return `
     <p class="field-hint license-pair-modal-hint">
-      <strong>Super Admin — kontroll i plotë:</strong> ndrysho çelësin dhe ID-në kurdo, shkruaj manualisht ose Gjenero. Ruaj → POS përdor këto vlera.
+      <strong>Dy opsione për ID:</strong> (1) shkruaj ID-në nga ekrani i klientit, ose (2) Gjenero ID.
+      Pastaj <strong>Gjenero</strong> te çelësi → krijon LICENSE_KEY sipas asaj ID.
     </p>
-    <label for="${prefix}-celesi">Çelësi i licencës (KODI)</label>
+    <label for="${prefix}-device-id"><strong>ID e pajisjes (HARDWARE_ID)</strong></label>
+    <div class="link-actions modal-pair-row">
+      <input
+        name="${deviceName}"
+        id="${prefix}-device-id"
+        class="mono"
+        value="${esc(l.device_id || devId)}"
+        placeholder="XXXX-XXXX-XXXX-XXXX — shkruaj ose Gjenero"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        inputmode="text"
+      >
+      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-device">Gjenero ID</button>
+    </div>
+    <label for="${prefix}-celesi">Çelësi i licencës (LICENSE_KEY)</label>
     <div class="link-actions modal-pair-row">
       <input
         name="${keyName}"
@@ -321,25 +391,12 @@ function licensePairFieldsHtml(l, { keyName = "celesi", deviceName = "device_id"
         autocomplete="off"
         autocapitalize="characters"
         spellcheck="false"
+        placeholder="Gjenerohet nga ID"
       >
-      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-key">Gjenero</button>
-    </div>
-    <label for="${prefix}-device-id"><strong>ID e pajisjes</strong></label>
-    <div class="link-actions modal-pair-row">
-      <input
-        name="${deviceName}"
-        id="${prefix}-device-id"
-        class="mono"
-        value="${esc(l.device_id || devId)}"
-        placeholder="Shkruaj ose Gjenero ID"
-        autocomplete="off"
-        autocapitalize="characters"
-        spellcheck="false"
-      >
-      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-device">Gjenero ID</button>
+      <button type="button" class="btn btn-accent btn-sm" id="${prefix}-gen-key">Gjenero nga ID</button>
     </div>
     <div class="license-create-actions" style="margin-bottom:0.75rem">
-      <button type="button" class="btn btn-accent btn-sm" id="${prefix}-gen-both">Gjenero kod + ID</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="${prefix}-gen-both">Gjenero ID + kod</button>
     </div>`;
 }
 
@@ -1889,12 +1946,25 @@ function bindMobileLicenseActions(scope) {
       else alert("Nuk ka çelës.");
     });
   });
+  scope.querySelectorAll("[data-mobile-device-input]").forEach((el) => bindHwIdAutoFormat(el));
   scope.querySelectorAll("[data-mobile-gen-key]").forEach(btn => {
     btn.addEventListener("click", async () => {
       try {
-        const input = scope.querySelector(`[data-mobile-key-input="${btn.dataset.mobileGenKey}"]`);
-        const celesi = await apiGenerateLicenseKey();
-        if (input) input.value = celesi;
+        const id = btn.dataset.mobileGenKey;
+        const input = scope.querySelector(`[data-mobile-key-input="${id}"]`);
+        const deviceInput = scope.querySelector(`[data-mobile-device-input="${id}"]`);
+        const hw = String(deviceInput?.value || "").trim();
+        if (!hw) {
+          alert("Shkruaj ID e pajisjes (nga ekrani Aktivizo KAFENE), pastaj Gjenero nga ID.");
+          deviceInput?.focus();
+          return;
+        }
+        const celesi = await apiGenerateHardwareLicenseKey(hw);
+        if (input) {
+          input.value = celesi;
+          input.focus();
+          input.select();
+        }
       } catch (err) {
         alert(err.message || "Gjenerimi i çelësit dështoi.");
       }
@@ -2001,41 +2071,43 @@ function renderMobileLicenseCards(licenses) {
           </div>
           <div class="license-mobile-pair">
             <div class="license-mobile-field">
-              <label>Çelësi i licencës</label>
-              <input
-                type="text"
-                class="device-id-input mono license-key-input"
-                data-mobile-key-input="${l.id}"
-                value="${esc(l.celesi || "")}"
-                placeholder="Shkruaj ose Gjenero"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-              >
-              <div class="license-mobile-field-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-gen-key="${l.id}">Gjenero</button>
-                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-key="${l.id}">Ruaj çelësin</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${l.id}">Kopjo</button>
-              </div>
-            </div>
-            <div class="license-mobile-field">
-              <label>ID e pajisjes</label>
+              <label>ID e pajisjes (shkruaj nga klienti OSE Gjenero ID)</label>
               <input
                 type="text"
                 class="device-id-input mono"
                 data-mobile-device-input="${l.id}"
                 value="${esc(devId)}"
-                placeholder="Shkruaj ose Gjenero ID"
+                placeholder="XXXX-XXXX-XXXX-XXXX"
                 autocomplete="off"
                 autocapitalize="characters"
                 spellcheck="false"
+                inputmode="text"
               >
               <div class="license-mobile-field-actions">
                 <button type="button" class="btn btn-ghost btn-sm" data-mobile-gen-device="${l.id}">Gjenero ID</button>
                 <button type="button" class="btn btn-primary btn-sm" data-mobile-save-device="${l.id}">Ruaj ID</button>
-                <button type="button" class="btn btn-accent btn-sm" data-mobile-save-both="${l.id}">Ruaj të dyja</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-device="${l.id}">Kopjo ID</button>
                 <button type="button" class="btn btn-ghost btn-sm" data-mobile-reset-device="${l.id}">Reset ID</button>
+              </div>
+            </div>
+            <div class="license-mobile-field">
+              <label>Çelësi i licencës (gjenerohet nga ID)</label>
+              <input
+                type="text"
+                class="device-id-input mono license-key-input"
+                data-mobile-key-input="${l.id}"
+                value="${esc(l.celesi || "")}"
+                placeholder="Shtyp «Gjenero nga ID»"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                inputmode="text"
+              >
+              <div class="license-mobile-field-actions">
+                <button type="button" class="btn btn-accent btn-sm" data-mobile-gen-key="${l.id}">Gjenero nga ID</button>
+                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-key="${l.id}">Ruaj çelësin</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${l.id}">Kopjo</button>
+                <button type="button" class="btn btn-accent btn-sm" data-mobile-save-both="${l.id}">Ruaj të dyja</button>
               </div>
             </div>
           </div>
@@ -2720,6 +2792,22 @@ document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () =>
     if (btn) btn.disabled = false;
   }
 });
+
+document.getElementById("btn-lm-gen-device")?.addEventListener("click", async () => {
+  const hwEl = document.getElementById("lm-device-id");
+  try {
+    const id = await apiGenerateDeviceId();
+    if (hwEl) {
+      hwEl.value = id;
+      hwEl.focus();
+    }
+    showMsg("msg-license-mobile", `ID e re: ${id}\nTani shtyp «Gjenero kod nga ID».`, true);
+  } catch (err) {
+    showMsg("msg-license-mobile", err.message || "Gjenerimi i ID dështoi.", false);
+  }
+});
+
+bindHwIdAutoFormat(document.getElementById("lm-device-id"));
 
 document.getElementById("btn-lm-copy-key")?.addEventListener("click", async () => {
   const key = String(document.getElementById("lm-celesi")?.value || "").trim();

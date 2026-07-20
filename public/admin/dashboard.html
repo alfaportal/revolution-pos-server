@@ -97,10 +97,14 @@
         <!-- LICENCAT -->
         <section class="section" id="sec-licencat">
           <div class="card gen-box">
-            <div class="card-title">Gjenero Kod License</div>
+            <div class="card-title">Gjenero Kod License nga Hardware ID</div>
+            <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.95rem">
+              Dy opsione: (1) shkruaj ID-në nga ekrani «Aktivizo KAFENE», ose (2) lëre bosh dhe përdor një ID të kopjuar.
+              Pastaj <strong>Gjenero Kod</strong>.
+            </p>
             <div class="field">
               <label for="gen-hw">Hardware ID</label>
-              <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" inputmode="text">
+              <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" inputmode="text" autocapitalize="characters" spellcheck="false">
             </div>
             <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
             <div id="gen-result" style="color:var(--accent)"></div>
@@ -282,6 +286,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=4"></script>
+  <script src="/admin/dashboard.js?v=5"></script>
 </body>
 </html>

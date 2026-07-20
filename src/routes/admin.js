@@ -29,6 +29,11 @@ const {
   featuresForTier,
   normalizePackageTier,
 } = require("../lib/packages");
+const {
+  generateHardwareLicenseKey,
+  normalizeHardwareId,
+  formatGrouped16,
+} = require("../lib/hardwareLicense");
 
 function withNormalizedPackageTier(body) {
   if (!body || typeof body !== "object") return body;
@@ -507,6 +512,28 @@ router.get("/licenses/generate-key", (_req, res) => {
 router.get("/licenses/generate-device-id", (_req, res) => {
   res.json({ ok: true, device_id: generateDeviceId() });
 });
+
+/**
+ * LICENSE_KEY nga HARDWARE_ID i klientit (ekrani "Aktivizo KAFENE").
+ * Body: { hardwareId: "XXXX-XXXX-XXXX-XXXX" }
+ */
+router.post(
+  "/licenses/generate-hardware-key",
+  asyncHandler(async (req, res) => {
+    const hardwareId = req.body?.hardwareId || req.body?.hardware_id || req.body?.device_id || "";
+    try {
+      const licenseKey = generateHardwareLicenseKey(hardwareId);
+      res.json({
+        ok: true,
+        licenseKey,
+        celesi: licenseKey,
+        hardwareId: formatGrouped16(normalizeHardwareId(hardwareId)),
+      });
+    } catch (e) {
+      res.status(400).json({ ok: false, gabim: e.message || String(e) });
+    }
+  }),
+);
 
 router.post("/licenses/:id/provision-device", asyncHandler(async (req, res) => {
   try {

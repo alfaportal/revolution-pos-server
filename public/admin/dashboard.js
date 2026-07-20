@@ -630,24 +630,57 @@ async function boot() {
 
   document.getElementById("btn-gen-key").addEventListener("click", async () => {
     const box = document.getElementById("gen-result");
+    const hwEl = document.getElementById("gen-hw");
+    const hardwareId = String(hwEl?.value || "").trim();
+    if (!hardwareId) {
+      box.textContent = "Shkruaj Hardware ID (nga ekrani i klientit).";
+      hwEl?.focus();
+      return;
+    }
     try {
-      const data = await api("/api/super/generate-license-key", {
-        method: "POST",
-        body: JSON.stringify({ hardwareId: document.getElementById("gen-hw").value.trim() }),
-      });
-      const key = data.licenseKey || "";
+      let data;
+      try {
+        data = await api("/api/admin/licenses/generate-hardware-key", {
+          method: "POST",
+          body: JSON.stringify({ hardwareId }),
+        });
+      } catch {
+        data = await api("/api/super/generate-license-key", {
+          method: "POST",
+          body: JSON.stringify({ hardwareId }),
+        });
+      }
+      const key = data.licenseKey || data.celesi || "";
+      const hw = data.hardwareId || hardwareId;
+      if (hwEl && data.hardwareId) hwEl.value = data.hardwareId;
       box.innerHTML = `
         <div class="copy-row" style="margin-top:0.5rem">
+          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Hardware ID</div>${esc(hw)}</div>
+          <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo ID</button>
+        </div>
+        <div class="copy-row" style="margin-top:0.5rem">
           <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">License Key</div>${esc(key)}</div>
-          <button type="button" class="btn btn-primary btn-copy" id="btn-copy-gen-key" data-copy="${esc(key)}">Kopjo</button>
+          <button type="button" class="btn btn-primary btn-copy" id="btn-copy-gen-key" data-copy="${esc(key)}">Kopjo kodin</button>
         </div>`;
-      document.getElementById("btn-copy-gen-key")?.addEventListener("click", (ev) => {
-        copyText(key, ev.currentTarget);
+      box.querySelectorAll("[data-copy]").forEach((btn) => {
+        btn.addEventListener("click", (ev) => copyText(btn.dataset.copy, ev.currentTarget));
       });
     } catch (ex) {
       box.textContent = ex.message;
     }
   });
+
+  const genHw = document.getElementById("gen-hw");
+  if (genHw) {
+    genHw.addEventListener("input", () => {
+      const hex = String(genHw.value || "").replace(/[^a-fA-F0-9]/g, "").toUpperCase().slice(0, 16);
+      let next = hex;
+      if (hex.length > 12) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12)}`;
+      else if (hex.length > 8) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}`;
+      else if (hex.length > 4) next = `${hex.slice(0, 4)}-${hex.slice(4)}`;
+      if (next !== genHw.value) genHw.value = next;
+    });
+  }
 
   document.getElementById("btn-ai-load").addEventListener("click", () => loadAi().catch(alert));
   document.getElementById("btn-inv-create").addEventListener("click", async () => {
