@@ -26,7 +26,8 @@ const {
   updateBillingInvoiceStatus,
   buildBillingInvoicePdf,
 } = require("../services/superAdminDashboardService");
-const { blockLicense, unblockLicense } = require("../services/licenseService");
+const { blockLicense, unblockLicense, updateLicense, updateLicenseStatus } = require("../services/licenseService");
+const { addMonthsISO, todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, activityFromReq } = require("../services/activityLogService");
 
 const router = express.Router();
@@ -170,6 +171,38 @@ router.post(
       targetLabel: license.celesi,
     }).catch(() => {});
     res.json({ ok: true, license });
+  }),
+);
+
+/** Zgjat licencën me N muaj (nga sot ose nga data_skadimit nëse ende aktive). */
+router.post(
+  "/dashboard/licenses/:id/extend",
+  asyncHandler(async (req, res) => {
+    const months = Math.max(1, Math.min(36, Number(req.body?.months) || 12));
+    const { getSupabase } = require("../db");
+    const db = getSupabase();
+    const { data: lic, error } = await db
+      .from("licenses")
+      .select("id, celesi, data_skadimit, statusi")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (error || !lic) return res.status(404).json({ ok: false, gabim: "Licenca nuk u gjet." });
+    const base =
+      lic.data_skadimit && String(lic.data_skadimit) > todayISO()
+        ? String(lic.data_skadimit)
+        : todayISO();
+    const data_skadimit = addMonthsISO(base, months);
+    await updateLicense(lic.id, { data_skadimit });
+    const license = await updateLicenseStatus(lic.id, "aktive");
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_extend",
+      targetType: "license",
+      targetId: license.id,
+      targetLabel: license.celesi,
+      details: { months, data_skadimit },
+    }).catch(() => {});
+    res.json({ ok: true, license, data_skadimit, months });
   }),
 );
 

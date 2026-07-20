@@ -217,9 +217,53 @@ body.nav-open .backdrop { display: block; }
   border-radius: var(--radius);
   padding: 1.1rem 1.15rem;
 }
+button.kpi {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  min-height: var(--tap);
+  touch-action: manipulation;
+}
+button.kpi:active { transform: scale(0.985); }
+button.kpi.active,
+button.kpi.kpi-jump:focus-visible {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 2px rgba(255, 149, 0, 0.25);
+}
 .kpi .lbl { color: var(--muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; font-weight: 650; }
 .kpi .val { font-size: 1.85rem; font-weight: 800; margin-top: 0.4rem; }
 .kpi.warn .val { color: var(--warn); }
+.kpi-hint {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.prob-card-focus {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 1px rgba(255, 149, 0, 0.35);
+}
+.prob-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+.prob-actions .btn { flex: 1 1 auto; min-width: 5.5rem; }
+#btn-rep-load,
+#btn-refresh-clients {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  touch-action: manipulation;
+  min-height: 44px;
+}
 
 .card {
   background: var(--card);
@@ -466,6 +510,8 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
   font-size: 1.05rem;
 }
+.problem-list li.prob-row { flex-direction: column; align-items: stretch; }
+.prob-main { width: 100%; }
 .form-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
 .form-grid .full { grid-column: 1 / -1; }
 .field label { display: block; color: var(--muted); font-size: 0.95rem; margin-bottom: 0.35rem; font-weight: 600; }

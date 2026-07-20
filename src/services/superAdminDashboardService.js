@@ -813,33 +813,49 @@ async function getProblemsReport() {
     };
 
     if (lics.some((l) => ["skaduar"].includes(l.statusi))) {
+      const lic = lics.find((l) => l.statusi === "skaduar");
       license_expired.push({
         ...base,
         detail: "Licencë e skaduar",
-        at: lics.find((l) => l.statusi === "skaduar")?.updated_at || null,
+        at: lic?.updated_at || lic?.data_skadimit || null,
+        license_id: lic?.id || null,
+        data_skadimit: lic?.data_skadimit || null,
+        statusi: lic?.statusi || "skaduar",
       });
     }
     if (lics.some((l) => ["revokuar", "pezulluar"].includes(l.statusi))) {
+      const lic = lics.find((l) => ["revokuar", "pezulluar"].includes(l.statusi));
       program.push({
         ...base,
         detail: "Licencë e bllokuar / pezulluar",
-        at: lics.find((l) => ["revokuar", "pezulluar"].includes(l.statusi))?.updated_at || null,
+        at: lic?.updated_at || null,
+        license_id: lic?.id || null,
+        data_skadimit: lic?.data_skadimit || null,
+        statusi: lic?.statusi || null,
       });
     }
     if (lics.length && lics.every((l) => isOfflineOver48h(l))) {
       const seen = lics.map(licenseLastSeen).filter(Boolean).sort().pop() || null;
+      const lic = lics[0];
       offline_48h.push({
         ...base,
         detail: "Offline më shumë se 48 orë",
         at: seen,
         last_seen_at: seen,
+        license_id: lic?.id || null,
+        data_skadimit: lic?.data_skadimit || null,
+        statusi: lic?.statusi || null,
       });
     }
     if (stockZeroClientIds.has(c.id)) {
+      const lic = lics.find((l) => l.statusi === "aktive") || lics[0];
       program.push({
         ...base,
         detail: "Probleme me programin (stok zero)",
         at: null,
+        license_id: lic?.id || null,
+        data_skadimit: lic?.data_skadimit || null,
+        statusi: lic?.statusi || null,
       });
     }
   }
@@ -874,6 +890,8 @@ async function getProblemsReport() {
     if (kind === "print") print_errors.push(row);
     else if (kind === "fiscal") fiscal_errors.push(row);
     else if (kind === "program" && client) {
+      const lics = licByClient.get(client.id) || [];
+      const lic = lics.find((l) => l.statusi === "aktive") || lics[0];
       program.push({
         id: client.id,
         emri: client.emri,
@@ -881,6 +899,9 @@ async function getProblemsReport() {
         tipi_label: labelForTipi(client.tipi),
         detail: row.detail,
         at: row.at,
+        license_id: lic?.id || null,
+        data_skadimit: lic?.data_skadimit || null,
+        statusi: lic?.statusi || null,
       });
     }
   }

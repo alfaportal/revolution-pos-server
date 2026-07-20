@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=7">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=9">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -194,30 +194,50 @@
               <button type="button" class="btn btn-ghost btn-sm" id="btn-rep-load">Rifresko</button>
             </div>
             <div class="kpi-row" id="problems-kpi">
-              <div class="kpi warn"><div class="lbl">Program</div><div class="val" id="prob-kpi-program">—</div></div>
-              <div class="kpi warn"><div class="lbl">Offline &gt;48h</div><div class="val" id="prob-kpi-offline">—</div></div>
-              <div class="kpi warn"><div class="lbl">Licencë skaduar</div><div class="val" id="prob-kpi-license">—</div></div>
-              <div class="kpi warn"><div class="lbl">Print</div><div class="val" id="prob-kpi-print">—</div></div>
-              <div class="kpi warn"><div class="lbl">Fiskale</div><div class="val" id="prob-kpi-fiscal">—</div></div>
+              <button type="button" class="kpi warn kpi-jump" data-prob-jump="program" id="kpi-btn-program">
+                <div class="lbl">Program</div>
+                <div class="val" id="prob-kpi-program">—</div>
+                <div class="kpi-hint">Prek për detaje</div>
+              </button>
+              <button type="button" class="kpi warn kpi-jump" data-prob-jump="offline" id="kpi-btn-offline">
+                <div class="lbl">Offline &gt;48h</div>
+                <div class="val" id="prob-kpi-offline">—</div>
+                <div class="kpi-hint">Prek për detaje</div>
+              </button>
+              <button type="button" class="kpi warn kpi-jump" data-prob-jump="license" id="kpi-btn-license">
+                <div class="lbl">Licencë skaduar</div>
+                <div class="val" id="prob-kpi-license">—</div>
+                <div class="kpi-hint">Prek për detaje</div>
+              </button>
+              <button type="button" class="kpi warn kpi-jump" data-prob-jump="print" id="kpi-btn-print">
+                <div class="lbl">Print</div>
+                <div class="val" id="prob-kpi-print">—</div>
+                <div class="kpi-hint">Prek për detaje</div>
+              </button>
+              <button type="button" class="kpi warn kpi-jump" data-prob-jump="fiscal" id="kpi-btn-fiscal">
+                <div class="lbl">Fiskale</div>
+                <div class="val" id="prob-kpi-fiscal">—</div>
+                <div class="kpi-hint">Prek për detaje</div>
+              </button>
             </div>
           </div>
-          <div class="card">
+          <div class="card" id="card-prob-program" data-prob-card="program">
             <div class="card-title">Probleme me programin</div>
             <ul class="problem-list" id="prob-program"></ul>
           </div>
-          <div class="card">
+          <div class="card" id="card-prob-offline" data-prob-card="offline">
             <div class="card-title">Offline më shumë se 48 orë</div>
             <ul class="problem-list" id="prob-offline"></ul>
           </div>
-          <div class="card">
+          <div class="card" id="card-prob-license" data-prob-card="license">
             <div class="card-title">Licencë e skaduar</div>
             <ul class="problem-list" id="prob-license"></ul>
           </div>
-          <div class="card">
+          <div class="card" id="card-prob-print" data-prob-card="print">
             <div class="card-title">Gabime printimi</div>
             <ul class="problem-list" id="prob-print"></ul>
           </div>
-          <div class="card">
+          <div class="card" id="card-prob-fiscal" data-prob-card="fiscal">
             <div class="card-title">Gabime fiskale</div>
             <ul class="problem-list" id="prob-fiscal"></ul>
           </div>
@@ -286,6 +306,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=8"></script>
+  <script src="/admin/dashboard.js?v=9"></script>
 </body>
 </html>

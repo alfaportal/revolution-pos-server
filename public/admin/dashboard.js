@@ -127,6 +127,12 @@ function openSection(name) {
   if (name === "faturimi") loadBilling();
   if (name === "raportet") loadReports();
   if (name === "cilesimet") loadSettings();
+  // Sinkron: kur hap Probleme ose Klientët, rifresko të dyja në background
+  if (name === "klientet" || name === "raportet") {
+    Promise.all([
+      name === "raportet" ? loadClients().catch(() => null) : loadReports().catch(() => null),
+    ]).catch(() => {});
+  }
 }
 
 function renderChart(el, points, valueKey = "total") {
@@ -311,10 +317,21 @@ async function openClientDetail(id) {
       <h4>Licenca</h4>
       ${licenses
         .map(
-          (l) => `<div style="margin-bottom:0.5rem">
+          (l) => `<div class="lic-detail-row" style="margin-bottom:0.75rem">
             <span class="badge ${l.statusi === "aktive" ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span>
             <div class="mono">HW: ${esc(l.device_id || "—")}</div>
             <div class="mono">Key: ${esc(l.celesi || "—")}</div>
+            <div style="color:var(--muted);font-size:0.85rem;margin:0.2rem 0">Skadon: ${esc(l.data_skadimit || "—")}</div>
+            <div class="prob-actions" style="margin-top:0.4rem">
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
+              <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
+              ${
+                ["pezulluar", "revokuar"].includes(String(l.statusi || ""))
+                  ? `<button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
+                  : ""
+              }
+            </div>
           </div>`,
         )
         .join("") || "<div>—</div>"}
@@ -326,6 +343,48 @@ async function openClientDetail(id) {
       <div>Thirrje: <strong>${ai.calls || 0}</strong></div>
     </div>
   `;
+  bindDrawerLicenseFix(document.getElementById("drawer-body"), id);
+}
+
+function bindDrawerLicenseFix(root, clientId) {
+  if (!root) return;
+  root.querySelectorAll("[data-drawer-extend]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const months = Number(btn.dataset.months) || 12;
+      if (!confirm(`Zgjato licencën me ${months} muaj?`)) return;
+      btn.disabled = true;
+      try {
+        const r = await api(`/api/super/dashboard/licenses/${btn.dataset.drawerExtend}/extend`, {
+          method: "POST",
+          body: JSON.stringify({ months }),
+        });
+        alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
+        await refreshClientsAndProblems();
+        if (clientId) await openClientDetail(clientId);
+      } catch (ex) {
+        alert(ex.message || "Zgjatja dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-drawer-unblock]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Zhblloko licencën?")) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerUnblock}/unblock`, {
+          method: "POST",
+        });
+        await refreshClientsAndProblems();
+        if (clientId) await openClientDetail(clientId);
+      } catch (ex) {
+        alert(ex.message || "Zhbllokimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 function closeDrawer() {
@@ -624,6 +683,33 @@ async function loadBilling() {
   });
 }
 
+function problemActionsHtml(p) {
+  const bits = [];
+  if (p.id) {
+    bits.push(
+      `<button type="button" class="btn btn-ghost btn-sm" data-prob-open="${esc(p.id)}">Hap klientin</button>`,
+    );
+  }
+  if (p.license_id) {
+    bits.push(
+      `<button type="button" class="btn btn-ghost btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="1">+1 muaj</button>`,
+    );
+    bits.push(
+      `<button type="button" class="btn btn-ghost btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="3">+3 muaj</button>`,
+    );
+    bits.push(
+      `<button type="button" class="btn btn-primary btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="12">+12 muaj</button>`,
+    );
+    if (["pezulluar", "revokuar"].includes(String(p.statusi || ""))) {
+      bits.push(
+        `<button type="button" class="btn btn-ghost btn-sm" data-prob-unblock="${esc(p.license_id)}">Zhblloko</button>`,
+      );
+    }
+  }
+  if (!bits.length) return "";
+  return `<div class="prob-actions">${bits.join("")}</div>`;
+}
+
 function renderProblemList(elId, rows, emptyText) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -631,16 +717,107 @@ function renderProblemList(elId, rows, emptyText) {
   el.innerHTML = list.length
     ? list
         .map(
-          (p) => `<li>
-            <div>
+          (p) => `<li class="prob-row">
+            <div class="prob-main">
               <strong>${esc(p.emri)}</strong>
-              <div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.at ? ` · ${esc(fmtDate(p.at))}` : ""}</div>
+              <div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.at ? ` · ${esc(fmtDate(p.at))}` : ""}${p.data_skadimit ? ` · skadon ${esc(p.data_skadimit)}` : ""}</div>
               <div style="margin-top:0.25rem;font-size:0.9rem">${esc(p.detail || "")}</div>
+              ${problemActionsHtml(p)}
             </div>
           </li>`,
         )
         .join("")
     : `<li style="color:var(--muted)">${esc(emptyText)}</li>`;
+  bindProblemActions(el);
+}
+
+function bindProblemActions(root) {
+  if (!root || root.dataset.bound === "1") return;
+  root.dataset.bound = "1";
+  root.addEventListener("click", async (e) => {
+    const openBtn = e.target.closest("[data-prob-open]");
+    if (openBtn) {
+      e.preventDefault();
+      try {
+        await openClientDetail(openBtn.dataset.probOpen);
+      } catch (ex) {
+        alert(ex.message || "Nuk u hap klienti.");
+      }
+      return;
+    }
+    const unblockBtn = e.target.closest("[data-prob-unblock]");
+    if (unblockBtn) {
+      e.preventDefault();
+      if (!confirm("Zhblloko licencën?")) return;
+      unblockBtn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${unblockBtn.dataset.probUnblock}/unblock`, {
+          method: "POST",
+        });
+        await refreshClientsAndProblems();
+      } catch (ex) {
+        alert(ex.message || "Zhbllokimi dështoi.");
+      } finally {
+        unblockBtn.disabled = false;
+      }
+      return;
+    }
+    const extBtn = e.target.closest("[data-prob-extend]");
+    if (extBtn) {
+      e.preventDefault();
+      const months = Number(extBtn.dataset.months) || 12;
+      if (!confirm(`Zgjato licencën me ${months} muaj?`)) return;
+      extBtn.disabled = true;
+      try {
+        const r = await api(`/api/super/dashboard/licenses/${extBtn.dataset.probExtend}/extend`, {
+          method: "POST",
+          body: JSON.stringify({ months }),
+        });
+        alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
+        await refreshClientsAndProblems();
+      } catch (ex) {
+        alert(ex.message || "Zgjatja dështoi.");
+      } finally {
+        extBtn.disabled = false;
+      }
+    }
+  });
+}
+
+function jumpToProblemCard(kind) {
+  document.querySelectorAll(".kpi-jump").forEach((b) => {
+    b.classList.toggle("active", b.dataset.probJump === kind);
+  });
+  document.querySelectorAll("[data-prob-card]").forEach((card) => {
+    const on = card.dataset.probCard === kind;
+    card.classList.toggle("prob-card-focus", on);
+  });
+  const card = document.querySelector(`[data-prob-card="${kind}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+async function refreshClientsAndProblems(btn) {
+  const buttons = btn
+    ? [btn]
+    : [
+        document.getElementById("btn-rep-load"),
+        document.getElementById("btn-refresh-clients"),
+      ].filter(Boolean);
+  buttons.forEach((b) => {
+    b.disabled = true;
+    b.dataset.prevLabel = b.textContent;
+    b.textContent = "Duke rifreskuar…";
+  });
+  try {
+    await Promise.all([loadClients().catch(() => null), loadReports()]);
+  } finally {
+    buttons.forEach((b) => {
+      b.disabled = false;
+      b.textContent = b.dataset.prevLabel || "Rifresko";
+    });
+  }
 }
 
 const PROBLEM_KIND_LABEL = {
@@ -736,7 +913,16 @@ async function boot() {
     const btn = e.target.closest("[data-section]");
     if (btn) openSection(btn.dataset.section);
   });
-  document.getElementById("btn-refresh-clients").addEventListener("click", () => loadClients().catch(alert));
+  document.getElementById("btn-refresh-clients").addEventListener("click", (e) => {
+    e.preventDefault();
+    refreshClientsAndProblems(e.currentTarget).catch((ex) => alert(ex.message || ex));
+  });
+  document.getElementById("problems-kpi")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-prob-jump]");
+    if (!btn) return;
+    e.preventDefault();
+    jumpToProblemCard(btn.dataset.probJump);
+  });
   document.getElementById("drawer-close").addEventListener("click", closeDrawer);
   document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
 
@@ -815,7 +1001,10 @@ async function boot() {
       alert(ex.message);
     }
   });
-  document.getElementById("btn-rep-load")?.addEventListener("click", () => loadReports().catch(alert));
+  document.getElementById("btn-rep-load")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    refreshClientsAndProblems(e.currentTarget).catch((ex) => alert(ex.message || ex));
+  });
   document.getElementById("btn-settings-save").addEventListener("click", async () => {
     try {
       await api("/api/super/dashboard/settings", {
