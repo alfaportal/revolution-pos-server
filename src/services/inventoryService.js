@@ -60,12 +60,22 @@ function findIngredientByName(ingredients, name) {
   if (!target) return null;
   const exact = ingredients.find(i => normalizeIngredientName(i.name) === target);
   if (exact) return exact;
-  return (
-    ingredients.find(i => {
-      const n = normalizeIngredientName(i.name);
-      return n.includes(target) || target.includes(n);
-    }) || null
-  );
+  const tokens = target.split(/\s+/).filter(t => t.length >= 3);
+  let best = null;
+  let bestScore = 0;
+  for (const i of ingredients) {
+    const n = normalizeIngredientName(i.name);
+    if (!n) continue;
+    let score = 0;
+    if (n.includes(target) || target.includes(n)) score = Math.min(n.length, target.length);
+    const overlap = tokens.filter(t => n.includes(t));
+    if (overlap.length) score = Math.max(score, overlap.join("").length + overlap.length * 3);
+    if (score > bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  }
+  return bestScore >= 4 ? best : null;
 }
 
 async function ensureInventoryReady() {
