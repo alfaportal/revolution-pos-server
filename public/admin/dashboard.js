@@ -397,32 +397,53 @@ function bindLicenseActions(root) {
   root.querySelectorAll("[data-save-license]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.saveLicense;
+      const card = btn.closest("[data-license-card]") || root;
       const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
       const keyEl = root.querySelector(`[data-key-input="${id}"]`);
+      const msgEl = card.querySelector(`[data-save-msg="${id}"]`) || root.querySelector(`[data-save-msg="${id}"]`);
       const device_id = String(hwEl?.value || "").trim();
       const celesi = String(keyEl?.value || "").trim();
       if (!celesi) {
-        alert("Shkruaj ose gjenero License Key.");
+        if (msgEl) {
+          msgEl.textContent = "Shkruaj ose gjenero License Key.";
+          msgEl.classList.add("err");
+        } else {
+          alert("Shkruaj ose gjenero License Key.");
+        }
         keyEl?.focus();
         return;
       }
       btn.disabled = true;
       const prev = btn.textContent;
       btn.textContent = "Duke ruajtur…";
+      if (msgEl) {
+        msgEl.textContent = "";
+        msgEl.classList.remove("err");
+      }
       try {
         await api(`/api/admin/licenses/${id}`, {
           method: "PATCH",
           body: JSON.stringify({ celesi, device_id }),
         });
         btn.textContent = "U ruajt ✓";
+        if (msgEl) {
+          msgEl.classList.remove("err");
+          msgEl.textContent = "Sistemi e ruajti ID + License Key.";
+        }
         setTimeout(() => {
           btn.textContent = prev;
           btn.disabled = false;
-        }, 1200);
+        }, 1500);
       } catch (ex) {
         btn.textContent = prev;
         btn.disabled = false;
-        alert(ex.message || "Ruajtja dështoi.");
+        const err = ex.message || "Ruajtja dështoi.";
+        if (msgEl) {
+          msgEl.classList.add("err");
+          msgEl.textContent = err;
+        } else {
+          alert(err);
+        }
       }
     });
   });
@@ -456,20 +477,25 @@ async function loadLicenses() {
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
               </h4>
-              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.65rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
-              <label class="lic-field-label">Hardware ID</label>
-              <div class="copy-row">
+              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.35rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
+              <div class="lic-field-block">
+                <label class="lic-field-label">Hardware ID (vetëm ID)</label>
                 <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-                <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo</button>
+                <div class="lic-field-actions">
+                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
+                </div>
               </div>
-              <label class="lic-field-label">License Key</label>
-              <div class="copy-row">
-                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="Gjenerohet nga ID" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-                <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo</button>
+              <div class="lic-field-block">
+                <label class="lic-field-label">License Key (vetëm licenca)</label>
+                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+                <div class="lic-field-actions">
+                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo licencën</button>
+                </div>
               </div>
               <div class="lic-card-actions">
                 <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero kod nga ID</button>
                 <button type="button" class="btn btn-ok" data-save-license="${esc(l.id)}">Ruaj ID + kod</button>
+                <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
                 ${
                   active
                     ? `<button type="button" class="btn btn-danger" data-block="${esc(l.id)}">Çaktivizo</button>`
@@ -493,22 +519,19 @@ async function loadLicenses() {
         return `<tr>
           <td>${esc(l.client_name)}</td>
           <td>
-            <div class="copy-row" style="margin:0">
-              <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
-              <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo</button>
-            </div>
+            <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" title="Vetëm Hardware ID">
+            <button type="button" class="btn btn-ghost btn-sm btn-copy" style="margin-top:0.35rem" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
           </td>
           <td>
-            <div class="copy-row" style="margin:0">
-              <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="License Key" autocomplete="off" spellcheck="false">
-              <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo</button>
-            </div>
+            <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" title="Vetëm License Key">
+            <button type="button" class="btn btn-ghost btn-sm btn-copy" style="margin-top:0.35rem" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo licencën</button>
           </td>
           <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
           <td>${esc(fmtDate(l.activated_at))}</td>
           <td style="white-space:nowrap">
             <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero</button>
             <button type="button" class="btn btn-ok btn-sm" data-save-license="${esc(l.id)}">Ruaj</button>
+            <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
             ${
               active
                 ? `<button type="button" class="btn btn-danger btn-sm" data-block="${esc(l.id)}">Çaktivizo</button>`
