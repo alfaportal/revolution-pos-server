@@ -476,73 +476,75 @@ async function sendWeeklyAiReportEmail({ to, clientName, weekStart, weekEnd, sum
 }
 
 /**
- * Njoftim Super Admin: klienti është offline (12/24/36/48 orë).
- * Pas 48h — kujtesë se ATK mund të bëjë kontroll.
+ * Njoftim PRONARIT: POS/cloud është offline (12/24/36/48 orë).
+ * Paralajmërim ATK — pas 48h rrezik kontrolli.
  */
-async function sendAdminClientOfflineEmail({
+async function sendOwnerClientOfflineEmail({
+  to,
   clientName,
-  phone,
   hoursOffline,
   milestoneHours,
   lastSeenAt,
   atkWarning,
 }) {
-  const to = resolveAdminNotifyEmail();
-  const name = clientName || "Klient i panjohur";
+  if (!to) throw new Error("Mungon email i pronarit.");
+  const name = clientName || "Pronar";
   const hours = Math.round(Number(hoursOffline) || Number(milestoneHours) || 0);
+  const support = resolveSupportPhone();
   const seenLabel = lastSeenAt
     ? new Date(lastSeenAt).toLocaleString("sq-AL", { timeZone: "Europe/Belgrade" })
-    : "asnjeherë / i panjohur";
+    : "i panjohur";
 
   const subject = atkWarning
-    ? `⚠️ OFFLINE >48h (rrezik ATK) — ${name}`
-    : `📴 Klient offline ${milestoneHours}h — ${name}`;
-
-  const atkBlock = atkWarning
-    ? [
-        "",
-        "KUJTESË E RËNDËSISHME:",
-        "Klienti ka kaluar 48 orë offline. ATK mund të vijë për kontroll",
-        "nëse sistemi fiskal / POS nuk po funksionon online.",
-        "Kontaktoni klientin sa më shpejt.",
-      ]
-    : [
-        "",
-        `Lejohet offline deri në 48 orë. Njoftime çdo 12 orë (ky: ${milestoneHours}h).`,
-        "Pas 48 orësh — rrezik kontrolli ATK nëse nuk rilidhet.",
-      ];
+    ? `⚠️ URGJENT: POS offline >48h — rrezik kontrolli ATK — ${name}`
+    : `Paralajmërim: POS offline ${milestoneHours}h — ${name}`;
 
   const text = [
-    `Klienti: ${name}`,
-    phone ? `Telefon: ${phone}` : null,
-    `Offline prej: ~${hours} orë`,
-    `Milestone: ${milestoneHours}h`,
-    `Last seen: ${seenLabel}`,
-    ...atkBlock,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `Përshëndetje ${name},`,
+    "",
+    `Sistemi juaj Revolution POS është offline prej rreth ${hours} orësh.`,
+    `Lidhja e fundit me cloud: ${seenLabel}`,
+    "",
+    atkWarning
+      ? "KUJTESË E RËNDËSISHME: Keni kaluar 48 orë offline. ATK mund të vijë për kontroll nëse sistemi fiskal / POS nuk po funksionon online. Rilidhni internetin dhe hapni programin sa më shpejt."
+      : `Mund të jeni offline deri në 48 orë. Ky është njoftimi i ${milestoneHours} orëve. Pas 48 orësh ATK mund të vijë për kontroll nëse sistemi nuk funksionon. Rilidhni internetin dhe hapni programin.`,
+    "",
+    `Nëse keni nevojë për ndihmë: ${support}`,
+    "",
+    "Revolution Invest POS",
+  ].join("\n");
 
   const html = `
-    <p><strong>${atkWarning ? "⚠️ OFFLINE &gt;48 orë — rrezik ATK" : "📴 Klient offline"}</strong></p>
-    <p>Klienti: <strong>${escapeHtmlEmail(name)}</strong></p>
-    ${phone ? `<p>Telefon: <strong>${escapeHtmlEmail(phone)}</strong></p>` : ""}
-    <p>Offline prej: <strong>~${hours} orë</strong> (njoftimi i ${milestoneHours}h)</p>
-    <p>Last seen: <code>${escapeHtmlEmail(seenLabel)}</code></p>
+    <p>Përshëndetje <strong>${escapeHtmlEmail(name)}</strong>,</p>
+    <p>Sistemi juaj <strong>Revolution POS</strong> është <strong>offline</strong> prej rreth <strong>${hours} orësh</strong>.</p>
+    <p>Lidhja e fundit me cloud: <code>${escapeHtmlEmail(seenLabel)}</code></p>
     ${
       atkWarning
         ? `<p style="margin-top:16px;padding:12px;background:#7f1d1d;color:#fecaca;border-radius:8px">
-            <strong>KUJTESË:</strong> Ka kaluar 48 orë offline. ATK mund të vijë për kontroll
-            nëse sistemi nuk po funksionon. Kontaktoni klientin sa më shpejt.
+            <strong>URGJENT:</strong> Keni kaluar <strong>48 orë</strong> offline.
+            <strong>ATK mund të vijë për kontroll</strong> nëse sistemi fiskal / POS nuk po funksionon online.
+            Rilidhni internetin dhe hapni programin sa më shpejt.
           </p>`
-        : `<p style="margin-top:12px;color:#64748b;font-size:13px">
-            Lejohet offline deri në 48 orë. Njoftime çdo 12 orë.
-            Pas 48 orësh — rrezik kontrolli ATK.
+        : `<p style="margin-top:16px;padding:12px;background:#78350f;color:#fde68a;border-radius:8px">
+            <strong>Paralajmërim:</strong> Mund të jeni offline deri në <strong>48 orë</strong>
+            (ky njoftim: ${milestoneHours}h). Pas 48 orësh
+            <strong>ATK mund të vijë për kontroll</strong> nëse sistemi nuk funksionon.
+            Rilidhni internetin dhe hapni programin.
           </p>`
     }
+    <p style="margin-top:16px">Nëse keni nevojë për ndihmë: <strong>${escapeHtmlEmail(support)}</strong></p>
+    <p style="color:#64748b;font-size:13px">Revolution Invest POS</p>
   `;
 
   return deliverEmail({ to, subject, text, html });
+}
+
+/** @deprecated përdor sendOwnerClientOfflineEmail — mbajtur për kompatibilitet */
+async function sendAdminClientOfflineEmail(opts) {
+  return sendOwnerClientOfflineEmail({
+    ...opts,
+    to: opts.to || resolveAdminNotifyEmail(),
+  });
 }
 
 module.exports = {
@@ -562,5 +564,6 @@ module.exports = {
   sendSupplySuggestionEmail,
   sendLowStockCriticalEmail,
   sendWeeklyAiReportEmail,
+  sendOwnerClientOfflineEmail,
   sendAdminClientOfflineEmail,
 };

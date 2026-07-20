@@ -1,7 +1,7 @@
 const { getSupabase } = require("../db");
 const {
   isEmailConfigured,
-  sendAdminClientOfflineEmail,
+  sendOwnerClientOfflineEmail,
 } = require("./emailService");
 
 const MILESTONES = [12, 24, 36, 48];
@@ -36,6 +36,22 @@ function normalizeOfflineSince(iso) {
   return d.toISOString();
 }
 
+async function resolveOwnerEmail(clientId, clientEmail) {
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("users")
+    .select("email")
+    .eq("client_id", clientId)
+    .eq("roli", "client_admin")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const ownerEmail = String(data?.email || "").trim().toLowerCase();
+  if (ownerEmail) return ownerEmail;
+  return String(clientEmail || "").trim().toLowerCase() || null;
+}
+
 async function fetchClientOfflineSnapshots() {
   const db = getSupabase();
   const [{ data: licenses, error: licErr }, { data: terminals, error: termErr }] =
@@ -43,7 +59,7 @@ async function fetchClientOfflineSnapshots() {
       db
         .from("licenses")
         .select(
-          "id, client_id, statusi, last_activated_at, last_validation_at, updated_at, created_at, clients(id, emri, email, telefoni, aktiv)",
+          "id, client_id, statusi, last_activated_at, last_validation_at, clients(id, emri, email, telefoni, aktiv)",
         )
         .neq("statusi", "revokuar"),
       db.from("license_terminals").select("license_id, last_seen_at"),
@@ -90,6 +106,7 @@ async function fetchClientOfflineSnapshots() {
       client_id: clientId,
       license_id: lic.id,
       client_name: client.emri || "—",
+      client_email: client.email || "",
       phone: client.telefoni || "",
       last_seen_at: lastSeen,
       offline_since: normalizeOfflineSince(lastSeen),
@@ -142,7 +159,7 @@ async function processOfflineNotifications() {
   }
 
   const offline = await fetchClientOfflineSnapshots();
-  const stats = { checked: offline.length, sent: 0, skipped: 0, errors: 0 };
+  const stats = { checked: offline.length, sent: 0, skipped: 0, no_email: 0, errors: 0 };
 
   for (const row of offline) {
     let sentSet;
@@ -156,6 +173,25 @@ async function processOfflineNotifications() {
       throw err;
     }
 
+    let ownerEmail = null;
+    try {
+      ownerEmail = await resolveOwnerEmail(row.client_id, row.client_email);
+    } catch (err) {
+      stats.errors += 1;
+      console.error(
+        `[cron] offlineNotifications owner email ${row.client_id}:`,
+        err.message || err,
+      );
+      continue;
+    }
+    if (!ownerEmail) {
+      stats.no_email += 1;
+      console.warn(
+        `[cron] offlineNotifications: pa email pronari — ${row.client_name} (${row.client_id})`,
+      );
+      continue;
+    }
+
     for (const milestone of MILESTONES) {
       if (row.hours_offline < milestone) continue;
       if (sentSet.has(milestone)) {
@@ -163,9 +199,9 @@ async function processOfflineNotifications() {
         continue;
       }
       try {
-        await sendAdminClientOfflineEmail({
+        await sendOwnerClientOfflineEmail({
+          to: ownerEmail,
           clientName: row.client_name,
-          phone: row.phone,
           hoursOffline: row.hours_offline,
           milestoneHours: milestone,
           lastSeenAt: row.last_seen_at,
@@ -185,7 +221,7 @@ async function processOfflineNotifications() {
   }
 
   console.log(
-    `[cron] offlineNotifications: checked=${stats.checked} sent=${stats.sent} skipped=${stats.skipped} errors=${stats.errors}`,
+    `[cron] offlineNotifications: checked=${stats.checked} sent=${stats.sent} skipped=${stats.skipped} no_email=${stats.no_email} errors=${stats.errors}`,
   );
   return stats;
 }
