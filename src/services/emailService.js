@@ -475,6 +475,76 @@ async function sendWeeklyAiReportEmail({ to, clientName, weekStart, weekEnd, sum
   return deliverEmail({ to, subject, text, html });
 }
 
+/**
+ * Njoftim Super Admin: klienti është offline (12/24/36/48 orë).
+ * Pas 48h — kujtesë se ATK mund të bëjë kontroll.
+ */
+async function sendAdminClientOfflineEmail({
+  clientName,
+  phone,
+  hoursOffline,
+  milestoneHours,
+  lastSeenAt,
+  atkWarning,
+}) {
+  const to = resolveAdminNotifyEmail();
+  const name = clientName || "Klient i panjohur";
+  const hours = Math.round(Number(hoursOffline) || Number(milestoneHours) || 0);
+  const seenLabel = lastSeenAt
+    ? new Date(lastSeenAt).toLocaleString("sq-AL", { timeZone: "Europe/Belgrade" })
+    : "asnjeherë / i panjohur";
+
+  const subject = atkWarning
+    ? `⚠️ OFFLINE >48h (rrezik ATK) — ${name}`
+    : `📴 Klient offline ${milestoneHours}h — ${name}`;
+
+  const atkBlock = atkWarning
+    ? [
+        "",
+        "KUJTESË E RËNDËSISHME:",
+        "Klienti ka kaluar 48 orë offline. ATK mund të vijë për kontroll",
+        "nëse sistemi fiskal / POS nuk po funksionon online.",
+        "Kontaktoni klientin sa më shpejt.",
+      ]
+    : [
+        "",
+        `Lejohet offline deri në 48 orë. Njoftime çdo 12 orë (ky: ${milestoneHours}h).`,
+        "Pas 48 orësh — rrezik kontrolli ATK nëse nuk rilidhet.",
+      ];
+
+  const text = [
+    `Klienti: ${name}`,
+    phone ? `Telefon: ${phone}` : null,
+    `Offline prej: ~${hours} orë`,
+    `Milestone: ${milestoneHours}h`,
+    `Last seen: ${seenLabel}`,
+    ...atkBlock,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const html = `
+    <p><strong>${atkWarning ? "⚠️ OFFLINE &gt;48 orë — rrezik ATK" : "📴 Klient offline"}</strong></p>
+    <p>Klienti: <strong>${escapeHtmlEmail(name)}</strong></p>
+    ${phone ? `<p>Telefon: <strong>${escapeHtmlEmail(phone)}</strong></p>` : ""}
+    <p>Offline prej: <strong>~${hours} orë</strong> (njoftimi i ${milestoneHours}h)</p>
+    <p>Last seen: <code>${escapeHtmlEmail(seenLabel)}</code></p>
+    ${
+      atkWarning
+        ? `<p style="margin-top:16px;padding:12px;background:#7f1d1d;color:#fecaca;border-radius:8px">
+            <strong>KUJTESË:</strong> Ka kaluar 48 orë offline. ATK mund të vijë për kontroll
+            nëse sistemi nuk po funksionon. Kontaktoni klientin sa më shpejt.
+          </p>`
+        : `<p style="margin-top:12px;color:#64748b;font-size:13px">
+            Lejohet offline deri në 48 orë. Njoftime çdo 12 orë.
+            Pas 48 orësh — rrezik kontrolli ATK.
+          </p>`
+    }
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   deliverEmail,
@@ -492,4 +562,5 @@ module.exports = {
   sendSupplySuggestionEmail,
   sendLowStockCriticalEmail,
   sendWeeklyAiReportEmail,
+  sendAdminClientOfflineEmail,
 };
