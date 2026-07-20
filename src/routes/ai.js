@@ -122,6 +122,7 @@ router.post(
       ok: true,
       supplier: result.supplier,
       invoice_number: result.invoice_number,
+      invoice_date: result.invoice_date || "",
       items: result.items,
       usage: {
         tokens_used: result.tokensUsed,

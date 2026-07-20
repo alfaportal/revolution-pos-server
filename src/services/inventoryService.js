@@ -328,80 +328,110 @@ async function applyInvoiceScanItems(clientId, body) {
   const list = Array.isArray(body?.items) ? body.items : [];
   if (!list.length) throw new Error("Nuk ka artikuj për import.");
 
-  await ensureInventoryReady();
-  let ingredients = await listIngredients(clientId);
+  const supplier = String(body?.supplier || "").trim();
+  const supplierEmail = String(body?.supplier_email || body?.supplierEmail || "").trim();
+  const invoice_number = String(body?.invoice_number || "").trim();
+  const invoice_date = body?.invoice_date || null;
+
+  // 1) Radhë për POS desktop — Stoku / Blerjet / Kontabilisti (burimi i vërtetë për kafene).
+  let pos_queue = null;
+  try {
+    const { enqueuePendingPurchase } = require("./posPendingPurchaseService");
+    pos_queue = await enqueuePendingPurchase(clientId, {
+      supplier,
+      invoice_number,
+      invoice_date,
+      items: list,
+      source: "ai_invoice_scan",
+    });
+  } catch (err) {
+    console.warn("[inventory] pos pending purchase queue failed:", err.message);
+    throw new Error(
+      `Nuk u dërgua te POS: ${err.message}. Stoku / Blerjet / Kontabilisti nuk u përditësuan.`,
+    );
+  }
+
+  // 2) Opsionale: përbërësit (inventory) — nuk duhet të bllokojë regjistrimin te POS.
   const applied = [];
   const created = [];
   const updated = [];
-  const supplier = String(body?.supplier || "").trim();
-  const supplierEmail = String(body?.supplier_email || body?.supplierEmail || "").trim();
+  try {
+    await ensureInventoryReady();
+    let ingredients = await listIngredients(clientId);
 
-  for (const raw of list) {
-    const name = String(raw?.name || "").trim();
-    const quantity = roundQty(Math.max(0, Number(raw?.quantity) || 0));
-    const unit = validateUnit(normalizeScanUnit(raw?.unit));
-    const unit_price = roundQty(
-      Math.max(0, Number(raw?.unit_price ?? raw?.price ?? raw?.cost_per_unit) || 0),
-    );
-    const createIfMissing = raw?.create_if_missing !== false;
+    for (const raw of list) {
+      const name = String(raw?.name || "").trim();
+      const quantity = roundQty(Math.max(0, Number(raw?.quantity) || 0));
+      const unit = validateUnit(normalizeScanUnit(raw?.unit));
+      const unit_price = roundQty(
+        Math.max(0, Number(raw?.unit_price ?? raw?.price ?? raw?.cost_per_unit) || 0),
+      );
+      const createIfMissing = raw?.create_if_missing !== false;
 
-    if (!name || quantity <= 0) continue;
+      if (!name || quantity <= 0) continue;
 
-    let ingredient = null;
-    const ingredientId = String(raw?.ingredient_id || "").trim();
-    if (UUID_RE.test(ingredientId)) {
-      ingredient = ingredients.find(i => i.id === ingredientId) || null;
+      let ingredient = null;
+      const ingredientId = String(raw?.ingredient_id || "").trim();
+      if (UUID_RE.test(ingredientId)) {
+        ingredient = ingredients.find(i => i.id === ingredientId) || null;
+      }
+      if (!ingredient) {
+        ingredient = findIngredientByName(ingredients, name);
+      }
+
+      if (!ingredient && createIfMissing) {
+        ingredient = await createIngredient(clientId, {
+          name,
+          unit,
+          quantity,
+          min_quantity: 0,
+          cost_per_unit: unit_price,
+        });
+        ingredients.push(ingredient);
+        created.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
+      } else if (ingredient) {
+        const patch = { add_quantity: quantity };
+        if (unit_price > 0) patch.cost_per_unit = unit_price;
+        if (supplier) patch.last_supplier = supplier;
+        if (supplierEmail) patch.last_supplier_email = supplierEmail;
+        ingredient = await updateIngredient(clientId, ingredient.id, patch);
+        const idx = ingredients.findIndex(i => i.id === ingredient.id);
+        if (idx >= 0) ingredients[idx] = ingredient;
+        updated.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
+      }
+
+      if (ingredient) {
+        applied.push({
+          ingredient_id: ingredient.id,
+          name: ingredient.name,
+          quantity,
+          unit,
+          unit_price,
+        });
+      }
     }
-    if (!ingredient) {
-      ingredient = findIngredientByName(ingredients, name);
-    }
-
-    if (!ingredient && createIfMissing) {
-      ingredient = await createIngredient(clientId, {
-        name,
-        unit,
-        quantity,
-        min_quantity: 0,
-        cost_per_unit: unit_price,
-      });
-      ingredients.push(ingredient);
-      created.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
-    } else if (ingredient) {
-      const patch = { add_quantity: quantity };
-      if (unit_price > 0) patch.cost_per_unit = unit_price;
-      if (supplier) patch.last_supplier = supplier;
-      if (supplierEmail) patch.last_supplier_email = supplierEmail;
-      ingredient = await updateIngredient(clientId, ingredient.id, patch);
-      const idx = ingredients.findIndex(i => i.id === ingredient.id);
-      if (idx >= 0) ingredients[idx] = ingredient;
-      updated.push({ id: ingredient.id, name: ingredient.name, quantity, unit });
-    }
-
-    if (ingredient) {
-      applied.push({
-        ingredient_id: ingredient.id,
-        name: ingredient.name,
-        quantity,
-        unit,
-        unit_price,
-      });
-    }
+  } catch (err) {
+    console.warn("[inventory] ingredient apply (secondary) failed:", err.message);
   }
 
-  if (!applied.length) {
-    throw new Error("Asnjë artikull nuk u importua — kontrolloni emrat dhe sasitë.");
-  }
+  const itemCount = Number(pos_queue?.item_count) || list.filter((r) => {
+    const name = String(r?.name || "").trim();
+    const quantity = Number(r?.quantity) || 0;
+    return name && quantity > 0;
+  }).length;
 
   return {
     supplier,
     supplier_email: supplierEmail,
-    invoice_number: String(body?.invoice_number || "").trim(),
-    applied_count: applied.length,
+    invoice_number,
+    applied_count: applied.length || itemCount,
     created_count: created.length,
     updated_count: updated.length,
     applied,
     created,
     updated,
+    pos_queue,
+    pos_pending: !!pos_queue?.id,
   };
 }
 

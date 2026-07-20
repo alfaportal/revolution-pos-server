@@ -265,6 +265,7 @@
       invoiceScanItems = Array.isArray(data.items) ? data.items : [];
       document.getElementById("invoice-scan-supplier").value = data.supplier || "";
       document.getElementById("invoice-scan-number").value = data.invoice_number || "";
+      window.__invoiceScanDate = data.invoice_date || "";
       renderInvoiceScanItems();
       setInvoiceScanStatus(
         `${invoiceScanItems.length} artikuj u gjetën (${Number(data.usage?.tokens_used || 0).toLocaleString("sq-AL")} tokenë). Kontrollo dhe Regjistro në Stok.`,
@@ -297,7 +298,12 @@
     const applyBtn = document.getElementById("btn-invoice-scan-apply");
     if (applyBtn) applyBtn.disabled = true;
     setInvoiceScanStatus("Duke përditësuar stokun…", true);
-    const payload = { supplier, invoice_number, items };
+    const payload = {
+      supplier,
+      invoice_number,
+      invoice_date: window.__invoiceScanDate || "",
+      items,
+    };
     try {
       if (!navigator.onLine) {
         const key = "ri_pos_pending_invoice_scans";
@@ -323,7 +329,12 @@
       }
       const msg = document.getElementById("inventory-msg");
       if (msg) {
-        msg.textContent = `${data.applied_count} artikuj u importuan (${data.created_count} të rinj, ${data.updated_count} u përditësuan).`;
+        const posNote = data.pos_pending
+          ? " U dërgua te POS — Stoku / Blerjet / Kontabilisti në desktop do të përditësohen automatikisht."
+          : "";
+        msg.textContent =
+          `${data.applied_count} artikuj u importuan (${data.created_count} të rinj, ${data.updated_count} u përditësuan).` +
+          posNote;
         msg.className = "owner-license-msg ok";
       }
     } catch (err) {

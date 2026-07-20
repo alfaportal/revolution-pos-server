@@ -3,23 +3,30 @@ const { isAiPaused } = require("../lib/aiConfig");
 
 const SCAN_PROMPT =
   "Analizo këtë foto të faturës së furnizuesit (faturë shitje/blerje, shqip ose anglisht). " +
-  "Lexo TË GJITHË rreshtat e produkteve nga tabela (Produkti / Emri, Sasia, Njësia, Çmimi). " +
+  "Lexo TË GJITHË rreshtat e produkteve nga tabela — asnjë rresht mos e anashkalo (edhe nëse është i fundit ose i vogël). " +
+  "Numëro rreshtat e produkteve në foto dhe kthe SAKTËSISHT të njëjtin numër në items. " +
   "Për çdo artikull: name = emri i produktit (p.sh. Golden Eagle, Fanta, Uji Mineral); " +
   "quantity = numri në kolonën Sasia (p.sh. 7 pako = 7, jo totali i pagesës); " +
   "unit = pako/copë/kg/l sipas faturës (nëse është Pako përdor 'copë'); " +
   "unit_price = çmimi PËR NJËSI me TVSH (Cmimi me tvsh), JO 'Vlera me tvsh' e rreshtit. " +
-  "Mos harro asnjë rresht të dukshëm. " +
+  "supplier = emri i firmës/furnizuesit; invoice_number = numri i faturës; " +
+  "invoice_date = data e faturës në format YYYY-MM-DD (nëse duket). " +
   "Përgjigju VETËM me JSON valid (pa markdown, pa shpjegim) në këtë format:\n" +
-  '{"supplier":"Emri i furnizuesit","invoice_number":"2026-900","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"copë","unit_price":9.50}]}';
+  '{"supplier":"Emri i furnizuesit","invoice_number":"2026-900","invoice_date":"2026-07-15","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"copë","unit_price":9.50}]}';
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.round(value * 1000) / 1000;
   }
-  const cleaned = String(value ?? "")
+  let cleaned = String(value ?? "")
     .replace(/\s/g, "")
-    .replace(/[^\d.,-]/g, "")
-    .replace(/,/g, ".");
+    .replace(/[^\d.,-]/g, "");
+  // Evropiane: 1.234,56 → 1234.56 | 7,00 → 7.00
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (cleaned.includes(",")) {
+    cleaned = cleaned.replace(",", ".");
+  }
   const match = cleaned.match(/-?\d+(?:\.\d+)?/);
   if (!match) return null;
   const n = Number(match[0]);
@@ -153,6 +160,7 @@ async function scanInvoiceFromImage({ mime, base64 }) {
     invoice_number: String(
       payload.invoice_number ?? payload.invoice_no ?? payload.nr_fature ?? payload.number ?? "",
     ).trim(),
+    invoice_date: String(payload.invoice_date ?? payload.date ?? payload.data ?? "").trim().slice(0, 10),
     items,
     tokensUsed,
     model: config.model,

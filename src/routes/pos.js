@@ -1,6 +1,10 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
 const { syncCatalogFromPos, syncStaffOnlyFromPos, pullCatalogForLicense } = require("../services/posSyncService");
+const {
+  listPendingPurchasesForLicense,
+  markPendingPurchaseApplied,
+} = require("../services/posPendingPurchaseService");
 
 const router = express.Router();
 
@@ -37,6 +41,28 @@ router.post("/staff/sync", licenseApiKeyOptional, async (req, res) => {
   try {
     const result = await syncStaffOnlyFromPos(req.body);
     res.status(201).json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/** Fatura blerjeje nga telefon/AI — POS i tërheq dhe i regjistron lokalisht. */
+router.get("/pending-purchases", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const result = await listPendingPurchasesForLicense(catalogLicenseBody(req));
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+router.post("/pending-purchases/applied", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const result = await markPendingPurchaseApplied({
+      ...catalogLicenseBody(req),
+      ...req.body,
+    });
+    res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
   }
