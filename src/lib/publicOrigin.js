@@ -3,6 +3,9 @@
 const DEFAULT_PUBLIC_ORIGIN = "https://revolution-pos.com";
 const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
+/** Setup Windows — shkarkim i drejtpërdrejtë (pa Railway Variables). */
+const DEFAULT_SETUP_DOWNLOAD_URL =
+  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.231/KAFENE-Setup.exe";
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
@@ -35,10 +38,10 @@ function getSupportEmail() {
   return DEFAULT_SUPPORT_EMAIL;
 }
 
-/** URL për shkarkim Setup — njerëzit e marrin vetë nga webfaqja. */
+/** URL për shkarkim Setup — njerëzit e marrin vetë nga webfaqja (default i gatshëm). */
 function getSetupDownloadUrl(plan) {
   const fallback =
-    process.env.SETUP_DOWNLOAD_URL?.trim() || "/downloads/KAFENE-Setup.exe";
+    process.env.SETUP_DOWNLOAD_URL?.trim() || DEFAULT_SETUP_DOWNLOAD_URL;
   const key = String(plan || "").toLowerCase();
   const byPlan = {
     p1:
@@ -81,6 +84,7 @@ module.exports = {
   DEFAULT_PUBLIC_ORIGIN,
   DEFAULT_SUPPORT_PHONE,
   DEFAULT_SUPPORT_EMAIL,
+  DEFAULT_SETUP_DOWNLOAD_URL,
   getPublicAppOrigin,
   getSupportPhone,
   getSupportPhoneDigits,

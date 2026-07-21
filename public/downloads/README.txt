@@ -1,11 +1,8 @@
-Vendosni ketu instaluesin Setup (p.sh. KAFENE-Setup.exe).
+Setup publik (default ne kod):
+https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.231/KAFENE-Setup.exe
 
-Opsione:
-1) Ngarkoni skedarin ne kete folder ne server (path: /downloads/KAFENE-Setup.exe)
-2) Ose ne Railway Variables vendosni:
-   SETUP_DOWNLOAD_URL=https://...link-i-setup.exe
-   SETUP_DOWNLOAD_P1_URL=...  (Standard)
-   SETUP_DOWNLOAD_P2_URL=...  (Pro)
-   SETUP_DOWNLOAD_P3_URL=...  (Full)
+Per update: ngarko version te ri me:
+  gh release create setup-vX.Y.Z KAFENE-Setup.exe --title "KAFENE Setup X.Y.Z"
 
-Mos e shtoni .exe ne Git (eshte ne .gitignore).
+Pastaj ndrysho DEFAULT_SETUP_DOWNLOAD_URL ne src/lib/publicOrigin.js
+Mos e shtoni .exe ne Git (~107MB).
