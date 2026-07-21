@@ -35,12 +35,45 @@ function getSupportEmail() {
   return DEFAULT_SUPPORT_EMAIL;
 }
 
+/** URL për shkarkim Setup — njerëzit e marrin vetë nga webfaqja. */
+function getSetupDownloadUrl(plan) {
+  const fallback =
+    process.env.SETUP_DOWNLOAD_URL?.trim() || "/downloads/KAFENE-Setup.exe";
+  const key = String(plan || "").toLowerCase();
+  const byPlan = {
+    p1:
+      process.env.SETUP_DOWNLOAD_P1_URL?.trim() ||
+      process.env.SETUP_DOWNLOAD_STANDARD_URL?.trim() ||
+      fallback,
+    p2:
+      process.env.SETUP_DOWNLOAD_P2_URL?.trim() ||
+      process.env.SETUP_DOWNLOAD_PRO_URL?.trim() ||
+      fallback,
+    p3:
+      process.env.SETUP_DOWNLOAD_P3_URL?.trim() ||
+      process.env.SETUP_DOWNLOAD_FULL_URL?.trim() ||
+      fallback,
+    p4:
+      process.env.SETUP_DOWNLOAD_P4_URL?.trim() ||
+      process.env.SETUP_DOWNLOAD_FULL_URL?.trim() ||
+      fallback,
+  };
+  return byPlan[key] || fallback;
+}
+
 function getPublicAppConfig() {
   return {
     public_origin: getPublicAppOrigin(),
     support_phone: getSupportPhone(),
     support_phone_digits: getSupportPhoneDigits(),
     support_email: getSupportEmail(),
+    setup_download_url: getSetupDownloadUrl(),
+    setup_downloads: {
+      p1: getSetupDownloadUrl("p1"),
+      p2: getSetupDownloadUrl("p2"),
+      p3: getSetupDownloadUrl("p3"),
+      p4: getSetupDownloadUrl("p4"),
+    },
   };
 }
 
@@ -52,5 +85,6 @@ module.exports = {
   getSupportPhone,
   getSupportPhoneDigits,
   getSupportEmail,
+  getSetupDownloadUrl,
   getPublicAppConfig,
 };

@@ -50,7 +50,11 @@ const { startTelegramBotWebhook } = require("./jobs/telegramBotWebhook");
 const telegramRoutes = require("./routes/telegram");
 const systemRoutes = require("./routes/system");
 const { router: paymentsRouter, stripeWebhookHandler } = require("./routes/payments");
-const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
+const {
+  getPublicAppConfig,
+  getPublicAppOrigin,
+  getSetupDownloadUrl,
+} = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 const { paymentsConfigured } = require("./lib/stripeConfig");
 
@@ -98,6 +102,13 @@ app.get("/api/public/config", (_req, res) => {
     ...getPublicAppConfig(),
     stripe_enabled: paymentsConfigured(),
   });
+});
+
+/** Shkarkim Setup — redirect te URL e konfiguruar (ose /downloads/...). */
+app.get("/api/public/setup-download", (req, res) => {
+  const plan = String(req.query.plan || "").trim().toLowerCase();
+  const url = getSetupDownloadUrl(plan);
+  res.redirect(302, url);
 });
 
 app.use("/api/payments", paymentsRouter);

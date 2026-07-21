@@ -1949,3 +1949,167 @@ a.article-card {
     cursor: pointer;
   }
 }
+
+.package-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.pay-section {
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.pay-methods {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.pay-method {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+  padding: 1.25rem 1.35rem;
+  border: 2px solid #0f172a;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.pay-method:hover {
+  border-color: #e63946;
+}
+
+.pay-method-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #15803d;
+  color: #fff;
+}
+
+.pay-method-badge-soon {
+  background: #94a3b8;
+}
+
+.pay-method-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.pay-card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.pay-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+.pay-mark-visa {
+  color: #1a1f71;
+  border-color: #1a1f71;
+}
+
+.pay-mark-mc {
+  color: #eb001b;
+  border-color: #eb001b;
+}
+
+.pay-mark-stripe {
+  color: #635bff;
+  border-color: #635bff;
+}
+
+.pay-method-btn {
+  pointer-events: none;
+  margin-top: 0.25rem;
+}
+
+.pay-banks-block {
+  padding: 1.15rem 1.25rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.pay-banks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.pay-banks-desc {
+  margin: 0 0 0.85rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.pay-banks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.pay-bank {
+  min-height: 3rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #0f172a;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.pay-bank:hover,
+.pay-bank.is-selected {
+  border-color: #e63946;
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.15);
+}
+
+.pay-hint {
+  margin: 1rem auto 0;
+  max-width: 720px;
+  text-align: center;
+  color: #b45309;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .pay-banks-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

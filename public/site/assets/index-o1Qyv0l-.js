@@ -1,88 +1,88 @@
-(function(){const a=document.createElement("link").relList;if(a&&a.supports&&a.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))o(n);new MutationObserver(n=>{for(const r of n)if(r.type==="childList")for(const s of r.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&o(s)}).observe(document,{childList:!0,subtree:!0});function i(n){const r={};return n.integrity&&(r.integrity=n.integrity),n.referrerPolicy&&(r.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?r.credentials="include":n.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function o(n){if(n.ep)return;n.ep=!0;const r=i(n);fetch(n.href,r)}})();const M=[];function T(e,a){const i=[],o=new RegExp("^"+e.replace(/\//g,"\\/").replace(/:([a-zA-Z]+)/g,(n,r)=>(i.push(r),"([^/]+)"))+"$");M.push({regex:o,keys:i,handler:a})}function U(e){const a=e.indexOf("#"),i=a>=0?e.slice(a+1):"",o=a>=0?e.slice(0,a)||"/":e;window.history.pushState({},"",i?`${o}#${i}`:o),O(),i&&requestAnimationFrame(()=>{var n;(n=document.getElementById(i))==null||n.scrollIntoView({behavior:"smooth"})})}function w(){return window.location.pathname.replace(/\/+$/,"")||"/"}function O(){var a;const e=w();for(const i of M){const o=e.match(i.regex);if(!o)continue;const n={};i.keys.forEach((r,s)=>{n[r]=decodeURIComponent(o[s+1])}),i.handler(n);return}(a=M.find(i=>i.regex.source==="^\\/$"))==null||a.handler({})}function Z(){document.addEventListener("click",e=>{const a=e.target.closest("a[data-navigate]");a&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||(e.preventDefault(),U(a.getAttribute("href"))))}),window.addEventListener("popstate",O),O()}const H={sq:{navLabel:"Kryesore",langLabel:"Gjuha",features:"Veçoritë",howItWorks:"Si funksionon",packages:"Paketat",faq:"FAQ",blog:"Blog",backToTop:"Kthehu lart",blogBadge:"Blog",heroTitle:"Këshilla & Njohuri për",heroAccent:"Restorante Moderne",heroSubtitle:"Artikuj praktikë për menaxhimin e restorantit, teknologjinë POS dhe eficiencën operacionale.",readMore:"Lexo →",backToBlog:"← Kthehu në ballina",pageTitle:"Revolution Invest POS — Restorante & Kafene",metaDescription:"Këshilla dhe njohuri për restorante moderne — menaxhim, POS, teknologji dhe eficiencë operacionale."},en:{navLabel:"Main navigation",langLabel:"Language",features:"Features",howItWorks:"How it works",packages:"Pricing",faq:"FAQ",blog:"Blog",backToTop:"Back to top",blogBadge:"Blog",heroTitle:"Tips & Insights for",heroAccent:"Modern Restaurants",heroSubtitle:"Practical articles on restaurant management, POS technology, and operational efficiency.",readMore:"Read →",backToBlog:"← Back to home",pageTitle:"Revolution Invest POS — Restaurants & Cafés",metaDescription:"Tips and insights for modern restaurants — management, POS, technology, and operational efficiency."}},I={sq:{"meta.title":"Revolution Invest POS — Sistemi POS për Restorantet, Kafenetë & Dyqanet","meta.description":"Revolution Invest POS — platformë e plotë për restorante, kafene dhe dyqane. POS, kuzhinë, kamarier, faqe publike /r/ & /s/, porosi online dhe offline me sync.","brand.subtitle":"Restorant · Kafene · Dyqan","nav.home":"Ballina","nav.howItWorks":"Si funksionon","nav.getStarted":"Si ta merrni","nav.packages":"Pakot","nav.blog":"Blog","nav.manual":"Manuali","nav.contact":"Kontakti","nav.openMenu":"Hap menunë","getStarted.title":"Si ta merrni programin — hap pas hapi","getStarted.subtitle":"Nuk duhet të dini teknikë. Ndiqni këto hapa; ne ju dërgojmë Setup.exe dhe kodin e aktivizimit.","getStarted.s1.title":"1. Zgjidhni pakon","getStarted.s1.desc":"Shikoni Pakot më poshtë (Standard, Pro, Full ose AI) dhe zgjidhni atë që ju duhet.","getStarted.s2.title":"2. Na shkruani në WhatsApp","getStarted.s2.desc":"Shtypni butonin ose shkruani +383 48707880. Thoni emrin e biznesit dhe pakon.","getStarted.s3.title":"3. Merrni Setup.exe","getStarted.s3.desc":"Ju dërgojmë skedarin e instalimit (Setup) për Windows — shkarkoni dhe hapni atë.","getStarted.s4.title":"4. Instaloni programin","getStarted.s4.desc":"Ndiqni dritaren e instalimit. Në fund hapet «Aktivizo KAFENE» me ID e pajisjes.","getStarted.s5.title":"5. Dërgoni ID e pajisjes","getStarted.s5.desc":"Kopjoni ID-në (XXXX-XXXX-XXXX-XXXX) dhe dërgojeni në WhatsApp — ne ju kthejmë License Key.","getStarted.s6.title":"6. Aktivizoni & filloni","getStarted.s6.desc":"Ngjitni çelësin te ekrani i aktivizimit. Trial 7 ditë ose licencë vjetore — pastaj punoni normalisht.","getStarted.cta":"Filloni tani me WhatsApp","getStarted.note":"Pako 4 (AI) aktivizohet vetëm pas kontaktit me ne — jo automatikisht online.","cta.startFree":"Fillo Falas","cta.choosePackage":"Zgjidh Pakon","cta.buyPackage":"Blej / Provo me WhatsApp","cta.payStripe":"Paguaj me kartë","cta.contactAi":"Kontaktoni për AI","checkout.title":"Pagesa me kartë — licenca (1 vit)","checkout.emri":"Emri juaj","checkout.biznesi":"Emri i biznesit","checkout.email":"Email","checkout.telefoni":"Telefoni","checkout.tipi":"Lloji i biznesit","checkout.pay":"Vazhdo te pagesa me kartë","checkout.cancel":"Anulo","checkout.busy":"Duke hapur Stripe…","checkout.error":"Pagesa nuk u hap. Provoni përsëri ose WhatsApp.","checkout.success":"Pagesa u krye! Ju kontaktojmë me Setup.exe dhe udhëzimet.","checkout.tipi.restorant":"Restorant","checkout.tipi.kafene":"Kafene","checkout.tipi.dyqan":"Dyqan","cta.contactUs":"Na Kontaktoni","cta.sendRequest":"Dërgo kërkesën","expand.more":"Lexo më shumë","expand.less":"Më pak","hero.badge":"Provë falas 7 ditë","hero.title":"Kontrollo çdo Porosi. Çdo Tavolinë. Çdo Ditë.","hero.subtitle":"Nga kasa te kuzhina, nga kamarieri te pronari — plus stok, fatura, faqe publike për restorante & dyqane, porosi online dhe punë offline. Gjithçka në një platformë.","hero.cta.primary":"Fillo 7 ditë falas","hero.cta.secondary":"Shiko veçoritë →","trialModal.title":"Provë falas — 7 ditë","trialModal.body":"Na kontaktoni për Setup + License Key (trial 7 ditë). Pa pagesë publike në faqe — thjesht shkruani ose telefononi.","trialModal.phoneLabel":"Telefon / WhatsApp","trialModal.phone":"+383 48707880","trialModal.wa":"Hap WhatsApp — provo tani","trialModal.close":"Mbyll","hero.stats.restaurants":"500+ Restorante","hero.stats.support":"24/7 Mbështetje","hero.stats.cloud":"Cloud & Offline","spotlight.title":"Çfarë përfshin programi","spotlight.subtitle":"Module profesionale që punojnë së bashku — nga operimi ditor te prezenca digjitale e biznesit tuaj.","spotlight.card1.category":"MENAXHIM","spotlight.card1.title":"Stoku, Faturat dhe Raportet","spotlight.card1.desc":"Inventar me përbërës dhe alarme stoku, fatura fiskale termike dhe raporte Z — kontroll i plotë mbi operacionet e restorantit.","spotlight.card1.link":"Lexo →","spotlight.card2.category":"PLATFORMË","spotlight.card2.title":"Restorant, Kafene & Dyqan — Faqe Publike për Çdo Lokal","spotlight.card2.desc":"Menu digjitale /r/ për restorante, vitrinë produktesh /s/ për dyqane, porosi online, rezervime tavolinash, offline me sync dhe panel pronari nga telefoni.","spotlight.card2.link":"Shiko pakot →","how.title":"Si funksionon sistemi","how.subtitle":"Katër module të lidhura — porosia shkon nga tavolina te kuzhina, pronari sheh gjithçka live, klienti gjen lokalin tuaj online.","how.pos.title":"POS Kasa","how.pos.desc":"Shitje të shpejta, tavolina, pagesa, fatura fiskale dhe printim termik — qendra e operimit të restorantit ose dyqanit tuaj.","how.waiter.title":"Kamarieri","how.waiter.desc":"Tablet ose telefon — merr porosi nga tavolina, punon edhe offline dhe i dërgon automatikisht në kuzhinë kur kthehet interneti.","how.kds.title":"KDS Kuzhina","how.kds.desc":"Ekran dixhital — porositë shfaqen live, stafi konfirmon gatishmërinë dhe servimi bëhet pa gabime.","how.owner.title":"Pronari","how.owner.desc":"Panel online — menu, stok, stafi, rezervime, faqja publike, raporte dhe QR — menaxhim i plotë nga kudo.","how.readManual":"Lexo në manual →","packages.title":"Pakot — çfarë përmban secila","packages.subtitle":"Zgjidhni vetëm një pako. Shihni çfarë përfshin; për çmime dhe oferta kontaktoni telefon ose email. Pagesa me kartë (Stripe) kur jeni gati.","packages.badge":"1 pako","packages.priceHint":"Për çmime / oferta: WhatsApp ose email — nuk shfaqen publike.","packages.oneOnly":"Mund të zgjidhni vetëm një pako. Për të ndryshuar, klikoni përsëri pakon e zgjedhur.","packages.p1.name":"Pako 1 — Standard","packages.p1.tagline":"POS + KDS + kamarier + kiosk + cloud","packages.p1.summary":"Manual — Pako 1: kasa POS, ekran kuzhine (KDS), kamarier nga telefoni, kiosk QR, sync cloud dhe panel pronari. Pa porosi online. Pa AI.","packages.p1.incl":"Përmban:","packages.p1.f1":"Kasa POS — tavolina, pagesa, printer","packages.p1.f2":"KDS — porosi live në kuzhinë","packages.p1.f3":"Kamarier — tablet / telefon","packages.p1.f4":"Kiosk QR nga tavolina","packages.p1.f5":"Cloud sync & panel pronari","packages.p1.f6":"Faqe publike menu (/r/)","packages.p2.name":"Pako 2 — Pro","packages.p2.tagline":"Gjithçka nga Standard + porosi online","packages.p2.summary":"Manual — Pako 2: e gjithë Pako 1, plus takeaway & delivery nga faqja. Ideal kur klienti porosit edhe jashtë lokalit. Pa AI.","packages.p2.incl":"Përmban (plus Pako 1):","packages.p2.f1":"Porosi online — takeaway & delivery","packages.p2.f2":"Faqe me porosi direkte","packages.p2.f3":"Sync porosive me POS & kuzhinë","packages.p2.f4":"Prano / refuzo porosi","packages.p2.f5":"Raporte nga të gjitha kanalet","packages.p2.f6":"Mbështetje prioritet","packages.p3.name":"Pako 3 — Full","packages.p3.tagline":"I plotë pa AI","packages.p3.summary":"Manual — Pako 3: POS, KDS, kamarier, kiosk, cloud, porosi online — paketa e plotë operative. Pa module AI (AI vetëm Pako 4 me leje).","packages.p3.incl":"Përmban (plus Pako 2):","packages.p3.f1":"POS + KDS + kamarier + kiosk","packages.p3.f2":"Porosi online (takeaway & delivery)","packages.p3.f3":"Cloud sync & backup","packages.p3.f4":"Panel i plotë (menu, stok, staf)","packages.p3.f5":"Faqe restorant / dyqan","packages.p3.f6":"Pa AI — AI vetëm me leje (Pako 4)","packages.p4.name":"Pako 4 — AI","packages.p4.tagline":"Full + AI — vetëm me leje","packages.p4.summary":"Manual — Pako 4: gjithçka nga Full + AI. Nuk aktivizohet online vetë. Vetëm pasi na kontaktoni dhe e lejojmë manualisht.","packages.p4.incl":"Përmban (plus Pako 3):","packages.p4.f1":"Skanim AI — fatura / menu","packages.p4.f2":"Asistent AI për pronarin","packages.p4.f3":"Parashikim stoku & raporte AI","packages.p4.f4":"Kontroll tokenësh nga admini","packages.p4.f5":"Aktivizim VETËM me lejen tonë","packages.p4.f6":"Kontaktoni për AI — jo blerje automatike","packages.clickHint":"Zgjidhni një pako (vetëm një). Pastaj vazhdoni me pagesë ose kontakt.","packages.includes":"Çfarë përmban kjo pako:","packages.selected":"Zgjedhur — vetëm kjo pako","contact.title":"Filloni sot — trial 7 ditë","contact.subtitle":"Na kontaktoni në WhatsApp për trial, instalim Setup.exe dhe zgjedhjen e pakos (Standard, Pro, Full ose AI).","contact.direct":"Kontakt i drejtpërdrejtë","contact.email":"revolutioninvest05@gmail.com","contact.sendMessage":"Dërgo mesazh","form.name":"Emri","form.phone":"Telefoni","form.message":"Mesazhi","form.namePlaceholder":"Emri i biznesit","form.messagePlaceholder":"P.sh. Restorant me 15 tavolina ose dyqan me 200 produkte…","form.error":"Plotësoni të gjitha fushat.","form.success":"Faleminderit! Po ju hapim WhatsApp për të dërguar kërkesën.","footer.tagline":"Sistemi i plotë POS për restorante, kafene, bare dhe dyqane — porosi, kuzhinë, stok, faqe publike dhe menaxhim nga një vend.","footer.note":"Zhvilluar dhe mirëmbajtur nga ekipi ynë në Kosovë dhe rajon.","footer.col.platform":"Platforma","footer.col.support":"Ndihmë & kontakt","footer.link.howItWorks":"Si funksionon","footer.link.packages":"Pakot & modulet","footer.link.blog":"Artikuj & këshilla","footer.link.manual":"Manuali i përdorimit","footer.link.contact":"Na kontaktoni","footer.link.trial":"Fillo provën falas","footer.legal.privacy":"Privatësia e të dhënave","footer.legal.terms":"Kushtet e shërbimit","footer.legal.notice":"Revolution Invest POS ofrohet me licencë të rregullt. Të dhënat e biznesit tuaj ruhen në mënyrë të sigurt sipas politikës sonë të privatësisë.","footer.rights":"Revolution Invest. Të gjitha të drejtat e rezervuara.","wa.trial":"Përshëndetje, dëshiroj të provoj Revolution Invest POS.","wa.custom":"Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.","wa.formIntro":"Përshëndetje, jam {name} ({phone}).","wa.formSuffix":"Dëshiroj Revolution Invest POS — trial 7 ditë.","legal.backHome":"← Kthehu në ballina","articles.heading":"Artikujt e fundit"},en:{"meta.title":"Revolution Invest POS — POS for Restaurants, Cafés & Shops","meta.description":"Revolution Invest POS — full platform for restaurants, cafés and retail. POS, kitchen, waiter, public pages /r/ & /s/, online orders and offline sync.","brand.subtitle":"Restaurant · Café · Shop","nav.home":"Home","nav.howItWorks":"How it works","nav.getStarted":"Get started","nav.packages":"Pricing","nav.blog":"Blog","nav.manual":"Manual","nav.contact":"Contact","nav.openMenu":"Open menu","getStarted.title":"How to get the software — step by step","getStarted.subtitle":"No technical skills needed. Follow these steps; we send you Setup.exe and the activation key.","getStarted.s1.title":"1. Choose a plan","getStarted.s1.desc":"See Packages below (Standard, Pro, Full or AI) and pick what you need.","getStarted.s2.title":"2. Message us on WhatsApp","getStarted.s2.desc":"Tap the button or write +383 48707880. Tell us your business name and plan.","getStarted.s3.title":"3. Get Setup.exe","getStarted.s3.desc":"We send you the Windows installer (Setup) — download and open it.","getStarted.s4.title":"4. Install the app","getStarted.s4.desc":"Follow the installer. At the end «Activate KAFENE» opens with your device ID.","getStarted.s5.title":"5. Send your device ID","getStarted.s5.desc":"Copy the ID (XXXX-XXXX-XXXX-XXXX) and send it on WhatsApp — we reply with a License Key.","getStarted.s6.title":"6. Activate & start","getStarted.s6.desc":"Paste the key on the activation screen. 7-day trial or annual license — then work normally.","getStarted.cta":"Start now on WhatsApp","getStarted.note":"Plan 4 (AI) is activated only after you contact us — not automatically online.","cta.startFree":"Start Free","cta.choosePackage":"Choose Plan","cta.buyPackage":"Buy / Try on WhatsApp","cta.payStripe":"Pay by card","cta.contactAi":"Contact for AI","checkout.title":"Card payment — license (1 year)","checkout.emri":"Your name","checkout.biznesi":"Business name","checkout.email":"Email","checkout.telefoni":"Phone","checkout.tipi":"Business type","checkout.pay":"Continue to card payment","checkout.cancel":"Cancel","checkout.busy":"Opening Stripe…","checkout.error":"Checkout failed. Try again or WhatsApp.","checkout.success":"Payment done! We will send Setup.exe and instructions.","checkout.tipi.restorant":"Restaurant","checkout.tipi.kafene":"Café","checkout.tipi.dyqan":"Shop","cta.contactUs":"Contact Us","cta.sendRequest":"Send request","expand.more":"Read more","expand.less":"Show less","hero.badge":"7-day free trial","hero.title":"Control Every Order. Every Table. Every Day.","hero.subtitle":"From register to kitchen, waiter to owner — plus stock, invoices, public pages for restaurants & shops, online orders and offline work. All in one platform.","hero.cta.primary":"Start 7-day free trial","hero.cta.secondary":"See features →","trialModal.title":"Free trial — 7 days","trialModal.body":"Contact us for Setup + License Key (7-day trial). No public prices on the site — just message or call.","trialModal.phoneLabel":"Phone / WhatsApp","trialModal.phone":"+383 48707880","trialModal.wa":"Open WhatsApp — try now","trialModal.close":"Close","hero.stats.restaurants":"500+ Restaurants","hero.stats.support":"24/7 Support","hero.stats.cloud":"Cloud & Offline","spotlight.title":"What's inside the platform","spotlight.subtitle":"Professional modules that work together — from daily operations to your business's digital presence.","spotlight.card1.category":"MANAGEMENT","spotlight.card1.title":"Inventory, Invoices & Reports","spotlight.card1.desc":"Ingredient inventory with stock alerts, fiscal receipts and Z-reports — full control over restaurant operations.","spotlight.card1.link":"Read →","spotlight.card2.category":"PLATFORM","spotlight.card2.title":"Restaurant, Café & Shop — A Public Page for Every Venue","spotlight.card2.desc":"Digital menu /r/ for restaurants, product storefront /s/ for shops, online orders, table reservations, offline sync and owner panel from your phone.","spotlight.card2.link":"View plans →","how.title":"How the system works","how.subtitle":"Four connected modules — orders flow from table to kitchen, the owner sees everything live, guests find you online.","how.pos.title":"POS Register","how.pos.desc":"Take orders, issue fiscal invoices, and manage tables — the hub of your restaurant operations.","how.waiter.title":"Waiter","how.waiter.desc":"Tablet or phone — take orders directly from the table and send them automatically to the kitchen.","how.kds.title":"Kitchen KDS","how.kds.desc":"Digital screen — see orders in real time and confirm when a dish is ready to serve.","how.owner.title":"Owner","how.owner.desc":"Online panel — view reports, manage menu and staff from anywhere, even your phone.","how.readManual":"Read in manual →","packages.title":"Plans — what's in each package","packages.subtitle":"Choose only one plan. See what's included; for pricing contact phone or email. Card payment (Stripe) when ready.","packages.badge":"1 plan","packages.priceHint":"For prices / offers: WhatsApp or email — not shown publicly.","packages.oneOnly":"You can select only one plan. To change, click the selected plan again.","packages.p1.name":"Plan 1 — Standard","packages.p1.tagline":"POS + KDS + waiter + kiosk + cloud","packages.p1.summary":"Guide — Plan 1: POS register, kitchen display, waiter app, QR kiosk, cloud sync and owner panel. No online orders. No AI.","packages.p1.incl":"Includes:","packages.p1.f1":"POS register — tables, payments, printer","packages.p1.f2":"KDS — live kitchen orders","packages.p1.f3":"Waiter — tablet / phone","packages.p1.f4":"QR kiosk from the table","packages.p1.f5":"Cloud sync & owner panel","packages.p1.f6":"Public menu page (/r/)","packages.p2.name":"Plan 2 — Pro","packages.p2.tagline":"Everything in Standard + online orders","packages.p2.summary":"Guide — Plan 2: all of Plan 1, plus takeaway & delivery from the public page. No AI.","packages.p2.incl":"Includes (plus Plan 1):","packages.p2.f1":"Online orders — takeaway & delivery","packages.p2.f2":"Public page with direct ordering","packages.p2.f3":"Order sync to POS & kitchen","packages.p2.f4":"Accept / refuse orders","packages.p2.f5":"Reports across all channels","packages.p2.f6":"Priority support","packages.p3.name":"Plan 3 — Full","packages.p3.tagline":"Complete without AI","packages.p3.summary":"Guide — Plan 3: POS, KDS, waiter, kiosk, cloud, online orders — full ops package. AI only in Plan 4 with our approval.","packages.p3.incl":"Includes (plus Plan 2):","packages.p3.f1":"POS + KDS + waiter + kiosk","packages.p3.f2":"Online orders (takeaway & delivery)","packages.p3.f3":"Cloud sync & backup","packages.p3.f4":"Full panel (menu, stock, staff)","packages.p3.f5":"Restaurant / shop page","packages.p3.f6":"No AI — AI only with approval (Plan 4)","packages.p4.name":"Plan 4 — AI","packages.p4.tagline":"Full + AI — approval required","packages.p4.summary":"Guide — Plan 4: everything in Full + AI. Not self-activated online. Only after you contact us and we enable it.","packages.p4.incl":"Includes (plus Plan 3):","packages.p4.f1":"AI scan — invoices / menu","packages.p4.f2":"AI assistant for owners","packages.p4.f3":"Stock forecast & AI reports","packages.p4.f4":"Token control by admin","packages.p4.f5":"Activation ONLY with our approval","packages.p4.f6":"Contact for AI — no automatic purchase","packages.clickHint":"Select one plan only. Then pay by card or contact us.","packages.includes":"What's in this plan:","packages.selected":"Selected — this plan only","contact.title":"Start today — 7-day trial","contact.subtitle":"Contact us on WhatsApp for trial, Setup.exe install, and choosing Standard, Pro, Full or AI.","contact.direct":"Direct contact","contact.email":"revolutioninvest05@gmail.com","contact.sendMessage":"Send a message","form.name":"Name","form.phone":"Phone","form.message":"Message","form.namePlaceholder":"Business name","form.messagePlaceholder":"E.g. Restaurant with 15 tables in Pristina…","form.error":"Please fill in all fields.","form.success":"Thank you! Opening WhatsApp so you can send your request.","footer.tagline":"The complete POS system for restaurants, cafés, and bars — orders, kitchen, reports, and management from one place.","footer.note":"Developed and maintained by our team in Kosovo and the region.","footer.col.platform":"Platform","footer.col.support":"Help & contact","footer.link.howItWorks":"How it works","footer.link.packages":"Plans & modules","footer.link.blog":"Articles & tips","footer.link.manual":"User manual","footer.link.contact":"Contact us","footer.link.trial":"Start free trial","footer.legal.privacy":"Data privacy","footer.legal.terms":"Terms of service","footer.legal.notice":"Revolution Invest POS is provided under a standard license. Your business data is stored securely in line with our privacy policy.","footer.rights":"Revolution Invest. All rights reserved.","wa.trial":"Hello, I would like to try Revolution Invest POS.","wa.custom":"Hello, I would like to discuss a tailored solution.","wa.formIntro":"Hello, I'm {name} ({phone}).","wa.formSuffix":"I want Revolution Invest POS — 1 month free.","legal.backHome":"← Back to home","articles.heading":"Latest articles"}},G="revolution-pos-lang";let y=localStorage.getItem(G)||"sq";function j(){return y}function J(e){e!=="sq"&&e!=="en"||(y=e,localStorage.setItem(G,y),document.documentElement.lang=y==="en"?"en":"sq")}function t(e){var a,i;return((a=H[y])==null?void 0:a[e])??((i=I[y])==null?void 0:i[e])??H.sq[e]??I.sq[e]??e}document.documentElement.lang=y==="en"?"en":"sq";function K(){return"/"}function ee(){return"/blog"}function te(e){return`${ee()}/${e}`.replace(/\/+/g,"/")}function S(e){return`/${e.replace(/^\//,"")}`}function $(e){return w()==="/"?`#${e}`:`/#${e}`}function A(e,a,i,o){const n=w()==="/";return`<a href="${$(e)}"${n?"":" data-navigate"} class="${i===o?"active":""}">${a}</a>`}function x({activeNav:e="home"}={}){const a=j(),i=[{id:"home",label:t("nav.home"),section:"ballina"},{id:"get-started",label:t("nav.getStarted"),section:"si-ta-merrni"},{id:"how-it-works",label:t("nav.howItWorks"),section:"si-funksionon"},{id:"packages",label:t("nav.packages"),section:"pakot"},{id:"blog",label:t("nav.blog"),section:"artikuj"}];return`
+(function(){const a=document.createElement("link").relList;if(a&&a.supports&&a.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))o(n);new MutationObserver(n=>{for(const r of n)if(r.type==="childList")for(const s of r.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&o(s)}).observe(document,{childList:!0,subtree:!0});function i(n){const r={};return n.integrity&&(r.integrity=n.integrity),n.referrerPolicy&&(r.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?r.credentials="include":n.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function o(n){if(n.ep)return;n.ep=!0;const r=i(n);fetch(n.href,r)}})();const $=[];function K(t,a){const i=[],o=new RegExp("^"+t.replace(/\//g,"\\/").replace(/:([a-zA-Z]+)/g,(n,r)=>(i.push(r),"([^/]+)"))+"$");$.push({regex:o,keys:i,handler:a})}function te(t){const a=t.indexOf("#"),i=a>=0?t.slice(a+1):"",o=a>=0?t.slice(0,a)||"/":t;window.history.pushState({},"",i?`${o}#${i}`:o),I(),i&&requestAnimationFrame(()=>{var n;(n=document.getElementById(i))==null||n.scrollIntoView({behavior:"smooth"})})}function w(){return window.location.pathname.replace(/\/+$/,"")||"/"}function I(){var a;const t=w();for(const i of $){const o=t.match(i.regex);if(!o)continue;const n={};i.keys.forEach((r,s)=>{n[r]=decodeURIComponent(o[s+1])}),i.handler(n);return}(a=$.find(i=>i.regex.source==="^\\/$"))==null||a.handler({})}function ae(){document.addEventListener("click",t=>{const a=t.target.closest("a[data-navigate]");a&&(t.metaKey||t.ctrlKey||t.shiftKey||t.altKey||(t.preventDefault(),te(a.getAttribute("href"))))}),window.addEventListener("popstate",I),I()}const _={sq:{navLabel:"Kryesore",langLabel:"Gjuha",features:"Veçoritë",howItWorks:"Si funksionon",packages:"Paketat",faq:"FAQ",blog:"Blog",backToTop:"Kthehu lart",blogBadge:"Blog",heroTitle:"Këshilla & Njohuri për",heroAccent:"Restorante Moderne",heroSubtitle:"Artikuj praktikë për menaxhimin e restorantit, teknologjinë POS dhe eficiencën operacionale.",readMore:"Lexo →",backToBlog:"← Kthehu në ballina",pageTitle:"Revolution Invest POS — Restorante & Kafene",metaDescription:"Këshilla dhe njohuri për restorante moderne — menaxhim, POS, teknologji dhe eficiencë operacionale."},en:{navLabel:"Main navigation",langLabel:"Language",features:"Features",howItWorks:"How it works",packages:"Pricing",faq:"FAQ",blog:"Blog",backToTop:"Back to top",blogBadge:"Blog",heroTitle:"Tips & Insights for",heroAccent:"Modern Restaurants",heroSubtitle:"Practical articles on restaurant management, POS technology, and operational efficiency.",readMore:"Read →",backToBlog:"← Back to home",pageTitle:"Revolution Invest POS — Restaurants & Cafés",metaDescription:"Tips and insights for modern restaurants — management, POS, technology, and operational efficiency."}},T={sq:{"meta.title":"Revolution Invest POS — Sistemi POS për Restorantet, Kafenetë & Dyqanet","meta.description":"Revolution Invest POS — platformë e plotë për restorante, kafene dhe dyqane. POS, kuzhinë, kamarier, faqe publike /r/ & /s/, porosi online dhe offline me sync.","brand.subtitle":"Restorant · Kafene · Dyqan","nav.home":"Ballina","nav.howItWorks":"Si funksionon","nav.getStarted":"Si ta merrni","nav.packages":"Pakot","nav.blog":"Blog","nav.manual":"Manuali","nav.contact":"Kontakti","nav.openMenu":"Hap menunë","getStarted.title":"Si ta merrni programin — hap pas hapi","getStarted.subtitle":"Shkarkoni Setup vetë nga kjo faqe — pa pritur WhatsApp. Pastaj instaloni dhe aktivizoni.","getStarted.s1.title":"1. Zgjidhni pakon","getStarted.s1.desc":"Shikoni Pakot (Standard, Pro, Full ose AI) dhe zgjidhni atë që ju duhet.","getStarted.s2.title":"2. Shkarkoni Setup","getStarted.s2.desc":"Shtypni «Shkarko Setup» — skedari .exe shkarkohet drejt në kompjuterin tuaj.","getStarted.s3.title":"3. Instaloni programin","getStarted.s3.desc":"Hapni Setup.exe dhe ndiqni dritaren e instalimit (Windows).","getStarted.s4.title":"4. Hapni aktivizimin","getStarted.s4.desc":"Në fund hapet «Aktivizo KAFENE» me ID e pajisjes (XXXX-XXXX-XXXX-XXXX).","getStarted.s5.title":"5. Licenca / trial","getStarted.s5.desc":"Për trial 7 ditë ose pagesë vjetore — paguani më poshtë (Stripe) ose na shkruani për çelës.","getStarted.s6.title":"6. Filloni punën","getStarted.s6.desc":"Ngjitni License Key te ekrani i aktivizimit — pastaj punoni normalisht.","getStarted.cta":"Shkarko Setup (Windows)","getStarted.ctaHelp":"Ndihmë në WhatsApp","getStarted.note":"Pako 4 (AI) aktivizohet vetëm me lejen tonë. Setup e shkarkoni vetë — pagesa më poshtë.","cta.startFree":"Fillo Falas","cta.choosePackage":"Zgjidh Pakon","cta.buyPackage":"Shkarko / Paguaj","cta.downloadSetup":"Shkarko Setup","cta.payStripe":"Paguaj me kartë (Stripe)","cta.contactAi":"Kontaktoni për AI","pay.title":"Pagesa","pay.subtitle":"Zgjidhni mënyrën e pagesës. Stripe (kartë) është aktiv tani; bankat vendore së shpejti.","pay.stripe":"Stripe — kartë","pay.stripeDesc":"Visa / Mastercard — aktiv tani","pay.banks":"Banka vendore","pay.banksDesc":"Shenjat e bankave — pagesa bankare së shpejti (ende jo aktive)","pay.soon":"Së shpejti","pay.active":"Aktiv","pay.ctaStripe":"Vazhdo me Stripe","pay.pickPlan":"Zgjidhni një pako (1–3) më lart, pastaj paguani këtu.","pay.bank.teb":"TEB","pay.bank.raiffeisen":"Raiffeisen","pay.bank.nlb":"NLB","pay.bank.bkt":"BKT","pay.bank.procredit":"ProCredit","pay.bank.bpb":"BPB","checkout.title":"Pagesa me kartë — licenca (1 vit)","checkout.emri":"Emri juaj","checkout.biznesi":"Emri i biznesit","checkout.email":"Email","checkout.telefoni":"Telefoni","checkout.tipi":"Lloji i biznesit","checkout.pay":"Vazhdo te pagesa me kartë","checkout.cancel":"Anulo","checkout.busy":"Duke hapur Stripe…","checkout.error":"Pagesa nuk u hap. Provoni përsëri ose WhatsApp.","checkout.success":"Pagesa u krye! Shkarkoni Setup nga faqja dhe aktivizoni me çelësin që ju dërgojmë.","checkout.tipi.restorant":"Restorant","checkout.tipi.kafene":"Kafene","checkout.tipi.dyqan":"Dyqan","cta.contactUs":"Na Kontaktoni","cta.sendRequest":"Dërgo kërkesën","expand.more":"Lexo më shumë","expand.less":"Më pak","hero.badge":"Provë falas 7 ditë","hero.title":"Kontrollo çdo Porosi. Çdo Tavolinë. Çdo Ditë.","hero.subtitle":"Nga kasa te kuzhina, nga kamarieri te pronari — plus stok, fatura, faqe publike për restorante & dyqane, porosi online dhe punë offline. Gjithçka në një platformë.","hero.cta.primary":"Fillo 7 ditë falas","hero.cta.secondary":"Shiko veçoritë →","trialModal.title":"Provë falas — 7 ditë","trialModal.body":"Shkarkoni Setup vetë nga faqja, instaloni, pastaj na shkruani për License Key (trial 7 ditë) ose paguani me Stripe.","trialModal.phoneLabel":"Telefon / WhatsApp","trialModal.phone":"+383 48707880","trialModal.download":"Shkarko Setup","trialModal.wa":"WhatsApp — kërko çelës trial","trialModal.close":"Mbyll","hero.stats.restaurants":"500+ Restorante","hero.stats.support":"24/7 Mbështetje","hero.stats.cloud":"Cloud & Offline","spotlight.title":"Çfarë përfshin programi","spotlight.subtitle":"Module profesionale që punojnë së bashku — nga operimi ditor te prezenca digjitale e biznesit tuaj.","spotlight.card1.category":"MENAXHIM","spotlight.card1.title":"Stoku, Faturat dhe Raportet","spotlight.card1.desc":"Inventar me përbërës dhe alarme stoku, fatura fiskale termike dhe raporte Z — kontroll i plotë mbi operacionet e restorantit.","spotlight.card1.link":"Lexo →","spotlight.card2.category":"PLATFORMË","spotlight.card2.title":"Restorant, Kafene & Dyqan — Faqe Publike për Çdo Lokal","spotlight.card2.desc":"Menu digjitale /r/ për restorante, vitrinë produktesh /s/ për dyqane, porosi online, rezervime tavolinash, offline me sync dhe panel pronari nga telefoni.","spotlight.card2.link":"Shiko pakot →","how.title":"Si funksionon sistemi","how.subtitle":"Katër module të lidhura — porosia shkon nga tavolina te kuzhina, pronari sheh gjithçka live, klienti gjen lokalin tuaj online.","how.pos.title":"POS Kasa","how.pos.desc":"Shitje të shpejta, tavolina, pagesa, fatura fiskale dhe printim termik — qendra e operimit të restorantit ose dyqanit tuaj.","how.waiter.title":"Kamarieri","how.waiter.desc":"Tablet ose telefon — merr porosi nga tavolina, punon edhe offline dhe i dërgon automatikisht në kuzhinë kur kthehet interneti.","how.kds.title":"KDS Kuzhina","how.kds.desc":"Ekran dixhital — porositë shfaqen live, stafi konfirmon gatishmërinë dhe servimi bëhet pa gabime.","how.owner.title":"Pronari","how.owner.desc":"Panel online — menu, stok, stafi, rezervime, faqja publike, raporte dhe QR — menaxhim i plotë nga kudo.","how.readManual":"Lexo në manual →","packages.title":"Pakot — çfarë përmban secila","packages.subtitle":"Zgjidhni vetëm një pako. Shihni çfarë përfshin; për çmime dhe oferta kontaktoni telefon ose email. Pagesa me kartë (Stripe) kur jeni gati.","packages.badge":"1 pako","packages.priceHint":"Për çmime / oferta: WhatsApp ose email — nuk shfaqen publike.","packages.oneOnly":"Mund të zgjidhni vetëm një pako. Për të ndryshuar, klikoni përsëri pakon e zgjedhur.","packages.p1.name":"Pako 1 — Standard","packages.p1.tagline":"POS + KDS + kamarier + kiosk + cloud","packages.p1.summary":"Manual — Pako 1: kasa POS, ekran kuzhine (KDS), kamarier nga telefoni, kiosk QR, sync cloud dhe panel pronari. Pa porosi online. Pa AI.","packages.p1.incl":"Përmban:","packages.p1.f1":"Kasa POS — tavolina, pagesa, printer","packages.p1.f2":"KDS — porosi live në kuzhinë","packages.p1.f3":"Kamarier — tablet / telefon","packages.p1.f4":"Kiosk QR nga tavolina","packages.p1.f5":"Cloud sync & panel pronari","packages.p1.f6":"Faqe publike menu (/r/)","packages.p2.name":"Pako 2 — Pro","packages.p2.tagline":"Gjithçka nga Standard + porosi online","packages.p2.summary":"Manual — Pako 2: e gjithë Pako 1, plus takeaway & delivery nga faqja. Ideal kur klienti porosit edhe jashtë lokalit. Pa AI.","packages.p2.incl":"Përmban (plus Pako 1):","packages.p2.f1":"Porosi online — takeaway & delivery","packages.p2.f2":"Faqe me porosi direkte","packages.p2.f3":"Sync porosive me POS & kuzhinë","packages.p2.f4":"Prano / refuzo porosi","packages.p2.f5":"Raporte nga të gjitha kanalet","packages.p2.f6":"Mbështetje prioritet","packages.p3.name":"Pako 3 — Full","packages.p3.tagline":"I plotë pa AI","packages.p3.summary":"Manual — Pako 3: POS, KDS, kamarier, kiosk, cloud, porosi online — paketa e plotë operative. Pa module AI (AI vetëm Pako 4 me leje).","packages.p3.incl":"Përmban (plus Pako 2):","packages.p3.f1":"POS + KDS + kamarier + kiosk","packages.p3.f2":"Porosi online (takeaway & delivery)","packages.p3.f3":"Cloud sync & backup","packages.p3.f4":"Panel i plotë (menu, stok, staf)","packages.p3.f5":"Faqe restorant / dyqan","packages.p3.f6":"Pa AI — AI vetëm me leje (Pako 4)","packages.p4.name":"Pako 4 — AI","packages.p4.tagline":"Full + AI — vetëm me leje","packages.p4.summary":"Manual — Pako 4: gjithçka nga Full + AI. Nuk aktivizohet online vetë. Vetëm pasi na kontaktoni dhe e lejojmë manualisht.","packages.p4.incl":"Përmban (plus Pako 3):","packages.p4.f1":"Skanim AI — fatura / menu","packages.p4.f2":"Asistent AI për pronarin","packages.p4.f3":"Parashikim stoku & raporte AI","packages.p4.f4":"Kontroll tokenësh nga admini","packages.p4.f5":"Aktivizim VETËM me lejen tonë","packages.p4.f6":"Kontaktoni për AI — jo blerje automatike","packages.clickHint":"Zgjidhni një pako (vetëm një). Pastaj vazhdoni me pagesë ose kontakt.","packages.includes":"Çfarë përmban kjo pako:","packages.selected":"Zgjedhur — vetëm kjo pako","contact.title":"Filloni sot — trial 7 ditë","contact.subtitle":"Na kontaktoni në WhatsApp për trial, instalim Setup.exe dhe zgjedhjen e pakos (Standard, Pro, Full ose AI).","contact.direct":"Kontakt i drejtpërdrejtë","contact.email":"revolutioninvest05@gmail.com","contact.sendMessage":"Dërgo mesazh","form.name":"Emri","form.phone":"Telefoni","form.message":"Mesazhi","form.namePlaceholder":"Emri i biznesit","form.messagePlaceholder":"P.sh. Restorant me 15 tavolina ose dyqan me 200 produkte…","form.error":"Plotësoni të gjitha fushat.","form.success":"Faleminderit! Po ju hapim WhatsApp për të dërguar kërkesën.","footer.tagline":"Sistemi i plotë POS për restorante, kafene, bare dhe dyqane — porosi, kuzhinë, stok, faqe publike dhe menaxhim nga një vend.","footer.note":"Zhvilluar dhe mirëmbajtur nga ekipi ynë në Kosovë dhe rajon.","footer.col.platform":"Platforma","footer.col.support":"Ndihmë & kontakt","footer.link.howItWorks":"Si funksionon","footer.link.packages":"Pakot & modulet","footer.link.blog":"Artikuj & këshilla","footer.link.manual":"Manuali i përdorimit","footer.link.contact":"Na kontaktoni","footer.link.trial":"Fillo provën falas","footer.legal.privacy":"Privatësia e të dhënave","footer.legal.terms":"Kushtet e shërbimit","footer.legal.notice":"Revolution Invest POS ofrohet me licencë të rregullt. Të dhënat e biznesit tuaj ruhen në mënyrë të sigurt sipas politikës sonë të privatësisë.","footer.rights":"Revolution Invest. Të gjitha të drejtat e rezervuara.","wa.trial":"Përshëndetje, dëshiroj të provoj Revolution Invest POS.","wa.custom":"Përshëndetje, dëshiroj të diskutoj për zgjidhje të personalizuara.","wa.formIntro":"Përshëndetje, jam {name} ({phone}).","wa.formSuffix":"Dëshiroj Revolution Invest POS — trial 7 ditë.","legal.backHome":"← Kthehu në ballina","articles.heading":"Artikujt e fundit"},en:{"meta.title":"Revolution Invest POS — POS for Restaurants, Cafés & Shops","meta.description":"Revolution Invest POS — full platform for restaurants, cafés and retail. POS, kitchen, waiter, public pages /r/ & /s/, online orders and offline sync.","brand.subtitle":"Restaurant · Café · Shop","nav.home":"Home","nav.howItWorks":"How it works","nav.getStarted":"Get started","nav.packages":"Pricing","nav.blog":"Blog","nav.manual":"Manual","nav.contact":"Contact","nav.openMenu":"Open menu","getStarted.title":"How to get the software — step by step","getStarted.subtitle":"Download Setup yourself from this page — no waiting on WhatsApp. Then install and activate.","getStarted.s1.title":"1. Choose a plan","getStarted.s1.desc":"See Packages (Standard, Pro, Full or AI) and pick what you need.","getStarted.s2.title":"2. Download Setup","getStarted.s2.desc":"Tap «Download Setup» — the .exe file downloads to your computer.","getStarted.s3.title":"3. Install the app","getStarted.s3.desc":"Open Setup.exe and follow the Windows installer.","getStarted.s4.title":"4. Open activation","getStarted.s4.desc":"At the end «Activate KAFENE» opens with your device ID (XXXX-XXXX-XXXX-XXXX).","getStarted.s5.title":"5. License / trial","getStarted.s5.desc":"For a 7-day trial or annual license — pay below (Stripe) or message us for a key.","getStarted.s6.title":"6. Start working","getStarted.s6.desc":"Paste the License Key on the activation screen — then work normally.","getStarted.cta":"Download Setup (Windows)","getStarted.ctaHelp":"Help on WhatsApp","getStarted.note":"Plan 4 (AI) needs our approval. Download Setup yourself — pay below.","cta.startFree":"Start Free","cta.choosePackage":"Choose Plan","cta.buyPackage":"Download / Pay","cta.downloadSetup":"Download Setup","cta.payStripe":"Pay by card (Stripe)","cta.contactAi":"Contact for AI","pay.title":"Payment","pay.subtitle":"Choose how to pay. Stripe (card) is active now; local banks coming soon.","pay.stripe":"Stripe — card","pay.stripeDesc":"Visa / Mastercard — active now","pay.banks":"Local banks","pay.banksDesc":"Bank logos — bank transfer coming soon (not active yet)","pay.soon":"Soon","pay.active":"Active","pay.ctaStripe":"Continue with Stripe","pay.pickPlan":"Select a plan (1–3) above, then pay here.","pay.bank.teb":"TEB","pay.bank.raiffeisen":"Raiffeisen","pay.bank.nlb":"NLB","pay.bank.bkt":"BKT","pay.bank.procredit":"ProCredit","pay.bank.bpb":"BPB","checkout.title":"Card payment — license (1 year)","checkout.emri":"Your name","checkout.biznesi":"Business name","checkout.email":"Email","checkout.telefoni":"Phone","checkout.tipi":"Business type","checkout.pay":"Continue to card payment","checkout.cancel":"Cancel","checkout.busy":"Opening Stripe…","checkout.error":"Checkout failed. Try again or WhatsApp.","checkout.success":"Payment done! Download Setup from the site and activate with the key we send.","checkout.tipi.restorant":"Restaurant","checkout.tipi.kafene":"Café","checkout.tipi.dyqan":"Shop","cta.contactUs":"Contact Us","cta.sendRequest":"Send request","expand.more":"Read more","expand.less":"Show less","hero.badge":"7-day free trial","hero.title":"Control Every Order. Every Table. Every Day.","hero.subtitle":"From register to kitchen, waiter to owner — plus stock, invoices, public pages for restaurants & shops, online orders and offline work. All in one platform.","hero.cta.primary":"Start 7-day free trial","hero.cta.secondary":"See features →","trialModal.title":"Free trial — 7 days","trialModal.body":"Download Setup yourself, install, then message us for a License Key (7-day trial) or pay with Stripe.","trialModal.phoneLabel":"Phone / WhatsApp","trialModal.phone":"+383 48707880","trialModal.download":"Download Setup","trialModal.wa":"WhatsApp — request trial key","trialModal.close":"Close","hero.stats.restaurants":"500+ Restaurants","hero.stats.support":"24/7 Support","hero.stats.cloud":"Cloud & Offline","spotlight.title":"What's inside the platform","spotlight.subtitle":"Professional modules that work together — from daily operations to your business's digital presence.","spotlight.card1.category":"MANAGEMENT","spotlight.card1.title":"Inventory, Invoices & Reports","spotlight.card1.desc":"Ingredient inventory with stock alerts, fiscal receipts and Z-reports — full control over restaurant operations.","spotlight.card1.link":"Read →","spotlight.card2.category":"PLATFORM","spotlight.card2.title":"Restaurant, Café & Shop — A Public Page for Every Venue","spotlight.card2.desc":"Digital menu /r/ for restaurants, product storefront /s/ for shops, online orders, table reservations, offline sync and owner panel from your phone.","spotlight.card2.link":"View plans →","how.title":"How the system works","how.subtitle":"Four connected modules — orders flow from table to kitchen, the owner sees everything live, guests find you online.","how.pos.title":"POS Register","how.pos.desc":"Take orders, issue fiscal invoices, and manage tables — the hub of your restaurant operations.","how.waiter.title":"Waiter","how.waiter.desc":"Tablet or phone — take orders directly from the table and send them automatically to the kitchen.","how.kds.title":"Kitchen KDS","how.kds.desc":"Digital screen — see orders in real time and confirm when a dish is ready to serve.","how.owner.title":"Owner","how.owner.desc":"Online panel — view reports, manage menu and staff from anywhere, even your phone.","how.readManual":"Read in manual →","packages.title":"Plans — what's in each package","packages.subtitle":"Choose only one plan. See what's included; for pricing contact phone or email. Card payment (Stripe) when ready.","packages.badge":"1 plan","packages.priceHint":"For prices / offers: WhatsApp or email — not shown publicly.","packages.oneOnly":"You can select only one plan. To change, click the selected plan again.","packages.p1.name":"Plan 1 — Standard","packages.p1.tagline":"POS + KDS + waiter + kiosk + cloud","packages.p1.summary":"Guide — Plan 1: POS register, kitchen display, waiter app, QR kiosk, cloud sync and owner panel. No online orders. No AI.","packages.p1.incl":"Includes:","packages.p1.f1":"POS register — tables, payments, printer","packages.p1.f2":"KDS — live kitchen orders","packages.p1.f3":"Waiter — tablet / phone","packages.p1.f4":"QR kiosk from the table","packages.p1.f5":"Cloud sync & owner panel","packages.p1.f6":"Public menu page (/r/)","packages.p2.name":"Plan 2 — Pro","packages.p2.tagline":"Everything in Standard + online orders","packages.p2.summary":"Guide — Plan 2: all of Plan 1, plus takeaway & delivery from the public page. No AI.","packages.p2.incl":"Includes (plus Plan 1):","packages.p2.f1":"Online orders — takeaway & delivery","packages.p2.f2":"Public page with direct ordering","packages.p2.f3":"Order sync to POS & kitchen","packages.p2.f4":"Accept / refuse orders","packages.p2.f5":"Reports across all channels","packages.p2.f6":"Priority support","packages.p3.name":"Plan 3 — Full","packages.p3.tagline":"Complete without AI","packages.p3.summary":"Guide — Plan 3: POS, KDS, waiter, kiosk, cloud, online orders — full ops package. AI only in Plan 4 with our approval.","packages.p3.incl":"Includes (plus Plan 2):","packages.p3.f1":"POS + KDS + waiter + kiosk","packages.p3.f2":"Online orders (takeaway & delivery)","packages.p3.f3":"Cloud sync & backup","packages.p3.f4":"Full panel (menu, stock, staff)","packages.p3.f5":"Restaurant / shop page","packages.p3.f6":"No AI — AI only with approval (Plan 4)","packages.p4.name":"Plan 4 — AI","packages.p4.tagline":"Full + AI — approval required","packages.p4.summary":"Guide — Plan 4: everything in Full + AI. Not self-activated online. Only after you contact us and we enable it.","packages.p4.incl":"Includes (plus Plan 3):","packages.p4.f1":"AI scan — invoices / menu","packages.p4.f2":"AI assistant for owners","packages.p4.f3":"Stock forecast & AI reports","packages.p4.f4":"Token control by admin","packages.p4.f5":"Activation ONLY with our approval","packages.p4.f6":"Contact for AI — no automatic purchase","packages.clickHint":"Select one plan only. Then pay by card or contact us.","packages.includes":"What's in this plan:","packages.selected":"Selected — this plan only","contact.title":"Start today — 7-day trial","contact.subtitle":"Contact us on WhatsApp for trial, Setup.exe install, and choosing Standard, Pro, Full or AI.","contact.direct":"Direct contact","contact.email":"revolutioninvest05@gmail.com","contact.sendMessage":"Send a message","form.name":"Name","form.phone":"Phone","form.message":"Message","form.namePlaceholder":"Business name","form.messagePlaceholder":"E.g. Restaurant with 15 tables in Pristina…","form.error":"Please fill in all fields.","form.success":"Thank you! Opening WhatsApp so you can send your request.","footer.tagline":"The complete POS system for restaurants, cafés, and bars — orders, kitchen, reports, and management from one place.","footer.note":"Developed and maintained by our team in Kosovo and the region.","footer.col.platform":"Platform","footer.col.support":"Help & contact","footer.link.howItWorks":"How it works","footer.link.packages":"Plans & modules","footer.link.blog":"Articles & tips","footer.link.manual":"User manual","footer.link.contact":"Contact us","footer.link.trial":"Start free trial","footer.legal.privacy":"Data privacy","footer.legal.terms":"Terms of service","footer.legal.notice":"Revolution Invest POS is provided under a standard license. Your business data is stored securely in line with our privacy policy.","footer.rights":"Revolution Invest. All rights reserved.","wa.trial":"Hello, I would like to try Revolution Invest POS.","wa.custom":"Hello, I would like to discuss a tailored solution.","wa.formIntro":"Hello, I'm {name} ({phone}).","wa.formSuffix":"I want Revolution Invest POS — 1 month free.","legal.backHome":"← Back to home","articles.heading":"Latest articles"}},G="revolution-pos-lang";let y=localStorage.getItem(G)||"sq";function j(){return y}function ie(t){t!=="sq"&&t!=="en"||(y=t,localStorage.setItem(G,y),document.documentElement.lang=y==="en"?"en":"sq")}function e(t){var a,i;return((a=_[y])==null?void 0:a[t])??((i=T[y])==null?void 0:i[t])??_.sq[t]??T.sq[t]??t}document.documentElement.lang=y==="en"?"en":"sq";function M(){return"/"}function oe(){return"/blog"}function ne(t){return`${oe()}/${t}`.replace(/\/+/g,"/")}function S(t){return`/${t.replace(/^\//,"")}`}function x(t){return w()==="/"?`#${t}`:`/#${t}`}function z(t,a,i,o){const n=w()==="/";return`<a href="${x(t)}"${n?"":" data-navigate"} class="${i===o?"active":""}">${a}</a>`}function E({activeNav:t="home"}={}){const a=j(),i=[{id:"home",label:e("nav.home"),section:"ballina"},{id:"get-started",label:e("nav.getStarted"),section:"si-ta-merrni"},{id:"how-it-works",label:e("nav.howItWorks"),section:"si-funksionon"},{id:"packages",label:e("nav.packages"),section:"pakot"},{id:"blog",label:e("nav.blog"),section:"artikuj"}];return`
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="${K()}" ${w()==="/"?"":"data-navigate"} aria-label="Revolution Invest POS">
+        <a class="brand" href="${M()}" ${w()==="/"?"":"data-navigate"} aria-label="Revolution Invest POS">
           <span class="brand-mark" aria-hidden="true">
             <img src="${S("logo-source.png")}" width="40" height="40" alt="" />
           </span>
           <span class="brand-text">
             Revolution Invest POS
-            <small>${t("brand.subtitle")}</small>
+            <small>${e("brand.subtitle")}</small>
           </span>
         </a>
 
-        <nav class="nav nav-desktop" aria-label="${t("navLabel")}">
-          ${i.map(o=>A(o.section,o.label,e,o.id)).join("")}
-          <a href="/website/manual.html">${t("nav.manual")}</a>
-          ${A("kontakt",t("nav.contact"),e,"contact")}
+        <nav class="nav nav-desktop" aria-label="${e("navLabel")}">
+          ${i.map(o=>z(o.section,o.label,t,o.id)).join("")}
+          <a href="/website/manual.html">${e("nav.manual")}</a>
+          ${z("kontakt",e("nav.contact"),t,"contact")}
         </nav>
 
         <div class="header-actions">
-          <div class="lang-switch" aria-label="${t("langLabel")}">
+          <div class="lang-switch" aria-label="${e("langLabel")}">
             <button type="button" data-lang="sq" class="${a==="sq"?"active":""}">SQ</button>
             <button type="button" data-lang="en" class="${a==="en"?"active":""}">EN</button>
           </div>
-          <a class="btn btn-primary header-cta-desktop" href="${$("kontakt")}">${t("cta.startFree")}</a>
-          <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-mobile" aria-label="${t("nav.openMenu")}">☰</button>
+          <a class="btn btn-primary header-cta-desktop" href="${x("kontakt")}">${e("cta.startFree")}</a>
+          <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-mobile" aria-label="${e("nav.openMenu")}">☰</button>
         </div>
       </div>
 
-      <nav class="nav-mobile" id="nav-mobile" aria-label="${t("navLabel")}">
-        ${i.map(o=>A(o.section,o.label,e,o.id)).join("")}
-        <a href="/website/manual.html">${t("nav.manual")}</a>
-        ${A("kontakt",t("nav.contact"),e,"contact")}
-        <a class="btn btn-primary" href="${$("kontakt")}">${t("cta.startFree")}</a>
+      <nav class="nav-mobile" id="nav-mobile" aria-label="${e("navLabel")}">
+        ${i.map(o=>z(o.section,o.label,t,o.id)).join("")}
+        <a href="/website/manual.html">${e("nav.manual")}</a>
+        ${z("kontakt",e("nav.contact"),t,"contact")}
+        <a class="btn btn-primary" href="${x("kontakt")}">${e("cta.startFree")}</a>
       </nav>
     </header>
-  `}function P(e,a){const i=w()==="/";return`<li><a href="${i?`#${e}`:`/#${e}`}"${i?"":" data-navigate"}>${a}</a></li>`}function N(){const a=w()==="/"?"":" data-navigate";return`
+  `}function P(t,a){const i=w()==="/";return`<li><a href="${i?`#${t}`:`/#${t}`}"${i?"":" data-navigate"}>${a}</a></li>`}function N(){const a=w()==="/"?"":" data-navigate";return`
     <footer class="site-footer">
       <div class="container footer-grid">
         <div class="footer-brand">
-          <a class="footer-logo" href="${K()}"${a} aria-label="Revolution Invest POS">
+          <a class="footer-logo" href="${M()}"${a} aria-label="Revolution Invest POS">
             <span class="brand-mark" aria-hidden="true">
               <img src="${S("logo-source.png")}" width="40" height="40" alt="" />
             </span>
             <span class="footer-logo-text">Revolution Invest POS</span>
           </a>
-          <p class="footer-tagline">${t("footer.tagline")}</p>
-          <p class="footer-note">${t("footer.note")}</p>
+          <p class="footer-tagline">${e("footer.tagline")}</p>
+          <p class="footer-note">${e("footer.note")}</p>
         </div>
 
         <div class="footer-col">
-          <h4>${t("footer.col.platform")}</h4>
+          <h4>${e("footer.col.platform")}</h4>
           <ul>
-            ${P("si-ta-merrni",t("nav.getStarted"))}
-            ${P("si-funksionon",t("footer.link.howItWorks"))}
-            ${P("pakot",t("footer.link.packages"))}
-            ${P("artikuj",t("footer.link.blog"))}
-            <li><a href="/website/manual.html">${t("footer.link.manual")}</a></li>
+            ${P("si-ta-merrni",e("nav.getStarted"))}
+            ${P("si-funksionon",e("footer.link.howItWorks"))}
+            ${P("pakot",e("footer.link.packages"))}
+            ${P("artikuj",e("footer.link.blog"))}
+            <li><a href="/website/manual.html">${e("footer.link.manual")}</a></li>
           </ul>
         </div>
 
         <div class="footer-col" id="kontakt">
-          <h4>${t("footer.col.support")}</h4>
+          <h4>${e("footer.col.support")}</h4>
           <ul>
-            ${P("kontakt",t("footer.link.contact"))}
-            <li><a href="#" id="footer-trial" data-trial-modal>${t("footer.link.trial")}</a></li>
+            ${P("kontakt",e("footer.link.contact"))}
+            <li><a href="#" id="footer-trial" data-trial-modal>${e("footer.link.trial")}</a></li>
             <li><a id="footer-whatsapp" href="#" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
-            <li><a href="mailto:${t("contact.email")}">${t("contact.email")}</a></li>
+            <li><a href="mailto:${e("contact.email")}">${e("contact.email")}</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-bottom">
         <div class="container footer-bottom-inner">
-          <p class="footer-copy">© ${new Date().getFullYear()} ${t("footer.rights")}</p>
-          <p class="footer-legal-notice">${t("footer.legal.notice")}</p>
+          <p class="footer-copy">© ${new Date().getFullYear()} ${e("footer.rights")}</p>
+          <p class="footer-legal-notice">${e("footer.legal.notice")}</p>
           <div class="footer-legal-links">
-            <a href="/privacy" data-navigate>${t("footer.legal.privacy")}</a>
+            <a href="/privacy" data-navigate>${e("footer.legal.privacy")}</a>
             <span aria-hidden="true">·</span>
-            <a href="/terms" data-navigate>${t("footer.legal.terms")}</a>
+            <a href="/terms" data-navigate>${e("footer.legal.terms")}</a>
           </div>
         </div>
       </div>
     </footer>
-  `}function E(){const e=document.getElementById("footer-whatsapp");if(!e)return;async function a(){try{const i=await fetch("/api/public/config"),o=await i.json();if(!i.ok||!o.ok)return;const n=o.support_phone||"+383 48707880",r=o.support_phone_digits||"38348707880";e.textContent=`WhatsApp — ${n}`,e.href=`https://wa.me/${r}?text=${encodeURIComponent(t("wa.trial"))}`}catch{e.textContent="WhatsApp",e.href=`https://wa.me/38348707880?text=${encodeURIComponent(t("wa.trial"))}`}}a()}function F(){return`<button id="back-to-top" class="back-to-top" type="button" aria-label="${t("backToTop")}">↑</button>`}function C(){const e=document.querySelector("#back-to-top");if(!e)return;const a=()=>{e.classList.toggle("visible",window.scrollY>400)};window.removeEventListener("scroll",a),window.addEventListener("scroll",a),a(),e.onclick=()=>{window.scrollTo({top:0,behavior:"smooth"})}}function W(){document.querySelectorAll(".lang-switch button[data-lang]").forEach(e=>{e.onclick=()=>{const a=e.dataset.lang;a!==j()&&(J(a),O())}})}function L(){const e=document.getElementById("menu-toggle"),a=document.getElementById("nav-mobile");e==null||e.addEventListener("click",()=>{const i=a.classList.toggle("open");e.setAttribute("aria-expanded",i?"true":"false")}),a==null||a.querySelectorAll("a").forEach(i=>{i.addEventListener("click",()=>a.classList.remove("open"))})}const ae={"stoku-faturat-dhe-skanimi-me-ai":`
+  `}function F(){const t=document.getElementById("footer-whatsapp");if(!t)return;async function a(){try{const i=await fetch("/api/public/config"),o=await i.json();if(!i.ok||!o.ok)return;const n=o.support_phone||"+383 48707880",r=o.support_phone_digits||"38348707880";t.textContent=`WhatsApp — ${n}`,t.href=`https://wa.me/${r}?text=${encodeURIComponent(e("wa.trial"))}`}catch{t.textContent="WhatsApp",t.href=`https://wa.me/38348707880?text=${encodeURIComponent(e("wa.trial"))}`}}a()}function C(){return`<button id="back-to-top" class="back-to-top" type="button" aria-label="${e("backToTop")}">↑</button>`}function L(){const t=document.querySelector("#back-to-top");if(!t)return;const a=()=>{t.classList.toggle("visible",window.scrollY>400)};window.removeEventListener("scroll",a),window.addEventListener("scroll",a),a(),t.onclick=()=>{window.scrollTo({top:0,behavior:"smooth"})}}function D(){document.querySelectorAll(".lang-switch button[data-lang]").forEach(t=>{t.onclick=()=>{const a=t.dataset.lang;a!==j()&&(ie(a),I())}})}function W(){const t=document.getElementById("menu-toggle"),a=document.getElementById("nav-mobile");t==null||t.addEventListener("click",()=>{const i=a.classList.toggle("open");t.setAttribute("aria-expanded",i?"true":"false")}),a==null||a.querySelectorAll("a").forEach(i=>{i.addEventListener("click",()=>a.classList.remove("open"))})}const re={"stoku-faturat-dhe-skanimi-me-ai":`
     <p>Në restorantet e Kosovës, Shqipërisë dhe Maqedonisë së Veriut, menaxhimi i stokut dhe faturave mbetet një nga sfidat më të mëdha operative. Shumë biznese ende mbështeten në fletore, Excel ose regjistrime manuale që krijojnë gabime, humbje produktesh dhe vonesa në raportim. Revolution POS ofron një qasje moderne që kombinon menaxhimin e stokut, faturave dhe skanimin me inteligjencë artificiale — gjithçka në një platformë të vetme.</p>
 
     <h2>Pse stoku dhe faturat janë të lidhura ngusht</h2>
@@ -240,7 +240,7 @@
 
     <h2>Filloni me Revolution POS</h2>
     <p>Porositë e klientëve direkt nga telefoni nuk janë luks — janë standardi i ri për restorantet që duan të rriten. Revolution POS e ofron këtë funksionalitet të integruar, pa kosto shtesë për aplikacion të veçantë klienti. Aktivizoni sot dhe jepuni klientëve tuaj kontrollin që kërkojnë — ndërkohë që optimizoni operacionet e restorantit.</p>
-  `},ie={"meny-digjitale-qr":`
+  `},se={"meny-digjitale-qr":`
     <p>Menytë e printuara po bëhen të kaluara. Në Kosovë, Shqipëri dhe Maqedoni, restorantet po kalojnë në meny digjitale me QR code — një zgjidhje e thjeshtë, ekonomike dhe higjienike që klientët e kanë adoptuar shpejt pas pandemisë. Në vend që të printoni menu të re çdo muaj kur ndryshojnë çmimet, një QR code në tavolinë hap menynë e përditësuar automatikisht në telefonin e klientit.</p>
 
     <h2>Çfarë është meny digjitale me QR code</h2>
@@ -467,7 +467,7 @@
 
     <h2>Filloni të merrni vendime me numra</h2>
     <p>Analitika nuk kërkon ekspertizë teknike. Revolution POS e bën të thjeshtë: hapni panelin, zgjidhni raportin, shihni grafikët. Nëse restoranti juaj ende merr vendime "me sy", koha për të kaluar te të dhënat është tani. Regjistrimi juaj fillon të mbledhë informacion që ditën e parë — çdo porosi, çdo pagesë, çdo zbritje. Pas një jave, do të keni insight që më parë nuk i kishit.</p>
-  `},oe={"bashko-tavolina":`
+  `},le={"bashko-tavolina":`
     <p>Grupet e mëdha — familje, kolegë, festa — janë klientë me vlerë të lartë për restorantet. Por kur duhet të kombinohen dy ose tre tavolina, ose kur klientët kalojnë nga një tavolinë në tjetrën, porositë shpesh bëhen kaotike. Kuzhina merr porosi të ndara, faturat ndahen gabim, dhe stafi humbet kohë duke koordinuar manualisht. Funksionaliteti "Bashko Tavolina" i Revolution POS e zgjidh këtë — pa ndërprerje, pa konfuzion.</p>
 
     <h2>Çfarë do të thotë bashkimi i tavolinave</h2>
@@ -676,7 +676,7 @@
 
     <h2>Filloni pa konfuzion</h2>
     <p>Split bill është standard në Revolution POS — pa modul shtesë. Stafi trajnohet për 5 minuta: zgjidh porosi, kliko "Nda faturën", zgjidh metodën, printo. Klientët tuaj do ta vlerësojnë — dhe stafi do të kursen orë çdo javë që më parë shkonte te llogaritjet manuale.</p>
-  `},ne={...ae,...ie,...oe},re={"stoku-faturat-dhe-skanimi-me-ai":`
+  `},pe={...re,...se,...le},he={"stoku-faturat-dhe-skanimi-me-ai":`
     <p>In restaurants across Kosovo, Albania, and North Macedonia, stock management and supplier invoices remain among the biggest operational challenges. Many businesses still rely on notebooks, Excel spreadsheets, or manual entries that create errors, product loss, and reporting delays. Revolution POS offers a modern approach that combines inventory management, invoicing, and AI-powered scanning — all in a single platform built for the realities of the Albanian-speaking market.</p>
 
     <h2>Why stock and invoices are closely linked</h2>
@@ -834,7 +834,7 @@
 
     <h2>Get started with Revolution POS</h2>
     <p>Customer orders directly from their phone are not a luxury — they are the new standard for restaurants that want to grow. Revolution POS offers this functionality integrated, without extra cost for a separate customer app. Activate it today and give your customers the control they want — while optimizing your restaurant operations.</p>
-  `},se={"meny-digjitale-qr":`
+  `},ue={"meny-digjitale-qr":`
     <p>Printed menus are becoming a thing of the past. In Kosovo, Albania, and North Macedonia, restaurants are switching to digital menus with QR codes — a simple, cost-effective, and hygienic solution that customers adopted quickly after the pandemic. Instead of printing a new menu every month when prices change, a QR code on the table opens an automatically updated menu on the customer's phone.</p>
 
     <h2>What is a digital menu with QR code</h2>
@@ -1062,7 +1062,7 @@
 
     <h2>Start making decisions with numbers</h2>
     <p>Analytics does not require technical expertise. Revolution POS makes it simple: open the dashboard, select the report, view the charts. If your restaurant still makes decisions "by eye," the time to switch to data is now. Your registration starts collecting information from day one — every order, every payment, every discount. After one week, you will have insights you never had before.</p>
-  `},le={"bashko-tavolina":`
+  `},de={"bashko-tavolina":`
     <p>Large groups — families, colleagues, celebrations — are high-value customers for restaurants. But when two or three tables need to be combined, or when customers move from one table to another, orders often become chaotic. The kitchen receives split orders, bills are divided incorrectly, and staff waste time coordinating manually. The "Merge Tables" feature in Revolution POS solves this — without interruption, without confusion.</p>
 
     <h2>What merging tables means</h2>
@@ -1273,38 +1273,38 @@
 
     <h2>Start without confusion</h2>
     <p>Split bill is standard in Revolution POS — no extra module. Staff training takes 5 minutes: select order, click "Split Bill", choose method, print. Your customers will appreciate it — and staff will save hours every week that previously went to manual calculations.</p>
-  `},he={...re,...se,...le},Q=[{slug:"stoku-faturat-dhe-skanimi-me-ai",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku, Faturat dhe Skanimi me AI: Kontroll më i Lehtë për Restorantin",date:"06 maj 2026"},en:{category:"MANAGEMENT",title:"Inventory, Invoices & AI Scanning: Easier Control for Your Restaurant",date:"06 May 2026"}},{slug:"aplikacion-offline-me-sync",variant:"mobile",sq:{category:"POS & TEKNOLOGJI",title:"Aplikacion Offline me Sync për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Offline App with Sync for Restaurants",date:"06 May 2026"}},{slug:"program-pos-falas",variant:"pos",sq:{category:"POS & TEKNOLOGJI",title:"Program POS Falas për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Free POS Software for Restaurants",date:"06 May 2026"}},{slug:"5-arsye-pos",variant:"analytics",sq:{category:"MENAXHIM",title:"5 Arsye pse çdo restorant ka nevojë për POS",date:"05 maj 2026"},en:{category:"MANAGEMENT",title:"5 Reasons Every Restaurant Needs a POS System",date:"05 May 2026"}},{slug:"porosite-klienteve",variant:"mobile",sq:{category:"FUNKSIONALITETE",title:"Porositë e Klientëve: Klientët porosisin direkt nga telefoni",date:"04 maj 2026"},en:{category:"FEATURES",title:"Customer Orders: Guests Order Directly from Their Phone",date:"04 May 2026"}},{slug:"meny-digjitale-qr",variant:"qr",sq:{category:"TEKNOLOGJI",title:"Meny Digjitale me QR Code",date:"03 maj 2026"},en:{category:"TECHNOLOGY",title:"Digital Menu with QR Code",date:"03 May 2026"}},{slug:"skanoni-menyne-me-ai",variant:"scan",sq:{category:"TEKNOLOGJI",title:"Skanoni Menunë me AI: Shtoni 50 Produkte në 2 Minuta",date:"28 mars 2026"},en:{category:"TECHNOLOGY",title:"Scan Your Menu with AI: Add 50 Products in 2 Minutes",date:"28 March 2026"}},{slug:"stoku-menaxhimi-inventarit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku: Si të Menaxhoni Inventarin e Restorantit pa Humbje",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Inventory: How to Manage Restaurant Stock Without Losses",date:"28 March 2026"}},{slug:"zbritjet-ne-restorante",variant:"pos",sq:{category:"MENAXHIM",title:"Zbritjet në Restorante: Si të Rrisni Shitjet me Oferta të Zgjuara",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Discounts: Grow Sales with Smart Offers",date:"28 March 2026"}},{slug:"analitika-ne-restorante",variant:"analytics",sq:{category:"ANALITIKË",title:"Analitika në Restorante: Nga të Dhënat te Vendime më të Mira",date:"27 mars 2026"},en:{category:"ANALYTICS",title:"Restaurant Analytics: From Data to Better Decisions",date:"27 March 2026"}},{slug:"bashko-tavolina",variant:"tables",sq:{category:"VEÇORI",title:"Bashko Tavolina: Si të Kombinosh Porositë pa Ndërprerje",date:"27 mars 2026"},en:{category:"FEATURES",title:"Merge Tables: Combine Orders Without Disruption",date:"27 March 2026"}},{slug:"identifikim-stafi",variant:"login",sq:{category:"VEÇORI",title:"Identifikim Stafi: PIN, RFID apo Fjalëkalim — Cila Metodë për Çfarë?",date:"27 mars 2026"},en:{category:"FEATURES",title:"Staff Login: PIN, RFID or Password — Which Method for What?",date:"27 March 2026"}},{slug:"raportet-e-restorantit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Raportet e Restorantit: Si të Kuptosh Biznesin Tënd me Numra",date:"27 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Reports: Understand Your Business by the Numbers",date:"27 March 2026"}}];function pe(e){return e==="en"?he:ne}function V(e,a){const i=e[a]??e.sq,o=pe(a)[e.slug];return o?{slug:e.slug,variant:e.variant,category:i.category,title:i.title,date:i.date,content:o}:null}function ue(e,a=j()){const i=Q.find(o=>o.slug===e);return i?V(i,a):null}function de(e=j()){return Q.map(a=>V(a,e)).filter(Boolean)}const ce=S("images/articles/program-pos-falas.jpg");function me(e){return S(`images/articles/${e}.jpg`)}function D(e,{alt:a="",loading:i="lazy",className:o="article-photo"}={}){const n=a.replace(/"/g,"&quot;");return`<img src="${me(e)}" alt="${n}" class="${o}" loading="${i}" onerror="this.onerror=null;this.src='${ce}';" />`}const ge=S("images/hero.jpg"),ke=["p1","p2","p3","p4"],_={p1:["incl","f1","f2","f3","f4","f5","f6"],p2:["incl","f1","f2","f3","f4","f5","f6"],p3:["incl","f1","f2","f3","f4","f5","f6"],p4:["incl","f1","f2","f3","f4","f5","f6"]},fe={p1:["incl","f1","f2","f3","f4"],p2:["incl","f1","f2","f3","f4"],p3:["incl","f1","f2","f3","f4"],p4:["incl","f1","f2","f3","f4"]};function X(e,{keys:a}={}){const i=`packages.${e}`;return(a??_[e]??[]).map(n=>t(`${i}.${n}`)).filter(Boolean).map(n=>`<li>${n}</li>`).join("")}function z(e){const a=`packages.${e}`,i=t(`${a}.tagline`),o=t(`${a}.name`);return`
+  `},ce={...he,...ue,...de},Q=[{slug:"stoku-faturat-dhe-skanimi-me-ai",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku, Faturat dhe Skanimi me AI: Kontroll më i Lehtë për Restorantin",date:"06 maj 2026"},en:{category:"MANAGEMENT",title:"Inventory, Invoices & AI Scanning: Easier Control for Your Restaurant",date:"06 May 2026"}},{slug:"aplikacion-offline-me-sync",variant:"mobile",sq:{category:"POS & TEKNOLOGJI",title:"Aplikacion Offline me Sync për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Offline App with Sync for Restaurants",date:"06 May 2026"}},{slug:"program-pos-falas",variant:"pos",sq:{category:"POS & TEKNOLOGJI",title:"Program POS Falas për Restorante",date:"06 maj 2026"},en:{category:"POS & TECHNOLOGY",title:"Free POS Software for Restaurants",date:"06 May 2026"}},{slug:"5-arsye-pos",variant:"analytics",sq:{category:"MENAXHIM",title:"5 Arsye pse çdo restorant ka nevojë për POS",date:"05 maj 2026"},en:{category:"MANAGEMENT",title:"5 Reasons Every Restaurant Needs a POS System",date:"05 May 2026"}},{slug:"porosite-klienteve",variant:"mobile",sq:{category:"FUNKSIONALITETE",title:"Porositë e Klientëve: Klientët porosisin direkt nga telefoni",date:"04 maj 2026"},en:{category:"FEATURES",title:"Customer Orders: Guests Order Directly from Their Phone",date:"04 May 2026"}},{slug:"meny-digjitale-qr",variant:"qr",sq:{category:"TEKNOLOGJI",title:"Meny Digjitale me QR Code",date:"03 maj 2026"},en:{category:"TECHNOLOGY",title:"Digital Menu with QR Code",date:"03 May 2026"}},{slug:"skanoni-menyne-me-ai",variant:"scan",sq:{category:"TEKNOLOGJI",title:"Skanoni Menunë me AI: Shtoni 50 Produkte në 2 Minuta",date:"28 mars 2026"},en:{category:"TECHNOLOGY",title:"Scan Your Menu with AI: Add 50 Products in 2 Minutes",date:"28 March 2026"}},{slug:"stoku-menaxhimi-inventarit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Stoku: Si të Menaxhoni Inventarin e Restorantit pa Humbje",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Inventory: How to Manage Restaurant Stock Without Losses",date:"28 March 2026"}},{slug:"zbritjet-ne-restorante",variant:"pos",sq:{category:"MENAXHIM",title:"Zbritjet në Restorante: Si të Rrisni Shitjet me Oferta të Zgjuara",date:"28 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Discounts: Grow Sales with Smart Offers",date:"28 March 2026"}},{slug:"analitika-ne-restorante",variant:"analytics",sq:{category:"ANALITIKË",title:"Analitika në Restorante: Nga të Dhënat te Vendime më të Mira",date:"27 mars 2026"},en:{category:"ANALYTICS",title:"Restaurant Analytics: From Data to Better Decisions",date:"27 March 2026"}},{slug:"bashko-tavolina",variant:"tables",sq:{category:"VEÇORI",title:"Bashko Tavolina: Si të Kombinosh Porositë pa Ndërprerje",date:"27 mars 2026"},en:{category:"FEATURES",title:"Merge Tables: Combine Orders Without Disruption",date:"27 March 2026"}},{slug:"identifikim-stafi",variant:"login",sq:{category:"VEÇORI",title:"Identifikim Stafi: PIN, RFID apo Fjalëkalim — Cila Metodë për Çfarë?",date:"27 mars 2026"},en:{category:"FEATURES",title:"Staff Login: PIN, RFID or Password — Which Method for What?",date:"27 March 2026"}},{slug:"raportet-e-restorantit",variant:"dashboard",sq:{category:"MENAXHIM",title:"Raportet e Restorantit: Si të Kuptosh Biznesin Tënd me Numra",date:"27 mars 2026"},en:{category:"MANAGEMENT",title:"Restaurant Reports: Understand Your Business by the Numbers",date:"27 March 2026"}}];function me(t){return t==="en"?ce:pe}function X(t,a){const i=t[a]??t.sq,o=me(a)[t.slug];return o?{slug:t.slug,variant:t.variant,category:i.category,title:i.title,date:i.date,content:o}:null}function ge(t,a=j()){const i=Q.find(o=>o.slug===t);return i?X(i,a):null}function ke(t=j()){return Q.map(a=>X(a,t)).filter(Boolean)}const fe=S("images/articles/program-pos-falas.jpg");function ve(t){return S(`images/articles/${t}.jpg`)}function B(t,{alt:a="",loading:i="lazy",className:o="article-photo"}={}){const n=a.replace(/"/g,"&quot;");return`<img src="${ve(t)}" alt="${n}" class="${o}" loading="${i}" onerror="this.onerror=null;this.src='${fe}';" />`}const ye=S("images/hero.jpg"),Y=["p1","p2","p3","p4"],U={p1:["incl","f1","f2","f3","f4","f5","f6"],p2:["incl","f1","f2","f3","f4","f5","f6"],p3:["incl","f1","f2","f3","f4","f5","f6"],p4:["incl","f1","f2","f3","f4","f5","f6"]},je={p1:["incl","f1","f2","f3","f4"],p2:["incl","f1","f2","f3","f4"],p3:["incl","f1","f2","f3","f4"],p4:["incl","f1","f2","f3","f4"]};function Z(t,{keys:a}={}){const i=`packages.${t}`;return(a??U[t]??[]).map(n=>e(`${i}.${n}`)).filter(Boolean).map(n=>`<li>${n}</li>`).join("")}function q(t){const a=`packages.${t}`,i=e(`${a}.tagline`),o=e(`${a}.name`);return`
     <article
       class="package-card"
-      data-package="${e}"
+      data-package="${t}"
       role="button"
       tabindex="0"
       aria-pressed="false"
       aria-label="${o}"
     >
       <div class="package-card-thumb" aria-hidden="true">${o.charAt(0)}</div>
-      <span class="package-badge">${t("packages.badge")}</span>
+      <span class="package-badge">${e("packages.badge")}</span>
       <div class="package-card-body">
         <h3 class="package-name">${o}</h3>
         ${i?`<p class="package-tagline">${i}</p>`:""}
-        <ul class="package-list">${X(e,{keys:fe[e]})}</ul>
-        <span class="btn btn-ghost package-select-btn">${t(e==="p4"?"cta.contactAi":"cta.buyPackage")}</span>
+        <ul class="package-list">${Z(t,{keys:je[t]})}</ul>
+        <span class="btn btn-ghost package-select-btn">${e(t==="p4"?"cta.contactAi":"cta.buyPackage")}</span>
       </div>
     </article>
-  `}function q(e,a,i,o){const n=t(a);return`
+  `}function O(t,a,i,o){const n=e(a);return`
     <article class="how-card">
       <div class="how-card-photo">
-        <img src="${S(e)}" alt="${n}" loading="lazy" />
+        <img src="${S(t)}" alt="${n}" loading="lazy" />
       </div>
       <div class="how-card-body">
         <h3>${n}</h3>
         <div class="how-card-desc-wrap">
-          <p class="how-card-desc">${t(i)}</p>
+          <p class="how-card-desc">${e(i)}</p>
         </div>
-        <a class="how-card-link" href="${o}">${t("how.readManual")}</a>
+        <a class="how-card-link" href="${o}">${e("how.readManual")}</a>
       </div>
     </article>
-  `}function ve(e){return`
+  `}function be(t){return`
     <div class="spotlight-mock spotlight-mock-platform" aria-hidden="true">
       <div class="sm-phone">
         <div class="sm-phone-screen">
@@ -1319,76 +1319,76 @@
           <div class="sm-grid-mini sm-grid-shop"><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
       </div>
-    </div>`}function ye({variant:e,categoryKey:a,titleKey:i,descKey:o,linkKey:n,href:r,imageSlug:s="",hidePhoto:l=!1}){const u=s?`<div class="spotlight-photo-fallback">${D(s,{className:"spotlight-img"})}</div>`:"",v=l?"":`
+    </div>`}function we({variant:t,categoryKey:a,titleKey:i,descKey:o,linkKey:n,href:r,imageSlug:s="",hidePhoto:p=!1}){const g=s?`<div class="spotlight-photo-fallback">${B(s,{className:"spotlight-img"})}</div>`:"",d=p?"":`
       <div class="spotlight-photo">
-        ${ve()}
-        ${u}
+        ${be()}
+        ${g}
       </div>`;return`
-    <a class="spotlight-card spotlight-card-${e}${l?" spotlight-card--no-photo":""}" href="${r}" data-navigate>
-      ${v}
+    <a class="spotlight-card spotlight-card-${t}${p?" spotlight-card--no-photo":""}" href="${r}" data-navigate>
+      ${d}
       <div class="spotlight-body">
-        <div class="spotlight-category">${t(a)}</div>
-        <h3 class="spotlight-title">${t(i)}</h3>
-        <p class="spotlight-desc">${t(o)}</p>
-        <span class="spotlight-link">${t(n)}</span>
+        <div class="spotlight-category">${e(a)}</div>
+        <h3 class="spotlight-title">${e(i)}</h3>
+        <p class="spotlight-desc">${e(o)}</p>
+        <span class="spotlight-link">${e(n)}</span>
       </div>
     </a>
-  `}function je(){const e=window.matchMedia("(max-width: 640px)");document.querySelectorAll(".how-card").forEach(a=>{const i=a.querySelector(".how-card-desc-wrap"),o=a.querySelector(".how-card-desc");if(!i||!o)return;let n=a.querySelector(".card-toggle[data-how-toggle]");n||(n=document.createElement("button"),n.type="button",n.className="card-toggle",n.dataset.howToggle="1",i.insertAdjacentElement("afterend",n));const r=()=>{const s=i.classList.contains("is-expanded"),l=e.matches&&(s||o.textContent.trim().length>85);n.hidden=!l,n.setAttribute("aria-expanded",s?"true":"false"),n.textContent=t(s?"expand.less":"expand.more"),e.matches||i.classList.remove("is-expanded")};n.addEventListener("click",()=>{i.classList.toggle("is-expanded"),r()}),r(),e.addEventListener("change",r),window.addEventListener("resize",r,{passive:!0})}),document.querySelectorAll(".package-card[data-package]").forEach(a=>{const i=a.querySelector(".package-list");if(!i)return;i.classList.add("package-list--foldable");let o=a.querySelector(".card-toggle[data-package-toggle]");o||(o=document.createElement("button"),o.type="button",o.className="card-toggle",o.dataset.packageToggle="1",i.insertAdjacentElement("afterend",o));const n=()=>{const r=i.querySelectorAll("li"),s=i.classList.contains("is-expanded"),l=e.matches&&r.length>3;o.hidden=!l,o.setAttribute("aria-expanded",s?"true":"false"),o.textContent=t(s?"expand.less":"expand.more"),e.matches||i.classList.remove("is-expanded")};o.addEventListener("click",r=>{r.preventDefault(),r.stopPropagation(),i.classList.toggle("is-expanded"),n()}),n(),e.addEventListener("change",n)})}function be(){fetch("/api/public/config").then(o=>o.json()).then(o=>{o!=null&&o.ok&&o.stripe_enabled&&(window.__stripeEnabled=!0)}).catch(()=>{});const e=new URLSearchParams(window.location.hash.split("?")[1]||""),a=e.get("payment"),i=e.get("session_id");if(a==="success"){const o=document.querySelector(".get-started-note");o&&(o.textContent=t("checkout.success"),o.style.color="#15803d"),i&&i.startsWith("cs_")&&fetch("/api/payments/confirm-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:i})}).catch(()=>{})}}function we(){const e=document.getElementById("get-started-wa");e&&(async()=>{try{const a=await fetch("/api/public/config"),i=await a.json();if(!a.ok||!i.ok)return;const o=i.support_phone_digits||"38348707880",n=encodeURIComponent(j()==="en"?"Hello, I want Revolution POS (Setup + trial).":"Përshëndetje, dua të marr Revolution POS (Setup + trial).");e.href=`https://wa.me/${o}?text=${n}`}catch{}})()}function Se(){var R;const e=document.querySelectorAll(".package-card[data-package]"),a=document.getElementById("package-detail"),i=document.getElementById("package-detail-name"),o=document.getElementById("package-detail-summary"),n=document.getElementById("package-detail-list"),r=document.getElementById("contact-package"),s=document.getElementById("packages-one-only");if(!e.length||!a)return;let l=null;const u=()=>{l=null,sessionStorage.removeItem("selectedPackage"),e.forEach(h=>{h.classList.remove("selected"),h.setAttribute("aria-pressed","false")}),a.hidden=!0,r&&(r.value=""),s&&(s.hidden=!0)},v=(h,k={})=>{const g=!!k.force;if(!g&&l&&l!==h){s&&(s.hidden=!1,s.textContent=t("packages.oneOnly"));return}if(!g&&l===h){u();return}const p=`packages.${h}`;if(l=h,e.forEach(c=>{const m=c.dataset.package===h;c.classList.toggle("selected",m),c.setAttribute("aria-pressed",m?"true":"false")}),i.textContent=t(`${p}.name`),o){const c=t(`${p}.summary`);o.textContent=c,o.hidden=!c}n.innerHTML=X(h,{keys:_[h]}),a.hidden=!1,s&&(s.hidden=!1,s.textContent=t("packages.oneOnly")),r&&(r.value=t(`${p}.name`));const d=document.getElementById("package-detail-cta");d&&(h==="p4"?d.textContent=t("cta.contactAi"):window.__stripeEnabled?d.textContent=t("cta.payStripe"):d.textContent=t("cta.buyPackage")),sessionStorage.setItem("selectedPackage",h)};e.forEach(h=>{const k=h.dataset.package,g=p=>{var d;(d=p==null?void 0:p.target)!=null&&d.closest(".how-card-link")||v(k)};h.addEventListener("click",g),h.addEventListener("keydown",p=>{(p.key==="Enter"||p.key===" ")&&(p.preventDefault(),v(k))})}),(R=document.getElementById("package-detail-cta"))==null||R.addEventListener("click",async()=>{var c;const h=sessionStorage.getItem("selectedPackage")||"",k=((c=document.getElementById("contact-package"))==null?void 0:c.value.trim())||"";let g="38348707880",p=!!window.__stripeEnabled;try{const m=await fetch("/api/public/config"),f=await m.json();m.ok&&f.ok&&(f.support_phone_digits&&(g=f.support_phone_digits),f.stripe_enabled&&(p=!0,window.__stripeEnabled=!0))}catch{}if(h==="p4"){const m=`Përshëndetje, dua informacion për AI (Pako 4).
-Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(m)}`,"_blank","noopener,noreferrer");return}if(p&&(h==="p1"||h==="p2"||h==="p3")){Ae(h);return}const d=`Përshëndetje, dua të blej / provoj Revolution POS.
-Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_blank","noopener,noreferrer")});const b=sessionStorage.getItem("selectedPackage");b&&ke.includes(b)&&v(b,{force:!0})}async function Pe(){var s;const e=document.getElementById("trial-modal");e&&e.remove();let a="+383 48707880",i="38348707880";try{const l=await fetch("/api/public/config"),u=await l.json();l.ok&&u.ok&&(u.support_phone&&(a=u.support_phone),u.support_phone_digits&&(i=u.support_phone_digits))}catch{}const o=encodeURIComponent(t("wa.trial")),n=document.createElement("div");n.id="trial-modal",n.className="checkout-modal",n.innerHTML=`
+  `}function Se(){const t=window.matchMedia("(max-width: 640px)");document.querySelectorAll(".how-card").forEach(a=>{const i=a.querySelector(".how-card-desc-wrap"),o=a.querySelector(".how-card-desc");if(!i||!o)return;let n=a.querySelector(".card-toggle[data-how-toggle]");n||(n=document.createElement("button"),n.type="button",n.className="card-toggle",n.dataset.howToggle="1",i.insertAdjacentElement("afterend",n));const r=()=>{const s=i.classList.contains("is-expanded"),p=t.matches&&(s||o.textContent.trim().length>85);n.hidden=!p,n.setAttribute("aria-expanded",s?"true":"false"),n.textContent=e(s?"expand.less":"expand.more"),t.matches||i.classList.remove("is-expanded")};n.addEventListener("click",()=>{i.classList.toggle("is-expanded"),r()}),r(),t.addEventListener("change",r),window.addEventListener("resize",r,{passive:!0})}),document.querySelectorAll(".package-card[data-package]").forEach(a=>{const i=a.querySelector(".package-list");if(!i)return;i.classList.add("package-list--foldable");let o=a.querySelector(".card-toggle[data-package-toggle]");o||(o=document.createElement("button"),o.type="button",o.className="card-toggle",o.dataset.packageToggle="1",i.insertAdjacentElement("afterend",o));const n=()=>{const r=i.querySelectorAll("li"),s=i.classList.contains("is-expanded"),p=t.matches&&r.length>3;o.hidden=!p,o.setAttribute("aria-expanded",s?"true":"false"),o.textContent=e(s?"expand.less":"expand.more"),t.matches||i.classList.remove("is-expanded")};o.addEventListener("click",r=>{r.preventDefault(),r.stopPropagation(),i.classList.toggle("is-expanded"),n()}),n(),t.addEventListener("change",n)})}function Pe(){fetch("/api/public/config").then(o=>o.json()).then(o=>{o!=null&&o.ok&&o.stripe_enabled&&(window.__stripeEnabled=!0)}).catch(()=>{});const t=new URLSearchParams(window.location.hash.split("?")[1]||""),a=t.get("payment"),i=t.get("session_id");if(a==="success"){const o=document.querySelector(".get-started-note");o&&(o.textContent=e("checkout.success"),o.style.color="#15803d"),i&&i.startsWith("cs_")&&fetch("/api/payments/confirm-session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:i})}).catch(()=>{})}}function R(t){const a=t&&Y.includes(t)?t:"";return a?`/api/public/setup-download?plan=${encodeURIComponent(a)}`:"/api/public/setup-download"}function Re(){const t=document.getElementById("get-started-download"),a=document.getElementById("get-started-wa");t&&(t.href=R(sessionStorage.getItem("selectedPackage")||"p1")),a&&(async()=>{try{const i=await fetch("/api/public/config"),o=await i.json();if(!i.ok||!o.ok)return;const n=o.support_phone_digits||"38348707880",r=encodeURIComponent(j()==="en"?"Hello, I downloaded Setup — I need a trial / license key.":"Përshëndetje, shkarkova Setup — më duhet çelës trial / licencë.");a.href=`https://wa.me/${n}?text=${r}`,o.setup_download_url&&t&&!sessionStorage.getItem("selectedPackage")&&(t.href=o.setup_download_url)}catch{}})()}function Ae(){const t=document.getElementById("pay-stripe-cta"),a=document.querySelectorAll("[data-pay-bank]");a.forEach(i=>{i.addEventListener("click",o=>{o.preventDefault(),a.forEach(r=>r.classList.remove("is-selected")),i.classList.add("is-selected");const n=document.getElementById("pay-hint");n&&(n.hidden=!1,n.textContent=`${e("pay.banks")}: ${i.textContent} — ${e("pay.soon")}. ${e("pay.stripeDesc")}`)})}),t==null||t.addEventListener("click",()=>{var n;const i=sessionStorage.getItem("selectedPackage")||"",o=document.getElementById("pay-hint");if(i==="p4"){o&&(o.hidden=!1,o.textContent=e("packages.p4.summary"));return}if(i==="p1"||i==="p2"||i==="p3"){window.__stripeEnabled?J(i):o&&(o.hidden=!1,o.textContent=e("checkout.error"));return}o&&(o.hidden=!1,o.textContent=e("pay.pickPlan")),(n=document.getElementById("pakot"))==null||n.scrollIntoView({behavior:"smooth"})})}function ze(){var A;const t=document.querySelectorAll(".package-card[data-package]"),a=document.getElementById("package-detail"),i=document.getElementById("package-detail-name"),o=document.getElementById("package-detail-summary"),n=document.getElementById("package-detail-list"),r=document.getElementById("contact-package"),s=document.getElementById("packages-one-only");if(!t.length||!a)return;let p=null;const g=()=>{p=null,sessionStorage.removeItem("selectedPackage"),t.forEach(l=>{l.classList.remove("selected"),l.setAttribute("aria-pressed","false")}),a.hidden=!0,r&&(r.value=""),s&&(s.hidden=!0)},d=(l,f={})=>{const k=!!f.force;if(!k&&p&&p!==l){s&&(s.hidden=!1,s.textContent=e("packages.oneOnly"));return}if(!k&&p===l){g();return}const h=`packages.${l}`;if(p=l,t.forEach(u=>{const V=u.dataset.package===l;u.classList.toggle("selected",V),u.setAttribute("aria-pressed",V?"true":"false")}),i.textContent=e(`${h}.name`),o){const u=e(`${h}.summary`);o.textContent=u,o.hidden=!u}n.innerHTML=Z(l,{keys:U[l]}),a.hidden=!1,s&&(s.hidden=!1,s.textContent=e("packages.oneOnly")),r&&(r.value=e(`${h}.name`));const c=document.getElementById("package-detail-cta");c&&(l==="p4"?c.textContent=e("cta.contactAi"):window.__stripeEnabled?c.textContent=e("cta.payStripe"):c.textContent=e("cta.buyPackage"));const v=document.getElementById("package-detail-download");v&&(v.href=R(l),v.hidden=!1);const m=document.getElementById("get-started-download");m&&(m.href=R(l)),sessionStorage.setItem("selectedPackage",l)};t.forEach(l=>{const f=l.dataset.package,k=h=>{var c;(c=h==null?void 0:h.target)!=null&&c.closest(".how-card-link")||d(f)};l.addEventListener("click",k),l.addEventListener("keydown",h=>{(h.key==="Enter"||h.key===" ")&&(h.preventDefault(),d(f))})}),(A=document.getElementById("package-detail-cta"))==null||A.addEventListener("click",async()=>{var c,v;const l=sessionStorage.getItem("selectedPackage")||"",f=((c=document.getElementById("contact-package"))==null?void 0:c.value.trim())||"";let k="38348707880",h=!!window.__stripeEnabled;try{const m=await fetch("/api/public/config"),u=await m.json();m.ok&&u.ok&&(u.support_phone_digits&&(k=u.support_phone_digits),u.stripe_enabled&&(h=!0,window.__stripeEnabled=!0))}catch{}if(l==="p4"){const m=`Përshëndetje, dua informacion për AI (Pako 4).
+Pako: ${f}`;window.open(`https://wa.me/${k}?text=${encodeURIComponent(m)}`,"_blank","noopener,noreferrer");return}if(h&&(l==="p1"||l==="p2"||l==="p3")){(v=document.getElementById("pagesa"))==null||v.scrollIntoView({behavior:"smooth"}),J(l);return}window.location.href=R(l||"p1")});const b=sessionStorage.getItem("selectedPackage");b&&Y.includes(b)&&d(b,{force:!0})}async function qe(){var p;const t=document.getElementById("trial-modal");t&&t.remove();let a="+383 48707880",i="38348707880";try{const g=await fetch("/api/public/config"),d=await g.json();g.ok&&d.ok&&(d.support_phone&&(a=d.support_phone),d.support_phone_digits&&(i=d.support_phone_digits))}catch{}const o=encodeURIComponent(e("wa.trial")),n=sessionStorage.getItem("selectedPackage")||"p1",r=document.createElement("div");r.id="trial-modal",r.className="checkout-modal",r.innerHTML=`
     <div class="checkout-modal-card" role="dialog" aria-modal="true" aria-labelledby="trial-title">
-      <h3 id="trial-title">${t("trialModal.title")}</h3>
-      <p class="trial-modal-body">${t("trialModal.body")}</p>
+      <h3 id="trial-title">${e("trialModal.title")}</h3>
+      <p class="trial-modal-body">${e("trialModal.body")}</p>
       <p class="trial-modal-phone">
-        <span>${t("trialModal.phoneLabel")}</span>
+        <span>${e("trialModal.phoneLabel")}</span>
         <a href="tel:+${i}">${a}</a>
       </p>
       <div class="checkout-actions">
-        <a class="btn btn-primary" href="https://wa.me/${i}?text=${o}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
-        <button type="button" class="btn btn-ghost" id="trial-close">${t("trialModal.close")}</button>
+        <a class="btn btn-primary" href="${R(n)}" download>${e("trialModal.download")}</a>
+        <a class="btn btn-ghost" href="https://wa.me/${i}?text=${o}" target="_blank" rel="noopener noreferrer">${e("trialModal.wa")}</a>
+        <button type="button" class="btn btn-ghost" id="trial-close">${e("trialModal.close")}</button>
       </div>
-    </div>`,document.body.appendChild(n);const r=()=>n.remove();(s=n.querySelector("#trial-close"))==null||s.addEventListener("click",r),n.addEventListener("click",l=>{l.target===n&&r()})}function Re(){document.querySelectorAll("[data-trial-modal]").forEach(e=>{e.addEventListener("click",a=>{a.preventDefault(),Pe()})})}function Ae(e){var n,r;const a=document.getElementById("stripe-checkout-modal");a&&a.remove();const i=document.createElement("div");i.id="stripe-checkout-modal",i.className="checkout-modal",i.innerHTML=`
+    </div>`,document.body.appendChild(r);const s=()=>r.remove();(p=r.querySelector("#trial-close"))==null||p.addEventListener("click",s),r.addEventListener("click",g=>{g.target===r&&s()})}function Oe(){document.querySelectorAll("[data-trial-modal]").forEach(t=>{t.addEventListener("click",a=>{a.preventDefault(),qe()})})}function J(t){var n,r;const a=document.getElementById("stripe-checkout-modal");a&&a.remove();const i=document.createElement("div");i.id="stripe-checkout-modal",i.className="checkout-modal",i.innerHTML=`
     <div class="checkout-modal-card" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-      <h3 id="checkout-title">${t("checkout.title")}</h3>
-      <p class="checkout-plan-label">${t(`packages.${e}.name`)}</p>
-      <label>${t("checkout.emri")}<input id="co-emri" autocomplete="name" required></label>
-      <label>${t("checkout.biznesi")}<input id="co-biz" autocomplete="organization" required></label>
-      <label>${t("checkout.email")}<input id="co-email" type="email" autocomplete="email" required></label>
-      <label>${t("checkout.telefoni")}<input id="co-phone" type="tel" autocomplete="tel"></label>
-      <label>${t("checkout.tipi")}
+      <h3 id="checkout-title">${e("checkout.title")}</h3>
+      <p class="checkout-plan-label">${e(`packages.${t}.name`)}</p>
+      <label>${e("checkout.emri")}<input id="co-emri" autocomplete="name" required></label>
+      <label>${e("checkout.biznesi")}<input id="co-biz" autocomplete="organization" required></label>
+      <label>${e("checkout.email")}<input id="co-email" type="email" autocomplete="email" required></label>
+      <label>${e("checkout.telefoni")}<input id="co-phone" type="tel" autocomplete="tel"></label>
+      <label>${e("checkout.tipi")}
         <select id="co-tipi">
-          <option value="restorant">${t("checkout.tipi.restorant")}</option>
-          <option value="kafene">${t("checkout.tipi.kafene")}</option>
-          <option value="dyqan">${t("checkout.tipi.dyqan")}</option>
+          <option value="restorant">${e("checkout.tipi.restorant")}</option>
+          <option value="kafene">${e("checkout.tipi.kafene")}</option>
+          <option value="dyqan">${e("checkout.tipi.dyqan")}</option>
         </select>
       </label>
       <p class="checkout-msg" id="co-msg" hidden></p>
       <div class="checkout-actions">
-        <button type="button" class="btn btn-primary" id="co-pay">${t("checkout.pay")}</button>
-        <button type="button" class="btn btn-ghost" id="co-cancel">${t("checkout.cancel")}</button>
+        <button type="button" class="btn btn-primary" id="co-pay">${e("checkout.pay")}</button>
+        <button type="button" class="btn btn-ghost" id="co-cancel">${e("checkout.cancel")}</button>
       </div>
-    </div>`,document.body.appendChild(i);const o=()=>i.remove();(n=i.querySelector("#co-cancel"))==null||n.addEventListener("click",o),i.addEventListener("click",s=>{s.target===i&&o()}),(r=i.querySelector("#co-pay"))==null||r.addEventListener("click",async()=>{var k,g,p,d,c;const s=i.querySelector("#co-pay"),l=i.querySelector("#co-msg"),u=String(((k=i.querySelector("#co-emri"))==null?void 0:k.value)||"").trim(),v=String(((g=i.querySelector("#co-biz"))==null?void 0:g.value)||"").trim(),b=String(((p=i.querySelector("#co-email"))==null?void 0:p.value)||"").trim(),R=String(((d=i.querySelector("#co-phone"))==null?void 0:d.value)||"").trim(),h=String(((c=i.querySelector("#co-tipi"))==null?void 0:c.value)||"restorant");if(!u||!v||!b){l&&(l.hidden=!1,l.textContent=t("checkout.error"));return}s&&(s.disabled=!0,s.textContent=t("checkout.busy"));try{const m=await fetch("/api/payments/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:e,emri:u,emri_biznesit:v,email:b,telefoni:R,tipi:h})}),f=await m.json();if(!m.ok||!f.ok||!f.url)throw new Error(f.gabim||t("checkout.error"));window.location.href=f.url}catch(m){l&&(l.hidden=!1,l.textContent=m.message||t("checkout.error")),s&&(s.disabled=!1,s.textContent=t("checkout.pay"))}})}function B(){var i,o;const e=de(),a=j();document.title=t("meta.title"),(o=document.querySelector('meta[name="description"]'))==null||o.setAttribute("content",((i=I[a])==null?void 0:i["meta.description"])??I.sq["meta.description"]),document.getElementById("app").innerHTML=`
-    ${x({activeNav:"home"})}
+    </div>`,document.body.appendChild(i);const o=()=>i.remove();(n=i.querySelector("#co-cancel"))==null||n.addEventListener("click",o),i.addEventListener("click",s=>{s.target===i&&o()}),(r=i.querySelector("#co-pay"))==null||r.addEventListener("click",async()=>{var f,k,h,c,v;const s=i.querySelector("#co-pay"),p=i.querySelector("#co-msg"),g=String(((f=i.querySelector("#co-emri"))==null?void 0:f.value)||"").trim(),d=String(((k=i.querySelector("#co-biz"))==null?void 0:k.value)||"").trim(),b=String(((h=i.querySelector("#co-email"))==null?void 0:h.value)||"").trim(),A=String(((c=i.querySelector("#co-phone"))==null?void 0:c.value)||"").trim(),l=String(((v=i.querySelector("#co-tipi"))==null?void 0:v.value)||"restorant");if(!g||!d||!b){p&&(p.hidden=!1,p.textContent=e("checkout.error"));return}s&&(s.disabled=!0,s.textContent=e("checkout.busy"));try{const m=await fetch("/api/payments/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:t,emri:g,emri_biznesit:d,email:b,telefoni:A,tipi:l})}),u=await m.json();if(!m.ok||!u.ok||!u.url)throw new Error(u.gabim||e("checkout.error"));window.location.href=u.url}catch(m){p&&(p.hidden=!1,p.textContent=m.message||e("checkout.error")),s&&(s.disabled=!1,s.textContent=e("checkout.pay"))}})}function H(){var i,o;const t=ke(),a=j();document.title=e("meta.title"),(o=document.querySelector('meta[name="description"]'))==null||o.setAttribute("content",((i=T[a])==null?void 0:i["meta.description"])??T.sq["meta.description"]),document.getElementById("app").innerHTML=`
+    ${E({activeNav:"home"})}
     <main>
-      <section class="hero hero-with-image hero-home" id="ballina" style="--hero-image: url('${ge}')">
+      <section class="hero hero-with-image hero-home" id="ballina" style="--hero-image: url('${ye}')">
         <div class="hero-overlay hero-overlay-dark"></div>
         <div class="container hero-content hero-home-content">
           <div class="hero-badge hero-home-badge">
             <span aria-hidden="true">🔥</span>
-            ${t("hero.badge")}
+            ${e("hero.badge")}
           </div>
-          <h1>${t("hero.title")}</h1>
-          <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
+          <h1>${e("hero.title")}</h1>
+          <p class="hero-home-subtitle">${e("hero.subtitle")}</p>
           <div class="hero-actions">
-            <button type="button" class="btn btn-hero-primary" data-trial-modal>${t("hero.cta.primary")}</button>
-            <a class="btn btn-hero-secondary" href="#pakot">${t("hero.cta.secondary")}</a>
+            <button type="button" class="btn btn-hero-primary" data-trial-modal>${e("hero.cta.primary")}</button>
+            <a class="btn btn-hero-secondary" href="#pakot">${e("hero.cta.secondary")}</a>
           </div>
           <div class="hero-stats" aria-label="Statistika">
-            <span>${t("hero.stats.restaurants")}</span>
+            <span>${e("hero.stats.restaurants")}</span>
             <span class="hero-stats-sep" aria-hidden="true">·</span>
-            <span>${t("hero.stats.support")}</span>
+            <span>${e("hero.stats.support")}</span>
             <span class="hero-stats-sep" aria-hidden="true">·</span>
-            <span>${t("hero.stats.cloud")}</span>
+            <span>${e("hero.stats.cloud")}</span>
           </div>
         </div>
       </section>
@@ -1396,11 +1396,11 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       <section class="site-section spotlight-section" id="veçorite">
         <div class="container">
           <div class="section-head">
-            <h2>${t("spotlight.title")}</h2>
-            <p>${t("spotlight.subtitle")}</p>
+            <h2>${e("spotlight.title")}</h2>
+            <p>${e("spotlight.subtitle")}</p>
           </div>
           <div class="spotlight-grid spotlight-grid--single">
-            ${ye({variant:"platform",categoryKey:"spotlight.card2.category",titleKey:"spotlight.card2.title",descKey:"spotlight.card2.desc",linkKey:"spotlight.card2.link",href:"#pakot"})}
+            ${we({variant:"platform",categoryKey:"spotlight.card2.category",titleKey:"spotlight.card2.title",descKey:"spotlight.card2.desc",linkKey:"spotlight.card2.link",href:"#pakot"})}
           </div>
         </div>
       </section>
@@ -1408,59 +1408,60 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       <section class="site-section get-started-section" id="si-ta-merrni">
         <div class="container">
           <div class="section-head">
-            <h2>${t("getStarted.title")}</h2>
-            <p>${t("getStarted.subtitle")}</p>
+            <h2>${e("getStarted.title")}</h2>
+            <p>${e("getStarted.subtitle")}</p>
           </div>
           <ol class="get-started-steps">
             <li>
-              <strong>${t("getStarted.s1.title")}</strong>
-              <p>${t("getStarted.s1.desc")}</p>
+              <strong>${e("getStarted.s1.title")}</strong>
+              <p>${e("getStarted.s1.desc")}</p>
             </li>
             <li>
-              <strong>${t("getStarted.s2.title")}</strong>
-              <p>${t("getStarted.s2.desc")}</p>
+              <strong>${e("getStarted.s2.title")}</strong>
+              <p>${e("getStarted.s2.desc")}</p>
             </li>
             <li>
-              <strong>${t("getStarted.s3.title")}</strong>
-              <p>${t("getStarted.s3.desc")}</p>
+              <strong>${e("getStarted.s3.title")}</strong>
+              <p>${e("getStarted.s3.desc")}</p>
             </li>
             <li>
-              <strong>${t("getStarted.s4.title")}</strong>
-              <p>${t("getStarted.s4.desc")}</p>
+              <strong>${e("getStarted.s4.title")}</strong>
+              <p>${e("getStarted.s4.desc")}</p>
             </li>
             <li>
-              <strong>${t("getStarted.s5.title")}</strong>
-              <p>${t("getStarted.s5.desc")}</p>
+              <strong>${e("getStarted.s5.title")}</strong>
+              <p>${e("getStarted.s5.desc")}</p>
             </li>
             <li>
-              <strong>${t("getStarted.s6.title")}</strong>
-              <p>${t("getStarted.s6.desc")}</p>
+              <strong>${e("getStarted.s6.title")}</strong>
+              <p>${e("getStarted.s6.desc")}</p>
             </li>
           </ol>
           <div class="get-started-actions">
-            <a class="btn btn-primary" id="get-started-wa" href="https://wa.me/38348707880?text=${encodeURIComponent("Përshëndetje, dua të marr Revolution POS (Setup + trial).")}" target="_blank" rel="noopener noreferrer">${t("getStarted.cta")}</a>
-            <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
+            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download?plan=p1">${e("getStarted.cta")}</a>
+            <a class="btn btn-ghost" href="#pakot">${e("nav.packages")}</a>
+            <a class="btn btn-ghost" id="get-started-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${e("getStarted.ctaHelp")}</a>
           </div>
-          <p class="get-started-note">${t("getStarted.note")}</p>
+          <p class="get-started-note">${e("getStarted.note")}</p>
         </div>
       </section>
 
       <section class="articles" id="artikuj">
         <div class="container">
           <div class="section-head">
-            <h2>${t("articles.heading")}</h2>
+            <h2>${e("articles.heading")}</h2>
           </div>
           <div class="article-grid">
-            ${e.map(n=>`
-                  <a class="article-card" href="${te(n.slug)}" data-navigate>
+            ${t.map(n=>`
+                  <a class="article-card" href="${ne(n.slug)}" data-navigate>
                     <div class="article-thumb">
-                      ${D(n.slug,{alt:n.title})}
+                      ${B(n.slug,{alt:n.title})}
                     </div>
                     <div class="article-body">
                       <div class="article-category">${n.category}</div>
                       <h2 class="article-title">${n.title}</h2>
                       <div class="article-footer">
-                        <span class="article-link">${t("readMore")}</span>
+                        <span class="article-link">${e("readMore")}</span>
                       </div>
                     </div>
                   </a>
@@ -1472,14 +1473,14 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       <section class="site-section" id="si-funksionon">
         <div class="container">
           <div class="section-head">
-            <h2>${t("how.title")}</h2>
-            <p>${t("how.subtitle")}</p>
+            <h2>${e("how.title")}</h2>
+            <p>${e("how.subtitle")}</p>
           </div>
           <div class="how-grid">
-            ${q("images/modules/pos-kasa.jpg","how.pos.title","how.pos.desc","/website/manual.html#menuja")}
-            ${q("images/modules/kamarieri.jpg","how.waiter.title","how.waiter.desc","/website/manual.html#kamarieri")}
-            ${q("images/modules/kds-kuzhina.jpg","how.kds.title","how.kds.desc","/website/manual.html#kuzhina")}
-            ${q("images/modules/pronari.jpg","how.owner.title","how.owner.desc","/website/manual.html#hyrja")}
+            ${O("images/modules/pos-kasa.jpg","how.pos.title","how.pos.desc","/website/manual.html#menuja")}
+            ${O("images/modules/kamarieri.jpg","how.waiter.title","how.waiter.desc","/website/manual.html#kamarieri")}
+            ${O("images/modules/kds-kuzhina.jpg","how.kds.title","how.kds.desc","/website/manual.html#kuzhina")}
+            ${O("images/modules/pronari.jpg","how.owner.title","how.owner.desc","/website/manual.html#hyrja")}
           </div>
         </div>
       </section>
@@ -1487,39 +1488,80 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       <section class="site-section site-section-muted" id="pakot">
         <div class="container">
           <div class="section-head">
-            <h2>${t("packages.title")}</h2>
-            <p>${t("packages.subtitle")}</p>
-            <p class="packages-hint">${t("packages.clickHint")}</p>
-            <p class="packages-hint packages-price-hint">${t("packages.priceHint")}</p>
+            <h2>${e("packages.title")}</h2>
+            <p>${e("packages.subtitle")}</p>
+            <p class="packages-hint">${e("packages.clickHint")}</p>
+            <p class="packages-hint packages-price-hint">${e("packages.priceHint")}</p>
             <p class="packages-hint" id="packages-one-only" hidden></p>
           </div>
           <div class="packages-grid">
-            ${z("p1")}
-            ${z("p2")}
-            ${z("p3")}
-            ${z("p4")}
+            ${q("p1")}
+            ${q("p2")}
+            ${q("p3")}
+            ${q("p4")}
           </div>
           <div class="package-detail-panel" id="package-detail" hidden>
             <div class="package-detail-head">
-              <span class="package-detail-badge">${t("packages.selected")}</span>
+              <span class="package-detail-badge">${e("packages.selected")}</span>
               <h3 id="package-detail-name"></h3>
             </div>
             <p class="package-detail-summary" id="package-detail-summary" hidden></p>
-            <p class="package-detail-label">${t("packages.includes")}</p>
+            <p class="package-detail-label">${e("packages.includes")}</p>
             <ul class="package-detail-list" id="package-detail-list"></ul>
             <input type="hidden" id="contact-package" value="">
-            <button class="btn btn-primary" type="button" id="package-detail-cta">${t("cta.choosePackage")}</button>
+            <div class="package-detail-actions">
+              <a class="btn btn-ghost" id="package-detail-download" href="/api/public/setup-download" hidden>${e("cta.downloadSetup")}</a>
+              <button class="btn btn-primary" type="button" id="package-detail-cta">${e("cta.choosePackage")}</button>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section class="site-section pay-section" id="pagesa">
+        <div class="container">
+          <div class="section-head">
+            <h2>${e("pay.title")}</h2>
+            <p>${e("pay.subtitle")}</p>
+          </div>
+          <div class="pay-methods">
+            <button type="button" class="pay-method pay-method-active" id="pay-stripe-cta">
+              <span class="pay-method-badge">${e("pay.active")}</span>
+              <strong>${e("pay.stripe")}</strong>
+              <span class="pay-method-desc">${e("pay.stripeDesc")}</span>
+              <span class="pay-card-marks" aria-hidden="true">
+                <span class="pay-mark pay-mark-visa">VISA</span>
+                <span class="pay-mark pay-mark-mc">Mastercard</span>
+                <span class="pay-mark pay-mark-stripe">Stripe</span>
+              </span>
+              <span class="btn btn-primary pay-method-btn">${e("pay.ctaStripe")}</span>
+            </button>
+            <div class="pay-banks-block">
+              <div class="pay-banks-head">
+                <strong>${e("pay.banks")}</strong>
+                <span class="pay-method-badge pay-method-badge-soon">${e("pay.soon")}</span>
+              </div>
+              <p class="pay-banks-desc">${e("pay.banksDesc")}</p>
+              <div class="pay-banks-grid" role="group" aria-label="${e("pay.banks")}">
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.teb")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.raiffeisen")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.nlb")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.bkt")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.procredit")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${e("pay.soon")}">${e("pay.bank.bpb")}</button>
+              </div>
+            </div>
+          </div>
+          <p class="pay-hint" id="pay-hint" hidden></p>
         </div>
       </section>
     </main>
     ${N()}
-    ${F()}
-  `,C(),W(),L(),E(),Se(),je(),we(),Re(),be(),window.location.hash?requestAnimationFrame(()=>{var n;(n=document.querySelector(window.location.hash))==null||n.scrollIntoView({behavior:"smooth"})}):window.scrollTo(0,0)}function ze(e){const a=ue(e);if(!a){B();return}document.title=`${a.title} — Revolution POS`,document.getElementById("app").innerHTML=`
-    ${x({activeNav:"blog"})}
+    ${C()}
+  `,L(),D(),W(),F(),ze(),Se(),Re(),Ae(),Oe(),Pe(),window.location.hash?requestAnimationFrame(()=>{var n;(n=document.querySelector(window.location.hash))==null||n.scrollIntoView({behavior:"smooth"})}):window.scrollTo(0,0)}function Ie(t){const a=ge(t);if(!a){H();return}document.title=`${a.title} — Revolution POS`,document.getElementById("app").innerHTML=`
+    ${E({activeNav:"blog"})}
     <main class="article-page">
       <div class="container">
-        <a class="article-back" href="${K()}" data-navigate>${t("backToBlog")}</a>
+        <a class="article-back" href="${M()}" data-navigate>${e("backToBlog")}</a>
 
         <article class="article-full">
           <header class="article-full-header">
@@ -1528,7 +1570,7 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
           </header>
 
           <div class="article-full-image">
-            ${D(a.slug,{alt:a.title,loading:"eager"})}
+            ${B(a.slug,{alt:a.title,loading:"eager"})}
           </div>
 
           <div class="article-content">
@@ -1538,8 +1580,8 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       </div>
     </main>
     ${N()}
-    ${F()}
-  `,C(),W(),L(),E(),window.scrollTo(0,0)}const qe={privacy:{sq:{title:"Privatësia e të dhënave",updated:"Përditësuar: qershor 2026",content:`
+    ${C()}
+  `,L(),D(),W(),F(),window.scrollTo(0,0)}const Te={privacy:{sq:{title:"Privatësia e të dhënave",updated:"Përditësuar: qershor 2026",content:`
         <p class="legal-lead">Kjo politikë shpjegon si <strong>Revolution Invest POS</strong> (“ne”, “shërbimi”) mbledh, përdor dhe mbron të dhënat kur bizneset në Kosovë, Shqipëri dhe rajon përdorin platformën tonë.</p>
 
         <h2>1. Kush jemi ne</h2>
@@ -1825,11 +1867,11 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
 
         <h2>12. Contact</h2>
         <p>Email: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a><br />Contact: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
-      `}}};function Oe(e){const a=qe[e];if(!a)return null;const i=j();return a[i]??a.sq}function Y(e){const a=Oe(e);if(!a){B();return}document.title=`${a.title} — Revolution Invest POS`,document.getElementById("app").innerHTML=`
-    ${x({activeNav:"home"})}
+      `}}};function Ke(t){const a=Te[t];if(!a)return null;const i=j();return a[i]??a.sq}function ee(t){const a=Ke(t);if(!a){H();return}document.title=`${a.title} — Revolution Invest POS`,document.getElementById("app").innerHTML=`
+    ${E({activeNav:"home"})}
     <main class="legal-page">
       <div class="container">
-        <a class="article-back" href="${K()}" data-navigate>${t("legal.backHome")}</a>
+        <a class="article-back" href="${M()}" data-navigate>${e("legal.backHome")}</a>
         <article class="legal-doc">
           <header class="legal-doc-header">
             <p class="legal-doc-meta">${a.updated}</p>
@@ -1842,5 +1884,5 @@ Pako: ${k}`;window.open(`https://wa.me/${g}?text=${encodeURIComponent(d)}`,"_bla
       </div>
     </main>
     ${N()}
-    ${F()}
-  `,C(),W(),L(),E(),window.scrollTo(0,0)}T("/",()=>B());T("/privacy",()=>Y("privacy"));T("/terms",()=>Y("terms"));T("/blog/:slug",({slug:e})=>ze(e));Z();
+    ${C()}
+  `,L(),D(),W(),F(),window.scrollTo(0,0)}K("/",()=>H());K("/privacy",()=>ee("privacy"));K("/terms",()=>ee("terms"));K("/blog/:slug",({slug:t})=>Ie(t));ae();

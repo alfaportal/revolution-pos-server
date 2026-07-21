@@ -245,9 +245,18 @@ function bindStripeConfigAndPaymentBanner() {
   }
 }
 
-function bindGetStartedWhatsApp() {
-  const el = document.getElementById("get-started-wa");
-  if (!el) return;
+function setupDownloadHref(plan) {
+  const p = plan && PACKAGE_PLANS.includes(plan) ? plan : "";
+  return p ? `/api/public/setup-download?plan=${encodeURIComponent(p)}` : "/api/public/setup-download";
+}
+
+function bindGetStartedDownload() {
+  const dl = document.getElementById("get-started-download");
+  const help = document.getElementById("get-started-wa");
+  if (dl) {
+    dl.href = setupDownloadHref(sessionStorage.getItem("selectedPackage") || "p1");
+  }
+  if (!help) return;
   (async () => {
     try {
       const res = await fetch("/api/public/config");
@@ -256,14 +265,58 @@ function bindGetStartedWhatsApp() {
       const digits = data.support_phone_digits || "38348707880";
       const text = encodeURIComponent(
         getLang() === "en"
-          ? "Hello, I want Revolution POS (Setup + trial)."
-          : "Përshëndetje, dua të marr Revolution POS (Setup + trial).",
+          ? "Hello, I downloaded Setup — I need a trial / license key."
+          : "Përshëndetje, shkarkova Setup — më duhet çelës trial / licencë.",
       );
-      el.href = `https://wa.me/${digits}?text=${text}`;
+      help.href = `https://wa.me/${digits}?text=${text}`;
+      if (data.setup_download_url && dl && !sessionStorage.getItem("selectedPackage")) {
+        dl.href = data.setup_download_url;
+      }
     } catch {
       /* keep default */
     }
   })();
+}
+
+function bindPaymentSection() {
+  const stripeBtn = document.getElementById("pay-stripe-cta");
+  const bankBtns = document.querySelectorAll("[data-pay-bank]");
+  bankBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      bankBtns.forEach((b) => b.classList.remove("is-selected"));
+      btn.classList.add("is-selected");
+      const hint = document.getElementById("pay-hint");
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = `${t("pay.banks")}: ${btn.textContent} — ${t("pay.soon")}. ${t("pay.stripeDesc")}`;
+      }
+    });
+  });
+  stripeBtn?.addEventListener("click", () => {
+    const plan = sessionStorage.getItem("selectedPackage") || "";
+    const hint = document.getElementById("pay-hint");
+    if (plan === "p4") {
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = t("packages.p4.summary");
+      }
+      return;
+    }
+    if (plan === "p1" || plan === "p2" || plan === "p3") {
+      if (window.__stripeEnabled) openStripeCheckoutModal(plan);
+      else if (hint) {
+        hint.hidden = false;
+        hint.textContent = t("checkout.error");
+      }
+      return;
+    }
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = t("pay.pickPlan");
+    }
+    document.getElementById("pakot")?.scrollIntoView({ behavior: "smooth" });
+  });
 }
 
 function bindPackageCards() {
@@ -339,6 +392,14 @@ function bindPackageCards() {
       else ctaBtn.textContent = t("cta.buyPackage");
     }
 
+    const dlBtn = document.getElementById("package-detail-download");
+    if (dlBtn) {
+      dlBtn.href = setupDownloadHref(plan);
+      dlBtn.hidden = false;
+    }
+    const getStartedDl = document.getElementById("get-started-download");
+    if (getStartedDl) getStartedDl.href = setupDownloadHref(plan);
+
     sessionStorage.setItem("selectedPackage", plan);
   };
 
@@ -382,11 +443,11 @@ function bindPackageCards() {
       return;
     }
     if (stripeOn && (plan === "p1" || plan === "p2" || plan === "p3")) {
+      document.getElementById("pagesa")?.scrollIntoView({ behavior: "smooth" });
       openStripeCheckoutModal(plan);
       return;
     }
-    const text = `Përshëndetje, dua të blej / provoj Revolution POS.\nPako: ${pkg}`;
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+    window.location.href = setupDownloadHref(plan || "p1");
   });
 
   const saved = sessionStorage.getItem("selectedPackage");
@@ -413,6 +474,7 @@ async function openTrialModal() {
   }
 
   const waText = encodeURIComponent(t("wa.trial"));
+  const plan = sessionStorage.getItem("selectedPackage") || "p1";
   const modal = document.createElement("div");
   modal.id = "trial-modal";
   modal.className = "checkout-modal";
@@ -425,7 +487,8 @@ async function openTrialModal() {
         <a href="tel:+${digits}">${phone}</a>
       </p>
       <div class="checkout-actions">
-        <a class="btn btn-primary" href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
+        <a class="btn btn-primary" href="${setupDownloadHref(plan)}" download>${t("trialModal.download")}</a>
+        <a class="btn btn-ghost" href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
         <button type="button" class="btn btn-ghost" id="trial-close">${t("trialModal.close")}</button>
       </div>
     </div>`;
@@ -621,8 +684,9 @@ export function renderHome() {
             </li>
           </ol>
           <div class="get-started-actions">
-            <a class="btn btn-primary" id="get-started-wa" href="https://wa.me/38348707880?text=${encodeURIComponent("Përshëndetje, dua të marr Revolution POS (Setup + trial).")}" target="_blank" rel="noopener noreferrer">${t("getStarted.cta")}</a>
+            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download?plan=p1">${t("getStarted.cta")}</a>
             <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
+            <a class="btn btn-ghost" id="get-started-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("getStarted.ctaHelp")}</a>
           </div>
           <p class="get-started-note">${t("getStarted.note")}</p>
         </div>
@@ -695,8 +759,49 @@ export function renderHome() {
             <p class="package-detail-label">${t("packages.includes")}</p>
             <ul class="package-detail-list" id="package-detail-list"></ul>
             <input type="hidden" id="contact-package" value="">
-            <button class="btn btn-primary" type="button" id="package-detail-cta">${t("cta.choosePackage")}</button>
+            <div class="package-detail-actions">
+              <a class="btn btn-ghost" id="package-detail-download" href="/api/public/setup-download" hidden>${t("cta.downloadSetup")}</a>
+              <button class="btn btn-primary" type="button" id="package-detail-cta">${t("cta.choosePackage")}</button>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section class="site-section pay-section" id="pagesa">
+        <div class="container">
+          <div class="section-head">
+            <h2>${t("pay.title")}</h2>
+            <p>${t("pay.subtitle")}</p>
+          </div>
+          <div class="pay-methods">
+            <button type="button" class="pay-method pay-method-active" id="pay-stripe-cta">
+              <span class="pay-method-badge">${t("pay.active")}</span>
+              <strong>${t("pay.stripe")}</strong>
+              <span class="pay-method-desc">${t("pay.stripeDesc")}</span>
+              <span class="pay-card-marks" aria-hidden="true">
+                <span class="pay-mark pay-mark-visa">VISA</span>
+                <span class="pay-mark pay-mark-mc">Mastercard</span>
+                <span class="pay-mark pay-mark-stripe">Stripe</span>
+              </span>
+              <span class="btn btn-primary pay-method-btn">${t("pay.ctaStripe")}</span>
+            </button>
+            <div class="pay-banks-block">
+              <div class="pay-banks-head">
+                <strong>${t("pay.banks")}</strong>
+                <span class="pay-method-badge pay-method-badge-soon">${t("pay.soon")}</span>
+              </div>
+              <p class="pay-banks-desc">${t("pay.banksDesc")}</p>
+              <div class="pay-banks-grid" role="group" aria-label="${t("pay.banks")}">
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.teb")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.raiffeisen")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.nlb")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.bkt")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.procredit")}</button>
+                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.bpb")}</button>
+              </div>
+            </div>
+          </div>
+          <p class="pay-hint" id="pay-hint" hidden></p>
         </div>
       </section>
     </main>
@@ -710,7 +815,8 @@ export function renderHome() {
   bindFooterContact();
   bindPackageCards();
   bindCollapsibleCards();
-  bindGetStartedWhatsApp();
+  bindGetStartedDownload();
+  bindPaymentSection();
   bindTrialModal();
   bindStripeConfigAndPaymentBanner();
 

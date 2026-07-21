@@ -3,3 +3,8 @@ node_modules/
 .DS_Store
 *.log
 data/
+public/downloads/*.exe
+public/downloads/*.msi
+public/downloads/*.dmg
+public/downloads/*.AppImage
+!public/downloads/README.txt
