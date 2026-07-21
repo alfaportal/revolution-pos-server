@@ -18,9 +18,32 @@ const EXTRACT_PROMPT =
   "6) name = Pershkrimi SAKTËSISHT si në faturë (p.sh. Ujë Mineral 0.50l, Coca-Cola 0.25l).\n" +
   "7) MOS invento rreshta. MOS përfshi TVSH/total/subtotal si artikull.\n" +
   "8) supplier = emri i firmës së sipërme (DISKONT…), JO emri i kafenesë blerëse.\n" +
+  "9) supplier_nui = NUI / Nr. unik identifikues / Nr. biznesi i FURNIZUESIT (vetëm shifra, p.sh. 810xxxxxx). JO NUI i blerësit.\n" +
+  "10) supplier_vat = Nr. TVSH i furnizuesit nëse duket (p.sh. XK…). Nëse nuk ka → \"\".\n" +
+  "11) vat_rate = norma dominante e TVSH në faturë: 18, 8 ose 0. Nga kolona Tatimi / % TVSH / totalet. Nëse e paqartë → 18.\n" +
   "invoice_number (p.sh. 2024-400), invoice_date YYYY-MM-DD, total_with_vat = «Vlera për pagesë».\n" +
   "Përgjigju VETËM me JSON (pa markdown):\n" +
-  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2024-400","invoice_date":"2024-05-13","total_with_vat":277.72,"items":[{"name":"Ujë Mineral 0.50l","quantity":20,"unit":"copë","unit_price":0.25,"line_total":5.90,"pieces_per_pack":1},{"name":"Coca-Cola 0.25l","quantity":2,"unit":"copë","unit_price":0.60,"line_total":1.42,"pieces_per_pack":1}]}';
+  '{"supplier":"DISKONT DESAR SH.P.K.","supplier_nui":"810123456","supplier_vat":"","vat_rate":18,"invoice_number":"2024-400","invoice_date":"2024-05-13","total_with_vat":277.72,"items":[{"name":"Ujë Mineral 0.50l","quantity":20,"unit":"copë","unit_price":0.25,"line_total":5.90,"pieces_per_pack":1},{"name":"Coca-Cola 0.25l","quantity":2,"unit":"copë","unit_price":0.60,"line_total":1.42,"pieces_per_pack":1}]}';
+
+function normalizeSupplierNui(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length >= 8 && digits.length <= 12) return digits;
+  const s = String(raw || "").trim().replace(/\s+/g, "");
+  return s.slice(0, 32);
+}
+
+function normalizeScanVatRate(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 18;
+  if (n === 0 || n === 8 || n === 18) return n;
+  if (n > 0 && n < 1) {
+    const pct = Math.round(n * 100);
+    if (pct === 8 || pct === 18) return pct;
+  }
+  if (n <= 0) return 0;
+  if (n <= 8) return 8;
+  return 18;
+}
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -262,6 +285,16 @@ async function scanInvoiceFromImage({ mime, base64 }) {
   return {
     document_type: "stock_purchase",
     supplier: String(payload.supplier ?? payload.furnizues ?? payload.vendor ?? "").trim(),
+    supplier_nui: normalizeSupplierNui(
+      payload.supplier_nui ?? payload.nui ?? payload.nr_fiskal ?? payload.fiscal_number ?? "",
+    ),
+    supplier_vat: String(payload.supplier_vat ?? payload.nr_tvsh ?? payload.vat_number ?? "")
+      .trim()
+      .slice(0, 64),
+    vat_rate: normalizeScanVatRate(
+      payload.vat_rate ?? payload.tvsh_percent ?? payload.tax_rate ?? payload.tatimi ?? 18,
+    ),
+    purchase_kind: "goods",
     invoice_number: String(
       payload.invoice_number ?? payload.invoice_no ?? payload.nr_fature ?? payload.number ?? "",
     ).trim(),

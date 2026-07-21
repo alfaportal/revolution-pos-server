@@ -313,12 +313,31 @@
             <input type="text" id="blerje-supplier" placeholder="p.sh. DISKONT DESAR" autocomplete="organization">
           </div>
           <div>
+            <label for="blerje-supplier-nui">NUI / Nr. fiskal</label>
+            <input type="text" id="blerje-supplier-nui" placeholder="opsionale" inputmode="numeric">
+          </div>
+          <div>
             <label for="blerje-invoice-no">Nr. faturës</label>
             <input type="text" id="blerje-invoice-no" placeholder="p.sh. 2024-400">
           </div>
           <div>
             <label for="blerje-invoice-date">Data</label>
             <input type="date" id="blerje-invoice-date">
+          </div>
+          <div>
+            <label for="blerje-vat-rate">TVSH %</label>
+            <select id="blerje-vat-rate">
+              <option value="18" selected>18%</option>
+              <option value="8">8%</option>
+              <option value="0">0%</option>
+            </select>
+          </div>
+          <div>
+            <label for="blerje-kind">Lloji</label>
+            <select id="blerje-kind">
+              <option value="goods" selected>Mallra / stok</option>
+              <option value="invest">Investime</option>
+            </select>
           </div>
         </div>
         <div id="blerje-cat-filter" class="product-cat-filter" role="tablist" aria-label="Filtro sipas kategorisë" style="display:flex;flex-wrap:nowrap;gap:0.4rem;overflow-x:auto;margin:0.75rem 0 0.5rem;padding:0.15rem 0"></div>
@@ -1182,14 +1201,30 @@
       <div id="invoice-scan-status" class="owner-license-msg"></div>
       <div id="invoice-scan-loading" class="menu-scan-loading hidden">Duke skanuar faturën…</div>
       <div id="invoice-scan-results" class="menu-scan-results hidden">
-        <div class="filter-row menu-add-row" style="margin-top:0.75rem">
+        <div class="filter-row menu-add-row" style="margin-top:0.75rem;flex-wrap:wrap;gap:0.5rem">
           <div>
             <label for="invoice-scan-supplier">Furnizuesi</label>
             <input type="text" id="invoice-scan-supplier" placeholder="p.sh. Metro, Lidl…">
           </div>
           <div>
+            <label for="invoice-scan-nui">NUI / Nr. fiskal</label>
+            <input type="text" id="invoice-scan-nui" placeholder="lexohet nga AI" inputmode="numeric">
+          </div>
+          <div>
+            <label for="invoice-scan-vat-id">Nr. TVSH</label>
+            <input type="text" id="invoice-scan-vat-id" placeholder="opsionale">
+          </div>
+          <div>
             <label for="invoice-scan-number">Nr. faturës</label>
             <input type="text" id="invoice-scan-number" placeholder="p.sh. BL-2026-001">
+          </div>
+          <div>
+            <label for="invoice-scan-vat-rate">TVSH %</label>
+            <select id="invoice-scan-vat-rate">
+              <option value="18" selected>18%</option>
+              <option value="8">8%</option>
+              <option value="0">0%</option>
+            </select>
           </div>
         </div>
         <div class="overflow-x">
@@ -1247,8 +1282,8 @@
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
   <script src="/js/owner-inventory.js?v=2"></script>
-  <script src="/js/owner-invoice-scan.js?v=3"></script>
-  <script src="/js/owner-purchase.js?v=2"></script>
+  <script src="/js/owner-invoice-scan.js?v=4"></script>
+  <script src="/js/owner-purchase.js?v=3"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
   <script src="/js/owner-ai-assistant.js?v=2"></script>

@@ -477,10 +477,92 @@
     }
 
     @media print {
-      .site-header, .toc-card, .site-footer, .menu-toggle { display: none !important; }
+      .site-header, .toc-card, .site-footer, .menu-toggle, .man-ai-wrap { display: none !important; }
       body { background: #fff; color: #111; }
       .manual-section { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
       .photo-placeholder { border-color: #999; }
+    }
+
+    /* AI ndihmë — max 3 pyetje */
+    .man-ai-wrap {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 90;
+      width: min(22rem, calc(100vw - 2rem));
+      font-size: 0.9rem;
+    }
+    .man-ai-toggle {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.7rem 1.1rem;
+      background: linear-gradient(135deg, #e63946, #c1121f);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      float: right;
+    }
+    .man-ai-panel {
+      clear: both;
+      margin-top: 0.55rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .man-ai-panel[hidden] { display: none !important; }
+    .man-ai-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--navy-3);
+    }
+    .man-ai-head strong { font-size: 0.92rem; }
+    .man-ai-head span { color: var(--muted); font-size: 0.78rem; }
+    .man-ai-body { padding: 0.75rem 0.9rem; max-height: 14rem; overflow-y: auto; }
+    .man-ai-msg { margin: 0 0 0.65rem; line-height: 1.45; }
+    .man-ai-msg.user { color: #cbd5e1; }
+    .man-ai-msg.bot { color: var(--text); }
+    .man-ai-msg.err { color: #fca5a5; }
+    .man-ai-foot {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0.65rem 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    .man-ai-foot input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--navy-2);
+      color: var(--text);
+      padding: 0.55rem 0.7rem;
+      font: inherit;
+    }
+    .man-ai-foot button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      padding: 0.55rem 0.85rem;
+      cursor: pointer;
+    }
+    .man-ai-foot button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .man-ai-hint {
+      margin: 0;
+      padding: 0 0.9rem 0.7rem;
+      color: var(--muted);
+      font-size: 0.75rem;
     }
   </style>
 </head>
@@ -516,7 +598,7 @@
         <a href="#raportet" data-i18n="toc.6">6. Raportet</a>
         <a href="#faqja" data-i18n="toc.7">7. Faqja Publike</a>
         <a href="#siguria" data-i18n="toc.8">8. FjalÃ«kalimet &amp; Siguria</a>
-        <a href="#stoku" data-i18n="toc.9">9. Stoku</a>
+        <a href="#stoku" data-i18n="toc.9">9. Stoku &amp; Blerjet</a>
         <a href="#terminalet" data-i18n="toc.10">10. Terminalet</a>
         <a href="/" data-i18n="nav.backHome">â† Kthehu te Ballina</a>
       </nav>
@@ -528,9 +610,9 @@
       <h1 data-i18n="hero.title">Manual PÃ«rdorimi â€” Revolution Invest POS</h1>
       <p data-i18n="hero.subtitle">UdhÃ«zues i plotÃ« hap pas hapi pÃ«r pronarÃ«t, menaxherÃ«t, kamarierÃ«t dhe stafin. Ky manual mbulon panelin e pronarit, modulin e kamarierit, kiosk QR, ekranin e kuzhinÃ«s, raportet, stokun, terminalet dhe faqen publike.</p>
       <div class="manual-meta">
-        <span class="meta-pill" data-i18n="hero.version">Versioni 1.0</span>
+        <span class="meta-pill" data-i18n="hero.version">Versioni 1.0.232</span>
         <span class="meta-pill" data-i18n="hero.language">Gjuha: Shqip</span>
-        <span class="meta-pill" data-i18n="hero.updated">PÃ«rditÃ«suar: Qershor 2026</span>
+        <span class="meta-pill" data-i18n="hero.updated">Përditësuar: Korrik 2026</span>
       </div>
     </div>
   </section>
@@ -550,19 +632,17 @@
         <li><a href="#raportet" data-i18n="toc.6">6. Raportet</a></li>
         <li><a href="#faqja" data-i18n="toc.7">7. Faqja Publike</a></li>
         <li><a href="#siguria" data-i18n="toc.8">8. Siguria</a></li>
-        <li><a href="#stoku" data-i18n="toc.9">9. Stoku</a></li>
+        <li><a href="#stoku" data-i18n="toc.9">9. Stoku &amp; Blerjet</a></li>
         <li class="toc-sub"><a href="#stoku-aktivizo" data-i18n="toc.9.track">Aktivizo ndjekjen</a></li>
-        <li class="toc-sub"><a href="#stoku-sasia" data-i18n="toc.9.qty">Sasia &amp; alarmi</a></li>
-        <li class="toc-sub"><a href="#stoku-rimbush" data-i18n="toc.9.refill">Rimbush stokun</a></li>
+        <li class="toc-sub"><a href="#stoku-blerje" data-i18n="toc.9.buy">Regjistro blerjen</a></li>
+        <li class="toc-sub"><a href="#stoku-sasia" data-i18n="toc.9.qty">Shitja &amp; stoku zero</a></li>
         <li><a href="#terminalet" data-i18n="toc.10">10. Terminalet</a></li>
         <li class="toc-sub"><a href="#terminalet-shiko" data-i18n="toc.10.view">Terminale aktive</a></li>
         <li class="toc-sub"><a href="#terminalet-limit" data-i18n="toc.10.limit">Limiti &amp; kontakti</a></li>
         <li><a href="#kontabilisti" data-i18n="toc.11">11. Librat e Kontabilistit</a></li>
-        <li class="toc-sub"><a href="#kontabilisti-hap" data-i18n="toc.11.open">Hap librat</a></li>
-        <li class="toc-sub"><a href="#kontabilisti-shpenzim" data-i18n="toc.11.expense">Regjistro shpenzim</a></li>
-        <li class="toc-sub"><a href="#kontabilisti-raport" data-i18n="toc.11.report">Raporte &amp; TVSh</a></li>
-        <li class="toc-sub"><a href="#kontabilisti-audit" data-i18n="toc.11.audit">Audit trail</a></li>
-        <li class="toc-sub"><a href="#kontabilisti-eksport" data-i18n="toc.11.export">Eksport</a></li>
+        <li class="toc-sub"><a href="#kontabilisti-hap" data-i18n="toc.11.open">Hap &amp; auto-mbushje</a></li>
+        <li class="toc-sub"><a href="#kontabilisti-shpenzim" data-i18n="toc.11.expense">Shpenzim / paga / qera</a></li>
+        <li class="toc-sub"><a href="#kontabilisti-eksport" data-i18n="toc.11.export">Excel &amp; PDF ATK</a></li>
         <li><a href="#ndihma" data-i18n="toc.12">12. NdihmÃ« dhe MbÃ«shtetje</a></li>
         <li class="toc-sub"><a href="#ndihma-kontakt" data-i18n="toc.12.contact">Si tÃ« na kontaktoni</a></li>
         <li class="toc-sub"><a href="#ndihma-anydesk" data-i18n="toc.12.anydesk">AnyDesk</a></li>
@@ -741,6 +821,11 @@
         <div class="box box-warning">
           <div class="box-title">âš ï¸ Kujdes</div>
           <p>NÃ«se arka fiskale ATK Ã«shtÃ« e aktivizuar, fatura regjistrohet edhe fiskalisht. Sigurohuni qÃ« lidhja me arken (COM Port) funksionon para mbylljes sÃ« tavolinÃ«s.</p>
+        </div>
+
+        <div class="box box-tip">
+          <div class="box-title">Kujdes i rÃ«ndÃ«sishÃ«m</div>
+          <p><strong>Porosia e kamarierit</strong> (nga telefoni me PIN) shkon <strong>direkt te banaku</strong> â€” pa buton Prano/Refuzo. Prano/Refuzo Ã«shtÃ« vetÃ«m pÃ«r porosi nga QR, takeaway ose burime tÃ« jashtme. Mbyllja e tavolinÃ«s funksionon nga telefoni <strong>dhe</strong> nga POS â€” njÃ« porosi = njÃ« pagesÃ« (pa dublim).</p>
         </div>
       </article>
 
@@ -950,80 +1035,36 @@
       <!-- 9. STOKU -->
       <article class="manual-section" id="stoku" data-i18n-section="stoku">
         <span class="section-num">Seksioni 9</span>
-        <h2>STOKU (Inventory Management)</h2>
-        <p>Moduli i stokut ju lejon tÃ« ndiqni sasinÃ« e artikujve nÃ« menu. Kur stoku bie nÃ« zero, artikulli fshihet automatikisht nga menuja nÃ« POS, tablet dhe kiosk â€” pa nevojÃ« ta fshihni manualisht.</p>
+        <h2>STOKU &amp; BLERJET</h2>
+        <p>Stoku ndjek sasinÃ« e produkteve. <strong>Shitja e zbrit</strong> stokun automatikisht. <strong>Blerja e rrit</strong> stokun automatikisht dhe e fut faturÃ«n te Kontabilisti â€” pronari nuk i mbush librat me dorÃ«.</p>
 
-        <h3 id="stoku-aktivizo">Si aktivizohet ndjekja e stokut pÃ«r artikull</h3>
+        <h3 id="stoku-aktivizo">Si aktivizohet ndjekja e stokut</h3>
         <ol class="steps">
-          <li>Hyni nÃ« panelin e pronarit â†’ tabi <strong>Stoku</strong>.</li>
-          <li>Te tabela e artikujve, gjeni produktin qÃ« dÃ«shironi tÃ« ndiqni (p.sh. Â«CappuccinoÂ», Â«Pizza MargheritaÂ»).</li>
-          <li>Te kolona <strong>Ndiq stokun</strong>, aktivizoni checkbox-in (<strong>Po</strong>).</li>
-          <li>Fushat <strong>Sasia</strong> dhe <strong>Pragu i alarmit</strong> bÃ«hen tÃ« editueshme.</li>
-          <li>Klikoni <strong>Â«RuajÂ»</strong> nÃ« rreshtin e atij artikulli pÃ«r tÃ« ruajtur ndryshimin.</li>
+          <li>Panel pronari â†’ tabi <strong>Stoku</strong> (ose Admin POS â†’ Menu / Stok).</li>
+          <li>PÃ«r produktin: aktivizoni <strong>Ndiq stokun</strong>, vendosni <strong>SasinÃ«</strong> dhe <strong>Pragun e alarmit</strong>.</li>
+          <li>Ruani. Kur sasia = 0, produkti fshihet nga menuja nÃ« POS, telefon dhe kiosk derisa ta rimbushni.</li>
         </ol>
 
+        <h3 id="stoku-blerje">Si regjistrohet blerja (mÃ«nyra kryesore)</h3>
+        <p>Pronari shÃ«non faturÃ«n e furnizuesit. Sistemi bÃ«n pjesÃ«n tjetÃ«r.</p>
+        <ol class="steps">
+          <li><strong>NÃ« POS (Admin â†’ Blerjet):</strong> Â«+ FaturÃ« e reÂ» â†’ Furnizuesi, <strong>NUI</strong>, <strong>TVSH %</strong> (18/8/0), nr. fature, data, artikujt (kategori â†’ produkt â†’ sasi â†’ Ã§mim) â†’ <strong>Ruaj</strong>.</li>
+          <li><strong>Ose me AI:</strong> Â«Skano faturÃ«Â» â†’ foto â†’ AI lexon furnizuesin, NUI, TVSH, artikujt â†’ kontrolloni â†’ <strong>Regjistro nÃ« Stok</strong>.</li>
+          <li><strong>Ose nga telefoni:</strong> Panel pronari â†’ <strong>Blerje</strong> â†’ shÃ«noni faturÃ«n â†’ POS e tÃ«rheq automatikisht (~45 sekonda).</li>
+        </ol>
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ KÃ«shillÃ«</div>
-          <p>Aktivizoni stokun vetÃ«m pÃ«r artikuj me sasi tÃ« kufizuar (p.sh. produkte sezonale). Artikujt pa ndjekje stoku funksionojnÃ« si mÃ« parÃ« â€” gjithmonÃ« tÃ« disponueshÃ«m nÃ« menu.</p>
+          <div class="box-title">Ã‡farÃ« ndodh pas Ruaj</div>
+          <p>1) Stoku rritet. 2) Fatura shfaqet te Blerjet. 3) Libri i Blerjes TVSH / Deklarata / Excel / PDF ATK mbushen <strong>vetÃ«</strong>. NÃ«se AI nuk lexon foton â€” mbusheni me dorÃ«; mjafton. Nuk duhet tÃ« shtoni stokun dy herÃ« me dorÃ«.</p>
         </div>
 
-        <h3 id="stoku-sasia">Si vendoset sasia dhe pragu i alarmit</h3>
+        <h3 id="stoku-sasia">Shitja dhe stoku zero</h3>
         <ol class="steps">
-          <li>Te tabi <strong>Stoku</strong>, pÃ«r artikullin me ndjekje tÃ« aktivizuar:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>Sasia</strong> â€” numri aktual i njÃ«si nÃ« stok (p.sh. 50)</li>
-              <li><strong>Pragu i alarmit</strong> â€” kur sasia bie nÃ« kÃ«tÃ« vlerÃ« ose mÃ« poshtÃ«, artikulli shÃ«nohet Â«Stok i ulÃ«tÂ» (p.sh. 10)</li>
-            </ul>
-          </li>
-          <li>PÃ«rmbledhja sipÃ«r tabelÃ«s tregon: artikuj me stok, stok i ulÃ«t dhe artikuj tÃ« mbaruar.</li>
-          <li>Klikoni <strong>Â«RuajÂ»</strong> pas Ã§do ndryshimi.</li>
-          <li>Ndryshimet sinkronizohen me POS-in dhe tabletat brenda ~15 sekondave.</li>
+          <li>Ã‡do shitje e mbyllur (POS, kamarier, kiosk) zbrit stokun pÃ«r artikujt me ndjekje.</li>
+          <li>NÃ« zero: status Â«MbaruarÂ» â€” produkti nuk shfaqet nÃ« menu derisa ta rimbushni (blerje ose Â«Rimbush StokunÂ»).</li>
         </ol>
-
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Kujdes</div>
-          <p>Ã‡do shitje (POS, kamarier, kiosk) zbrit automatikisht stokun pÃ«r artikujt me ndjekje tÃ« aktivizuar. Sigurohuni qÃ« sasia fillestare tÃ« jetÃ« e saktÃ« para fillimit tÃ« turnit.</p>
-        </div>
-
-        <h3 id="stoku-rimbush">Si bÃ«het rimbushimi i stokut</h3>
-        <ol class="steps">
-          <li>Te tabi <strong>Stoku</strong>, gjeni artikullin qÃ« dÃ«shironi tÃ« rimbushni.</li>
-          <li>Klikoni butonin <strong>Â«Rimbush StokunÂ»</strong> nÃ« rreshtin e atij artikulli.</li>
-          <li>Shkruani sasinÃ« e re totale (p.sh. 100 njÃ«si) nÃ« dialogun qÃ« shfaqet.</li>
-          <li>Konfirmoni â€” sasia pÃ«rditÃ«sohet dhe statusi ndryshon (p.sh. nga Â«MbaruarÂ» nÃ« Â«OKÂ»).</li>
-          <li>Artikulli rikthehet automatikisht nÃ« menu nÃ« POS dhe tablet.</li>
-        </ol>
-
-        <h3>Ã‡farÃ« ndodh kur stoku arrin zero</h3>
-        <ol class="steps">
-          <li>Kur sasia bie nÃ« <strong>0</strong>, statusi bÃ«het <strong>Â«MbaruarÂ»</strong> (rreshti theksohet me ngjyrÃ« tÃ« kuqe).</li>
-          <li>Artikulli <strong>fshihet automatikisht</strong> nga menuja nÃ«:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li>Aplikacionin POS (kasa)</li>
-              <li>Tabletin e kamarierit</li>
-              <li>Kiosk-un QR tÃ« tavolinÃ«s</li>
-            </ul>
-          </li>
-          <li>KlientÃ«t dhe stafi <strong>nuk e shohin</strong> artikullin derisa ta rimbushni stokun.</li>
-          <li>Pas rimbushjes, artikulli rikthehet pa nevojÃ« ta aktivizoni manualisht te tabi Menuja.</li>
-        </ol>
-
-        <div class="box box-warning">
-          <div class="box-title">âš ï¸ Kujdes</div>
-          <p>Stoku zero ndryshon vetÃ«m disponueshmÃ«rinÃ« nÃ« menu â€” <strong>nuk</strong> fshin artikullin nga lista e menusÃ« nÃ« panel. Historiku i porosive tÃ« mÃ«parshme mbetet i paprekur.</p>
-        </div>
-
-        <h3>Njoftimet me email pÃ«r stok tÃ« ulÃ«t</h3>
-        <ol class="steps">
-          <li>Kur sasia bie nÃ«n pragun e alarmit ose arrin zero, sistemi dÃ«rgon automatikisht <strong>email te pronari</strong>.</li>
-          <li>Emaili pÃ«rmban emrin e artikullit, sasinÃ« aktuale dhe statusin (stok i ulÃ«t ose mbaruar).</li>
-          <li>Emaili dÃ«rgohet te adresa e regjistruar e pronarit (<code>/owner/login</code>) ose emaili i biznesit.</li>
-          <li>Tabi <strong>Stoku</strong> tregon njÃ« badge nÃ«se ka artikuj me alarm â€” kontrolloni panelin Ã§do ditÃ«.</li>
-        </ol>
-
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ KÃ«shillÃ«</div>
-          <p>Vendosni pragun e alarmit disa njÃ«si mbi zero (p.sh. 5â€“10) qÃ« tÃ« merrni email para se produkti tÃ« mbarojÃ« plotÃ«sisht dhe tÃ« keni kohÃ« pÃ«r rimbushim.</p>
+          <div class="box-title">Kujdes</div>
+          <p>Vendosni NUI dhe TVSH % nÃ« faturÃ«n e blerjes qÃ« kutizat ATK tÃ« jenÃ« tÃ« sakta. Default Ã«shtÃ« 18% nÃ«se nuk zgjidhni ndryshe.</p>
         </div>
       </article>
 
@@ -1101,69 +1142,37 @@
       <!-- 11. LIBRAT E KONTABILISTIT -->
       <article class="manual-section" id="kontabilisti" data-i18n-section="kontabilisti">
         <span class="section-num">Seksioni 11</span>
-        <h2>LIBRAT E KONTABILISTIT</h2>
-        <p>Moduli <strong>Kontabilisti</strong> (pako Full) hapet nga paneli i adminit tÃ« POS-it. Atje menaxhoni librin e shitjeve, shpenzimet, raportin e TVSh-sÃ« dhe eksportin pÃ«r kontabilistin. NÃ« panelin e pronarit nÃ« web (<code>/owner/login</code> â†’ tabi <strong>Raportet</strong>) gjeni edhe shpenzimet e vogla ditore dhe audit log-un.</p>
+        <h2>LIBRAT E KONTABILISTIT (ATK)</h2>
+        <p>NÃ« <strong>POS Admin â†’ Kontabilisti</strong> gjeni hub-in ATK: bilanc, libra TVSH, deklaratÃ«, paga, qera, tremujor, pasqyrÃ« vjetore. <strong>Shitjet dhe blerjet mbushin librat vetÃ«</strong> â€” ju eksportohet Excel / PDF ATK.</p>
 
-        <h3 id="kontabilisti-hap">Si tÃ« hapÃ«sh librat e kontabilistit nga paneli i adminit</h3>
+        <h3 id="kontabilisti-hap">Si hapet dhe Ã§farÃ« mbushen automatikisht</h3>
         <ol class="steps">
-          <li>Hapni aplikacionin <strong>Revolution Invest POS</strong> nÃ« kompjuterin e kasÃ«s.</li>
-          <li>Hyni nÃ« <strong>Admin</strong> (me tÃ« drejta administratori).</li>
-          <li>NÃ« menunÃ« e majtÃ« / tab-et e sipÃ«rme, zgjidhni <strong>Â«KontabilistiÂ»</strong>.</li>
-          <li>Do tÃ« shihni tre blloqe: <strong>Libri i shitjeve</strong>, <strong>Libri i blerjeve/shpenzimeve</strong> dhe <strong>Raporti i TVSH-sÃ«</strong>.</li>
+          <li>Hapni POS â†’ <strong>Admin</strong> â†’ <strong>Kontabilisti</strong>.</li>
+          <li>Zgjidhni periudhÃ«n (Sot / Ky muaj / Ngaâ€“Deri).</li>
+          <li><strong>Automatikisht:</strong> Libri i Shitjes TVSH (nga shitjet e mbyllura), Libri i Blerjes TVSH (nga Blerjet + shpenzimet), Deklarata e TVSH, Bilanci.</li>
+          <li>Butonat <strong>Excel</strong> / <strong>PDF ATK</strong> shkarkojnÃ« formularÃ«t zyrtarÃ« tÃ« mbushur me tÃ« njÃ«jtat tÃ« dhÃ«na.</li>
         </ol>
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ KÃ«shillÃ«</div>
-          <p>NÃ«se nuk e shihni tabin Â«KontabilistiÂ», pakoja juaj nuk e pÃ«rfshin (vetÃ«m Full). Kontaktoni Revolution Invest pÃ«r upgrade.</p>
+          <div class="box-title">Ã‡farÃ« bÃ«n pronari?</div>
+          <p>Regjistron blerjet (me dorÃ« ose AI) dhe shpenzimet. Shitjet vijnÃ« nga mbyllja e tavolinave. Pastaj hap Kontabilistin dhe eksporton pÃ«r kontabilistin â€” pa rishkrim manual tÃ« librave.</p>
         </div>
 
-        <h3 id="kontabilisti-shpenzim">Si tÃ« regjistrosh shpenzime</h3>
+        <h3 id="kontabilisti-shpenzim">Shpenzime, paga, qera</h3>
         <ol class="steps">
-          <li>Te <strong>Libri i blerjeve/shpenzimeve</strong>, klikoni <strong>Â«+ Shpenzim i riÂ»</strong>.</li>
-          <li>PlotÃ«soni fushat:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>Data</strong> â€” data e shpenzimit</li>
-              <li><strong>Emri i firmÃ«s</strong> â€” p.sh. Â«Firma Pastrimi SH.P.K.Â»</li>
-              <li><strong>PÃ«rshkrimi</strong> â€” p.sh. Â«Materiale pastrimiÂ»</li>
-              <li><strong>Kategoria</strong> â€” Qera, Pastrim, ShÃ«rbime, Paga, TÃ« papritura, TjetÃ«r</li>
-              <li><strong>Shuma (â‚¬)</strong> â€” me dy dhjetore</li>
-            </ul>
-          </li>
-          <li>Klikoni <strong>Â«Ruaj shpenziminÂ»</strong>. Rreshti shfaqet nÃ« listÃ« me emrin e personit qÃ« e regjistroi.</li>
-          <li><em>AlternativÃ« (web):</em> <code>https://revolution-pos.com/owner/login</code> â†’ <strong>Raportet</strong> â†’ <strong>Shpenzimet e vogla ditore</strong> (kategori, shumÃ«, datÃ«, emÃ«r firme).</li>
+          <li><strong>Shpenzim:</strong> Kontabilisti â†’ Shpenzime â†’ Â«+ ShpenzimÂ» (firma, NUI, TVSH %, kategori, shuma).</li>
+          <li><strong>Paga:</strong> seksioni Paga â€” shtoni punonjÃ«sit me dorÃ« pÃ«r muajin (nuk merren nga shitja).</li>
+          <li><strong>Qera:</strong> seksioni Qera â€” pagesat e qerasÃ« / TMB me dorÃ«.</li>
         </ol>
 
-        <h3 id="kontabilisti-raport">Si tÃ« shohÃ«sh raportin e tÃ« ardhurave dhe shpenzimeve</h3>
+        <h3 id="kontabilisti-eksport">Eksport pÃ«r kontabilistin</h3>
         <ol class="steps">
-          <li><strong>TÃ« ardhurat (libri i shitjeve):</strong> vendosni periudhÃ«n (Nga â€” Deri) â†’ <strong>Filtro</strong>. Shihni datÃ«n, nr. faturÃ«s, artikujt, shumÃ«n, normÃ«n TVSH, TVSh-nÃ« dhe mÃ«nyrÃ«n e pagesÃ«s.</li>
-          <li><strong>Shpenzimet:</strong> filtroni tÃ« njÃ«jtÃ«n periudhÃ« te libri i blerjeve/shpenzimeve.</li>
-          <li><strong>NÃ« web:</strong> paneli i pronarit â†’ <strong>Raportet</strong> â†’ Â«TÃ« ardhuratÂ» me filtrin e datave â†’ <strong>Shfaq</strong>.</li>
+          <li>Libri Shitjes / Blerjes â†’ <strong>Excel ATK</strong> (template zyrtar).</li>
+          <li>Deklarata TVSH / Tatim nÃ« burim / Qera / Tremujor / Pasqyra CD â†’ <strong>PDF ATK</strong> ose Excel.</li>
+          <li>DÃ«rgojani skedarÃ«t kontabilistit (email / USB).</li>
         </ol>
-
-        <h3 id="kontabilisti-audit">Si tÃ« shohÃ«sh audit trail-in (kush bÃ«ri Ã§ka, kur)</h3>
-        <ol class="steps">
-          <li><strong>NÃ« POS:</strong> Admin â†’ <strong>Ditari</strong> â†’ seksioni <strong>Â«Regjistri i veprimeve (kush e preku programin)Â»</strong>. Zgjidhni periudhÃ«n dhe klikoni <strong>KÃ«rko</strong>.</li>
-          <li><strong>NÃ« web:</strong> <code>/owner/login</code> â†’ <strong>Raportet</strong> â†’ <strong>Regjistri i veprimeve (Audit log)</strong>. Klikoni <strong>Rifresko</strong>.</li>
-          <li>Atje shfaqen ndryshimet e Ã§mimeve, faturat e anuluara, shpenzimet dhe veprimet e tjera â€” me kohÃ«n, veprimin, detajet dhe kush e bÃ«ri.</li>
-        </ol>
-
-        <h3 id="kontabilisti-tvsh">Si tÃ« gjenerosh raport fiskal me TVSh</h3>
-        <ol class="steps">
-          <li>Te <strong>Raporti i TVSH-sÃ«</strong>, zgjidhni <strong>muajin</strong>.</li>
-          <li>Klikoni <strong>Filtro</strong>.</li>
-          <li>Shihni normat (p.sh. <strong>0%</strong>, <strong>8%</strong>, <strong>18%</strong>) me shitjet neto, TVSh-nÃ« e mbledhur dhe shitjet bruto.</li>
-          <li>PÃ«r dokument tÃ« gatshÃ«m, pÃ«rdorni <strong>Eksporto PDF</strong> ose <strong>Eksporto CSV</strong>.</li>
-        </ol>
-
-        <h3 id="kontabilisti-eksport">Si tÃ« eksportosh tÃ« dhÃ«nat pÃ«r kontabilistin</h3>
-        <ol class="steps">
-          <li>Te <strong>Libri i shitjeve</strong>: filtroni periudhÃ«n â†’ <strong>Eksporto CSV</strong> ose <strong>Eksporto PDF</strong>.</li>
-          <li>Te <strong>Libri i blerjeve/shpenzimeve</strong>: e njÃ«jta â€” CSV ose PDF.</li>
-          <li>Te <strong>Raporti i TVSH-sÃ«</strong>: CSV ose PDF pÃ«r muajin e zgjedhur.</li>
-          <li>DÃ«rgojani skedarÃ«t kontabilistit tuaj (email, USB, ose cloud).</li>
-        </ol>
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ KÃ«shillÃ«</div>
-          <p>CSV hapet lehtÃ« nÃ« Excel. PDF Ã«shtÃ« i gatshÃ«m pÃ«r printim ose arkivim.</p>
+        <div class="box box-warning">
+          <div class="box-title">Kujdes</div>
+          <p>PÃ«r TVSH tÃ« saktÃ«, aktivizoni TVSH nÃ« cilÃ«simet fiskale dhe plotÃ«soni NUI + % te blerjet. Excel dhe PDF janÃ« tÃ« sinkronizuara me tÃ« njÃ«jtÃ«n databazÃ« lokale.</p>
         </div>
       </article>
 
@@ -1217,6 +1226,26 @@
       </article>
 
     </main>
+  </div>
+
+  <div class="man-ai-wrap" id="man-ai-wrap">
+    <button type="button" class="man-ai-toggle" id="man-ai-toggle" aria-expanded="false">
+      AI Ndihmë
+    </button>
+    <div class="man-ai-panel" id="man-ai-panel" hidden>
+      <div class="man-ai-head">
+        <strong>Pyet për manualin</strong>
+        <span id="man-ai-left">3/3</span>
+      </div>
+      <div class="man-ai-body" id="man-ai-body">
+        <p class="man-ai-msg bot">Pyet shkurt për kamarierin, kiosk, stok/blerje ose kontabilistin (seksionet 3, 4, 9, 11). Max 3 pyetje.</p>
+      </div>
+      <div class="man-ai-foot">
+        <input type="text" id="man-ai-input" maxlength="280" placeholder="p.sh. Si regjistroj blerjen?" autocomplete="off">
+        <button type="button" id="man-ai-send">Dërgo</button>
+      </div>
+      <p class="man-ai-hint">Përgjigje të shkurtra nga manuali. Për më shumë: seksionet e faqes ose WhatsApp +383 48707880.</p>
+    </div>
   </div>
 
   <footer class="site-footer">
@@ -1287,6 +1316,100 @@
 
       window.addEventListener("scroll", updateTocActive, { passive: true });
       updateTocActive();
+
+      /* AI ndihmë — max 3 pyetje / sesion */
+      (function initManualAi() {
+        const KEY = "ri_manual_ai_sid";
+        let sid = localStorage.getItem(KEY);
+        if (!sid || sid.length < 8) {
+          sid = "m" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem(KEY, sid);
+        }
+        const toggle = document.getElementById("man-ai-toggle");
+        const panel = document.getElementById("man-ai-panel");
+        const body = document.getElementById("man-ai-body");
+        const input = document.getElementById("man-ai-input");
+        const send = document.getElementById("man-ai-send");
+        const left = document.getElementById("man-ai-left");
+        if (!toggle || !panel || !body || !input || !send) return;
+
+        function setLeft(n, max) {
+          if (left) left.textContent = `${n}/${max || 3}`;
+          if (n <= 0) {
+            send.disabled = true;
+            input.disabled = true;
+          }
+        }
+
+        function addMsg(text, cls) {
+          const p = document.createElement("p");
+          p.className = "man-ai-msg " + cls;
+          p.textContent = text;
+          body.appendChild(p);
+          body.scrollTop = body.scrollHeight;
+        }
+
+        async function refreshStatus() {
+          try {
+            const r = await fetch("/api/public/manual-help/status?session=" + encodeURIComponent(sid));
+            const d = await r.json();
+            if (d.ok) setLeft(d.remaining, d.max);
+            if (d.enabled === false) {
+              addMsg("AI nuk është aktiv për momentin. Lexoni seksionet 3, 4, 9, 11.", "err");
+              send.disabled = true;
+            }
+          } catch (_) { /* ignore */ }
+        }
+
+        toggle.addEventListener("click", () => {
+          const open = panel.hasAttribute("hidden");
+          if (open) {
+            panel.removeAttribute("hidden");
+            toggle.setAttribute("aria-expanded", "true");
+            refreshStatus();
+            input.focus();
+          } else {
+            panel.setAttribute("hidden", "");
+            toggle.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        async function ask() {
+          const q = (input.value || "").trim();
+          if (!q || send.disabled) return;
+          input.value = "";
+          addMsg(q, "user");
+          send.disabled = true;
+          try {
+            const r = await fetch("/api/public/manual-help", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session: sid, message: q }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || !d.ok) {
+              addMsg(d.gabim || "Nuk u përgjigj. Provo përsëri ose lexo manualin.", "err");
+              if (d.remaining != null) setLeft(d.remaining, d.max || 3);
+              else if (r.status !== 429) send.disabled = false;
+              return;
+            }
+            addMsg(d.reply, "bot");
+            setLeft(d.remaining, d.max);
+            if (d.remaining > 0) send.disabled = false;
+          } catch (_) {
+            addMsg("Gabim rrjeti. Lexoni seksionet e manualit.", "err");
+            send.disabled = false;
+          }
+        }
+
+        send.addEventListener("click", () => ask());
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            ask();
+          }
+        });
+      })();
     })();
   </script>
 </body>

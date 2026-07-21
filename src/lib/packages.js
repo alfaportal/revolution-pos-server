@@ -41,6 +41,7 @@ const FULL_NO_AI = {
   kiosk: true,
   waiter: true,
   online_orders: true,
+  accountant: true,
   ai: false,
 };
 
@@ -55,11 +56,12 @@ const TIER_FEATURES = {
     kiosk: false,
     waiter: false,
     online_orders: false,
+    accountant: false,
     ai: false,
   },
   /** Pako 3 — Full pa AI (ID i ripërdorur nga Basic) */
   pako_2: { ...FULL_NO_AI },
-  /** Pako 1 — Standard */
+  /** Pako 1 — Standard — PA Kontabilist */
   pako_3: {
     pos: true,
     owner_panel: true,
@@ -69,9 +71,10 @@ const TIER_FEATURES = {
     kiosk: true,
     waiter: true,
     online_orders: false,
+    accountant: false,
     ai: false,
   },
-  /** Pako 2 — Pro */
+  /** Pako 2 — Pro — PA Kontabilist */
   pako_4: {
     pos: true,
     owner_panel: true,
@@ -81,9 +84,10 @@ const TIER_FEATURES = {
     kiosk: true,
     waiter: true,
     online_orders: true,
+    accountant: false,
     ai: false,
   },
-  /** Pako 4 — AI */
+  /** Pako 4 — AI (+ Kontabilist si Full) */
   pako_5: {
     pos: true,
     owner_panel: true,
@@ -93,6 +97,7 @@ const TIER_FEATURES = {
     kiosk: true,
     waiter: true,
     online_orders: true,
+    accountant: true,
     ai: true,
   },
 };
@@ -115,10 +120,10 @@ const TIER_SHORT_LABELS = {
 
 const TIER_CONTENTS = {
   pako_1: "POS, panel pronari, faqe",
-  pako_2: "POS, KDS, kamarier, cloud, kiosk, porosi online — pa AI",
-  pako_3: "POS, KDS, kamarier, cloud, kiosk",
-  pako_4: "POS, KDS, kamarier, cloud, kiosk, porosi online",
-  pako_5: "POS, KDS, kamarier, cloud, kiosk, porosi online, AI",
+  pako_2: "POS, KDS, kamarier, cloud, kiosk, porosi online, Kontabilisti — pa AI",
+  pako_3: "POS, KDS, kamarier, cloud, kiosk (pa Kontabilist)",
+  pako_4: "POS, KDS, kamarier, cloud, kiosk, porosi online (pa Kontabilist)",
+  pako_5: "POS, KDS, kamarier, cloud, kiosk, porosi online, Kontabilisti, AI",
 };
 
 /** Numri marketing 1–4 për shfaqje. */
@@ -173,6 +178,7 @@ function packageUpgradeMessage(feature) {
     mobile: "Aplikacioni mobile",
     website: "Website",
     online_orders: "Porosi online (takeaway & delivery)",
+    accountant: "Kontabilisti (ATK)",
   };
   const name = labels[feature] || feature;
   return `${name} nuk përfshihet në paketën tuaj. Kontaktoni administratorin për upgrade.`;

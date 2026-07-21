@@ -11,6 +11,8 @@ const {
   confirmSessionById,
 } = require("../services/stripeLicenseCheckout");
 const { stripeSecret, stripeWebhookSecret } = require("../lib/stripeConfig");
+const { getBankTransferPublic } = require("../lib/bankTransferConfig");
+const { createBankTransferRequest } = require("../services/bankTransferPaymentService");
 
 const router = express.Router();
 
@@ -21,6 +23,7 @@ router.get(
       ok: true,
       stripe: paymentsConfigured(),
       stripePublishableKey: stripePublishableKey(),
+      bank_transfer: getBankTransferPublic(),
       // Çmimet NUK ekspozohen publikisht — vetëm statusi i Stripe
       packages: ["p1", "p2", "p3"].map((plan) => ({
         plan,
@@ -28,6 +31,62 @@ router.get(
       })),
       note: "Pako 4 (AI) vetëm me leje — kontaktoni. Çmimet me telefon/email.",
     });
+  }),
+);
+
+router.get(
+  "/bank-transfer",
+  asyncHandler(async (_req, res) => {
+    res.json({ ok: true, ...getBankTransferPublic() });
+  }),
+);
+
+/**
+ * Klienti dërgon kërkesë pagese bankare.
+ * Fatura PDF NUK lëshohet këtu — vetëm pasi Super Admin konfirmon pagesën.
+ */
+router.post(
+  "/bank-transfer/request",
+  asyncHandler(async (req, res) => {
+    try {
+      const body = req.body || {};
+      const result = await createBankTransferRequest(body);
+      const bank = result.bank_transfer || getBankTransferPublic();
+      const lines = [
+        "🏦 Kërkesë pagese BANKARE (licencë) — Në pritje",
+        `Token: ${result.token}`,
+        `Pako: ${planLabel(result.plan)} (${result.plan})`,
+        `Shuma: ${Number(result.amountEur).toFixed(2)} EUR`,
+        `Emri: ${String(body.emri || "").trim()}`,
+        `Biznesi: ${String(body.emri_biznesit || body.biznesi || "").trim()}`,
+        `Email: ${String(body.email || "").trim()}`,
+        `Tel: ${String(body.telefoni || "").trim() || "—"}`,
+        `Llogaria: ${bank.bank} · ${bank.account} ${bank.currency}`,
+        "→ Kur të shohësh pagesën në bankë: Admin → Faturimi → Konfirmo & dërgo faturë PDF",
+      ];
+      try {
+        const { notifySuperAdmin } = require("./system");
+        await notifySuperAdmin(lines.join("\n"));
+      } catch (err) {
+        console.warn("[bank-transfer] notify:", err.message || err);
+      }
+      console.log("[bank-transfer]", lines.join(" | "));
+      res.status(201).json({
+        ok: true,
+        token: result.token,
+        message: result.message,
+        bank_transfer: bank,
+      });
+    } catch (e) {
+      const code = e.code || "ERROR";
+      const status =
+        code === "INVALID_PLAN" || code === "VALIDATION"
+          ? 400
+          : code === "MISSING_TABLE"
+            ? 503
+            : 400;
+      res.status(status).json({ ok: false, gabim: e.message || String(e), code });
+    }
   }),
 );
 

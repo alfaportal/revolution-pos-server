@@ -196,6 +196,12 @@
     });
     document.getElementById("invoice-scan-supplier").value = "";
     document.getElementById("invoice-scan-number").value = "";
+    const nuiEl = document.getElementById("invoice-scan-nui");
+    if (nuiEl) nuiEl.value = "";
+    const vatIdEl = document.getElementById("invoice-scan-vat-id");
+    if (vatIdEl) vatIdEl.value = "";
+    const vatRateEl = document.getElementById("invoice-scan-vat-rate");
+    if (vatRateEl) vatRateEl.value = "18";
     document.getElementById("btn-invoice-scan-run").disabled = true;
     if (invoiceScanPreviewUrl) {
       URL.revokeObjectURL(invoiceScanPreviewUrl);
@@ -275,6 +281,15 @@
       invoiceScanItems = Array.isArray(data.items) ? data.items : [];
       document.getElementById("invoice-scan-supplier").value = data.supplier || "";
       document.getElementById("invoice-scan-number").value = data.invoice_number || "";
+      const nuiEl = document.getElementById("invoice-scan-nui");
+      if (nuiEl) nuiEl.value = data.supplier_nui || "";
+      const vatIdEl = document.getElementById("invoice-scan-vat-id");
+      if (vatIdEl) vatIdEl.value = data.supplier_vat || "";
+      const vatRateEl = document.getElementById("invoice-scan-vat-rate");
+      if (vatRateEl) {
+        const r = Number(data.vat_rate);
+        vatRateEl.value = r === 0 || r === 8 || r === 18 ? String(r) : "18";
+      }
       window.__invoiceScanDate = data.invoice_date || "";
       renderInvoiceScanItems();
       const warnList = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
@@ -302,6 +317,9 @@
   async function applyInvoiceScan() {
     const items = readInvoiceScanItemsFromDom();
     const supplier = document.getElementById("invoice-scan-supplier")?.value?.trim() || "";
+    const supplier_nui = document.getElementById("invoice-scan-nui")?.value?.trim() || "";
+    const supplier_vat = document.getElementById("invoice-scan-vat-id")?.value?.trim() || "";
+    const vat_rate = Number(document.getElementById("invoice-scan-vat-rate")?.value ?? 18);
     const invoice_number = document.getElementById("invoice-scan-number")?.value?.trim() || "";
     if (!items.length) {
       setInvoiceScanStatus("Nuk ka artikuj për import.", false);
@@ -312,6 +330,10 @@
     setInvoiceScanStatus("Duke përditësuar stokun…", true);
     const payload = {
       supplier,
+      supplier_nui,
+      supplier_vat,
+      vat_rate,
+      purchase_kind: "goods",
       invoice_number,
       invoice_date: window.__invoiceScanDate || "",
       items,

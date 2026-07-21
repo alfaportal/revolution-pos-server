@@ -134,6 +134,10 @@ router.post(
     res.json({
       ok: true,
       supplier: result.supplier,
+      supplier_nui: result.supplier_nui || "",
+      supplier_vat: result.supplier_vat || "",
+      vat_rate: result.vat_rate != null ? result.vat_rate : 18,
+      purchase_kind: result.purchase_kind || "goods",
       invoice_number: result.invoice_number,
       invoice_date: result.invoice_date || "",
       items: result.items,

@@ -14,7 +14,7 @@ Backend i **Revolution Invest POS** — validim licence online, menaxhim klient�
 | Shërbim | URL |
 |---------|-----|
 | Produksion | `https://revolution-pos.com` |
-| Supabase | `https://tdkpcgxcudxbvrtmpobi.supabase.co` |
+| Supabase | Vetëm projekti aktiv te Railway (`SUPABASE_URL`) — Revolution POS |
 
 Vendosni `PUBLIC_APP_ORIGIN=https://revolution-pos.com` në Railway (Variables).
 
@@ -44,16 +44,16 @@ npm run dev
 
 ## Supabase — krijo tabelat
 
-1. Hyr në [Supabase Dashboard](https://supabase.com/dashboard) → projekti `tdkpcgxcudxbvrtmpobi`
-2. **SQL Editor** → ngjit përmbajtjen e `supabase/schema.sql` → **Run**
+1. Hyr në [Supabase Dashboard](https://supabase.com/dashboard) → **projekti i ri** (Revolution POS)
+2. **SQL Editor** → ekzekuto `supabase/ALL_FOR_NEW_SUPABASE.sql` (ose `schema.sql` + migrations)
 
-Nëse ke ekzekutuar `schema.sql` më parë, ekzekuto vetëm `supabase/migrations/002_owners_sales.sql`.
+Ky repo / Railway duhet të përdorë **vetëm** këtë projekt Supabase — mos mbaj URL të projektit të vjetër.
 
 ## Variablat e mjedisit (Railway)
 
 | Variabël | Përshkrimi |
 |----------|------------|
-| `SUPABASE_URL` | `https://tdkpcgxcudxbvrtmpobi.supabase.co` |
+| `SUPABASE_URL` | `https://YOUR-PROJECT-REF.supabase.co` (projekti i ri) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (Settings → API) — **jo** anon key |
 | `JWT_SECRET` | String i gjatë random (min 16 karaktere) |
 | `SUPER_ADMIN_EMAIL` | Email i panelit |

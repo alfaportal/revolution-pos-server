@@ -111,6 +111,42 @@ app.get("/api/public/setup-download", (req, res) => {
   res.redirect(302, url);
 });
 
+/** Ndihmë AI për manualin publik — max 3 pyetje / sesion, përgjigje të shkurtra. */
+app.get("/api/public/manual-help/status", (req, res) => {
+  try {
+    const { remainingFor, MAX_QUESTIONS } = require("./services/manualHelpService");
+    const { isAiEnabled, isAiPaused } = require("./lib/aiConfig");
+    const sessionId = String(req.query.session || "").trim();
+    res.json({
+      ok: true,
+      enabled: isAiEnabled() && !isAiPaused(),
+      remaining: remainingFor(sessionId),
+      max: MAX_QUESTIONS,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+app.post("/api/public/manual-help", async (req, res) => {
+  try {
+    const { askManualHelp } = require("./services/manualHelpService");
+    const result = await askManualHelp({
+      sessionId: req.body?.session || req.body?.sessionId,
+      message: req.body?.message || req.body?.pyetje,
+    });
+    res.json(result);
+  } catch (e) {
+    const status = e.code === "LIMIT" ? 429 : e.code === "AI_OFF" ? 503 : 400;
+    res.status(status).json({
+      ok: false,
+      gabim: e.message,
+      code: e.code || null,
+      remaining: e.remaining != null ? e.remaining : undefined,
+    });
+  }
+});
+
 app.use("/api/payments", paymentsRouter);
 
 app.get("/health/db", async (_req, res) => {

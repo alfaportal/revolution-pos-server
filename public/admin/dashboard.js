@@ -44,7 +44,7 @@ const TITLES = {
   klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
   licencat: ["Licencat", "Hardware ID, çelësa, aktivizim"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
-  faturimi: ["Faturimi", "Fatura PDF — paguar / papaguar"],
+  faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
   raportet: ["Probleme", "Vetëm probleme — pa shitje"],
   cilesimet: ["Cilësimet", "Admini, çmimet e pakove, AI"],
 };
@@ -124,7 +124,10 @@ function openSection(name) {
   if (name === "klientet") loadClients();
   if (name === "licencat") loadLicenses();
   if (name === "ai") loadAi();
-  if (name === "faturimi") loadBilling();
+  if (name === "faturimi") {
+    loadBankPayments().catch((ex) => console.warn(ex));
+    loadBilling();
+  }
   if (name === "raportet") loadReports();
   if (name === "cilesimet") loadSettings();
   // Sinkron: kur hap Probleme ose Klientët, rifresko të dyja në background
@@ -642,6 +645,106 @@ async function loadAi() {
     .join("") || `<tr><td colspan="5" style="color:var(--muted)">Nuk ka përdorim AI</td></tr>`;
 }
 
+function bindBankConfirmButtons(root) {
+  (root || document).querySelectorAll("[data-bank-confirm]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const token = btn.dataset.bankConfirm;
+      if (
+        !confirm(
+          "A ka ardhur pagesa në bankë?\n\nVetëm nëse PO — lëshohet fatura PDF (vulë/datë) me email dhe çelësi i licencës.",
+        )
+      ) {
+        return;
+      }
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = "Duke dërguar…";
+      try {
+        const r = await api(`/api/admin/bank-payments/${encodeURIComponent(token)}/confirm`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        alert(
+          r.already
+            ? `Tashmë e dërguar: ${r.invoice_number || ""}`
+            : `Fatura u dërgua: ${r.invoice_number || ""}\nEmail: ${r.email || ""}\nÇelësi: ${r.celesi || "—"}`,
+        );
+        loadBankPayments();
+      } catch (ex) {
+        alert(ex.message || ex);
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
+  });
+}
+
+async function loadBankPayments() {
+  const body = document.getElementById("bank-pay-body");
+  const cards = document.getElementById("bank-pay-cards");
+  const d = await api("/api/admin/bank-payments");
+  const rows = d.payments || [];
+
+  const statusMeta = (p) => {
+    const pending = p.status === "pending";
+    const issued = p.invoice_issued;
+    return {
+      pending,
+      issued,
+      statusLabel: issued ? "Fatura dërguar" : pending ? "Në pritje të pagesës" : esc(p.status),
+      badge: issued ? "badge-ok" : pending ? "badge-warn" : "badge-ok",
+      action: pending
+        ? `<button type="button" class="btn btn-ok bank-confirm-btn" data-bank-confirm="${esc(p.token)}">Konfirmo pagesën &amp; dërgo faturë PDF</button>`
+        : issued
+          ? `<span class="mono" style="font-size:0.85rem">${esc(p.invoice_number || "OK")}</span>`
+          : "—",
+    };
+  };
+
+  if (cards) {
+    cards.innerHTML =
+      rows
+        .map((p) => {
+          const m = statusMeta(p);
+          return `<article class="bank-pay-card">
+            <div class="bank-pay-card-top">
+              <strong>${esc(p.business_name || "—")}</strong>
+              <span class="badge ${m.badge}">${m.statusLabel}</span>
+            </div>
+            <div class="bank-pay-card-meta">${esc(p.owner_name || "")} · ${esc(fmtDate(p.created_at))}</div>
+            <div class="bank-pay-card-row"><span>Pako</span><strong>${esc(p.plan_label || p.plan)}</strong></div>
+            <div class="bank-pay-card-row"><span>Shuma</span><strong>${euro(p.amount_eur)}</strong></div>
+            <div class="bank-pay-card-row"><span>Email</span><strong class="mono">${esc(p.email)}</strong></div>
+            ${p.phone ? `<div class="bank-pay-card-row"><span>Tel</span><a href="tel:${esc(p.phone)}">${esc(p.phone)}</a></div>` : ""}
+            <div class="bank-pay-card-actions">${m.action}</div>
+          </article>`;
+        })
+        .join("") ||
+      `<p class="bank-pay-empty">Nuk ka kërkesa bankare ende</p>`;
+    bindBankConfirmButtons(cards);
+  }
+
+  if (body) {
+    body.innerHTML =
+      rows
+        .map((p) => {
+          const m = statusMeta(p);
+          return `<tr>
+        <td>${esc(fmtDate(p.created_at))}</td>
+        <td>${esc(p.business_name)}<div style="font-size:0.8rem;color:var(--muted)">${esc(p.owner_name)}</div></td>
+        <td>${esc(p.plan_label || p.plan)}</td>
+        <td>${euro(p.amount_eur)}</td>
+        <td class="mono" style="font-size:0.85rem">${esc(p.email)}</td>
+        <td><span class="badge ${m.badge}">${m.statusLabel}</span></td>
+        <td style="white-space:nowrap">${m.action}</td>
+      </tr>`;
+        })
+        .join("") ||
+      `<tr><td colspan="7" style="color:var(--muted)">Nuk ka kërkesa bankare ende</td></tr>`;
+    bindBankConfirmButtons(body);
+  }
+}
+
 async function loadBilling() {
   if (!clientsFlat.length) {
     try {
@@ -1013,6 +1116,9 @@ async function boot() {
   }
 
   document.getElementById("btn-ai-load").addEventListener("click", () => loadAi().catch(alert));
+  document.getElementById("btn-bank-pay-refresh")?.addEventListener("click", () => {
+    loadBankPayments().catch((ex) => alert(ex.message || ex));
+  });
   document.getElementById("btn-inv-create").addEventListener("click", async () => {
     try {
       await api("/api/super/dashboard/billing/invoices", {

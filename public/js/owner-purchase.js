@@ -197,16 +197,25 @@
     const dateEl = document.getElementById("blerje-invoice-date");
     if (dateEl && !dateEl.value) dateEl.value = todayIso();
     const sup = document.getElementById("blerje-supplier");
+    const nui = document.getElementById("blerje-supplier-nui");
     const num = document.getElementById("blerje-invoice-no");
+    const vat = document.getElementById("blerje-vat-rate");
+    const kind = document.getElementById("blerje-kind");
     if (sup) sup.value = "";
+    if (nui) nui.value = "";
     if (num) num.value = "";
+    if (vat) vat.value = "18";
+    if (kind) kind.value = "goods";
     renderLines();
   }
 
   async function savePurchase() {
     const supplier = document.getElementById("blerje-supplier")?.value?.trim() || "";
+    const supplier_nui = document.getElementById("blerje-supplier-nui")?.value?.trim() || "";
     const invoice_number = document.getElementById("blerje-invoice-no")?.value?.trim() || "";
     const invoice_date = document.getElementById("blerje-invoice-date")?.value || todayIso();
+    const vat_rate = Number(document.getElementById("blerje-vat-rate")?.value ?? 18);
+    const purchase_kind = document.getElementById("blerje-kind")?.value || "goods";
     const items = lines
       .map((l) => ({
         name: String(l.name || "").trim(),
@@ -236,7 +245,15 @@
     try {
       const data = await api()("/api/owner/purchases", {
         method: "POST",
-        body: JSON.stringify({ supplier, invoice_number, invoice_date, items }),
+        body: JSON.stringify({
+          supplier,
+          supplier_nui,
+          invoice_number,
+          invoice_date,
+          vat_rate,
+          purchase_kind,
+          items,
+        }),
       });
       setMsg(
         data.message ||

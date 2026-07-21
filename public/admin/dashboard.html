@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=9">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=11">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -163,6 +163,32 @@
         <!-- FATURIMI -->
         <section class="section" id="sec-faturimi">
           <div class="card">
+            <div class="card-title">
+              <span>Pagesa bankare (licenca)</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-bank-pay-refresh">Rifresko</button>
+            </div>
+            <p style="color:var(--muted);font-size:0.9rem;margin:0 0 0.75rem">
+              Fatura PDF me vulë/datë dërgohet me email <strong>vetëm pasi të konfirmoni</strong> që pagesa ka ardhur në bankë.
+            </p>
+            <div id="bank-pay-cards" class="bank-pay-cards" aria-live="polite"></div>
+            <div class="table-wrap desktop-only">
+              <table class="sa-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Biznesi</th>
+                    <th>Pako</th>
+                    <th>Shuma</th>
+                    <th>Email</th>
+                    <th>Statusi</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="bank-pay-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
             <div class="card-title">Gjenero faturë</div>
             <div class="form-grid">
               <div class="field full">
@@ -313,6 +339,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=9"></script>
+  <script src="/admin/dashboard.js?v=11"></script>
 </body>
 </html>

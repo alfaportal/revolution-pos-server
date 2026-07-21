@@ -818,4 +818,55 @@ router.post("/clients/:id/link-owner", asyncHandler(async (req, res) => {
   res.json({ ok: true, ...result });
 }));
 
+/**
+ * Pagesa bankare — listë. Fatura lëshohet VETËM me confirm.
+ */
+router.get(
+  "/bank-payments",
+  asyncHandler(async (req, res) => {
+    const {
+      listBankPayments,
+    } = require("../services/bankTransferPaymentService");
+    const status = String(req.query.status || "").trim() || undefined;
+    const payments = await listBankPayments({ status });
+    res.json({ ok: true, payments });
+  }),
+);
+
+/**
+ * Konfirmo pagesën në bankë → krijo licencë + dërgo faturë PDF (vulë/datë) me email.
+ * Pa këtë hap → nuk ka faturë.
+ */
+router.post(
+  "/bank-payments/:token/confirm",
+  asyncHandler(async (req, res) => {
+    const {
+      confirmBankPaymentAndIssueInvoice,
+    } = require("../services/bankTransferPaymentService");
+    const token = String(req.params.token || "").trim();
+    try {
+      const result = await confirmBankPaymentAndIssueInvoice(token, {
+        adminEmail: req.user?.email || "super_admin",
+      });
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "bank_payment_confirm_invoice",
+        targetType: "license_payment",
+        targetId: token,
+        targetLabel: result.invoice_number || token,
+      });
+      res.json({ ok: true, ...result });
+    } catch (e) {
+      const code = e.code || "ERROR";
+      const status =
+        code === "NOT_FOUND"
+          ? 404
+          : code === "NOT_BANK" || code === "INVALID_STATUS"
+            ? 400
+            : 400;
+      res.status(status).json({ ok: false, gabim: e.message || String(e), code });
+    }
+  }),
+);
+
 module.exports = router;

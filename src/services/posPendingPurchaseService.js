@@ -31,19 +31,46 @@ function normalizeItems(rawItems) {
       pieces_per_pack = Math.max(1, pieces_per_pack);
     }
     if (!name || quantity <= 0) continue;
+    if (raw && raw.__atk_meta === true) continue;
     out.push({ name, quantity, unit, unit_price, pieces_per_pack });
   }
   return out;
 }
 
+function extractAtkMeta(rawItems) {
+  const list = Array.isArray(rawItems) ? rawItems : [];
+  const metaRow = list.find((x) => x && x.__atk_meta === true);
+  if (!metaRow) {
+    return {
+      items: list,
+      supplier_nui: "",
+      supplier_vat: "",
+      vat_rate: 18,
+      purchase_kind: "goods",
+    };
+  }
+  return {
+    items: list.filter((x) => !(x && x.__atk_meta === true)),
+    supplier_nui: String(metaRow.supplier_nui || "").trim(),
+    supplier_vat: String(metaRow.supplier_vat || "").trim(),
+    vat_rate: Number(metaRow.vat_rate) >= 0 ? Number(metaRow.vat_rate) : 18,
+    purchase_kind: String(metaRow.purchase_kind || "goods").trim() || "goods",
+  };
+}
+
 function mapPendingRow(row) {
+  const parsed = extractAtkMeta(Array.isArray(row.items_json) ? row.items_json : []);
   return {
     id: row.id,
     client_id: row.client_id,
     supplier: String(row.supplier || "").trim(),
     invoice_number: String(row.invoice_number || "").trim(),
     invoice_date: row.invoice_date || null,
-    items: Array.isArray(row.items_json) ? row.items_json : [],
+    items: parsed.items,
+    supplier_nui: parsed.supplier_nui,
+    supplier_vat: parsed.supplier_vat,
+    vat_rate: parsed.vat_rate,
+    purchase_kind: parsed.purchase_kind,
     source: row.source || "ai_invoice_scan",
     status: row.status,
     created_at: row.created_at,
@@ -58,6 +85,27 @@ async function enqueuePendingPurchase(clientId, body = {}) {
   const invoice_number = String(body.invoice_number || "").trim();
   let invoice_date = body.invoice_date ? String(body.invoice_date).slice(0, 10) : null;
   if (invoice_date && !/^\d{4}-\d{2}-\d{2}$/.test(invoice_date)) invoice_date = null;
+
+  const supplier_nui = String(body.supplier_nui || "").trim().slice(0, 64);
+  const supplier_vat = String(body.supplier_vat || "").trim().slice(0, 64);
+  let vat_rate = Number(body.vat_rate);
+  if (!Number.isFinite(vat_rate) || vat_rate < 0) vat_rate = 18;
+  if (vat_rate !== 0 && vat_rate !== 8 && vat_rate !== 18) {
+    vat_rate = vat_rate <= 0 ? 0 : vat_rate <= 8 ? 8 : 18;
+  }
+  const kindRaw = String(body.purchase_kind || "goods").trim().toLowerCase();
+  const purchase_kind = kindRaw === "invest" || kindRaw === "investment" ? "invest" : "goods";
+
+  const itemsWithMeta = [
+    {
+      __atk_meta: true,
+      supplier_nui,
+      supplier_vat,
+      vat_rate,
+      purchase_kind,
+    },
+    ...items,
+  ];
 
   const db = getSupabase();
 
@@ -78,6 +126,9 @@ async function enqueuePendingPurchase(clientId, body = {}) {
         invoice_number,
         invoice_date,
         item_count: items.length,
+        supplier_nui,
+        vat_rate,
+        purchase_kind,
       };
     }
   }
@@ -89,7 +140,7 @@ async function enqueuePendingPurchase(clientId, body = {}) {
       supplier,
       invoice_number: invoice_number || `AI-${Date.now()}`,
       invoice_date,
-      items_json: items,
+      items_json: itemsWithMeta,
       source: String(body.source || "ai_invoice_scan").slice(0, 64),
       status: "pending",
     })
@@ -104,7 +155,10 @@ async function enqueuePendingPurchase(clientId, body = {}) {
     supplier: data.supplier,
     invoice_number: data.invoice_number,
     invoice_date: data.invoice_date,
-    item_count: Array.isArray(data.items_json) ? data.items_json.length : items.length,
+    item_count: items.length,
+    supplier_nui,
+    vat_rate,
+    purchase_kind,
     created_at: data.created_at,
   };
 }

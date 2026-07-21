@@ -342,6 +342,10 @@ async function applyInvoiceScanItems(clientId, body) {
       invoice_number,
       invoice_date,
       items: list,
+      supplier_nui: body?.supplier_nui,
+      supplier_vat: body?.supplier_vat,
+      vat_rate: body?.vat_rate,
+      purchase_kind: body?.purchase_kind,
       source: String(body?.source || "ai_invoice_scan").slice(0, 64),
     });
   } catch (err) {

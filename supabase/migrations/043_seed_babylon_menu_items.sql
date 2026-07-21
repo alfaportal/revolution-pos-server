@@ -12,7 +12,8 @@ DECLARE
 BEGIN
   SELECT COUNT(*) INTO v_client_count FROM clients WHERE emri ILIKE '%BABYLON%';
   IF v_client_count = 0 THEN
-    RAISE EXCEPTION 'Klienti BABYLON nuk u gjet te tabela clients (emri ILIKE %%BABYLON%%)';
+    RAISE NOTICE '043: Klienti BABYLON nuk u gjet — seed anashkalohet (OK për projekt të ri bosh).';
+    RETURN;
   ELSIF v_client_count > 1 THEN
     RAISE EXCEPTION 'U gjetën % klientë që përputhen me BABYLON — saktëso emrin te ky script para se ta ekzekutosh', v_client_count;
   END IF;

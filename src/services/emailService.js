@@ -13,11 +13,25 @@ function isEmailConfigured() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
-async function deliverEmail({ to, subject, text, html }) {
+async function deliverEmail({ to, subject, text, html, attachments }) {
   if (!isEmailConfigured()) {
     throw new Error(
       "Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY në Railway.",
     );
+  }
+
+  const payload = {
+    from: resolveEmailFrom(),
+    to: [String(to).trim().toLowerCase()],
+    subject,
+    text,
+    html,
+  };
+  if (Array.isArray(attachments) && attachments.length) {
+    payload.attachments = attachments.map((a) => ({
+      filename: String(a.filename || "attachment.pdf"),
+      content: String(a.content || ""),
+    }));
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -26,13 +40,7 @@ async function deliverEmail({ to, subject, text, html }) {
       Authorization: `Bearer ${process.env.RESEND_API_KEY.trim()}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from: resolveEmailFrom(),
-      to: [String(to).trim().toLowerCase()],
-      subject,
-      text,
-      html,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json().catch(() => ({}));

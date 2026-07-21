@@ -718,6 +718,10 @@ router.post("/purchases", async (req, res) => {
       invoice_number: body.invoice_number,
       invoice_date: body.invoice_date,
       items: body.items,
+      supplier_nui: body.supplier_nui,
+      supplier_vat: body.supplier_vat,
+      vat_rate: body.vat_rate,
+      purchase_kind: body.purchase_kind,
       source: "manual_purchase",
     });
     res.status(201).json({

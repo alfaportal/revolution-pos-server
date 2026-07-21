@@ -287,10 +287,24 @@ function bindPaymentSection() {
       bankBtns.forEach((b) => b.classList.remove("is-selected"));
       btn.classList.add("is-selected");
       const hint = document.getElementById("pay-hint");
+      const bankKey = btn.dataset.payBank || "raiffeisen";
+      const plan = sessionStorage.getItem("selectedPackage") || "";
+      if (plan === "p4") {
+        if (hint) {
+          hint.hidden = false;
+          hint.textContent = t("packages.p4.summary");
+        }
+        return;
+      }
+      if (plan === "p1" || plan === "p2" || plan === "p3") {
+        openBankTransferModal(plan, bankKey);
+        return;
+      }
       if (hint) {
         hint.hidden = false;
-        hint.textContent = `${t("pay.banks")}: ${btn.textContent} — ${t("pay.soon")}. ${t("pay.stripeDesc")}`;
+        hint.textContent = t("pay.pickPlan");
       }
+      document.getElementById("pakot")?.scrollIntoView({ behavior: "smooth" });
     });
   });
   stripeBtn?.addEventListener("click", () => {
@@ -507,6 +521,152 @@ function bindTrialModal() {
       e.preventDefault();
       openTrialModal();
     });
+  });
+}
+
+const FALLBACK_BANK = {
+  company: "REVOLUTION INVEST SH.P.K.",
+  bank: "Raiffeisen Bank Kosovo",
+  account: "1504001010467891",
+  currency: "EUR",
+  nui: "811314567",
+};
+
+async function fetchBankTransferDetails() {
+  try {
+    const res = await fetch("/api/payments/bank-transfer");
+    const data = await res.json();
+    if (res.ok && data.ok && data.account) {
+      return {
+        company: data.company || FALLBACK_BANK.company,
+        bank: data.bank || FALLBACK_BANK.bank,
+        account: data.account,
+        currency: data.currency || FALLBACK_BANK.currency,
+        nui: data.nui || FALLBACK_BANK.nui,
+      };
+    }
+  } catch {
+    /* fallback */
+  }
+  return { ...FALLBACK_BANK };
+}
+
+function openBankTransferModal(plan, bankKey) {
+  const existing = document.getElementById("bank-transfer-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "bank-transfer-modal";
+  modal.className = "checkout-modal";
+  modal.innerHTML = `
+    <div class="checkout-modal-card checkout-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="bank-title">
+      <h3 id="bank-title">${t("bank.title")}</h3>
+      <p class="checkout-plan-label">${t(`packages.${plan}.name`)}</p>
+      <p class="bank-intro">${t("bank.intro")}</p>
+      <div class="bank-details" id="bank-details" aria-busy="true">…</div>
+      <label>${t("checkout.emri")}<input id="bk-emri" autocomplete="name" required></label>
+      <label>${t("checkout.biznesi")}<input id="bk-biz" autocomplete="organization" required></label>
+      <label>${t("checkout.email")}<input id="bk-email" type="email" autocomplete="email" required></label>
+      <label>${t("checkout.telefoni")}<input id="bk-phone" type="tel" autocomplete="tel"></label>
+      <label>${t("checkout.tipi")}
+        <select id="bk-tipi">
+          <option value="restorant">${t("checkout.tipi.restorant")}</option>
+          <option value="kafene">${t("checkout.tipi.kafene")}</option>
+          <option value="dyqan">${t("checkout.tipi.dyqan")}</option>
+        </select>
+      </label>
+      <p class="checkout-msg" id="bk-msg" hidden></p>
+      <div class="checkout-actions">
+        <button type="button" class="btn btn-primary" id="bk-submit">${t("bank.submit")}</button>
+        <button type="button" class="btn btn-ghost" id="bk-cancel">${t("checkout.cancel")}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector("#bk-cancel")?.addEventListener("click", close);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+
+  const detailsEl = modal.querySelector("#bank-details");
+  fetchBankTransferDetails().then((bank) => {
+    if (!detailsEl) return;
+    detailsEl.removeAttribute("aria-busy");
+    detailsEl.innerHTML = `
+      <div class="bank-detail-row"><span>${t("bank.company")}</span><strong>${bank.company}</strong></div>
+      <div class="bank-detail-row"><span>${t("bank.bankName")}</span><strong>${bank.bank}</strong></div>
+      <div class="bank-detail-row"><span>${t("bank.account")}</span><strong class="bank-account-num" id="bk-account">${bank.account}</strong></div>
+      <div class="bank-detail-row"><span>${t("bank.currency")}</span><strong>${bank.currency}</strong></div>
+      <div class="bank-detail-row"><span>${t("bank.nui")}</span><strong>${bank.nui}</strong></div>
+      <button type="button" class="btn btn-ghost bank-copy-btn" id="bk-copy">${t("bank.copy")}</button>`;
+    modal.querySelector("#bk-copy")?.addEventListener("click", async () => {
+      const copyBtn = modal.querySelector("#bk-copy");
+      try {
+        await navigator.clipboard.writeText(bank.account);
+        if (copyBtn) copyBtn.textContent = t("bank.copied");
+      } catch {
+        /* ignore */
+      }
+    });
+  });
+
+  modal.querySelector("#bk-submit")?.addEventListener("click", async () => {
+    const btn = modal.querySelector("#bk-submit");
+    const msg = modal.querySelector("#bk-msg");
+    const emri = String(modal.querySelector("#bk-emri")?.value || "").trim();
+    const biz = String(modal.querySelector("#bk-biz")?.value || "").trim();
+    const email = String(modal.querySelector("#bk-email")?.value || "").trim();
+    const phone = String(modal.querySelector("#bk-phone")?.value || "").trim();
+    const tipi = String(modal.querySelector("#bk-tipi")?.value || "restorant");
+    if (!emri || !biz || !email) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = t("bank.error");
+      }
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = t("bank.busy");
+    }
+    try {
+      const res = await fetch("/api/payments/bank-transfer/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          bank: bankKey,
+          emri,
+          emri_biznesit: biz,
+          email,
+          telefoni: phone,
+          tipi,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.gabim || t("bank.error"));
+      }
+      if (msg) {
+        msg.hidden = false;
+        msg.classList.add("checkout-msg-ok");
+        msg.textContent = data.message || t("bank.success");
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = t("bank.submit");
+      }
+    } catch (err) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = err.message || t("bank.error");
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = t("bank.submit");
+      }
+    }
   });
 }
 
@@ -774,30 +934,39 @@ export function renderHome() {
             <p>${t("pay.subtitle")}</p>
           </div>
           <div class="pay-methods">
-            <button type="button" class="pay-method pay-method-active" id="pay-stripe-cta">
-              <span class="pay-method-badge">${t("pay.active")}</span>
-              <strong>${t("pay.stripe")}</strong>
+            <div class="pay-card pay-card-stripe">
+              <strong class="pay-card-title">${t("pay.stripe")}</strong>
               <span class="pay-method-desc">${t("pay.stripeDesc")}</span>
-              <span class="pay-card-marks" aria-hidden="true">
-                <span class="pay-mark pay-mark-visa">VISA</span>
-                <span class="pay-mark pay-mark-mc">Mastercard</span>
-                <span class="pay-mark pay-mark-stripe">Stripe</span>
-              </span>
-              <span class="btn btn-primary pay-method-btn">${t("pay.ctaStripe")}</span>
-            </button>
-            <div class="pay-banks-block">
-              <div class="pay-banks-head">
-                <strong>${t("pay.banks")}</strong>
-                <span class="pay-method-badge pay-method-badge-soon">${t("pay.soon")}</span>
+              <div class="pay-logo-row" aria-hidden="true">
+                <span class="pay-logo pay-logo-stripe" title="Stripe"></span>
+                <span class="pay-logo pay-logo-visa" title="Visa"></span>
+                <span class="pay-logo pay-logo-mc" title="Mastercard"></span>
+                <span class="pay-logo pay-logo-paypal" title="PayPal"></span>
               </div>
+              <button type="button" class="btn btn-primary pay-method-btn" id="pay-stripe-cta">${t("pay.ctaStripe")}</button>
+            </div>
+            <div class="pay-card pay-card-banks">
+              <strong class="pay-card-title">${t("pay.banks")}</strong>
               <p class="pay-banks-desc">${t("pay.banksDesc")}</p>
               <div class="pay-banks-grid" role="group" aria-label="${t("pay.banks")}">
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.teb")}</button>
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.raiffeisen")}</button>
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.nlb")}</button>
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.bkt")}</button>
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.procredit")}</button>
-                <button type="button" class="pay-bank" data-pay-bank title="${t("pay.soon")}">${t("pay.bank.bpb")}</button>
+                <button type="button" class="pay-bank" data-pay-bank="teb" aria-label="${t("pay.bank.teb")}">
+                  <span class="pay-bank-logo pay-bank-teb" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="pay-bank" data-pay-bank="raiffeisen" aria-label="${t("pay.bank.raiffeisen")}">
+                  <span class="pay-bank-logo pay-bank-raiffeisen" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="pay-bank" data-pay-bank="nlb" aria-label="${t("pay.bank.nlb")}">
+                  <span class="pay-bank-logo pay-bank-nlb" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="pay-bank" data-pay-bank="bkt" aria-label="${t("pay.bank.bkt")}">
+                  <span class="pay-bank-logo pay-bank-bkt" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="pay-bank" data-pay-bank="procredit" aria-label="${t("pay.bank.procredit")}">
+                  <span class="pay-bank-logo pay-bank-procredit" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="pay-bank" data-pay-bank="bpb" aria-label="${t("pay.bank.bpb")}">
+                  <span class="pay-bank-logo pay-bank-bpb" aria-hidden="true"></span>
+                </button>
               </div>
             </div>
           </div>

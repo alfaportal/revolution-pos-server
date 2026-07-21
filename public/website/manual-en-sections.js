@@ -350,82 +350,28 @@
         </div>`,
 
   stoku: `<span class="section-num">Section 9</span>
-        <h2>INVENTORY MANAGEMENT</h2>
-        <p>The inventory module lets you track quantities for menu items. When stock reaches zero, the item is automatically hidden from the menu on POS, tablet, and kiosk â€” no need to hide it manually.</p>
-
-        <h3 id="stoku-aktivizo">How to enable stock tracking for an item</h3>
+        <h2>STOCK &amp; PURCHASES</h2>
+        <p>Sales <strong>deduct</strong> stock automatically. Purchases <strong>increase</strong> stock and feed Accountant books — you do not fill ledgers by hand.</p>
+        <h3 id="stoku-aktivizo">Enable stock tracking</h3>
         <ol class="steps">
-          <li>Sign in to the owner panel â†’ <strong>Inventory</strong> tab.</li>
-          <li>In the items table, find the product you want to track (e.g. Â«CappuccinoÂ», Â«Pizza MargheritaÂ»).</li>
-          <li>In the <strong>Track stock</strong> column, enable the checkbox (<strong>Yes</strong>).</li>
-          <li>The <strong>Quantity</strong> and <strong>Alert threshold</strong> fields become editable.</li>
-          <li>Click <strong>Â«SaveÂ»</strong> on that item's row to save the change.</li>
+          <li>Owner panel → <strong>Stock</strong> (or POS Admin).</li>
+          <li>Enable <strong>Track stock</strong>, set quantity and alert threshold, Save.</li>
+          <li>At quantity 0 the item hides from POS, phone, and kiosk until restocked.</li>
         </ol>
-
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
-          <p>Enable stock only for items with limited quantity (e.g. seasonal products). Items without stock tracking work as before â€” always available on the menu.</p>
+        <h3 id="stoku-blerje">How to register a purchase</h3>
+        <ol class="steps">
+          <li><strong>POS Admin → Purchases:</strong> + New invoice → supplier, NUI, VAT %, items → Save.</li>
+          <li><strong>Or AI scan:</strong> photo → check → Register to Stock.</li>
+          <li><strong>Or phone:</strong> Owner → Purchases → POS pulls in ~45s.</li>
+        </ol>
+        <div class="box box-tip"><div class="box-title">After Save</div>
+          <p>Stock rises, invoice appears under Purchases, VAT purchase book / Excel / PDF ATK fill automatically. If AI fails, enter manually — that is enough.</p>
         </div>
-
-        <h3 id="stoku-sasia">How to set quantity and alert threshold</h3>
+        <h3 id="stoku-sasia">Sales and zero stock</h3>
         <ol class="steps">
-          <li>On the <strong>Inventory</strong> tab, for an item with tracking enabled:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>Quantity</strong> â€” current number of units in stock (e.g. 50)</li>
-              <li><strong>Alert threshold</strong> â€” when quantity falls to this value or below, the item is marked Â«Low stockÂ» (e.g. 10)</li>
-            </ul>
-          </li>
-          <li>The summary above the table shows: items in stock, low stock, and out-of-stock items.</li>
-          <li>Click <strong>Â«SaveÂ»</strong> after every change.</li>
-          <li>Changes sync to POS and tablets within ~15 seconds.</li>
-        </ol>
-
-        <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
-          <p>Every sale (POS, waiter, kiosk) automatically deducts stock for items with tracking enabled. Make sure the starting quantity is correct before the shift begins.</p>
-        </div>
-
-        <h3 id="stoku-rimbush">How to restock inventory</h3>
-        <ol class="steps">
-          <li>On the <strong>Inventory</strong> tab, find the item you want to restock.</li>
-          <li>Click the <strong>Â«RestockÂ»</strong> button on that item's row.</li>
-          <li>Enter the new total quantity (e.g. 100 units) in the dialog that appears.</li>
-          <li>Confirm â€” quantity updates and status changes (e.g. from Â«Out of stockÂ» to Â«OKÂ»).</li>
-          <li>The item returns automatically to the menu on POS and tablet.</li>
-        </ol>
-
-        <h3>What happens when stock reaches zero</h3>
-        <ol class="steps">
-          <li>When quantity falls to <strong>0</strong>, status becomes <strong>Â«Out of stockÂ»</strong> (row highlighted in red).</li>
-          <li>The item is <strong>automatically hidden</strong> from the menu on:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li>POS application (register)</li>
-              <li>Waiter tablet</li>
-              <li>Table QR kiosk</li>
-            </ul>
-          </li>
-          <li>Customers and staff <strong>do not see</strong> the item until you restock.</li>
-          <li>After restocking, the item returns without needing to activate it manually on the Menu tab.</li>
-        </ol>
-
-        <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
-          <p>Zero stock only changes availability on the menu â€” it <strong>does not</strong> delete the item from the menu list in the panel. Past order history remains untouched.</p>
-        </div>
-
-        <h3>Email notifications for low stock</h3>
-        <ol class="steps">
-          <li>When quantity falls below the alert threshold or reaches zero, the system automatically sends an <strong>email to the owner</strong>.</li>
-          <li>The email contains the item name, current quantity, and status (low stock or out of stock).</li>
-          <li>The email is sent to the registered owner address (<code>/owner/login</code>) or business email.</li>
-          <li>The <strong>Inventory</strong> tab shows a badge if there are items on alert â€” check the panel daily.</li>
-        </ol>
-
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
-          <p>Set the alert threshold a few units above zero (e.g. 5â€“10) so you receive email before the product runs out completely and have time to restock.</p>
-        </div>`,
-
+          <li>Every closed sale deducts tracked items.</li>
+          <li>At zero: Out of stock until you purchase or Restock.</li>
+        </ol>`,
   terminalet: `<span class="section-num">Section 10</span>
         <h2>TERMINALS (Multi-terminal)</h2>
         <p>Every Revolution Invest POS license supports one or more <strong>terminals</strong> â€” meaning computers or devices where the POS application is installed and activated.</p>
@@ -495,71 +441,24 @@
         </div>`,
 
   kontabilisti: `<span class="section-num">Section 11</span>
-        <h2>ACCOUNTANT BOOKS</h2>
-        <p>The <strong>Accountant</strong> module (Full package) opens from the POS admin panel. There you manage the sales ledger, expenses, VAT report, and export for your accountant. In the owner web panel (<code>/owner/login</code> â†’ <strong>Reports</strong> tab) you also find daily petty expenses and the audit log.</p>
-
-        <h3 id="kontabilisti-hap">How to open accountant books from the admin panel</h3>
+        <h2>ACCOUNTANT BOOKS (ATK)</h2>
+        <p>POS Admin → <strong>Accountant</strong> hub. Sales and purchases fill books automatically; you export Excel / PDF ATK.</p>
+        <h3 id="kontabilisti-hap">What fills automatically</h3>
         <ol class="steps">
-          <li>Open the <strong>Revolution Invest POS</strong> app on the register computer.</li>
-          <li>Sign in to <strong>Admin</strong> (with administrator rights).</li>
-          <li>In the left menu / top tabs, select <strong>Â«AccountantÂ»</strong> (Kontabilisti).</li>
-          <li>You will see three blocks: <strong>Sales ledger</strong>, <strong>Purchases/expenses ledger</strong>, and <strong>VAT report</strong>.</li>
+          <li>Open POS Admin → Accountant; pick the period.</li>
+          <li>Sales VAT book, Purchase VAT book, VAT declaration, balance — from closed sales and purchases.</li>
+          <li>Use <strong>Excel</strong> / <strong>PDF ATK</strong> for official forms.</li>
         </ol>
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
-          <p>If you do not see the Â«AccountantÂ» tab, your package does not include it (Full only). Contact Revolution Invest for an upgrade.</p>
-        </div>
-
-        <h3 id="kontabilisti-shpenzim">How to record expenses</h3>
+        <h3 id="kontabilisti-shpenzim">Expenses, payroll, rent</h3>
         <ol class="steps">
-          <li>Under <strong>Purchases/expenses ledger</strong>, click <strong>Â«+ New expenseÂ»</strong>.</li>
-          <li>Fill in:
-            <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>Date</strong></li>
-              <li><strong>Company name</strong></li>
-              <li><strong>Description</strong></li>
-              <li><strong>Category</strong> â€” Rent, Cleaning, Services, Payroll, Unexpected, Other</li>
-              <li><strong>Amount (â‚¬)</strong></li>
-            </ul>
-          </li>
-          <li>Click <strong>Â«Save expenseÂ»</strong>. The row appears with who recorded it.</li>
-          <li><em>Web alternative:</em> <code>https://revolution-pos.com/owner/login</code> â†’ <strong>Reports</strong> â†’ <strong>Daily petty expenses</strong>.</li>
+          <li>Expenses: + Expense (vendor, NUI, VAT %).</li>
+          <li>Payroll and rent: enter manually for the month.</li>
         </ol>
-
-        <h3 id="kontabilisti-raport">How to view income and expense reports</h3>
+        <h3 id="kontabilisti-eksport">Export for your accountant</h3>
         <ol class="steps">
-          <li><strong>Income (sales ledger):</strong> set the date range â†’ <strong>Filter</strong>. See date, invoice no., items, amount, VAT rate, VAT, and payment method.</li>
-          <li><strong>Expenses:</strong> filter the same period in the purchases/expenses ledger.</li>
-          <li><strong>On the web:</strong> owner panel â†’ <strong>Reports</strong> â†’ Â«RevenueÂ» with date filter â†’ <strong>Show</strong>.</li>
-        </ol>
-
-        <h3 id="kontabilisti-audit">How to view the audit trail</h3>
-        <ol class="steps">
-          <li><strong>On POS:</strong> Admin â†’ <strong>Journal</strong> (Ditari) â†’ <strong>Â«Activity register (who used the program)Â»</strong>. Choose the period and click <strong>Search</strong>.</li>
-          <li><strong>On the web:</strong> <code>/owner/login</code> â†’ <strong>Reports</strong> â†’ <strong>Activity register (Audit log)</strong> â†’ <strong>Refresh</strong>.</li>
-          <li>You see price changes, voided invoices, expenses, and other actions â€” with time, action, details, and who did it.</li>
-        </ol>
-
-        <h3 id="kontabilisti-tvsh">How to generate a fiscal VAT report</h3>
-        <ol class="steps">
-          <li>Under <strong>VAT report</strong>, select the <strong>month</strong>.</li>
-          <li>Click <strong>Filter</strong>.</li>
-          <li>See rates (e.g. <strong>0%</strong>, <strong>8%</strong>, <strong>18%</strong>) with net sales, VAT collected, and gross sales.</li>
-          <li>Use <strong>Export PDF</strong> or <strong>Export CSV</strong> for a ready document.</li>
-        </ol>
-
-        <h3 id="kontabilisti-eksport">How to export data for your accountant</h3>
-        <ol class="steps">
-          <li><strong>Sales ledger:</strong> filter the period â†’ <strong>Export CSV</strong> or <strong>Export PDF</strong>.</li>
-          <li><strong>Purchases/expenses:</strong> same â€” CSV or PDF.</li>
-          <li><strong>VAT report:</strong> CSV or PDF for the selected month.</li>
-          <li>Send the files to your accountant.</li>
-        </ol>
-        <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
-          <p>CSV opens easily in Excel. PDF is ready to print or archive.</p>
-        </div>`,
-
+          <li>Sales/Purchase books → Excel ATK.</li>
+          <li>VAT declaration / withholding / rent / quarterly / annual CD → PDF ATK or Excel.</li>
+        </ol>`,
   ndihma: `<span class="section-num">Section 12</span>
         <h2>HELP &amp; SUPPORT</h2>
         <p>We are available <strong>24 hours a day, 7 days a week</strong>. Any technical issue, install, printer, sync, or license â€” contact us and we fix it, with no extra charge for standard support.</p>
