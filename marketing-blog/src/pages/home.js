@@ -543,6 +543,69 @@ function bindTrialModal() {
   });
 }
 
+async function openEquipmentModal() {
+  const existing = document.getElementById("equip-modal");
+  if (existing) existing.remove();
+
+  let digits = "38348707880";
+  try {
+    const res = await fetch("/api/public/config");
+    const data = await res.json();
+    if (res.ok && data.ok && data.support_phone_digits) {
+      digits = data.support_phone_digits;
+    }
+  } catch {
+    /* default */
+  }
+
+  const waHref = `https://wa.me/${digits}?text=${encodeURIComponent(t("equip.wa"))}`;
+  const modal = document.createElement("div");
+  modal.id = "equip-modal";
+  modal.className = "checkout-modal";
+  modal.innerHTML = `
+    <div class="checkout-modal-card checkout-modal-card-wide equip-modal-card" role="dialog" aria-modal="true" aria-labelledby="equip-modal-title">
+      <p class="equip-eyebrow">${t("nav.equipment")}</p>
+      <h3 id="equip-modal-title">${t("equip.title")}</h3>
+      <p class="equip-subtitle">${t("equip.subtitle")}</p>
+      <p class="equip-lead">${t("equip.lead")}</p>
+      <h4 class="equip-points-title">${t("equip.pointsTitle")}</h4>
+      <ul class="equip-points">
+        <li><strong>${t("equip.p1.title")}</strong><span>${t("equip.p1.desc")}</span></li>
+        <li><strong>${t("equip.p2.title")}</strong><span>${t("equip.p2.desc")}</span></li>
+        <li><strong>${t("equip.p3.title")}</strong><span>${t("equip.p3.desc")}</span></li>
+        <li><strong>${t("equip.p4.title")}</strong><span>${t("equip.p4.desc")}</span></li>
+        <li><strong>${t("equip.p5.title")}</strong><span>${t("equip.p5.desc")}</span></li>
+      </ul>
+      <p class="equip-closing">${t("equip.closing")}</p>
+      <div class="checkout-actions equip-actions">
+        <a class="btn btn-primary" href="${waHref}" target="_blank" rel="noopener noreferrer">${t("equip.cta")}</a>
+        <button type="button" class="btn btn-ghost" id="equip-modal-packages">${t("equip.ctaSecondary")}</button>
+        <button type="button" class="btn btn-ghost" id="equip-modal-close">${t("trialModal.close")}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector("#equip-modal-close")?.addEventListener("click", close);
+  modal.querySelector("#equip-modal-packages")?.addEventListener("click", () => {
+    close();
+    document.getElementById("pakot")?.scrollIntoView({ behavior: "smooth" });
+  });
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+}
+
+function bindEquipmentModal() {
+  document.querySelectorAll("[data-equip-modal]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("nav-mobile")?.classList.remove("open");
+      openEquipmentModal();
+    });
+  });
+}
+
 const FALLBACK_BANK = {
   company: "REVOLUTION INVEST SH.P.K.",
   bank: "Raiffeisen Bank Kosovo",
@@ -799,7 +862,7 @@ export function renderHome() {
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
             <button type="button" class="btn btn-hero-primary" data-trial-modal>${t("hero.cta.primary")}</button>
-            <a class="btn btn-hero-secondary" href="#pajisjet">${t("nav.equipment")}</a>
+            <button type="button" class="btn btn-hero-secondary" data-equip-modal>${t("nav.equipment")}</button>
             <a class="btn btn-hero-ghost" href="#pakot">${t("hero.cta.secondary")}</a>
           </div>
           <div class="hero-stats" aria-label="Statistika">
@@ -827,32 +890,6 @@ export function renderHome() {
               linkKey: "spotlight.card2.link",
               href: "#pakot",
             })}
-          </div>
-        </div>
-      </section>
-
-      <section class="site-section equip-section" id="pajisjet">
-        <div class="container">
-          <div class="equip-layout">
-            <div class="equip-copy">
-              <p class="equip-eyebrow">${t("nav.equipment")}</p>
-              <h2>${t("equip.title")}</h2>
-              <p class="equip-subtitle">${t("equip.subtitle")}</p>
-              <p class="equip-lead">${t("equip.lead")}</p>
-              <h3 class="equip-points-title">${t("equip.pointsTitle")}</h3>
-              <ul class="equip-points">
-                <li><strong>${t("equip.p1.title")}</strong><span>${t("equip.p1.desc")}</span></li>
-                <li><strong>${t("equip.p2.title")}</strong><span>${t("equip.p2.desc")}</span></li>
-                <li><strong>${t("equip.p3.title")}</strong><span>${t("equip.p3.desc")}</span></li>
-                <li><strong>${t("equip.p4.title")}</strong><span>${t("equip.p4.desc")}</span></li>
-                <li><strong>${t("equip.p5.title")}</strong><span>${t("equip.p5.desc")}</span></li>
-              </ul>
-              <p class="equip-closing">${t("equip.closing")}</p>
-              <div class="equip-actions">
-                <a class="btn btn-primary" id="equip-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("equip.cta")}</a>
-                <a class="btn btn-ghost" href="#pakot">${t("equip.ctaSecondary")}</a>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -1034,21 +1071,13 @@ export function renderHome() {
   bindGetStartedDownload();
   bindPaymentSection();
   bindTrialModal();
+  bindEquipmentModal();
   bindStripeConfigAndPaymentBanner();
-  (async () => {
-    const el = document.getElementById("equip-wa");
-    if (!el) return;
-    try {
-      const res = await fetch("/api/public/config");
-      const data = await res.json();
-      const digits = data?.support_phone_digits || "38348707880";
-      el.href = `https://wa.me/${digits}?text=${encodeURIComponent(t("equip.wa"))}`;
-    } catch {
-      el.href = `https://wa.me/38348707880?text=${encodeURIComponent(t("equip.wa"))}`;
-    }
-  })();
 
-  if (window.location.hash) {
+  if (window.location.hash === "#pajisjet") {
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}` || "/");
+    openEquipmentModal();
+  } else if (window.location.hash) {
     requestAnimationFrame(() => {
       document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth" });
     });

@@ -13,6 +13,10 @@ function sectionLink(id, label, activeNav, navId) {
   return `<a href="${href}"${attrs} class="${activeNav === navId ? "active" : ""}">${label}</a>`;
 }
 
+function equipmentNavLink(label, activeNav) {
+  return `<a href="#pajisjet" data-equip-modal class="${activeNav === "equipment" ? "active" : ""}">${label}</a>`;
+}
+
 export function renderHeader({ activeNav = "home" } = {}) {
   const lang = getLang();
   const items = [
@@ -20,9 +24,14 @@ export function renderHeader({ activeNav = "home" } = {}) {
     { id: "get-started", label: t("nav.getStarted"), section: "si-ta-ngarkoni" },
     { id: "how-it-works", label: t("nav.howItWorks"), section: "si-funksionon" },
     { id: "packages", label: t("nav.packages"), section: "pakot" },
-    { id: "equipment", label: t("nav.equipment"), section: "pajisjet" },
+    { id: "equipment", label: t("nav.equipment"), equipModal: true },
     { id: "blog", label: t("nav.blog"), section: "artikuj" },
   ];
+
+  const navItemHtml = (item) =>
+    item.equipModal
+      ? equipmentNavLink(item.label, activeNav)
+      : sectionLink(item.section, item.label, activeNav, item.id);
 
   return `
     <header class="site-header">
@@ -38,7 +47,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
         </a>
 
         <nav class="nav nav-desktop" aria-label="${t("navLabel")}">
-          ${items.map((item) => sectionLink(item.section, item.label, activeNav, item.id)).join("")}
+          ${items.map(navItemHtml).join("")}
           <a href="/website/manual.html">${t("nav.manual")}</a>
           ${sectionLink("kontakt", t("nav.contact"), activeNav, "contact")}
         </nav>
@@ -54,7 +63,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
       </div>
 
       <nav class="nav-mobile" id="nav-mobile" aria-label="${t("navLabel")}">
-        ${items.map((item) => sectionLink(item.section, item.label, activeNav, item.id)).join("")}
+        ${items.map(navItemHtml).join("")}
         <a href="/website/manual.html">${t("nav.manual")}</a>
         ${sectionLink("kontakt", t("nav.contact"), activeNav, "contact")}
         <a class="btn btn-primary" href="${sectionHref("kontakt")}">${t("cta.startFree")}</a>
@@ -93,7 +102,7 @@ export function renderFooter() {
             ${footerSectionLink("si-ta-ngarkoni", t("nav.getStarted"))}
             ${footerSectionLink("si-funksionon", t("footer.link.howItWorks"))}
             ${footerSectionLink("pakot", t("footer.link.packages"))}
-            ${footerSectionLink("pajisjet", t("nav.equipment"))}
+            <li><a href="#pajisjet" data-equip-modal>${t("nav.equipment")}</a></li>
             ${footerSectionLink("artikuj", t("footer.link.blog"))}
             <li><a href="/website/manual.html">${t("footer.link.manual")}</a></li>
           </ul>
