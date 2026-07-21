@@ -69,6 +69,10 @@
         <span class="nav-icon" aria-hidden="true">📋</span>
         <span class="nav-label">Stoku</span>
       </button>
+      <button type="button" class="tab nav-tile" data-tab="blerje" id="tab-blerje">
+        <span class="nav-icon" aria-hidden="true">🛒</span>
+        <span class="nav-label">Blerje</span>
+      </button>
       <button type="button" class="tab nav-tile ai-feature-tab hidden" data-tab="ai" id="tab-ai-hub" hidden>
         <span class="nav-icon" aria-hidden="true">✨</span>
         <span class="nav-label">AI</span>
@@ -205,16 +209,15 @@
         <div class="card-title card-title-row">
           <span>Përbërësit (inventari)</span>
           <div class="card-title-actions">
-            <button type="button" class="btn btn-ghost btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>📷 Skanoj Faturë</button>
             <button type="button" class="btn btn-primary btn-sm" id="btn-ingredient-add">Shto përbërës</button>
           </div>
         </div>
         <p class="links-hint">
           Menaxhoni përbërësit e kuzhinës (miell, vaj, pije…). Kur konfirmohet porosi, stoku zbritet automatikisht
           sipas recetës (<code>menu_ingredients</code>). Rreshtat e kuq = nën minimum.
+          Për faturë furnizuesi → skeda <strong>Blerje</strong>.
         </p>
         <div id="inventory-alerts" class="inventory-alerts hidden"></div>
-        <div id="inventory-msg" class="owner-license-msg"></div>
         <div class="overflow-x">
           <table class="menu-owner-table inventory-owner-table">
             <thead>
@@ -293,6 +296,26 @@
             <tbody id="stock-items-body"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="panel-blerje" class="panel-section hidden">
+      <div class="card">
+        <div class="card-title card-title-row">
+          <span>Blerje — Fatura furnizuesi</span>
+          <div class="card-title-actions">
+            <button type="button" class="btn btn-primary btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>📷 Skanoj Faturë</button>
+          </div>
+        </div>
+        <p class="links-hint">
+          Këtu skanoni faturën e furnizuesit (kamera ose galeri). AI lexon artikujt → ti kontrollon →
+          <strong>Regjistro në Stok</strong>. Stoku rritet sipas blerjes. Shpenzimet e tjera (rrymë, qira…)
+          regjistrohen te <strong>Raportet</strong> / kontabilisti — jo këtu.
+        </p>
+        <div id="inventory-msg" class="owner-license-msg"></div>
+        <button type="button" class="btn btn-primary ai-feature-hidden" id="btn-blerje-scan-open" hidden style="width:100%;margin-top:0.5rem">
+          📷 Skano faturën (kamera / galeri)
+        </button>
       </div>
     </div>
 
@@ -643,13 +666,13 @@
     <div id="panel-ai" class="panel-section hidden">
       <div class="card ai-hub-card">
         <div class="card-title">AI</div>
-        <p class="links-hint" style="margin-top:0">Skanim faturash, kamarierët, stoku dhe tokenët.</p>
+        <p class="links-hint" style="margin-top:0">Kamarierët, stoku, tokenët. Skanimi i faturës është te skeda <strong>Blerje</strong>.</p>
         <div id="owner-ai-usage" class="links-hint" style="margin:0.5rem 0 0.75rem">Duke ngarkuar tokenët…</div>
         <button type="button" class="btn btn-primary" id="btn-ai-hub-scan-invoice" style="width:100%">
-          📷 Skanoj Faturë
+          🛒 Hap Blerje — Skano faturë
         </button>
         <p class="links-hint" style="margin-top:0.75rem;margin-bottom:0">
-          Hap kamerën ose zgjidh foto nga galeria → AI lexon produktet → konfirmo → stoku përditësohet.
+          Hap skedën Blerje për të skanuar faturën e furnizuesit dhe për ta regjistruar në stok.
         </p>
       </div>
       <div id="owner-ai-modules"></div>

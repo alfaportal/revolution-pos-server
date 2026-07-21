@@ -395,32 +395,49 @@
   }
 
   function applyInvoiceScanAiButton(data) {
-    const btn = document.getElementById("btn-invoice-scan-ai");
-    if (!btn || !data) return;
+    const btns = [
+      document.getElementById("btn-invoice-scan-ai"),
+      document.getElementById("btn-blerje-scan-open"),
+      document.getElementById("btn-ai-hub-scan-invoice"),
+    ].filter(Boolean);
+    if (!btns.length || !data) return;
     const msg = window.AI_UPGRADE_MSG || "Kontaktoni Revolution POS për upgrade";
     const active = !!data.enabled;
     const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
-    if (active) {
-      btn.removeAttribute("hidden");
-      btn.disabled = false;
-      btn.classList.remove("ai-feature-locked");
-      btn.title = "Skano faturën e furnizuesit";
-    } else if (needsUpgrade) {
-      btn.removeAttribute("hidden");
-      btn.disabled = true;
-      btn.classList.add("ai-feature-locked");
-      btn.title = msg;
-    } else {
-      btn.setAttribute("hidden", "");
-      btn.disabled = false;
-      btn.classList.remove("ai-feature-locked");
-      btn.title = "";
+    for (const btn of btns) {
+      if (active) {
+        btn.removeAttribute("hidden");
+        btn.disabled = false;
+        btn.classList.remove("ai-feature-locked");
+        if (btn.id !== "btn-ai-hub-scan-invoice") {
+          btn.title = "Skano faturën e furnizuesit";
+        }
+      } else if (needsUpgrade) {
+        btn.removeAttribute("hidden");
+        btn.disabled = true;
+        btn.classList.add("ai-feature-locked");
+        btn.title = msg;
+      } else {
+        btn.setAttribute("hidden", "");
+        btn.disabled = false;
+        btn.classList.remove("ai-feature-locked");
+        btn.title = "";
+      }
     }
   }
 
   window.applyInvoiceScanAiButton = applyInvoiceScanAiButton;
 
+  function openBlerjeAndScan() {
+    const tab = document.querySelector('.tab[data-tab="blerje"]');
+    if (tab) tab.click();
+    openInvoiceScanModal().catch((err) => setInvoiceScanStatus(err.message, false));
+  }
+
   document.getElementById("btn-invoice-scan-ai")?.addEventListener("click", () => {
+    openInvoiceScanModal().catch((err) => setInvoiceScanStatus(err.message, false));
+  });
+  document.getElementById("btn-blerje-scan-open")?.addEventListener("click", () => {
     openInvoiceScanModal().catch((err) => setInvoiceScanStatus(err.message, false));
   });
   document.getElementById("invoice-scan-close")?.addEventListener("click", closeInvoiceScanModal);
@@ -432,6 +449,7 @@
     applyInvoiceScan().catch((err) => setInvoiceScanStatus(err.message, false));
   });
 
+  window.openBlerjeAndScan = openBlerjeAndScan;
   function bindFileInput(id) {
     document.getElementById(id)?.addEventListener("change", (e) => {
       onInvoiceFileChosen(e.target.files?.[0] || null);

@@ -2987,10 +2987,11 @@ document.getElementById("btn-staff-add")?.addEventListener("click", async () => 
       alert(typeof AI_UPGRADE_MSG !== "undefined" ? AI_UPGRADE_MSG : "Kontaktoni Revolution POS për upgrade");
       return;
     }
-    if (typeof window.openInvoiceScanModal === "function") {
-      window.openInvoiceScanModal();
+    if (typeof window.openBlerjeAndScan === "function") {
+      window.openBlerjeAndScan();
       return;
     }
+    document.querySelector('.tab[data-tab="blerje"]')?.click();
     document.getElementById("btn-invoice-scan-ai")?.click();
   });
 })();
