@@ -302,12 +302,9 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     return fail(usable.code, usable.message);
   }
 
-  if (app_type) {
-    const expected = licenseAppType(license);
-    if (expected !== "tjeter" && app_type !== expected) {
-      return fail("WRONG_APP", `Liçenca është për ${expected}, jo për ${app_type}.`);
-    }
-  }
+  // app_type (kafene / restorant / bar / …) NUK bllokon më aktivizimin —
+  // klienti zgjedh tipin e biznesit pa lidhje me app_type të liçencës.
+  // (Ishin WRONG_APP kur app_type ≠ license.app_type)
 
   const deviceId = String(device_id || "").trim().toUpperCase();
   const host = sanitizeHostname(hostname);
