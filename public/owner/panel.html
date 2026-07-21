@@ -304,8 +304,8 @@
       <div class="card">
         <div class="card-title">Blerje — shëno faturën</div>
         <p class="links-hint">
-          Ti shënon blerjen (furnizuesi, nr., data, produktet). Pas <strong>Ruaj</strong>, sistemi e dërgon te POS:
-          <strong>stoku rritet</strong> dhe shfaqet te <strong>Blerjet / Kontabilisti</strong> në desktop.
+          1) Zgjidh <strong>kategorinë</strong> → 2) produktin → 3) sasinë/çmimin → <strong>Ruaj</strong>.
+          POS rrit stokun dhe e fut te Kontabilisti.
         </p>
         <div class="filter-row menu-add-row" style="flex-wrap:wrap;gap:0.5rem">
           <div>
@@ -321,10 +321,12 @@
             <input type="date" id="blerje-invoice-date">
           </div>
         </div>
-        <div class="overflow-x" style="margin-top:0.75rem">
+        <div id="blerje-cat-filter" class="product-cat-filter" role="tablist" aria-label="Filtro sipas kategorisë" style="display:flex;flex-wrap:nowrap;gap:0.4rem;overflow-x:auto;margin:0.75rem 0 0.5rem;padding:0.15rem 0"></div>
+        <div class="overflow-x" style="margin-top:0.35rem">
           <table class="menu-owner-table">
             <thead>
               <tr>
+                <th>Kategoria</th>
                 <th>Produkti</th>
                 <th>Sasia</th>
                 <th>Çmimi/copë</th>
@@ -1246,7 +1248,7 @@
   <script src="/js/owner-stock.js?v=2"></script>
   <script src="/js/owner-inventory.js?v=2"></script>
   <script src="/js/owner-invoice-scan.js?v=3"></script>
-  <script src="/js/owner-purchase.js?v=1"></script>
+  <script src="/js/owner-purchase.js?v=2"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
   <script src="/js/owner-ai-assistant.js?v=2"></script>
