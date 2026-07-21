@@ -334,10 +334,11 @@
       if (typeof window.loadOwnerStock === "function") {
         await window.loadOwnerStock();
       }
-      const msg = document.getElementById("inventory-msg");
+      const msg =
+        document.getElementById("blerje-msg") || document.getElementById("inventory-msg");
       if (msg) {
         const posNote = data.pos_pending
-          ? " U dërgua te POS — Stoku / Blerjet / Kontabilisti në desktop do të përditësohen automatikisht."
+          ? " U dërgua te POS — Stoku / Blerjet në desktop do të përditësohen automatikisht."
           : "";
         msg.textContent =
           `${data.applied_count} artikuj u importuan (${data.created_count} të rinj, ${data.updated_count} u përditësuan).` +
