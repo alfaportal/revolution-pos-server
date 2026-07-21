@@ -127,20 +127,23 @@
     body.innerHTML = invoiceScanItems
       .map((item, idx) => {
         const matchId = item.ingredient_id || suggestIngredientId(item.name);
-        const ppp = Number(item.pieces_per_pack) > 0 ? Number(item.pieces_per_pack) : (item.unit === "pako" ? 24 : 1);
+        const unitNorm = item.unit === "pako" ? "pako" : (item.unit === "kg" ? "kg" : (item.unit === "l" ? "l" : "copë"));
+        const ppp = unitNorm === "pako"
+          ? (Number(item.pieces_per_pack) > 0 ? Number(item.pieces_per_pack) : 24)
+          : 1;
         return `<tr>
           <td><input type="text" class="invoice-scan-name" data-idx="${idx}" value="${escAttr(item.name)}"></td>
-          <td><input type="number" class="invoice-scan-qty" data-idx="${idx}" min="0" step="0.001" value="${Number(item.quantity || 0)}" title="Sasia nga fatura (pako)"></td>
+          <td><input type="number" class="invoice-scan-qty" data-idx="${idx}" min="0" step="0.001" value="${Number(item.quantity || 0)}" title="Sasia nga fatura"></td>
           <td>
             <select class="invoice-scan-unit" data-idx="${idx}">
-              <option value="pako"${item.unit === "pako" ? " selected" : ""}>pako</option>
-              <option value="copë"${!item.unit || item.unit === "copë" ? " selected" : ""}>copë</option>
-              <option value="kg"${item.unit === "kg" ? " selected" : ""}>kg</option>
-              <option value="l"${item.unit === "l" ? " selected" : ""}>l</option>
+              <option value="copë"${unitNorm === "copë" ? " selected" : ""}>copë</option>
+              <option value="pako"${unitNorm === "pako" ? " selected" : ""}>pako</option>
+              <option value="kg"${unitNorm === "kg" ? " selected" : ""}>kg</option>
+              <option value="l"${unitNorm === "l" ? " selected" : ""}>l</option>
             </select>
           </td>
-          <td><input type="number" class="invoice-scan-ppp" data-idx="${idx}" min="1" step="1" value="${ppp}" title="Sa copë ka 1 pako"></td>
-          <td><input type="number" class="invoice-scan-price" data-idx="${idx}" min="0" step="0.01" value="${Number(item.unit_price || 0).toFixed(2)}" title="Çmimi për 1 pako"></td>
+          <td><input type="number" class="invoice-scan-ppp" data-idx="${idx}" min="1" step="1" value="${ppp}" title="Vetëm për pako — sa copë ka 1 pako"></td>
+          <td><input type="number" class="invoice-scan-price" data-idx="${idx}" min="0" step="0.01" value="${Number(item.unit_price || 0).toFixed(2)}" title="Çmimi për 1 njësi (copë ose pako)"></td>
           <td><select class="invoice-scan-match" data-idx="${idx}">${ingredientOptionsHtml(matchId)}</select></td>
         </tr>`;
       })
@@ -161,7 +164,9 @@
           name: name || item.name,
           quantity: Number.isFinite(quantity) ? quantity : item.quantity,
           unit,
-          pieces_per_pack: Number.isFinite(pieces_per_pack) && pieces_per_pack > 0 ? pieces_per_pack : (unit === "pako" ? 24 : 1),
+          pieces_per_pack: unit === "pako"
+            ? (Number.isFinite(pieces_per_pack) && pieces_per_pack > 0 ? pieces_per_pack : 24)
+            : 1,
           unit_price: Number.isFinite(unit_price) ? unit_price : item.unit_price,
           ingredient_id: ingredient_id || null,
           create_if_missing: !ingredient_id,

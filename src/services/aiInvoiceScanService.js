@@ -3,29 +3,24 @@ const { isAiPaused } = require("../lib/aiConfig");
 
 /**
  * Skanim fature BLERJEJE (Blerjet → kontrollo → Regjistro → stok).
- * Pa klasifikues automatik — nuk gjykon shitje/shpenzim; pronari e hap nga Blerjet.
- * Kontabilisti / shpenzimet mbeten modul i ndarë.
+ * Formati tipik KS (DISKONT DESAR etj.): Njesia=copë, Sasia=copa, Cmimi=çmim/copë.
+ * Mos e trajto si pako×24 nëse fatura thotë copë.
  */
 const EXTRACT_PROMPT =
-  "Kjo është faturë BLERJEJE furnizuesi për stok restoranti/kafeneje. Lexo saktë nga foto.\n" +
-  "Emri i kafenesë në faturë (p.sh. Babylon) është BLERËSI — furnizuesi është DISKONT/Metro/etj.\n" +
-  "Lexo TË GJITHË rreshtat e PRODUKTEVE nga tabela — asnjë produkt mos e anashkalo.\n" +
-  "MOS përfshi si artikull: TVSH, zbritje, transport, total, subtotal, raundim.\n" +
-  "Numëro rreshtat e produkteve në foto dhe kthe SAKTËSISHT të njëjtin numër në items.\n" +
-  "Për çdo artikull:\n" +
-  "- name = emri SAKTËSISHT si në faturë — MOS invento emra\n" +
-  "- quantity = kolonën Sasia (sa PAKO / njësi u blenë)\n" +
-  "- unit = 'pako' nëse Njësia është Pako/Pakë, përndryshe 'copë'/'kg'/'l'\n" +
-  "- unit_price = 'Cmimi me tvsh' (çmimi për 1 pako/njësi), JO 'Vlera me tvsh'\n" +
-  "- line_total = 'Vlera me tvsh' e atij rreshti nëse duket, përndryshe quantity*unit_price\n" +
-  "- pieces_per_pack = sa COPË brenda 1 pako:\n" +
-  "  * emri ka '10 cop' / '24 cop' → ai numër\n" +
-  "  * pije 0.25l/0.33l/0.5l në pako (pa numër) → zakonisht 24\n" +
-  "  * tashmë copë → 1\n" +
-  "supplier, invoice_number, invoice_date (YYYY-MM-DD),\n" +
-  "total_with_vat = TOTALI i faturës me TVSH (nëse duket).\n" +
-  "Përgjigju VETËM me JSON valid (pa markdown):\n" +
-  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2026-900","invoice_date":"2026-07-15","total_with_vat":66.50,"items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"pako","unit_price":9.50,"line_total":66.50,"pieces_per_pack":24}]}';
+  "Lexo këtë Faturë Shitje të FURNIZUESIT (p.sh. DISKONT DESAR) drejtuar kafenesë/restorantit (blerësi).\n" +
+  "Kolonat tipike: Nr | Barkodi | Pershkrimi | Njesia | Sasia | Cmimi | Rabati | Tatimi | Vlera Pa TVSH | TVSH | Vlera Me TVSH.\n" +
+  "RREGULLA KRITIKE:\n" +
+  "1) Lexo Njesia SAKTËSISHT nga fatura. Nëse shkruan «copë» / «cope» → unit=\"copë\". Vetëm nëse shkruan «Pako»/«Pakë» → unit=\"pako\".\n" +
+  "2) quantity = kolonën Sasia (numri siç duket: 40.00 → 40). MOS e shumëzo, MOS e ndaj.\n" +
+  "3) unit_price = kolonën Cmimi (çmimi për 1 njësi: 1 copë ose 1 pako). JO «Vlera Me TVSH».\n" +
+  "4) line_total = kolonën «Vlera Me TVSH» e atij rreshti.\n" +
+  "5) pieces_per_pack: nëse unit=\"copë\" → GJITHMONË 1. Nëse unit=\"pako\" → sa copë ka 1 pako (nga emri «24 cop» ose 24 për pije).\n" +
+  "6) name = Pershkrimi SAKTËSISHT si në faturë (p.sh. Ujë Mineral 0.50l, Coca-Cola 0.25l).\n" +
+  "7) MOS invento rreshta. MOS përfshi TVSH/total/subtotal si artikull.\n" +
+  "8) supplier = emri i firmës së sipërme (DISKONT…), JO emri i kafenesë blerëse.\n" +
+  "invoice_number (p.sh. 2024-400), invoice_date YYYY-MM-DD, total_with_vat = «Vlera për pagesë».\n" +
+  "Përgjigju VETËM me JSON (pa markdown):\n" +
+  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2024-400","invoice_date":"2024-05-13","total_with_vat":277.72,"items":[{"name":"Ujë Mineral 0.50l","quantity":20,"unit":"copë","unit_price":0.25,"line_total":5.90,"pieces_per_pack":1},{"name":"Coca-Cola 0.25l","quantity":2,"unit":"copë","unit_price":0.60,"line_total":1.42,"pieces_per_pack":1}]}';
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -64,14 +59,15 @@ function piecesFromName(name) {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 
+/** Vetëm për unit=pako. Për copë/kg/l → gjithmonë 1. */
 function inferPiecesPerPack(name, unit, explicit) {
+  const u = normalizeUnit(unit);
+  if (u !== "pako") return 1;
   const e = parseNumber(explicit);
   if (e != null && e > 0) return Math.max(1, Math.round(e));
   const fromName = piecesFromName(name);
   if (fromName) return fromName;
-  const u = normalizeUnit(unit);
-  if (u === "pako") return 24;
-  return 1;
+  return 24;
 }
 
 function normalizeInvoiceItems(rawItems) {
@@ -83,7 +79,7 @@ function normalizeInvoiceItems(rawItems) {
   for (const entry of rawItems) {
     const name = String(entry?.name ?? entry?.emri ?? entry?.product ?? entry?.artikull ?? "").trim();
     if (!name) continue;
-    if (/^(tvsh|vat|total|subtotal|zbritje|rabate|transport|shipping|raundim)/i.test(name)) {
+    if (/^(tvsh|vat|total|subtotal|zbritje|rabate|transport|shipping|raundim|vlera\s+neto|vlera\s+per)/i.test(name)) {
       continue;
     }
 
@@ -233,8 +229,7 @@ async function callAnthropicVision({ mime, base64, prompt, maxTokens }) {
 }
 
 /**
- * Lexon faturën e furnizuesit. Nuk klasifikon / nuk bllokon.
- * Ruajtja në stok bëhet vetëm pasi pronari shtyp «Regjistro» te Blerjet.
+ * Lexon faturën e furnizuesit. Ruajtja në stok vetëm pasi pronari shtyp «Regjistro».
  */
 async function scanInvoiceFromImage({ mime, base64 }) {
   if (isAiPaused()) {
@@ -286,4 +281,6 @@ module.exports = {
   scanInvoiceFromImage,
   normalizeInvoiceItems,
   buildTotalsCheck,
+  inferPiecesPerPack,
+  normalizeUnit,
 };
