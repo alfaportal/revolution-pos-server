@@ -2,6 +2,7 @@ const express = require("express");
 const { trimEnv } = require("../lib/env");
 const { processTelegramUpdate } = require("../services/telegramBotService");
 const { appendSystemFailure } = require("../services/systemFailureLog");
+const { isTelegramBotPaused } = require("../lib/botPause");
 
 const router = express.Router();
 
@@ -16,6 +17,9 @@ function verifyWebhookSecret(req) {
  * Telegram dërgon update vetëm kur vjen mesazh — zero polling.
  */
 router.post("/webhook", (req, res) => {
+  if (isTelegramBotPaused()) {
+    return res.status(200).json({ ok: true, paused: true });
+  }
   if (!verifyWebhookSecret(req)) {
     return res.status(403).json({ ok: false, gabim: "Webhook secret i pavlefshëm." });
   }

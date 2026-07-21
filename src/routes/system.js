@@ -2,6 +2,7 @@ const express = require("express");
 const { trimEnv } = require("../lib/env");
 const { validateLicense } = require("../services/licenseService");
 const { isTelegramConfigured, sendTelegramMessage } = require("../services/telegramService");
+const { isTelegramBotPaused, botPauseUntilLabel } = require("../lib/botPause");
 const { appendSystemFailure } = require("../services/systemFailureLog");
 
 const router = express.Router();
@@ -20,6 +21,10 @@ function getAlertChatId() {
 }
 
 async function notifySuperAdmin(text) {
+  if (isTelegramBotPaused()) {
+    console.log("[system] Telegram alert skipped — BOT pauzuar deri", botPauseUntilLabel());
+    return false;
+  }
   const chatId = getAlertChatId();
   if (!isTelegramConfigured() || !chatId) {
     console.warn("[system] Telegram alert skipped — TELEGRAM_BOT_TOKEN ose TELEGRAM_ALERT_CHAT_ID mungon.");

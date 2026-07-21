@@ -515,18 +515,23 @@ router.get("/licenses/generate-device-id", (_req, res) => {
 
 /**
  * LICENSE_KEY nga HARDWARE_ID i klientit (ekrani "Aktivizo KAFENE").
- * Body: { hardwareId: "XXXX-XXXX-XXXX-XXXX" }
+ * Body: { hardwareId, licenseType?: "trial"|"annual" }
  */
 router.post(
   "/licenses/generate-hardware-key",
   asyncHandler(async (req, res) => {
     const hardwareId = req.body?.hardwareId || req.body?.hardware_id || req.body?.device_id || "";
+    const licenseType = req.body?.licenseType || req.body?.license_type || "annual";
     try {
-      const licenseKey = generateHardwareLicenseKey(hardwareId);
+      const result = generateHardwareLicenseKey(hardwareId, { licenseType });
       res.json({
         ok: true,
-        licenseKey,
-        celesi: licenseKey,
+        licenseKey: result.licenseKey,
+        celesi: result.licenseKey,
+        licenseType: result.licenseType,
+        expiresAt: result.expiresAt,
+        expiresYmd: result.expiresYmd,
+        trialDays: result.trialDays || null,
         hardwareId: formatGrouped16(normalizeHardwareId(hardwareId)),
       });
     } catch (e) {

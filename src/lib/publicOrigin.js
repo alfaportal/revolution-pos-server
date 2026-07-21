@@ -1,7 +1,7 @@
 /** URL publike e aplikacionit (domain prod) dhe kontakt mbështetjeje. */
 
 const DEFAULT_PUBLIC_ORIGIN = "https://revolution-pos.com";
-const DEFAULT_SUPPORT_PHONE = "+383 43 555 294";
+const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
@@ -9,11 +9,16 @@ function getPublicAppOrigin() {
 }
 
 function getSupportPhone() {
-  return (
+  // Numri zyrtar publik — mos lejo numër të vjetër nga env (p.sh. 44555294).
+  const fromEnv = (
     process.env.SUPPORT_PHONE?.trim() ||
     process.env.TRIAL_SUPPORT_PHONE?.trim() ||
-    DEFAULT_SUPPORT_PHONE
+    ""
   );
+  if (fromEnv && !fromEnv.replace(/\D/g, "").includes("44555294")) {
+    return fromEnv;
+  }
+  return DEFAULT_SUPPORT_PHONE;
 }
 
 function getSupportPhoneDigits() {

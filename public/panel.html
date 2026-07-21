@@ -124,6 +124,11 @@
               <input type="text" id="lm-device-id" class="mono" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
               <button type="button" class="btn btn-ghost btn-sm" id="btn-lm-gen-device" title="Gjenero ID të ri">Gjenero ID</button>
             </div>
+            <label for="lm-license-type">Lloji i licencës</label>
+            <select id="lm-license-type" style="margin-bottom:0.5rem;width:100%">
+              <option value="trial">Trial (7 ditë)</option>
+              <option value="annual" selected>Vjetor (1 vit nga sot)</option>
+            </select>
             <button type="button" class="btn btn-accent" id="btn-lm-gen-key" style="margin:0.5rem 0;width:100%">Gjenero kod nga ID</button>
             <label>Çelësi i licencës (LICENSE_KEY)</label>
             <div class="link-actions">

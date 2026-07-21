@@ -427,16 +427,21 @@ function bindLicenseActions(root) {
       }
       btn.disabled = true;
       try {
+        const licenseType =
+          String(document.getElementById("gen-license-type")?.value || "annual").toLowerCase() ===
+          "trial"
+            ? "trial"
+            : "annual";
         let data;
         try {
           data = await api("/api/admin/licenses/generate-hardware-key", {
             method: "POST",
-            body: JSON.stringify({ hardwareId }),
+            body: JSON.stringify({ hardwareId, licenseType }),
           });
         } catch {
           data = await api("/api/super/generate-license-key", {
             method: "POST",
-            body: JSON.stringify({ hardwareId }),
+            body: JSON.stringify({ hardwareId, licenseType }),
           });
         }
         const key = data.licenseKey || data.celesi || "";
@@ -446,6 +451,14 @@ function bindLicenseActions(root) {
           keyEl.focus();
           keyEl.select();
         }
+        const typeLabel = data.licenseType === "trial" ? "Trial (7 ditë)" : "Vjetor";
+        const exp =
+          data.licenseType === "trial"
+            ? "7 ditë nga aktivizimi"
+            : data.expiresAt
+              ? `skadon ${data.expiresAt}`
+              : "";
+        alert(`U gjenerua: ${typeLabel}\nLICENSE_KEY: ${key}${exp ? `\n${exp}` : ""}`);
       } catch (ex) {
         alert(ex.message || "Gjenerimi dështoi.");
       } finally {
@@ -939,26 +952,41 @@ async function boot() {
       hwEl?.focus();
       return;
     }
+    const licenseType =
+      String(document.getElementById("gen-license-type")?.value || "annual").toLowerCase() ===
+      "trial"
+        ? "trial"
+        : "annual";
     try {
       let data;
       try {
         data = await api("/api/admin/licenses/generate-hardware-key", {
           method: "POST",
-          body: JSON.stringify({ hardwareId }),
+          body: JSON.stringify({ hardwareId, licenseType }),
         });
       } catch {
         data = await api("/api/super/generate-license-key", {
           method: "POST",
-          body: JSON.stringify({ hardwareId }),
+          body: JSON.stringify({ hardwareId, licenseType }),
         });
       }
       const key = data.licenseKey || data.celesi || "";
       const hw = data.hardwareId || hardwareId;
+      const typeLabel = data.licenseType === "trial" ? "Trial (7 ditë)" : "Vjetor (1 vit)";
+      const expLine =
+        data.licenseType === "trial"
+          ? "7 ditë nga aktivizimi i parë"
+          : data.expiresAt
+            ? `Skadon: ${data.expiresAt}`
+            : "";
       if (hwEl && data.hardwareId) hwEl.value = data.hardwareId;
       box.innerHTML = `
         <div class="copy-row" style="margin-top:0.5rem">
           <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Hardware ID</div>${esc(hw)}</div>
           <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo ID</button>
+        </div>
+        <div class="copy-row" style="margin-top:0.5rem">
+          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Lloji</div>${esc(typeLabel)}${expLine ? `<div style="margin-top:0.25rem;font-size:0.9rem">${esc(expLine)}</div>` : ""}</div>
         </div>
         <div class="copy-row" style="margin-top:0.5rem">
           <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">License Key</div>${esc(key)}</div>

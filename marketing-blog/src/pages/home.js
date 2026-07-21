@@ -57,7 +57,7 @@ function packageCard(plan) {
         <h3 class="package-name">${name}</h3>
         ${tagline ? `<p class="package-tagline">${tagline}</p>` : ""}
         <ul class="package-list">${packageFeaturesHtml(plan, { keys: PACKAGE_CARD_KEYS[plan] })}</ul>
-        <span class="btn btn-ghost package-select-btn">${t("cta.choosePackage")}</span>
+        <span class="btn btn-ghost package-select-btn">${plan === "p4" ? t("cta.contactAi") : t("cta.buyPackage")}</span>
       </div>
     </article>
   `;
@@ -218,6 +218,54 @@ function bindCollapsibleCards() {
   });
 }
 
+function bindStripeConfigAndPaymentBanner() {
+  fetch("/api/public/config")
+    .then((r) => r.json())
+    .then((data) => {
+      if (data?.ok && data.stripe_enabled) window.__stripeEnabled = true;
+    })
+    .catch(() => {});
+
+  const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
+  const payment = params.get("payment");
+  const sessionId = params.get("session_id");
+  if (payment === "success") {
+    const note = document.querySelector(".get-started-note");
+    if (note) {
+      note.textContent = t("checkout.success");
+      note.style.color = "#15803d";
+    }
+    if (sessionId && sessionId.startsWith("cs_")) {
+      fetch("/api/payments/confirm-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      }).catch(() => {});
+    }
+  }
+}
+
+function bindGetStartedWhatsApp() {
+  const el = document.getElementById("get-started-wa");
+  if (!el) return;
+  (async () => {
+    try {
+      const res = await fetch("/api/public/config");
+      const data = await res.json();
+      if (!res.ok || !data.ok) return;
+      const digits = data.support_phone_digits || "38348707880";
+      const text = encodeURIComponent(
+        getLang() === "en"
+          ? "Hello, I want Revolution POS (Setup + trial)."
+          : "Përshëndetje, dua të marr Revolution POS (Setup + trial).",
+      );
+      el.href = `https://wa.me/${digits}?text=${text}`;
+    } catch {
+      /* keep default */
+    }
+  })();
+}
+
 function bindPackageCards() {
   const cards = document.querySelectorAll(".package-card[data-package]");
   const detailPanel = document.getElementById("package-detail");
@@ -225,10 +273,41 @@ function bindPackageCards() {
   const detailSummary = document.getElementById("package-detail-summary");
   const detailList = document.getElementById("package-detail-list");
   const packageField = document.getElementById("contact-package");
+  const oneOnlyHint = document.getElementById("packages-one-only");
   if (!cards.length || !detailPanel) return;
 
-  const selectPackage = (plan) => {
+  /** Vetëm një pako e zgjedhur; klik i dytë në të njëjtën e çzgjedh. */
+  let lockedPlan = null;
+
+  const clearSelection = () => {
+    lockedPlan = null;
+    sessionStorage.removeItem("selectedPackage");
+    cards.forEach((card) => {
+      card.classList.remove("selected");
+      card.setAttribute("aria-pressed", "false");
+    });
+    detailPanel.hidden = true;
+    if (packageField) packageField.value = "";
+    if (oneOnlyHint) oneOnlyHint.hidden = true;
+  };
+
+  const selectPackage = (plan, opts = {}) => {
+    const force = !!opts.force;
+    if (!force && lockedPlan && lockedPlan !== plan) {
+      if (oneOnlyHint) {
+        oneOnlyHint.hidden = false;
+        oneOnlyHint.textContent = t("packages.oneOnly");
+      }
+      return;
+    }
+
+    if (!force && lockedPlan === plan) {
+      clearSelection();
+      return;
+    }
+
     const prefix = `packages.${plan}`;
+    lockedPlan = plan;
 
     cards.forEach((card) => {
       const selected = card.dataset.package === plan;
@@ -244,9 +323,20 @@ function bindPackageCards() {
     }
     detailList.innerHTML = packageFeaturesHtml(plan, { keys: PACKAGE_DETAIL_KEYS[plan] });
     detailPanel.hidden = false;
+    if (oneOnlyHint) {
+      oneOnlyHint.hidden = false;
+      oneOnlyHint.textContent = t("packages.oneOnly");
+    }
 
     if (packageField) {
       packageField.value = t(`${prefix}.name`);
+    }
+
+    const ctaBtn = document.getElementById("package-detail-cta");
+    if (ctaBtn) {
+      if (plan === "p4") ctaBtn.textContent = t("cta.contactAi");
+      else if (window.__stripeEnabled) ctaBtn.textContent = t("cta.payStripe");
+      else ctaBtn.textContent = t("cta.buyPackage");
     }
 
     sessionStorage.setItem("selectedPackage", plan);
@@ -268,17 +358,179 @@ function bindPackageCards() {
     });
   });
 
-  document.getElementById("package-detail-cta")?.addEventListener("click", () => {
-    const pkg = document.getElementById("contact-package")?.value.trim();
-    const subject = encodeURIComponent("Revolution Invest POS — provë falas");
-    const body = encodeURIComponent(pkg ? `Pako: ${pkg}\n\n` : "");
-    window.location.href = `mailto:${t("contact.email")}?subject=${subject}&body=${body}`;
+  document.getElementById("package-detail-cta")?.addEventListener("click", async () => {
+    const plan = sessionStorage.getItem("selectedPackage") || "";
+    const pkg = document.getElementById("contact-package")?.value.trim() || "";
+    let digits = "38348707880";
+    let stripeOn = !!window.__stripeEnabled;
+    try {
+      const res = await fetch("/api/public/config");
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        if (data.support_phone_digits) digits = data.support_phone_digits;
+        if (data.stripe_enabled) {
+          stripeOn = true;
+          window.__stripeEnabled = true;
+        }
+      }
+    } catch {
+      /* fallback */
+    }
+    if (plan === "p4") {
+      const text = `Përshëndetje, dua informacion për AI (Pako 4).\nPako: ${pkg}`;
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (stripeOn && (plan === "p1" || plan === "p2" || plan === "p3")) {
+      openStripeCheckoutModal(plan);
+      return;
+    }
+    const text = `Përshëndetje, dua të blej / provoj Revolution POS.\nPako: ${pkg}`;
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   });
 
   const saved = sessionStorage.getItem("selectedPackage");
   if (saved && PACKAGE_PLANS.includes(saved)) {
-    selectPackage(saved);
+    selectPackage(saved, { force: true });
   }
+}
+
+async function openTrialModal() {
+  const existing = document.getElementById("trial-modal");
+  if (existing) existing.remove();
+
+  let phone = "+383 48707880";
+  let digits = "38348707880";
+  try {
+    const res = await fetch("/api/public/config");
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      if (data.support_phone) phone = data.support_phone;
+      if (data.support_phone_digits) digits = data.support_phone_digits;
+    }
+  } catch {
+    /* default */
+  }
+
+  const waText = encodeURIComponent(t("wa.trial"));
+  const modal = document.createElement("div");
+  modal.id = "trial-modal";
+  modal.className = "checkout-modal";
+  modal.innerHTML = `
+    <div class="checkout-modal-card" role="dialog" aria-modal="true" aria-labelledby="trial-title">
+      <h3 id="trial-title">${t("trialModal.title")}</h3>
+      <p class="trial-modal-body">${t("trialModal.body")}</p>
+      <p class="trial-modal-phone">
+        <span>${t("trialModal.phoneLabel")}</span>
+        <a href="tel:+${digits}">${phone}</a>
+      </p>
+      <div class="checkout-actions">
+        <a class="btn btn-primary" href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
+        <button type="button" class="btn btn-ghost" id="trial-close">${t("trialModal.close")}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector("#trial-close")?.addEventListener("click", close);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+}
+
+function bindTrialModal() {
+  document.querySelectorAll("[data-trial-modal]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openTrialModal();
+    });
+  });
+}
+
+function openStripeCheckoutModal(plan) {
+  const existing = document.getElementById("stripe-checkout-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "stripe-checkout-modal";
+  modal.className = "checkout-modal";
+  modal.innerHTML = `
+    <div class="checkout-modal-card" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+      <h3 id="checkout-title">${t("checkout.title")}</h3>
+      <p class="checkout-plan-label">${t(`packages.${plan}.name`)}</p>
+      <label>${t("checkout.emri")}<input id="co-emri" autocomplete="name" required></label>
+      <label>${t("checkout.biznesi")}<input id="co-biz" autocomplete="organization" required></label>
+      <label>${t("checkout.email")}<input id="co-email" type="email" autocomplete="email" required></label>
+      <label>${t("checkout.telefoni")}<input id="co-phone" type="tel" autocomplete="tel"></label>
+      <label>${t("checkout.tipi")}
+        <select id="co-tipi">
+          <option value="restorant">${t("checkout.tipi.restorant")}</option>
+          <option value="kafene">${t("checkout.tipi.kafene")}</option>
+          <option value="dyqan">${t("checkout.tipi.dyqan")}</option>
+        </select>
+      </label>
+      <p class="checkout-msg" id="co-msg" hidden></p>
+      <div class="checkout-actions">
+        <button type="button" class="btn btn-primary" id="co-pay">${t("checkout.pay")}</button>
+        <button type="button" class="btn btn-ghost" id="co-cancel">${t("checkout.cancel")}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+  modal.querySelector("#co-cancel")?.addEventListener("click", close);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+
+  modal.querySelector("#co-pay")?.addEventListener("click", async () => {
+    const btn = modal.querySelector("#co-pay");
+    const msg = modal.querySelector("#co-msg");
+    const emri = String(modal.querySelector("#co-emri")?.value || "").trim();
+    const biz = String(modal.querySelector("#co-biz")?.value || "").trim();
+    const email = String(modal.querySelector("#co-email")?.value || "").trim();
+    const phone = String(modal.querySelector("#co-phone")?.value || "").trim();
+    const tipi = String(modal.querySelector("#co-tipi")?.value || "restorant");
+    if (!emri || !biz || !email) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = t("checkout.error");
+      }
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = t("checkout.busy");
+    }
+    try {
+      const res = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          emri,
+          emri_biznesit: biz,
+          email,
+          telefoni: phone,
+          tipi,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok || !data.url) {
+        throw new Error(data.gabim || t("checkout.error"));
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = err.message || t("checkout.error");
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = t("checkout.pay");
+      }
+    }
+  });
 }
 
 export function renderHome() {
@@ -304,8 +556,8 @@ export function renderHome() {
           <h1>${t("hero.title")}</h1>
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
-            <a class="btn btn-hero-primary" href="#kontakt">${t("hero.cta.primary")}</a>
-            <a class="btn btn-hero-secondary" href="#veçorite">${t("hero.cta.secondary")}</a>
+            <button type="button" class="btn btn-hero-primary" data-trial-modal>${t("hero.cta.primary")}</button>
+            <a class="btn btn-hero-secondary" href="#pakot">${t("hero.cta.secondary")}</a>
           </div>
           <div class="hero-stats" aria-label="Statistika">
             <span>${t("hero.stats.restaurants")}</span>
@@ -333,6 +585,46 @@ export function renderHome() {
               href: "#pakot",
             })}
           </div>
+        </div>
+      </section>
+
+      <section class="site-section get-started-section" id="si-ta-merrni">
+        <div class="container">
+          <div class="section-head">
+            <h2>${t("getStarted.title")}</h2>
+            <p>${t("getStarted.subtitle")}</p>
+          </div>
+          <ol class="get-started-steps">
+            <li>
+              <strong>${t("getStarted.s1.title")}</strong>
+              <p>${t("getStarted.s1.desc")}</p>
+            </li>
+            <li>
+              <strong>${t("getStarted.s2.title")}</strong>
+              <p>${t("getStarted.s2.desc")}</p>
+            </li>
+            <li>
+              <strong>${t("getStarted.s3.title")}</strong>
+              <p>${t("getStarted.s3.desc")}</p>
+            </li>
+            <li>
+              <strong>${t("getStarted.s4.title")}</strong>
+              <p>${t("getStarted.s4.desc")}</p>
+            </li>
+            <li>
+              <strong>${t("getStarted.s5.title")}</strong>
+              <p>${t("getStarted.s5.desc")}</p>
+            </li>
+            <li>
+              <strong>${t("getStarted.s6.title")}</strong>
+              <p>${t("getStarted.s6.desc")}</p>
+            </li>
+          </ol>
+          <div class="get-started-actions">
+            <a class="btn btn-primary" id="get-started-wa" href="https://wa.me/38348707880?text=${encodeURIComponent("Përshëndetje, dua të marr Revolution POS (Setup + trial).")}" target="_blank" rel="noopener noreferrer">${t("getStarted.cta")}</a>
+            <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
+          </div>
+          <p class="get-started-note">${t("getStarted.note")}</p>
         </div>
       </section>
 
@@ -385,6 +677,8 @@ export function renderHome() {
             <h2>${t("packages.title")}</h2>
             <p>${t("packages.subtitle")}</p>
             <p class="packages-hint">${t("packages.clickHint")}</p>
+            <p class="packages-hint packages-price-hint">${t("packages.priceHint")}</p>
+            <p class="packages-hint" id="packages-one-only" hidden></p>
           </div>
           <div class="packages-grid">
             ${packageCard("p1")}
@@ -416,6 +710,9 @@ export function renderHome() {
   bindFooterContact();
   bindPackageCards();
   bindCollapsibleCards();
+  bindGetStartedWhatsApp();
+  bindTrialModal();
+  bindStripeConfigAndPaymentBanner();
 
   if (window.location.hash) {
     requestAnimationFrame(() => {

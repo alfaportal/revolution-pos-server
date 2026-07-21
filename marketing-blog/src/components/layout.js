@@ -17,6 +17,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
   const lang = getLang();
   const items = [
     { id: "home", label: t("nav.home"), section: "ballina" },
+    { id: "get-started", label: t("nav.getStarted"), section: "si-ta-merrni" },
     { id: "how-it-works", label: t("nav.howItWorks"), section: "si-funksionon" },
     { id: "packages", label: t("nav.packages"), section: "pakot" },
     { id: "blog", label: t("nav.blog"), section: "artikuj" },
@@ -88,6 +89,7 @@ export function renderFooter() {
         <div class="footer-col">
           <h4>${t("footer.col.platform")}</h4>
           <ul>
+            ${footerSectionLink("si-ta-merrni", t("nav.getStarted"))}
             ${footerSectionLink("si-funksionon", t("footer.link.howItWorks"))}
             ${footerSectionLink("pakot", t("footer.link.packages"))}
             ${footerSectionLink("artikuj", t("footer.link.blog"))}
@@ -99,8 +101,7 @@ export function renderFooter() {
           <h4>${t("footer.col.support")}</h4>
           <ul>
             ${footerSectionLink("kontakt", t("footer.link.contact"))}
-            ${footerSectionLink("kontakt", t("footer.link.trial"))}
-            <li><a href="/owner/login">${t("footer.link.login")}</a></li>
+            <li><a href="#" id="footer-trial" data-trial-modal>${t("footer.link.trial")}</a></li>
             <li><a id="footer-whatsapp" href="#" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
             <li><a href="mailto:${t("contact.email")}">${t("contact.email")}</a></li>
           </ul>
@@ -131,13 +132,13 @@ export function bindFooterContact() {
       const res = await fetch("/api/public/config");
       const data = await res.json();
       if (!res.ok || !data.ok) return;
-      const phone = data.support_phone || "+383 44 123 456";
-      const digits = data.support_phone_digits || "38344123456";
+      const phone = data.support_phone || "+383 48707880";
+      const digits = data.support_phone_digits || "38348707880";
       waLink.textContent = `WhatsApp — ${phone}`;
       waLink.href = `https://wa.me/${digits}?text=${encodeURIComponent(t("wa.trial"))}`;
     } catch {
       waLink.textContent = "WhatsApp";
-      waLink.href = `https://wa.me/38344123456?text=${encodeURIComponent(t("wa.trial"))}`;
+      waLink.href = `https://wa.me/38348707880?text=${encodeURIComponent(t("wa.trial"))}`;
     }
   }
 
@@ -193,8 +194,8 @@ export function bindContactForm() {
   const formMsg = document.getElementById("form-msg");
   if (!form) return;
 
-  let waDigits = "38344123456";
-  let supportPhone = "+383 44 123 456";
+  let waDigits = "38348707880";
+  let supportPhone = "+383 48707880";
 
   async function loadSiteConfig() {
     try {

@@ -2,6 +2,7 @@ const { trimEnv } = require("../lib/env");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { isTelegramConfigured, callTelegramApi } = require("../services/telegramService");
 const { appendSystemFailure } = require("../services/systemFailureLog");
+const { isTelegramBotPaused, botPauseUntilLabel } = require("../lib/botPause");
 
 function getTelegramWebhookUrl() {
   const custom = trimEnv("TELEGRAM_WEBHOOK_URL");
@@ -24,6 +25,18 @@ async function registerTelegramWebhook() {
 }
 
 async function startTelegramBotWebhook() {
+  if (isTelegramBotPaused()) {
+    console.log(`  ⏸️  Telegram Bot: PAUZUAR deri ${botPauseUntilLabel()} (TELEGRAM_BOT_PAUSED=0 për hapje).`);
+    try {
+      if (isTelegramConfigured()) {
+        await callTelegramApi("deleteWebhook", { drop_pending_updates: true });
+        console.log("  ⏸️  Telegram Bot: webhook u hoq (pause).");
+      }
+    } catch (err) {
+      console.warn("[telegram-bot] deleteWebhook (pause):", err.message || err);
+    }
+    return;
+  }
   if (!isTelegramConfigured()) {
     console.log("  ⚠️  Telegram Bot: TELEGRAM_BOT_TOKEN mungon — webhook çaktivizohet.");
     return;

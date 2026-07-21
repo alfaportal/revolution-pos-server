@@ -7,6 +7,7 @@ const { getZonedParts, listEligibleClients } = require("./aiDailyReportService")
 const { getNotificationSettings } = require("./notificationSettingsService");
 const { sendTelegramMessage, isTelegramConfigured } = require("./telegramService");
 const { sendSms, isSmsConfigured } = require("./smsService");
+const { isTelegramBotPaused, isSmsPaused } = require("../lib/botPause");
 const { ensureNotificationSchema } = require("../lib/ensureNotificationSchema");
 
 function addDays(dateStr, days) {
@@ -26,9 +27,15 @@ async function clientCanNotify(clientId) {
 }
 
 async function deliverOwnerMessage(settings, text) {
-  const results = { telegram: false, sms: false, errors: [] };
+  const results = { telegram: false, sms: false, errors: [], paused: false };
 
-  if (settings.telegram_chat_id && isTelegramConfigured()) {
+  if (isTelegramBotPaused() && isSmsPaused()) {
+    results.paused = true;
+    console.log("[notify] BOT/SMS pauzuar — njoftimi anashkalohet.");
+    return results;
+  }
+
+  if (settings.telegram_chat_id && isTelegramConfigured() && !isTelegramBotPaused()) {
     try {
       await sendTelegramMessage(settings.telegram_chat_id, text);
       results.telegram = true;
@@ -37,7 +44,7 @@ async function deliverOwnerMessage(settings, text) {
     }
   }
 
-  if (settings.sms_number && isSmsConfigured()) {
+  if (settings.sms_number && isSmsConfigured() && !isSmsPaused()) {
     try {
       await sendSms(settings.sms_number, text);
       results.sms = true;
@@ -47,6 +54,10 @@ async function deliverOwnerMessage(settings, text) {
   }
 
   if (!results.telegram && !results.sms) {
+    if (isTelegramBotPaused() || isSmsPaused()) {
+      results.paused = true;
+      return results;
+    }
     if (!settings.telegram_chat_id && !settings.sms_number) {
       throw new Error("Vendosni Telegram Chat ID ose numrin SMS.");
     }

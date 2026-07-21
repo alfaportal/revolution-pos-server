@@ -1,4 +1,5 @@
 const { trimEnv } = require("../lib/env");
+const { isSmsPaused, botPauseUntilLabel } = require("../lib/botPause");
 
 function getVonageConfig() {
   return {
@@ -9,6 +10,7 @@ function getVonageConfig() {
 }
 
 function isSmsConfigured() {
+  if (isSmsPaused()) return false;
   const cfg = getVonageConfig();
   return Boolean(cfg.apiKey && cfg.apiSecret);
 }
@@ -22,6 +24,10 @@ function normalizePhone(number) {
 }
 
 async function sendSms(to, text) {
+  if (isSmsPaused()) {
+    console.log("[sms] pauzuar deri", botPauseUntilLabel());
+    return { status: "paused" };
+  }
   const cfg = getVonageConfig();
   if (!cfg.apiKey || !cfg.apiSecret) {
     throw new Error("SMS nuk është i konfiguruar (VONAGE_API_KEY / VONAGE_API_SECRET).");
@@ -54,6 +60,7 @@ async function sendSms(to, text) {
 module.exports = {
   getVonageConfig,
   isSmsConfigured,
+  isSmsPaused,
   sendSms,
   normalizePhone,
 };

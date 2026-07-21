@@ -36,18 +36,24 @@ router.use(authRequired, superAdminOnly);
 
 /**
  * Gjenero LICENSE_KEY nga HARDWARE_ID i klientit (telefoni i Super Admin).
- * Body: { hardwareId: "XXXX-XXXX-XXXX-XXXX" }
- * → { licenseKey: "XXXX-XXXX-XXXX-XXXX" }
+ * Body: { hardwareId, licenseType?: "trial"|"annual" }
+ * → { licenseKey, licenseType, expiresAt, ... }
  */
 router.post(
   "/generate-license-key",
   asyncHandler(async (req, res) => {
     const hardwareId = req.body?.hardwareId || req.body?.hardware_id || "";
+    const licenseType = req.body?.licenseType || req.body?.license_type || "annual";
     try {
-      const licenseKey = generateHardwareLicenseKey(hardwareId);
+      const result = generateHardwareLicenseKey(hardwareId, { licenseType });
       res.json({
         ok: true,
-        licenseKey,
+        licenseKey: result.licenseKey,
+        celesi: result.licenseKey,
+        licenseType: result.licenseType,
+        expiresAt: result.expiresAt,
+        expiresYmd: result.expiresYmd,
+        trialDays: result.trialDays || null,
         hardwareId: formatGrouped16(normalizeHardwareId(hardwareId)),
       });
     } catch (e) {

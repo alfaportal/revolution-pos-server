@@ -106,6 +106,13 @@
               <label for="gen-hw">Hardware ID</label>
               <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" inputmode="text" autocapitalize="characters" spellcheck="false">
             </div>
+            <div class="field">
+              <label for="gen-license-type">Lloji i licencës</label>
+              <select id="gen-license-type">
+                <option value="trial">Trial (7 ditë)</option>
+                <option value="annual" selected>Vjetor (1 vit nga sot)</option>
+              </select>
+            </div>
             <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
             <div id="gen-result" style="color:var(--accent)"></div>
           </div>

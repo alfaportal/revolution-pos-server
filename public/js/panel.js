@@ -252,23 +252,51 @@ async function apiGenerateLicenseKey() {
   return celesi;
 }
 
+function selectedHwLicenseType() {
+  const el =
+    document.getElementById("lm-license-type") || document.getElementById("gen-license-type");
+  return String(el?.value || "annual")
+    .trim()
+    .toLowerCase() === "trial"
+    ? "trial"
+    : "annual";
+}
+
 /** LICENSE_KEY nga HARDWARE_ID — i njëjti si generate-license.js / Aktivizo KAFENE. */
-async function apiGenerateHardwareLicenseKey(hardwareId) {
+async function apiGenerateHardwareLicenseKey(hardwareId, licenseType = "annual") {
   const hw = String(hardwareId || "").trim();
   if (!hw) throw new Error("Fut ID e pajisjes (HARDWARE_ID) nga ekrani i klientit.");
+  const type =
+    String(licenseType || "annual")
+      .trim()
+      .toLowerCase() === "trial"
+      ? "trial"
+      : "annual";
   // Prefero /api/admin (panel Super Admin); fallback /api/super (dashboard)
   try {
     const data = await api("/api/admin/licenses/generate-hardware-key", {
       method: "POST",
-      body: JSON.stringify({ hardwareId: hw }),
+      body: JSON.stringify({ hardwareId: hw, licenseType: type }),
     });
-    return data.licenseKey || data.celesi || "";
+    return {
+      licenseKey: data.licenseKey || data.celesi || "",
+      licenseType: data.licenseType || type,
+      expiresAt: data.expiresAt || null,
+      trialDays: data.trialDays || null,
+      hardwareId: data.hardwareId || hw,
+    };
   } catch {
     const data = await api("/api/super/generate-license-key", {
       method: "POST",
-      body: JSON.stringify({ hardwareId: hw }),
+      body: JSON.stringify({ hardwareId: hw, licenseType: type }),
     });
-    return data.licenseKey || data.celesi || "";
+    return {
+      licenseKey: data.licenseKey || data.celesi || "",
+      licenseType: data.licenseType || type,
+      expiresAt: data.expiresAt || null,
+      trialDays: data.trialDays || null,
+      hardwareId: data.hardwareId || hw,
+    };
   }
 }
 
@@ -329,7 +357,8 @@ function bindLicenseModalPairActions({ keyId, deviceId, genKeyId, genDeviceId, g
         document.getElementById(deviceId)?.focus();
         return;
       }
-      document.getElementById(keyId).value = await apiGenerateHardwareLicenseKey(hw);
+      const gen = await apiGenerateHardwareLicenseKey(hw, selectedHwLicenseType());
+      document.getElementById(keyId).value = gen.licenseKey;
     } catch (err) {
       alert(err.message || "Gjenerimi i kodit dështoi.");
     }
@@ -351,7 +380,8 @@ function bindLicenseModalPairActions({ keyId, deviceId, genKeyId, genDeviceId, g
         hw = await apiGenerateDeviceId();
         if (hwEl) hwEl.value = hw;
       }
-      document.getElementById(keyId).value = await apiGenerateHardwareLicenseKey(hw);
+      const gen = await apiGenerateHardwareLicenseKey(hw, selectedHwLicenseType());
+      document.getElementById(keyId).value = gen.licenseKey;
     } catch (err) {
       alert(err.message || "Gjenerimi dështoi.");
     }
@@ -1959,9 +1989,9 @@ function bindMobileLicenseActions(scope) {
           deviceInput?.focus();
           return;
         }
-        const celesi = await apiGenerateHardwareLicenseKey(hw);
+        const gen = await apiGenerateHardwareLicenseKey(hw, selectedHwLicenseType());
         if (input) {
-          input.value = celesi;
+          input.value = gen.licenseKey;
           input.focus();
           input.select();
         }
@@ -2775,15 +2805,23 @@ document.getElementById("btn-lm-gen-key")?.addEventListener("click", async () =>
   const btn = document.getElementById("btn-lm-gen-key");
   if (btn) btn.disabled = true;
   try {
-    const licenseKey = await apiGenerateHardwareLicenseKey(hardwareId);
+    const type = selectedHwLicenseType();
+    const gen = await apiGenerateHardwareLicenseKey(hardwareId, type);
     if (keyEl) {
-      keyEl.value = licenseKey;
+      keyEl.value = gen.licenseKey;
       keyEl.focus();
       keyEl.select();
     }
+    const typeLabel = gen.licenseType === "trial" ? "Trial (7 ditë)" : "Vjetor (1 vit)";
+    const exp =
+      gen.licenseType === "trial"
+        ? "7 ditë nga aktivizimi"
+        : gen.expiresAt
+          ? `Skadon: ${gen.expiresAt}`
+          : "";
     showMsg(
       "msg-license-mobile",
-      `Kodi u gjenerua.\nLICENSE_KEY: ${licenseKey}\n\nKopjoja klientit me WhatsApp/SMS.`,
+      `Kodi u gjenerua (${typeLabel}).\nLICENSE_KEY: ${gen.licenseKey}${exp ? `\n${exp}` : ""}\n\nKopjoja klientit me WhatsApp/SMS.`,
       true,
     );
   } catch (err) {

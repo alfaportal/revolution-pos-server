@@ -49,8 +49,10 @@ const { startWeeklyDataExportCron } = require("./jobs/weeklyDataExport");
 const { startTelegramBotWebhook } = require("./jobs/telegramBotWebhook");
 const telegramRoutes = require("./routes/telegram");
 const systemRoutes = require("./routes/system");
+const { router: paymentsRouter, stripeWebhookHandler } = require("./routes/payments");
 const { getPublicAppConfig, getPublicAppOrigin } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
+const { paymentsConfigured } = require("./lib/stripeConfig");
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
@@ -61,6 +63,16 @@ const PORT = Number(process.env.PORT) || 8080;
 app.set("trust proxy", 1);
 
 app.use(corsMiddleware);
+
+// Stripe webhook — RAW body (para express.json), si KetuJemi
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    void stripeWebhookHandler(req, res);
+  },
+);
+
 app.use(express.json({ limit: "12mb" }));
 app.use(jsonErrorHandler);
 app.use(cookieParser());
@@ -81,8 +93,14 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/api/public/config", (_req, res) => {
-  res.json({ ok: true, ...getPublicAppConfig() });
+  res.json({
+    ok: true,
+    ...getPublicAppConfig(),
+    stripe_enabled: paymentsConfigured(),
+  });
 });
+
+app.use("/api/payments", paymentsRouter);
 
 app.get("/health/db", async (_req, res) => {
   const result = await testSupabaseConnection();
