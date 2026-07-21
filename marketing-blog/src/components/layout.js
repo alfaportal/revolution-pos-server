@@ -17,7 +17,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
   const lang = getLang();
   const items = [
     { id: "home", label: t("nav.home"), section: "ballina" },
-    { id: "get-started", label: t("nav.getStarted"), section: "si-ta-merrni" },
+    { id: "get-started", label: t("nav.getStarted"), section: "si-ta-ngarkoni" },
     { id: "how-it-works", label: t("nav.howItWorks"), section: "si-funksionon" },
     { id: "packages", label: t("nav.packages"), section: "pakot" },
     { id: "blog", label: t("nav.blog"), section: "artikuj" },
@@ -89,7 +89,7 @@ export function renderFooter() {
         <div class="footer-col">
           <h4>${t("footer.col.platform")}</h4>
           <ul>
-            ${footerSectionLink("si-ta-merrni", t("nav.getStarted"))}
+            ${footerSectionLink("si-ta-ngarkoni", t("nav.getStarted"))}
             ${footerSectionLink("si-funksionon", t("footer.link.howItWorks"))}
             ${footerSectionLink("pakot", t("footer.link.packages"))}
             ${footerSectionLink("artikuj", t("footer.link.blog"))}

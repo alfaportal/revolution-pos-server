@@ -651,7 +651,7 @@ export function renderHome() {
         </div>
       </section>
 
-      <section class="site-section get-started-section" id="si-ta-merrni">
+      <section class="site-section get-started-section" id="si-ta-ngarkoni">
         <div class="container">
           <div class="section-head">
             <h2>${t("getStarted.title")}</h2>
