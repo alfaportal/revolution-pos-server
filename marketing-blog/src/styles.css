@@ -1350,6 +1350,24 @@ a.article-card {
   line-height: 1.45;
 }
 
+.setup-version-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(230, 57, 70, 0.12), rgba(15, 23, 42, 0.04));
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.setup-version-num {
+  color: #e63946;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .get-started-actions {
   display: flex;
   flex-wrap: wrap;

@@ -6,6 +6,7 @@ const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
 /** Setup Windows — shkarkim i drejtpërdrejtë (pa Railway Variables). */
 const DEFAULT_SETUP_DOWNLOAD_URL =
   "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.231/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.231";
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
@@ -64,6 +65,15 @@ function getSetupDownloadUrl(plan) {
   return byPlan[key] || fallback;
 }
 
+/** Versioni i Setup që shfaqet në webfaqe (p.sh. 1.0.231). */
+function getSetupVersion() {
+  const fromEnv = process.env.SETUP_VERSION?.trim();
+  if (fromEnv) return fromEnv.replace(/^v/i, "");
+  const url = getSetupDownloadUrl();
+  const m = String(url).match(/setup-v?(\d+\.\d+\.\d+)/i) || String(url).match(/(\d+\.\d+\.\d+)/);
+  return (m && m[1]) || DEFAULT_SETUP_VERSION;
+}
+
 function getPublicAppConfig() {
   return {
     public_origin: getPublicAppOrigin(),
@@ -71,6 +81,7 @@ function getPublicAppConfig() {
     support_phone_digits: getSupportPhoneDigits(),
     support_email: getSupportEmail(),
     setup_download_url: getSetupDownloadUrl(),
+    setup_version: getSetupVersion(),
     setup_downloads: {
       p1: getSetupDownloadUrl("p1"),
       p2: getSetupDownloadUrl("p2"),
@@ -85,10 +96,12 @@ module.exports = {
   DEFAULT_SUPPORT_PHONE,
   DEFAULT_SUPPORT_EMAIL,
   DEFAULT_SETUP_DOWNLOAD_URL,
+  DEFAULT_SETUP_VERSION,
   getPublicAppOrigin,
   getSupportPhone,
   getSupportPhoneDigits,
   getSupportEmail,
   getSetupDownloadUrl,
+  getSetupVersion,
   getPublicAppConfig,
 };

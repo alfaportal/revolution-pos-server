@@ -253,22 +253,28 @@ function setupDownloadHref(plan) {
 function bindGetStartedDownload() {
   const dl = document.getElementById("get-started-download");
   const help = document.getElementById("get-started-wa");
+  const verEl = document.getElementById("setup-version-label");
   if (dl) {
     dl.href = setupDownloadHref(sessionStorage.getItem("selectedPackage") || "p1");
   }
-  if (!help) return;
   (async () => {
     try {
       const res = await fetch("/api/public/config");
       const data = await res.json();
       if (!res.ok || !data.ok) return;
-      const digits = data.support_phone_digits || "38348707880";
-      const text = encodeURIComponent(
-        getLang() === "en"
-          ? "Hello, I downloaded Setup — I need a trial / license key."
-          : "Përshëndetje, shkarkova Setup — më duhet çelës trial / licencë.",
-      );
-      help.href = `https://wa.me/${digits}?text=${text}`;
+      if (verEl && data.setup_version) {
+        verEl.hidden = false;
+        verEl.innerHTML = `<strong>${t("getStarted.version")}:</strong> <span class="setup-version-num">v${data.setup_version}</span> — ${t("getStarted.versionHint")}`;
+      }
+      if (help) {
+        const digits = data.support_phone_digits || "38348707880";
+        const text = encodeURIComponent(
+          getLang() === "en"
+            ? "Hello, I downloaded Setup — I need a trial / license key."
+            : "Përshëndetje, shkarkova Setup — më duhet çelës trial / licencë.",
+        );
+        help.href = `https://wa.me/${digits}?text=${text}`;
+      }
       if (data.setup_download_url && dl && !sessionStorage.getItem("selectedPackage")) {
         dl.href = data.setup_download_url;
       }
@@ -870,6 +876,7 @@ export function renderHome() {
               <p>${t("getStarted.s6.desc")}</p>
             </li>
           </ol>
+          <p class="setup-version-banner" id="setup-version-label" hidden></p>
           <div class="get-started-actions">
             <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download?plan=p1">${t("getStarted.cta")}</a>
             <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
