@@ -6,12 +6,15 @@ const CLASSIFY_PROMPT =
   "Je klasifikues dokumentesh për Revolution POS (restorant/kafene).\n" +
   "Shiko foton dhe klasifiko. Përgjigju VETËM me JSON (pa markdown):\n" +
   '{"document_type":"stock_purchase"|"expense"|"sales_receipt"|"unknown","confidence":0.0,"reason":"max 12 fjalë"}\n' +
-  "Rregulla:\n" +
-  "- stock_purchase = faturë furnizuesi me produkte/pije për stok (tabela artikujsh, sasi, çmim)\n" +
-  "- expense = shpenzim jo-stok (rrymë, ujë, qira, pastrim, internet, shërbim)\n" +
-  "- sales_receipt = kupon/faturë shitjeje te klienti (POS, fiskal shitje)\n" +
-  "- unknown = nuk dihet\n" +
-  "Mos invento. Nëse ka dyshim, unknown.";
+  "Rregulla KRITIKE (lexo me kujdes):\n" +
+  "- stock_purchase = faturë BLERJEJE nga FURNIZUESI (DISKONT, DESAR, Metro, Viva, Cash&Carry, depo, sh.p.k. shitës) " +
+  "me tabelë artikujsh/pije për stok. Emri i kafenesë/restorantit (p.sh. Babylon Caffe) është BLERËSI, JO shitësi.\n" +
+  "- Nëse logo/emri i sipërm është furnizues (DISKONT DESAR etj.) dhe ka Nr. fature + tabela produkte → stock_purchase.\n" +
+  "- expense = faturë shërbimi pa stok (rrymë, ujë, qira, pastrim, internet, telefon).\n" +
+  "- sales_receipt = VETËM kupon i ngushtë termik / kupon fiskal POS i kafenesë drejtuar klientit final " +
+  "(jo faturë A4 e furnizuesit).\n" +
+  "- unknown = nuk dihet. Në dyshim → stock_purchase nëse duket faturë me tabela produkte.\n" +
+  "GABIM i zakonshëm: MOS e quaj sales_receipt një faturë ku kafeneja është blerëse e pijeve nga furnizuesi.";
 
 /** AI 2 — nxjerr rreshtat VETËM për fatura blerjeje stoku. */
 const EXTRACT_PROMPT =
@@ -358,20 +361,36 @@ async function scanInvoiceFromImage({ mime, base64 }) {
   }
   let tokensUsed = classified.tokensUsed;
 
-  const allowStock =
-    classified.document_type === "stock_purchase" ||
-    (classified.document_type === "unknown" && classified.confidence < 0.45);
+  // sales_receipt i rremë: faturë A4 furnizuesi (DISKONT…) me emrin e kafenesë si blerës
+  // Bllokohet vetëm kupon fiskal/termik i qartë — jo faturë e rregullt blerjeje.
+  const reasonLower = String(classified.reason || "").toLowerCase();
+  const looksLikeFiscalCoupon = /kupon\s*fiskal|fiskal\s*pos|termik|thermal|receipt\s*roll|kupon\s*i\s*ngusht/.test(
+    reasonLower,
+  );
+  let effectiveType = classified.document_type;
+  if (effectiveType === "sales_receipt" && !looksLikeFiscalCoupon) {
+    effectiveType = "stock_purchase";
+  }
 
-  // unknown me besueshmëri të ulët: provo nxjerrjen (foto e paqartë klasifikimi)
-  // expense / sales_receipt: MOS lejo stok
-  if (classified.document_type === "expense" || classified.document_type === "sales_receipt") {
-    const err = new Error(rejectNonStockMessage(classified.document_type, classified.reason));
+  const allowStock =
+    effectiveType === "stock_purchase" ||
+    (effectiveType === "unknown" && classified.confidence < 0.45);
+
+  // expense: mos lejo stok. sales_receipt vetëm nëse duket kupon fiskal.
+  if (effectiveType === "expense") {
+    const err = new Error(rejectNonStockMessage("expense", classified.reason));
     err.code = "NOT_STOCK_INVOICE";
-    err.document_type = classified.document_type;
+    err.document_type = "expense";
+    throw err;
+  }
+  if (classified.document_type === "sales_receipt" && looksLikeFiscalCoupon) {
+    const err = new Error(rejectNonStockMessage("sales_receipt", classified.reason));
+    err.code = "NOT_STOCK_INVOICE";
+    err.document_type = "sales_receipt";
     throw err;
   }
 
-  if (!allowStock && classified.document_type === "unknown" && classified.confidence >= 0.45) {
+  if (!allowStock && effectiveType === "unknown" && classified.confidence >= 0.45) {
     const err = new Error(rejectNonStockMessage("unknown", classified.reason));
     err.code = "NOT_STOCK_INVOICE";
     err.document_type = "unknown";
@@ -382,16 +401,17 @@ async function scanInvoiceFromImage({ mime, base64 }) {
   tokensUsed += extracted.tokensUsed;
 
   const warnings = [...(extracted.warnings || [])];
-  if (classified.document_type === "unknown") {
+  if (classified.document_type === "unknown" || classified.document_type === "sales_receipt") {
     warnings.unshift(
-      "Klasifikimi nuk ishte 100% i sigurt — kontrollo mirë që është faturë blerjeje para se të regjistrosh në stok.",
+      "Kontrollo që është faturë blerjeje furnizuesi para se të regjistrosh në stok.",
     );
   }
 
   return {
-    document_type: classified.document_type === "unknown" ? "stock_purchase" : classified.document_type,
+    document_type: "stock_purchase",
     classification: {
       document_type: classified.document_type,
+      effective_type: effectiveType,
       confidence: classified.confidence,
       reason: classified.reason,
     },
