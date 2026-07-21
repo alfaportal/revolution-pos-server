@@ -9,7 +9,7 @@ const legalPages = {
         <p class="legal-lead">Kjo politikë shpjegon si <strong>Revolution Invest POS</strong> (“ne”, “shërbimi”) mbledh, përdor dhe mbron të dhënat kur bizneset në Kosovë, Shqipëri dhe rajon përdorin platformën tonë.</p>
 
         <h2>1. Kush jemi ne</h2>
-        <p>Revolution Invest POS ofrohet nga Revolution Invest. Për pyetje rreth privatësisë: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>.</p>
+        <p>Revolution Invest POS ofrohet nga Revolution Invest. Për pyetje rreth privatësisë: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a>.</p>
 
         <h2>2. Cilat të dhëna mbledhim</h2>
         <p>Varet nga mënyra se si e përdorni shërbimin:</p>
@@ -61,7 +61,7 @@ const legalPages = {
           <li><strong>Portabilitet:</strong> merrni të dhënat tuaja në format të lexueshëm, kur aplikohet.</li>
           <li><strong>Ankim:</strong> ankoheni te autoriteti i mbrojtjes së të dhënave në vendin tuaj.</li>
         </ul>
-        <p>Për të ushtruar këto të drejta, shkruani te <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>. Përgjigjemi brenda 30 ditëve.</p>
+        <p>Për të ushtruar këto të drejta, shkruani te <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a>. Përgjigjemi brenda 30 ditëve.</p>
 
         <h2>8. Cookies & teknologji të ngjashme</h2>
         <p>Faqja publique dhe paneli përdorin cookies thelbësore për hyrjen në llogari, preferencën e gjuhës dhe sigurinë e sesionit. Nuk përdorim cookies reklamuese palësh të treta në platformën tonë.</p>
@@ -73,7 +73,7 @@ const legalPages = {
         <p>Mund ta përditësojmë këtë faqe. Data e përditësimit shfaqet sipër. Përdorimi i vazhdueshëm i shërbimit pas ndryshimeve nënkupton pranimin e politikës së re.</p>
 
         <h2>11. Kontakt</h2>
-        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Faqja e kontaktit: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+        <p>Email: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a><br />Faqja e kontaktit: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
       `,
     },
     en: {
@@ -83,7 +83,7 @@ const legalPages = {
         <p class="legal-lead">This policy explains how <strong>Revolution Invest POS</strong> (“we”, “the service”) collects, uses, and protects data when businesses in Kosovo, Albania, and the region use our platform.</p>
 
         <h2>1. Who we are</h2>
-        <p>Revolution Invest POS is provided by Revolution Invest. Privacy inquiries: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>.</p>
+        <p>Revolution Invest POS is provided by Revolution Invest. Privacy inquiries: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a>.</p>
 
         <h2>2. What data we collect</h2>
         <p>Depending on how you use the service:</p>
@@ -135,7 +135,7 @@ const legalPages = {
           <li><strong>Portability:</strong> receive your data in a readable format, where applicable.</li>
           <li><strong>Complaint:</strong> lodge a complaint with your local data protection authority.</li>
         </ul>
-        <p>To exercise these rights, email <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a>. We respond within 30 days.</p>
+        <p>To exercise these rights, email <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a>. We respond within 30 days.</p>
 
         <h2>8. Cookies & similar technologies</h2>
         <p>The public site and panel use essential cookies for login, language preference, and session security. We do not use third-party advertising cookies on our platform.</p>
@@ -147,7 +147,7 @@ const legalPages = {
         <p>We may update this page. The update date is shown above. Continued use after changes means acceptance of the updated policy.</p>
 
         <h2>11. Contact</h2>
-        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Contact page: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+        <p>Email: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a><br />Contact page: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
       `,
     },
   },
@@ -228,7 +228,7 @@ const legalPages = {
         <p>Këto kushte rregullohen sipas ligjeve të Republikës së Kosovës, përveç kur marrëveshja e shkruar parashikon ndryshe. Mosmarrëveshjet zgjidhen fillimisht me negociata të ndershme; nëse dështojnë, kompetente janë gjykatat e Kosovës.</p>
 
         <h2>12. Kontakt</h2>
-        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Kontakt: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+        <p>Email: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a><br />Kontakt: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
       `,
     },
     en: {
@@ -307,7 +307,7 @@ const legalPages = {
         <p>These terms are governed by the laws of the Republic of Kosovo, unless a written agreement states otherwise. Disputes are first resolved through good-faith negotiation; if that fails, courts in Kosovo have jurisdiction.</p>
 
         <h2>12. Contact</h2>
-        <p>Email: <a href="mailto:info@revolution-pos.com">info@revolution-pos.com</a><br />Contact: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
+        <p>Email: <a href="mailto:revolutioninvest05@gmail.com">revolutioninvest05@gmail.com</a><br />Contact: <a href="/#kontakt" data-navigate>revolution-pos.com/#kontakt</a></p>
       `,
     },
   },
