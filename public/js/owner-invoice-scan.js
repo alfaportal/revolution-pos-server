@@ -401,22 +401,32 @@
   }
 
   function applyInvoiceScanAiButton(data) {
+    const card = document.getElementById("blerje-scan-card");
     const btns = [
       document.getElementById("btn-invoice-scan-ai"),
       document.getElementById("btn-blerje-scan-open"),
       document.getElementById("btn-ai-hub-scan-invoice"),
     ].filter(Boolean);
-    if (!btns.length || !data) return;
+    if (!data) return;
     const msg = window.AI_UPGRADE_MSG || "Kontaktoni Revolution POS për upgrade";
     const active = !!data.enabled;
     const needsUpgrade = !!data.configured && !data.paused && !data.package_ai;
+    if (card) {
+      if (active || needsUpgrade) {
+        card.removeAttribute("hidden");
+        card.classList.remove("hidden");
+      } else {
+        card.setAttribute("hidden", "");
+      }
+    }
+    if (!btns.length) return;
     for (const btn of btns) {
       if (active) {
         btn.removeAttribute("hidden");
         btn.disabled = false;
         btn.classList.remove("ai-feature-locked");
         if (btn.id !== "btn-ai-hub-scan-invoice") {
-          btn.title = "Skano faturën e furnizuesit";
+          btn.title = "Skano faturën e furnizuesit (opsionale)";
         }
       } else if (needsUpgrade) {
         btn.removeAttribute("hidden");

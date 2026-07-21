@@ -2436,6 +2436,9 @@ document.querySelectorAll(".tab").forEach(tab => {
       applyAiUiState();
       loadOwnerSupplySuggestions?.();
     }
+    if (tab.dataset.tab === "blerje") {
+      window.loadOwnerBlerjePanel?.();
+    }
     if (tab.dataset.tab === "ai-raporte") loadOwnerAiReports?.();
     if (tab.dataset.tab === "ai-asistent") loadOwnerAiAssistant?.();
     if (tab.dataset.tab === "njoftimet") loadOwnerNotifications?.();

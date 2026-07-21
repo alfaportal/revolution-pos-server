@@ -19,14 +19,19 @@ function normalizeItems(rawItems) {
     const unit_price = roundQty(
       Math.max(0, Number(raw?.unit_price ?? raw?.price ?? raw?.cmimi) || 0),
     );
-    const unit = String(raw?.unit || "copë").trim() || "copë";
-    let pieces_per_pack = Math.round(Number(raw?.pieces_per_pack ?? raw?.copa_ne_pako) || 0);
-    if (!(pieces_per_pack > 0)) {
-      const m = name.match(/(\d+)\s*cop/i);
-      pieces_per_pack = m ? Number(m[1]) : /pako/i.test(unit) ? 24 : 1;
+    const unitRaw = String(raw?.unit || raw?.njesia || "copë").trim().toLowerCase();
+    const unit = /^(pako|pake|pak|box|carton)$/.test(unitRaw) ? "pako" : (unitRaw === "kg" || unitRaw === "l" ? unitRaw : "copë");
+    let pieces_per_pack = 1;
+    if (unit === "pako") {
+      pieces_per_pack = Math.round(Number(raw?.pieces_per_pack ?? raw?.copa_ne_pako) || 0);
+      if (!(pieces_per_pack > 0)) {
+        const m = name.match(/(\d+)\s*cop/i);
+        pieces_per_pack = m ? Number(m[1]) : 24;
+      }
+      pieces_per_pack = Math.max(1, pieces_per_pack);
     }
     if (!name || quantity <= 0) continue;
-    out.push({ name, quantity, unit, unit_price, pieces_per_pack: Math.max(1, pieces_per_pack) });
+    out.push({ name, quantity, unit, unit_price, pieces_per_pack });
   }
   return out;
 }

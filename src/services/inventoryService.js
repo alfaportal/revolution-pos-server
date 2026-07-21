@@ -342,7 +342,7 @@ async function applyInvoiceScanItems(clientId, body) {
       invoice_number,
       invoice_date,
       items: list,
-      source: "ai_invoice_scan",
+      source: String(body?.source || "ai_invoice_scan").slice(0, 64),
     });
   } catch (err) {
     console.warn("[inventory] pos pending purchase queue failed:", err.message);

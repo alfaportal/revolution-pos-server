@@ -705,6 +705,33 @@ router.post("/inventory/apply-invoice-scan", requireAiPackage, async (req, res) 
   }
 });
 
+/**
+ * Blerje MANUALE nga telefon/panel — pa AI skanim.
+ * Pronari shënon faturën → radhë POS → stok + Blerjet + Kontabilisti në desktop.
+ */
+router.post("/purchases", async (req, res) => {
+  try {
+    const { enqueuePendingPurchase } = require("../services/posPendingPurchaseService");
+    const body = req.body || {};
+    const pos_queue = await enqueuePendingPurchase(req.user.client_id, {
+      supplier: body.supplier,
+      invoice_number: body.invoice_number,
+      invoice_date: body.invoice_date,
+      items: body.items,
+      source: "manual_purchase",
+    });
+    res.status(201).json({
+      ok: true,
+      pos_pending: true,
+      queued: pos_queue,
+      message:
+        "Blerja u dërgua te POS. Stoku, Blerjet dhe Kontabilisti përditësohen automatikisht në desktop.",
+    });
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
 router.get("/ai-reports", requireAiPackage, async (req, res) => {
   try {
     const limit = Math.min(90, Number(req.query.limit) || 30);

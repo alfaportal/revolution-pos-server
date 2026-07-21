@@ -302,20 +302,52 @@
 
     <div id="panel-blerje" class="panel-section hidden">
       <div class="card">
-        <div class="card-title card-title-row">
-          <span>Blerje — Fatura furnizuesi</span>
-          <div class="card-title-actions">
-            <button type="button" class="btn btn-primary btn-sm ai-feature-hidden" id="btn-invoice-scan-ai" hidden>📷 Skanoj Faturë</button>
+        <div class="card-title">Blerje — shëno faturën</div>
+        <p class="links-hint">
+          Ti shënon blerjen (furnizuesi, nr., data, produktet). Pas <strong>Ruaj</strong>, sistemi e dërgon te POS:
+          <strong>stoku rritet</strong> dhe shfaqet te <strong>Blerjet / Kontabilisti</strong> në desktop.
+        </p>
+        <div class="filter-row menu-add-row" style="flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <label for="blerje-supplier">Furnizuesi</label>
+            <input type="text" id="blerje-supplier" placeholder="p.sh. DISKONT DESAR" autocomplete="organization">
+          </div>
+          <div>
+            <label for="blerje-invoice-no">Nr. faturës</label>
+            <input type="text" id="blerje-invoice-no" placeholder="p.sh. 2024-400">
+          </div>
+          <div>
+            <label for="blerje-invoice-date">Data</label>
+            <input type="date" id="blerje-invoice-date">
           </div>
         </div>
-        <p class="links-hint">
-          Këtu skanoni faturën e furnizuesit (kamera ose galeri). AI lexon artikujt → ti kontrollon →
-          <strong>Regjistro në Stok</strong>. Stoku rritet sipas blerjes. Shpenzimet e tjera (rrymë, qira…)
-          regjistrohen te <strong>Raportet</strong> / kontabilisti — jo këtu.
-        </p>
+        <div class="overflow-x" style="margin-top:0.75rem">
+          <table class="menu-owner-table">
+            <thead>
+              <tr>
+                <th>Produkti</th>
+                <th>Sasia</th>
+                <th>Çmimi/copë</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="blerje-lines-body"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem">
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-blerje-add-line">+ Rresht</button>
+          <button type="button" class="btn btn-primary" id="btn-blerje-save">Ruaj blerjen → Stok + Kontabilist</button>
+        </div>
         <div id="blerje-msg" class="owner-license-msg"></div>
-        <button type="button" class="btn btn-primary ai-feature-hidden" id="btn-blerje-scan-open" hidden style="width:100%;margin-top:0.5rem">
-          📷 Skano faturën (kamera / galeri)
+      </div>
+      <div class="card ai-feature-hidden" id="blerje-scan-card" style="margin-top:1rem" hidden>
+        <div class="card-title card-title-row">
+          <span>Opsionale — skanim foto (AI)</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-invoice-scan-ai" hidden>📷 Skano</button>
+        </div>
+        <p class="links-hint" style="margin:0">Vetëm ndihmë për të lexuar foton. Blerjen kryesore shënoje manualisht më lart.</p>
+        <button type="button" class="btn btn-ghost" id="btn-blerje-scan-open" hidden style="width:100%;margin-top:0.5rem">
+          📷 Hap skanim fature
         </button>
       </div>
     </div>
@@ -1208,12 +1240,13 @@
   <script src="/js/fiscalDiagnostics.js?v=1"></script>
   <script src="/js/offlineQueue.js?v=1"></script>
   <script src="/js/qrcode.js?v=1"></script>
-  <script src="/js/owner.js?v=34"></script>
+  <script src="/js/owner.js?v=35"></script>
   <script src="/js/owner-locations.js?v=1"></script>
   <script src="/js/owner-catalog.js?v=1"></script>
   <script src="/js/owner-stock.js?v=2"></script>
   <script src="/js/owner-inventory.js?v=2"></script>
-  <script src="/js/owner-invoice-scan.js?v=2"></script>
+  <script src="/js/owner-invoice-scan.js?v=3"></script>
+  <script src="/js/owner-purchase.js?v=1"></script>
   <script src="/js/owner-ai-reports.js?v=1"></script>
   <script src="/js/owner-supply-suggestions.js?v=1"></script>
   <script src="/js/owner-ai-assistant.js?v=2"></script>
