@@ -4,7 +4,6 @@ window.MANUAL_UI = {
     "meta.description":
       "Manual përdorimi i Revolution Invest POS — udhëzime hap pas hapi për pronarët, kamarierët dhe stafin.",
     "nav.home": "Ballina",
-    "nav.login": "Hyr në Panel",
     "nav.manual": "Manuali",
     "nav.backHome": "← Kthehu te Ballina",
     "nav.langLabel": "Gjuha",
@@ -46,7 +45,6 @@ window.MANUAL_UI = {
     "toc.12.bug": "Raporto problem",
     "footer.text": "Revolution Invest POS — Manual përdorimi",
     "footer.home": "Ballina",
-    "footer.owner": "Paneli i pronarit",
     "footer.contact": "Kontakt & mbështetje",
   },
   en: {
@@ -54,7 +52,6 @@ window.MANUAL_UI = {
     "meta.description":
       "Revolution Invest POS user manual — step-by-step guides for owners, waiters, and staff.",
     "nav.home": "Home",
-    "nav.login": "Log in to Panel",
     "nav.manual": "Manual",
     "nav.backHome": "← Back to Home",
     "nav.langLabel": "Language",
@@ -96,7 +93,6 @@ window.MANUAL_UI = {
     "toc.12.bug": "Report a problem",
     "footer.text": "Revolution Invest POS — User manual",
     "footer.home": "Home",
-    "footer.owner": "Owner panel",
     "footer.contact": "Contact & support",
   },
 };
