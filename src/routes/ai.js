@@ -114,7 +114,20 @@ router.post(
     }
 
     const image = extractMenuScanImage(req);
-    const result = await scanInvoiceFromImage(image);
+    let result;
+    try {
+      result = await scanInvoiceFromImage(image);
+    } catch (err) {
+      if (err && err.code === "NOT_STOCK_INVOICE") {
+        return res.status(422).json({
+          ok: false,
+          gabim: err.message || "Dokumenti nuk është faturë blerjeje stoku.",
+          document_type: err.document_type || "unknown",
+          code: "NOT_STOCK_INVOICE",
+        });
+      }
+      throw err;
+    }
 
     await trackAiUsage(restaurantId, "scan_invoice", result.tokensUsed);
 
@@ -124,6 +137,10 @@ router.post(
       invoice_number: result.invoice_number,
       invoice_date: result.invoice_date || "",
       items: result.items,
+      document_type: result.document_type || "stock_purchase",
+      classification: result.classification || null,
+      totals_check: result.totals_check || null,
+      warnings: Array.isArray(result.warnings) ? result.warnings : [],
       usage: {
         tokens_used: result.tokensUsed,
         provider: result.provider,

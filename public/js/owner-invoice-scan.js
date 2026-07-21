@@ -272,9 +272,11 @@
       document.getElementById("invoice-scan-number").value = data.invoice_number || "";
       window.__invoiceScanDate = data.invoice_date || "";
       renderInvoiceScanItems();
+      const warnList = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
+      const warnText = warnList.length ? ` ⚠ ${warnList[0]}` : "";
       setInvoiceScanStatus(
-        `${invoiceScanItems.length} artikuj u gjetën (${Number(data.usage?.tokens_used || 0).toLocaleString("sq-AL")} tokenë). Kontrollo dhe Regjistro në Stok.`,
-        true,
+        `${invoiceScanItems.length} artikuj (blerje stoku). Kontrollo dhe Regjistro në Stok.${warnText}`,
+        warnList.length ? false : true,
       );
     } catch (err) {
       const msg = String(err.message || err || "");

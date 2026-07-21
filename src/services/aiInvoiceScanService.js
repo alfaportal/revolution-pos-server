@@ -1,22 +1,40 @@
 const { getAnthropicVisionConfig } = require("../lib/aiVisionConfig");
 const { isAiPaused } = require("../lib/aiConfig");
 
-const SCAN_PROMPT =
-  "Analizo këtë foto të faturës së furnizuesit (faturë shitje/blerje, shqip ose anglisht). " +
-  "Lexo TË GJITHË rreshtat e produkteve nga tabela — asnjë rresht mos e anashkalo. " +
-  "Numëro rreshtat e produkteve në foto dhe kthe SAKTËSISHT të njëjtin numër në items. " +
+/** AI 1 — klasifikon foton para se të prekë stokun. */
+const CLASSIFY_PROMPT =
+  "Je klasifikues dokumentesh për Revolution POS (restorant/kafene).\n" +
+  "Shiko foton dhe klasifiko. Përgjigju VETËM me JSON (pa markdown):\n" +
+  '{"document_type":"stock_purchase"|"expense"|"sales_receipt"|"unknown","confidence":0.0,"reason":"max 12 fjalë"}\n' +
+  "Rregulla:\n" +
+  "- stock_purchase = faturë furnizuesi me produkte/pije për stok (tabela artikujsh, sasi, çmim)\n" +
+  "- expense = shpenzim jo-stok (rrymë, ujë, qira, pastrim, internet, shërbim)\n" +
+  "- sales_receipt = kupon/faturë shitjeje te klienti (POS, fiskal shitje)\n" +
+  "- unknown = nuk dihet\n" +
+  "Mos invento. Nëse ka dyshim, unknown.";
+
+/** AI 2 — nxjerr rreshtat VETËM për fatura blerjeje stoku. */
+const EXTRACT_PROMPT =
+  "Kjo është faturë BLERJEJE furnizuesi për stok. Lexo saktë nga foto.\n" +
+  "Lexo TË GJITHË rreshtat e PRODUKTEVE nga tabela — asnjë produkt mos e anashkalo.\n" +
+  "MOS përfshi si artikull: TVSH, zbritje, transport, total, subtotal, raundim.\n" +
+  "Numëro rreshtat e produkteve në foto dhe kthe SAKTËSISHT të njëjtin numër në items.\n" +
   "Për çdo artikull:\n" +
-  "- name = emri SAKTËSISHT si në faturë (p.sh. Golden Eagle 0.25l, Aria Mineral 0.50l) — MOS invento emra të tjerë\n" +
-  "- quantity = numri në kolonën Sasia (sa PAKO / njësi u blenë)\n" +
+  "- name = emri SAKTËSISHT si në faturë — MOS invento emra\n" +
+  "- quantity = kolonën Sasia (sa PAKO / njësi u blenë)\n" +
   "- unit = 'pako' nëse Njësia është Pako/Pakë, përndryshe 'copë'/'kg'/'l'\n" +
   "- unit_price = 'Cmimi me tvsh' (çmimi për 1 pako/njësi), JO 'Vlera me tvsh'\n" +
-  "- pieces_per_pack = sa COPË ka brenda 1 pako:\n" +
-  "  * nëse emri ka '10 cop' / '24 cop' → ai numër;\n" +
-  "  * për pije 0.25l/0.33l/0.5l në pako (pa numër) → zakonisht 24;\n" +
-  "  * nëse është tashmë copë → 1\n" +
-  "supplier, invoice_number, invoice_date (YYYY-MM-DD).\n" +
+  "- line_total = 'Vlera me tvsh' e atij rreshti nëse duket, përndryshe quantity*unit_price\n" +
+  "- pieces_per_pack = sa COPË brenda 1 pako:\n" +
+  "  * emri ka '10 cop' / '24 cop' → ai numër\n" +
+  "  * pije 0.25l/0.33l/0.5l në pako (pa numër) → zakonisht 24\n" +
+  "  * tashmë copë → 1\n" +
+  "supplier, invoice_number, invoice_date (YYYY-MM-DD),\n" +
+  "total_with_vat = TOTALI i faturës me TVSH (nëse duket).\n" +
   "Përgjigju VETËM me JSON valid (pa markdown):\n" +
-  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2026-900","invoice_date":"2026-07-15","items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"pako","unit_price":9.50,"pieces_per_pack":24}]}';
+  '{"supplier":"DISKONT DESAR SH.P.K.","invoice_number":"2026-900","invoice_date":"2026-07-15","total_with_vat":66.50,"items":[{"name":"Golden Eagle 0.25l","quantity":7,"unit":"pako","unit_price":9.50,"line_total":66.50,"pieces_per_pack":24}]}';
+
+const STOCK_TYPES = new Set(["stock_purchase", "purchase", "blerje_stoku"]);
 
 function parseNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -73,18 +91,25 @@ function normalizeInvoiceItems(rawItems) {
 
   for (const entry of rawItems) {
     const name = String(entry?.name ?? entry?.emri ?? entry?.product ?? entry?.artikull ?? "").trim();
+    if (!name) continue;
+    // Mos trajto rreshta total/TVSH si produkte
+    if (/^(tvsh|vat|total|subtotal|zbritje|rabate|transport|shipping|raundim)/i.test(name)) {
+      continue;
+    }
+
     const quantity = parseNumber(entry?.quantity ?? entry?.sasia ?? entry?.qty ?? entry?.amount);
     const unit = normalizeUnit(entry?.unit ?? entry?.njesia ?? entry?.njësia ?? "copë");
     const unit_price = parseNumber(
       entry?.unit_price ?? entry?.price ?? entry?.cmimi ?? entry?.cost ?? entry?.unit_cost,
     );
-    if (!name || quantity == null || quantity <= 0) continue;
+    if (quantity == null || quantity <= 0) continue;
 
     const pieces_per_pack = inferPiecesPerPack(
       name,
       unit,
       entry?.pieces_per_pack ?? entry?.copa_ne_pako ?? entry?.pieces,
     );
+    const line_total = parseNumber(entry?.line_total ?? entry?.vlera ?? entry?.value);
 
     const key = `${name.toLowerCase()}|${quantity}|${unit}|${pieces_per_pack}`;
     if (seen.has(key)) continue;
@@ -95,6 +120,7 @@ function normalizeInvoiceItems(rawItems) {
       unit,
       unit_price: unit_price != null && unit_price >= 0 ? unit_price : 0,
       pieces_per_pack,
+      ...(line_total != null && line_total >= 0 ? { line_total } : {}),
     });
   }
 
@@ -120,10 +146,84 @@ function extractJsonPayload(text) {
   }
 }
 
-async function scanInvoiceFromImage({ mime, base64 }) {
-  if (isAiPaused()) {
-    throw new Error("AI është i ndalur për momentin. Provoni përsëri më vonë.");
+function normalizeDocumentType(raw) {
+  const t = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (STOCK_TYPES.has(t) || t === "stock" || t === "inventory") return "stock_purchase";
+  if (t === "expense" || t === "shpenzim" || t === "bill") return "expense";
+  if (t === "sales_receipt" || t === "sale" || t === "fiskal" || t === "receipt") return "sales_receipt";
+  return "unknown";
+}
+
+function rejectNonStockMessage(documentType, reason) {
+  const why = String(reason || "").trim();
+  if (documentType === "expense") {
+    return (
+      "Kjo foto duket si SHPENZIM (jo faturë blerjeje stoku). " +
+      "Mos e regjistro në Stok — përdor Kontabilistin për shpenzime." +
+      (why ? ` (${why})` : "")
+    );
   }
+  if (documentType === "sales_receipt") {
+    return (
+      "Kjo foto duket si kupon/faturë SHITJEJE (jo blerje stoku). " +
+      "Nuk duhet të rrisë stokun." +
+      (why ? ` (${why})` : "")
+    );
+  }
+  return (
+    "Nuk u identifikua si faturë blerjeje stoku. " +
+    "Ngarko një foto të qartë të faturës së furnizuesit me produkte." +
+    (why ? ` (${why})` : "")
+  );
+}
+
+function buildTotalsCheck(items, invoiceTotal) {
+  const linesSum = items.reduce((sum, it) => {
+    if (it.line_total != null && Number.isFinite(it.line_total)) {
+      return sum + it.line_total;
+    }
+    return sum + Number(it.quantity || 0) * Number(it.unit_price || 0);
+  }, 0);
+  const roundedLines = Math.round(linesSum * 100) / 100;
+  const warnings = [];
+  let ok = true;
+  let invoice_total = null;
+
+  if (invoiceTotal != null && invoiceTotal > 0) {
+    invoice_total = Math.round(invoiceTotal * 100) / 100;
+    const diff = Math.abs(roundedLines - invoice_total);
+    const tolerance = Math.max(0.5, invoice_total * 0.12);
+    if (diff > tolerance) {
+      ok = false;
+      warnings.push(
+        `Shuma e rreshtave (${roundedLines.toFixed(2)} €) nuk përputhet mirë me totalin e faturës (${invoice_total.toFixed(2)} €). Kontrollo sasitë/çmimet para se të regjistrosh.`,
+      );
+    }
+  }
+
+  for (const it of items) {
+    if (it.line_total == null || it.unit_price == null) continue;
+    const expected = Math.round(it.quantity * it.unit_price * 100) / 100;
+    const got = Math.round(it.line_total * 100) / 100;
+    if (Math.abs(expected - got) > Math.max(0.3, expected * 0.15)) {
+      warnings.push(
+        `Rreshti «${it.name}»: sasia×çmimi (${expected.toFixed(2)}) ≠ vlera rreshtit (${got.toFixed(2)}).`,
+      );
+    }
+  }
+
+  return {
+    ok,
+    lines_sum: roundedLines,
+    invoice_total,
+    warnings,
+  };
+}
+
+async function callAnthropicVision({ mime, base64, prompt, maxTokens }) {
   const config = getAnthropicVisionConfig();
   if (!config.ready) {
     throw new Error("Skanimi i faturës kërkon ANTHROPIC_API_KEY në environment.");
@@ -138,7 +238,7 @@ async function scanInvoiceFromImage({ mime, base64 }) {
     },
     body: JSON.stringify({
       model: config.model,
-      max_tokens: config.maxTokens,
+      max_tokens: maxTokens || config.maxTokens,
       temperature: 0,
       messages: [
         {
@@ -152,10 +252,7 @@ async function scanInvoiceFromImage({ mime, base64 }) {
                 data: base64,
               },
             },
-            {
-              type: "text",
-              text: SCAN_PROMPT,
-            },
+            { type: "text", text: prompt },
           ],
         },
       ],
@@ -173,27 +270,146 @@ async function scanInvoiceFromImage({ mime, base64 }) {
     .join("")
     .trim();
 
+  const tokensUsed =
+    Number(data.usage?.input_tokens || 0) + Number(data.usage?.output_tokens || 0);
+
+  return { text, tokensUsed, model: config.model };
+}
+
+async function classifyDocumentImage({ mime, base64 }) {
+  const { text, tokensUsed, model } = await callAnthropicVision({
+    mime,
+    base64,
+    prompt: CLASSIFY_PROMPT,
+    maxTokens: 256,
+  });
+  const payload = extractJsonPayload(text);
+  const document_type = normalizeDocumentType(payload.document_type ?? payload.type ?? payload.tipi);
+  const confidence = Number(payload.confidence);
+  return {
+    document_type,
+    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
+    reason: String(payload.reason || payload.arsye || "").trim().slice(0, 120),
+    tokensUsed,
+    model,
+  };
+}
+
+async function extractStockInvoice({ mime, base64 }) {
+  const config = getAnthropicVisionConfig();
+  const { text, tokensUsed, model } = await callAnthropicVision({
+    mime,
+    base64,
+    prompt: EXTRACT_PROMPT,
+    maxTokens: config.maxTokens,
+  });
+
   const payload = extractJsonPayload(text);
   const items = normalizeInvoiceItems(payload.items ?? payload.lines ?? payload.artikuj ?? payload);
 
   if (!items.length) {
-    throw new Error("Nuk u gjetën artikuj në foto. Provoni një foto më të qartë të faturës.");
+    throw new Error("Nuk u gjetën artikuj në foto. Provoni një foto më të qartë të faturës së furnizuesit.");
   }
 
-  const tokensUsed =
-    Number(data.usage?.input_tokens || 0) + Number(data.usage?.output_tokens || 0);
+  const invoiceTotal = parseNumber(
+    payload.total_with_vat ?? payload.total ?? payload.grand_total ?? payload.totali,
+  );
+  const totals_check = buildTotalsCheck(items, invoiceTotal);
 
   return {
     supplier: String(payload.supplier ?? payload.furnizues ?? payload.vendor ?? "").trim(),
     invoice_number: String(
       payload.invoice_number ?? payload.invoice_no ?? payload.nr_fature ?? payload.number ?? "",
     ).trim(),
-    invoice_date: String(payload.invoice_date ?? payload.date ?? payload.data ?? "").trim().slice(0, 10),
+    invoice_date: String(payload.invoice_date ?? payload.date ?? payload.data ?? "")
+      .trim()
+      .slice(0, 10),
     items,
+    totals_check,
+    warnings: totals_check.warnings || [],
     tokensUsed,
-    model: config.model,
+    model,
+  };
+}
+
+/**
+ * Dy hapa: (1) klasifikim — bllokon shpenzim/shitje në stok
+ *           (2) nxjerrje + kontroll shumash — pa auto-ruajtje
+ */
+async function scanInvoiceFromImage({ mime, base64 }) {
+  if (isAiPaused()) {
+    throw new Error("AI është i ndalur për momentin. Provoni përsëri më vonë.");
+  }
+  if (!mime || !base64) {
+    throw new Error("Mungon fotoja e faturës.");
+  }
+
+  let classified;
+  try {
+    classified = await classifyDocumentImage({ mime, base64 });
+  } catch (classifyErr) {
+    // Nëse klasifikimi dështon, mos e ndalo skanimin — vazhdo me nxjerrje (si më parë).
+    classified = {
+      document_type: "unknown",
+      confidence: 0,
+      reason: String(classifyErr.message || "classify_failed").slice(0, 80),
+      tokensUsed: 0,
+    };
+  }
+  let tokensUsed = classified.tokensUsed;
+
+  const allowStock =
+    classified.document_type === "stock_purchase" ||
+    (classified.document_type === "unknown" && classified.confidence < 0.45);
+
+  // unknown me besueshmëri të ulët: provo nxjerrjen (foto e paqartë klasifikimi)
+  // expense / sales_receipt: MOS lejo stok
+  if (classified.document_type === "expense" || classified.document_type === "sales_receipt") {
+    const err = new Error(rejectNonStockMessage(classified.document_type, classified.reason));
+    err.code = "NOT_STOCK_INVOICE";
+    err.document_type = classified.document_type;
+    throw err;
+  }
+
+  if (!allowStock && classified.document_type === "unknown" && classified.confidence >= 0.45) {
+    const err = new Error(rejectNonStockMessage("unknown", classified.reason));
+    err.code = "NOT_STOCK_INVOICE";
+    err.document_type = "unknown";
+    throw err;
+  }
+
+  const extracted = await extractStockInvoice({ mime, base64 });
+  tokensUsed += extracted.tokensUsed;
+
+  const warnings = [...(extracted.warnings || [])];
+  if (classified.document_type === "unknown") {
+    warnings.unshift(
+      "Klasifikimi nuk ishte 100% i sigurt — kontrollo mirë që është faturë blerjeje para se të regjistrosh në stok.",
+    );
+  }
+
+  return {
+    document_type: classified.document_type === "unknown" ? "stock_purchase" : classified.document_type,
+    classification: {
+      document_type: classified.document_type,
+      confidence: classified.confidence,
+      reason: classified.reason,
+    },
+    supplier: extracted.supplier,
+    invoice_number: extracted.invoice_number,
+    invoice_date: extracted.invoice_date,
+    items: extracted.items,
+    totals_check: extracted.totals_check,
+    warnings,
+    tokensUsed,
+    model: extracted.model,
     provider: "anthropic",
   };
 }
 
-module.exports = { scanInvoiceFromImage };
+module.exports = {
+  scanInvoiceFromImage,
+  classifyDocumentImage,
+  normalizeInvoiceItems,
+  buildTotalsCheck,
+};
