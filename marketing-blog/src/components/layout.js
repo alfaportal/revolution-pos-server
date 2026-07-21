@@ -20,6 +20,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
     { id: "get-started", label: t("nav.getStarted"), section: "si-ta-ngarkoni" },
     { id: "how-it-works", label: t("nav.howItWorks"), section: "si-funksionon" },
     { id: "packages", label: t("nav.packages"), section: "pakot" },
+    { id: "equipment", label: t("nav.equipment"), section: "pajisjet" },
     { id: "blog", label: t("nav.blog"), section: "artikuj" },
   ];
 
@@ -92,6 +93,7 @@ export function renderFooter() {
             ${footerSectionLink("si-ta-ngarkoni", t("nav.getStarted"))}
             ${footerSectionLink("si-funksionon", t("footer.link.howItWorks"))}
             ${footerSectionLink("pakot", t("footer.link.packages"))}
+            ${footerSectionLink("pajisjet", t("nav.equipment"))}
             ${footerSectionLink("artikuj", t("footer.link.blog"))}
             <li><a href="/website/manual.html">${t("footer.link.manual")}</a></li>
           </ul>

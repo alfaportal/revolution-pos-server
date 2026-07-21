@@ -780,7 +780,8 @@ export function renderHome() {
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
             <button type="button" class="btn btn-hero-primary" data-trial-modal>${t("hero.cta.primary")}</button>
-            <a class="btn btn-hero-secondary" href="#pakot">${t("hero.cta.secondary")}</a>
+            <a class="btn btn-hero-secondary" href="#pajisjet">${t("nav.equipment")}</a>
+            <a class="btn btn-hero-ghost" href="#pakot">${t("hero.cta.secondary")}</a>
           </div>
           <div class="hero-stats" aria-label="Statistika">
             <span>${t("hero.stats.restaurants")}</span>
@@ -807,6 +808,32 @@ export function renderHome() {
               linkKey: "spotlight.card2.link",
               href: "#pakot",
             })}
+          </div>
+        </div>
+      </section>
+
+      <section class="site-section equip-section" id="pajisjet">
+        <div class="container">
+          <div class="equip-layout">
+            <div class="equip-copy">
+              <p class="equip-eyebrow">${t("nav.equipment")}</p>
+              <h2>${t("equip.title")}</h2>
+              <p class="equip-subtitle">${t("equip.subtitle")}</p>
+              <p class="equip-lead">${t("equip.lead")}</p>
+              <h3 class="equip-points-title">${t("equip.pointsTitle")}</h3>
+              <ul class="equip-points">
+                <li><strong>${t("equip.p1.title")}</strong><span>${t("equip.p1.desc")}</span></li>
+                <li><strong>${t("equip.p2.title")}</strong><span>${t("equip.p2.desc")}</span></li>
+                <li><strong>${t("equip.p3.title")}</strong><span>${t("equip.p3.desc")}</span></li>
+                <li><strong>${t("equip.p4.title")}</strong><span>${t("equip.p4.desc")}</span></li>
+                <li><strong>${t("equip.p5.title")}</strong><span>${t("equip.p5.desc")}</span></li>
+              </ul>
+              <p class="equip-closing">${t("equip.closing")}</p>
+              <div class="equip-actions">
+                <a class="btn btn-primary" id="equip-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("equip.cta")}</a>
+                <a class="btn btn-ghost" href="#pakot">${t("equip.ctaSecondary")}</a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -988,6 +1015,18 @@ export function renderHome() {
   bindPaymentSection();
   bindTrialModal();
   bindStripeConfigAndPaymentBanner();
+  (async () => {
+    const el = document.getElementById("equip-wa");
+    if (!el) return;
+    try {
+      const res = await fetch("/api/public/config");
+      const data = await res.json();
+      const digits = data?.support_phone_digits || "38348707880";
+      el.href = `https://wa.me/${digits}?text=${encodeURIComponent(t("equip.wa"))}`;
+    } catch {
+      el.href = `https://wa.me/38348707880?text=${encodeURIComponent(t("equip.wa"))}`;
+    }
+  })();
 
   if (window.location.hash) {
     requestAnimationFrame(() => {
