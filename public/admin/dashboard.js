@@ -1046,6 +1046,27 @@ async function boot() {
     renderClientsSectors(e.target.value);
   });
 
+  document.getElementById("btn-setup-link")?.addEventListener("click", async () => {
+    const box = document.getElementById("setup-link-result");
+    if (!box) return;
+    box.textContent = "Duke gjeneruar…";
+    try {
+      const ttl = Number(document.getElementById("setup-ttl")?.value || 72);
+      const data = await api(`/api/admin/setup-download-link?ttlHours=${encodeURIComponent(ttl)}`);
+      const url = data.url || "";
+      box.innerHTML = `
+        <div class="copy-row">
+          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Setup v${esc(data.setup_version || "")} — skadon ${esc(String(data.expires_in_hours || ttl))}h</div>${esc(url)}</div>
+          <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(url)}">Kopjo link</button>
+        </div>`;
+      box.querySelector("[data-copy]")?.addEventListener("click", (e) => {
+        copyText(url, e.currentTarget).catch(() => {});
+      });
+    } catch (ex) {
+      box.textContent = ex.message || String(ex);
+    }
+  });
+
   document.getElementById("btn-gen-key").addEventListener("click", async () => {
     const box = document.getElementById("gen-result");
     const hwEl = document.getElementById("gen-hw");

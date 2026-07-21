@@ -104,9 +104,35 @@ app.get("/api/public/config", (_req, res) => {
   });
 });
 
-/** Shkarkim Setup — redirect te URL e konfiguruar (ose /downloads/...). */
+/**
+ * Shkarkim Setup — VETËM me token të nënshkruar (Super Admin).
+ * Pa token → 403 (jo më publik i hapur).
+ */
 app.get("/api/public/setup-download", (req, res) => {
-  const plan = String(req.query.plan || "").trim().toLowerCase();
+  const {
+    verifySetupDownloadToken,
+    isSetupDownloadConfigured,
+  } = require("./lib/setupDownloadAuth");
+  if (!isSetupDownloadConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      gabim: "Shkarkimi i Setup kërkon SETUP_DOWNLOAD_SECRET në server.",
+      code: "SETUP_SECRET_MISSING",
+    });
+  }
+  const token = String(req.query.t || req.query.token || "").trim();
+  const check = verifySetupDownloadToken(token);
+  if (!check.ok) {
+    return res.status(403).json({
+      ok: false,
+      gabim:
+        check.reason === "expired"
+          ? "Linku i shkarkimit ka skaduar. Kërkoni link të ri nga Revolution Invest."
+          : "Shkarkimi i Setup nuk është publik. Kontaktoni Revolution Invest për link zyrtar.",
+      code: "SETUP_TOKEN_REQUIRED",
+    });
+  }
+  const plan = String(req.query.plan || check.plan || "").trim().toLowerCase();
   const url = getSetupDownloadUrl(plan);
   res.redirect(302, url);
 });

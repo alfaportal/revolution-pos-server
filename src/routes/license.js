@@ -164,6 +164,61 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/license/update-info — update VETËM nëse licenca është valide.
+ * Kthen link shkarkimi me token (jo URL publike e hapur).
+ */
+router.post("/update-info", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { celesi, license_key, device_id, current_version } = req.body || {};
+    const key = celesi || license_key;
+    if (!key) {
+      return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
+    }
+    const result = await validateLicense({
+      celesi: key,
+      device_id,
+      client_ip: clientIp(req),
+    });
+    if (!result.valid) {
+      return res.status(403).json({ ok: false, update_available: false, gabim: result.message });
+    }
+
+    const {
+      getSetupVersion,
+      getPublicAppOrigin,
+    } = require("../lib/publicOrigin");
+    const {
+      createSetupDownloadToken,
+      isSetupDownloadConfigured,
+    } = require("../lib/setupDownloadAuth");
+
+    const latest = getSetupVersion();
+    const current = String(current_version || "").replace(/^v/i, "").trim();
+    const updateAvailable = Boolean(latest && current && latest !== current);
+
+    let download_url = null;
+    if (updateAvailable && isSetupDownloadConfigured()) {
+      const token = createSetupDownloadToken({ ttlHours: 48 });
+      const origin = getPublicAppOrigin();
+      download_url = `${origin}/api/public/setup-download?t=${encodeURIComponent(token)}`;
+    }
+
+    res.json({
+      ok: true,
+      update_available: updateAvailable,
+      latest_version: latest,
+      current_version: current || null,
+      download_url,
+      message: updateAvailable
+        ? "Ka version të ri — shkarkoni vetëm nga linku zyrtar."
+        : "Jeni në versionin e fundit.",
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
  * POST /api/v1/license/ack-factory-reset — POS konfirmon që e ka marrë urdhrin e rivendosjes
  */
 router.post("/ack-factory-reset", licenseApiKeyOptional, async (req, res) => {

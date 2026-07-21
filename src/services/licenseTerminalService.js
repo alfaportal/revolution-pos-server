@@ -1,6 +1,7 @@
 const { getSupabase } = require("../db");
 
-const TERMINAL_GRACE_MS = 24 * 60 * 60 * 1000;
+/** Pa shtim terminali të ri gjatë grace — vetëm mesazh. Overflow i ri = bllokim. */
+const TERMINAL_GRACE_MS = 2 * 60 * 60 * 1000;
 
 function normalizeDeviceId(deviceId) {
   return String(deviceId || "").trim().toUpperCase().replace(/\s+/g, "");
@@ -142,18 +143,6 @@ async function clearAllTerminals(licenseId) {
   await clearTerminalLimitGrace(licenseId);
 }
 
-function graceSuccessResult(license, activeCount, maxTerminals, graceUntil) {
-  return {
-    allowed: true,
-    warning: true,
-    code: "TERMINAL_LIMIT_GRACE",
-    message: terminalLimitMessage(graceUntil),
-    active_count: activeCount,
-    max_terminals: maxTerminals,
-    grace_until: graceUntil,
-  };
-}
-
 function blockedResult(activeCount, maxTerminals) {
   return {
     allowed: false,
@@ -167,8 +156,16 @@ function blockedResult(activeCount, maxTerminals) {
 
 async function resolveTerminalAccess(license, deviceId, hostname, ip) {
   const id = normalizeDeviceId(deviceId);
+  /* 1 PC = 1 çelës: pa device_id → refuzo (mos anashkalo) */
   if (!id) {
-    return { allowed: true, skip: true, active_count: 0, max_terminals: getMaxTerminals(license) };
+    return {
+      allowed: false,
+      code: "DEVICE_REQUIRED",
+      message: "Mungon ID e pajisjes. Riaktivizoni licencën.",
+      force_logout: true,
+      active_count: 0,
+      max_terminals: getMaxTerminals(license),
+    };
   }
 
   await migrateLegacyTerminal(license);
@@ -210,15 +207,8 @@ async function resolveTerminalAccess(license, deviceId, hostname, ip) {
     };
   }
 
-  const graceStart = await startTerminalLimitGrace(license.id);
-  license.terminal_limit_grace_at = graceStart;
-  const grace = getGraceState(license);
-
-  if (grace.withinGrace) {
-    await insertTerminal(license.id, id, { hostname, ip });
-    return graceSuccessResult(license, terminals.length + 1, maxTerminals, grace.graceUntil);
-  }
-
+  /* Terminal i ri kur limiti u mbush — BLLOKIM (pa insert, pa grace që shton PC) */
+  await startTerminalLimitGrace(license.id);
   return blockedResult(terminals.length, maxTerminals);
 }
 

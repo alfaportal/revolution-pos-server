@@ -245,18 +245,30 @@ function bindStripeConfigAndPaymentBanner() {
   }
 }
 
+function setupWhatsAppHref(digits = "38348707880", plan = "") {
+  const planLabel = plan ? ` (pako ${plan})` : "";
+  const text =
+    getLang() === "en"
+      ? `Hello, I need the official protected Setup link${planLabel} and a license / trial key.`
+      : `Përshëndetje, më duhet linku zyrtar i mbrojtur për Setup${planLabel} dhe çelës trial / licencë.`;
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}
+
+/** @deprecated Setup nuk është më publik — përdor WhatsApp / token admin */
 function setupDownloadHref(plan) {
-  const p = plan && PACKAGE_PLANS.includes(plan) ? plan : "";
-  return p ? `/api/public/setup-download?plan=${encodeURIComponent(p)}` : "/api/public/setup-download";
+  return setupWhatsAppHref("38348707880", plan);
 }
 
 function bindGetStartedDownload() {
   const dl = document.getElementById("get-started-download");
   const help = document.getElementById("get-started-wa");
   const verEl = document.getElementById("setup-version-label");
-  if (dl) {
-    dl.href = setupDownloadHref(sessionStorage.getItem("selectedPackage") || "p1");
-  }
+  const setupWaText = () =>
+    encodeURIComponent(
+      getLang() === "en"
+        ? "Hello, I need the official protected Setup download link and a trial / license key."
+        : "Përshëndetje, më duhet linku zyrtar i mbrojtur për Setup dhe çelës trial / licencë.",
+    );
   (async () => {
     try {
       const res = await fetch("/api/public/config");
@@ -266,20 +278,20 @@ function bindGetStartedDownload() {
         verEl.hidden = false;
         verEl.innerHTML = `<strong>${t("getStarted.version")}:</strong> <span class="setup-version-num">v${data.setup_version}</span> — ${t("getStarted.versionHint")}`;
       }
-      if (help) {
-        const digits = data.support_phone_digits || "38348707880";
-        const text = encodeURIComponent(
-          getLang() === "en"
-            ? "Hello, I downloaded Setup — I need a trial / license key."
-            : "Përshëndetje, shkarkova Setup — më duhet çelës trial / licencë.",
-        );
-        help.href = `https://wa.me/${digits}?text=${text}`;
+      const digits = data.support_phone_digits || "38348707880";
+      const wa = `https://wa.me/${digits}?text=${setupWaText()}`;
+      if (dl) {
+        dl.href = wa;
+        dl.removeAttribute("download");
+        dl.target = "_blank";
+        dl.rel = "noopener noreferrer";
       }
-      if (data.setup_download_url && dl && !sessionStorage.getItem("selectedPackage")) {
-        dl.href = data.setup_download_url;
-      }
+      if (help) help.href = wa;
     } catch {
-      /* keep default */
+      if (dl) {
+        dl.href = `https://wa.me/38348707880?text=${setupWaText()}`;
+        dl.target = "_blank";
+      }
     }
   })();
 }
@@ -414,11 +426,12 @@ function bindPackageCards() {
 
     const dlBtn = document.getElementById("package-detail-download");
     if (dlBtn) {
-      dlBtn.href = setupDownloadHref(plan);
+      dlBtn.href = setupWhatsAppHref("38348707880", plan);
+      dlBtn.textContent = t("getStarted.cta");
+      dlBtn.target = "_blank";
+      dlBtn.rel = "noopener noreferrer";
       dlBtn.hidden = false;
     }
-    const getStartedDl = document.getElementById("get-started-download");
-    if (getStartedDl) getStartedDl.href = setupDownloadHref(plan);
 
     sessionStorage.setItem("selectedPackage", plan);
   };
@@ -467,7 +480,7 @@ function bindPackageCards() {
       openStripeCheckoutModal(plan);
       return;
     }
-    window.location.href = setupDownloadHref(plan || "p1");
+    window.open(setupWhatsAppHref(digits, plan || "p1"), "_blank", "noopener,noreferrer");
   });
 
   const saved = sessionStorage.getItem("selectedPackage");
@@ -507,7 +520,7 @@ async function openTrialModal() {
         <a href="tel:+${digits}">${phone}</a>
       </p>
       <div class="checkout-actions">
-        <a class="btn btn-primary" href="${setupDownloadHref(plan)}" download>${t("trialModal.download")}</a>
+        <a class="btn btn-primary" href="${setupWhatsAppHref("38348707880", plan)}" target="_blank" rel="noopener noreferrer">${t("getStarted.cta")}</a>
         <a class="btn btn-ghost" href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
         <button type="button" class="btn btn-ghost" id="trial-close">${t("trialModal.close")}</button>
       </div>
@@ -878,7 +891,7 @@ export function renderHome() {
           </ol>
           <p class="setup-version-banner" id="setup-version-label" hidden></p>
           <div class="get-started-actions">
-            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download?plan=p1">${t("getStarted.cta")}</a>
+            <a class="btn btn-primary" id="get-started-download" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("getStarted.cta")}</a>
             <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
             <a class="btn btn-ghost" id="get-started-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("getStarted.ctaHelp")}</a>
           </div>

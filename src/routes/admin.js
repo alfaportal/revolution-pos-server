@@ -819,6 +819,46 @@ router.post("/clients/:id/link-owner", asyncHandler(async (req, res) => {
 }));
 
 /**
+ * Link zyrtar Setup (me token) — jo publik.
+ * GET /api/admin/setup-download-link?ttlHours=72&plan=p1
+ */
+router.get(
+  "/setup-download-link",
+  asyncHandler(async (req, res) => {
+    const {
+      createSetupDownloadToken,
+      isSetupDownloadConfigured,
+    } = require("../lib/setupDownloadAuth");
+    const { getPublicAppOrigin, getSetupVersion } = require("../lib/publicOrigin");
+    if (!isSetupDownloadConfigured()) {
+      return res.status(503).json({
+        ok: false,
+        gabim: "Vendosni SETUP_DOWNLOAD_SECRET (ose JWT_SECRET) në Railway.",
+      });
+    }
+    const ttlHours = Number(req.query.ttlHours || 72);
+    const plan = String(req.query.plan || "").trim().toLowerCase();
+    const token = createSetupDownloadToken({ ttlHours, plan });
+    const origin = getPublicAppOrigin();
+    const qs = new URLSearchParams({ t: token });
+    if (plan) qs.set("plan", plan);
+    const url = `${origin}/api/public/setup-download?${qs.toString()}`;
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "setup_download_link",
+      targetType: "setup",
+      targetLabel: getSetupVersion(),
+    });
+    res.json({
+      ok: true,
+      url,
+      setup_version: getSetupVersion(),
+      expires_in_hours: Math.min(720, Math.max(1, ttlHours || 72)),
+    });
+  }),
+);
+
+/**
  * Pagesa bankare — listë. Fatura lëshohet VETËM me confirm.
  */
 router.get(

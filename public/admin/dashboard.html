@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=11">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=12">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -115,6 +115,18 @@
             </div>
             <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
             <div id="gen-result" style="color:var(--accent)"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Link Setup zyrtar (i mbrojtur)</div>
+            <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.95rem">
+              Setup nuk shkarkohet publikisht. Gjenero link me token (skadon) dhe dërgoja klientit në WhatsApp.
+            </p>
+            <div class="field">
+              <label for="setup-ttl">Vlefshmëria (orë)</label>
+              <input id="setup-ttl" type="number" min="1" max="720" value="72">
+            </div>
+            <button type="button" class="btn btn-ok" id="btn-setup-link">Gjenero link shkarkimi</button>
+            <div id="setup-link-result" style="margin-top:0.75rem;word-break:break-all;color:var(--accent)"></div>
           </div>
           <div class="card">
             <div class="card-title">Lista e licencave</div>
@@ -339,6 +351,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=11"></script>
+  <script src="/admin/dashboard.js?v=12"></script>
 </body>
 </html>

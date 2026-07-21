@@ -75,19 +75,18 @@ function getSetupVersion() {
 }
 
 function getPublicAppConfig() {
+  const { isSetupDownloadConfigured } = require("./setupDownloadAuth");
   return {
     public_origin: getPublicAppOrigin(),
     support_phone: getSupportPhone(),
     support_phone_digits: getSupportPhoneDigits(),
     support_email: getSupportEmail(),
-    setup_download_url: getSetupDownloadUrl(),
     setup_version: getSetupVersion(),
-    setup_downloads: {
-      p1: getSetupDownloadUrl("p1"),
-      p2: getSetupDownloadUrl("p2"),
-      p3: getSetupDownloadUrl("p3"),
-      p4: getSetupDownloadUrl("p4"),
-    },
+    setup_requires_token: true,
+    setup_download_configured: isSetupDownloadConfigured(),
+    /* URL direkte NUK ekspozohet publike — vetëm me token nga admin */
+    setup_download_url: null,
+    setup_downloads: null,
   };
 }
 
