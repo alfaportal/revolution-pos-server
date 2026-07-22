@@ -1,8 +1,10 @@
-Setup publik (default ne kod):
-https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.231/KAFENE-Setup.exe
+Setup Windows — URL zyrtare (duhet të përputhet me asset-in në Releases):
 
-Per update: ngarko version te ri me:
-  gh release create setup-vX.Y.Z KAFENE-Setup.exe --title "KAFENE Setup X.Y.Z"
+https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.237/KAFENE-Setup.exe
 
-Pastaj ndrysho DEFAULT_SETUP_DOWNLOAD_URL ne src/lib/publicOrigin.js
-Mos e shtoni .exe ne Git (~107MB).
+Si të ngarkosh version të ri:
+  1. Kopjo Setup si KAFENE-Setup.exe (emër fikse)
+  2. gh release create setup-vX.Y.Z KAFENE-Setup.exe --title "KAFENE Setup X.Y.Z"
+  3. Ndrysho DEFAULT_SETUP_DOWNLOAD_URL + DEFAULT_SETUP_VERSION në src/lib/publicOrigin.js
+
+MOS përdor emrin «Sistemi i Kafenes Setup …» në URL — browseri / GitHub e bën 404.

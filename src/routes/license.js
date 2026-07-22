@@ -222,7 +222,8 @@ router.post("/update-info", licenseApiKeyOptional, async (req, res) => {
 
     let download_url = null;
     if (updateAvailable && isSetupDownloadConfigured()) {
-      const token = createSetupDownloadToken({ ttlHours: 48 });
+      const { DEFAULT_SETUP_LINK_TTL_HOURS } = require("../lib/publicOrigin");
+      const token = createSetupDownloadToken({ ttlHours: DEFAULT_SETUP_LINK_TTL_HOURS });
       const origin = getPublicAppOrigin();
       download_url = `${origin}/api/public/setup-download?t=${encodeURIComponent(token)}`;
     }

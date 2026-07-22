@@ -18,7 +18,8 @@ const IP_WINDOW_MS = 60 * 60 * 1000;
 const IP_MAX = 5;
 const DEST_WINDOW_MS = 24 * 60 * 60 * 1000;
 const DEST_MAX = 5;
-const TOKEN_TTL_HOURS = 72;
+const { DEFAULT_SETUP_LINK_TTL_HOURS } = require("../lib/publicOrigin");
+const TOKEN_TTL_HOURS = DEFAULT_SETUP_LINK_TTL_HOURS;
 
 /** @type {Map<string, number[]>} */
 const hitsByKey = new Map();

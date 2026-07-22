@@ -1141,7 +1141,7 @@ async function boot() {
     if (!box) return;
     box.textContent = "Duke gjeneruar…";
     try {
-      const ttl = Number(document.getElementById("setup-ttl")?.value || 72);
+      const ttl = Number(document.getElementById("setup-ttl")?.value || 168);
       const data = await api(`/api/admin/setup-download-link?ttlHours=${encodeURIComponent(ttl)}`);
       const url = data.url || "";
       box.innerHTML = `

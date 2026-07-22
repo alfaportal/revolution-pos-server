@@ -3,10 +3,12 @@
 const DEFAULT_PUBLIC_ORIGIN = "https://revolution-pos.com";
 const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
-/** Setup Windows — shkarkim i drejtpërdrejtë (pa Railway Variables). */
+/** Setup Windows — emri i asset-it në GitHub Releases (duhet të përputhet saktë). */
 const DEFAULT_SETUP_DOWNLOAD_URL =
   "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.237/KAFENE-Setup.exe";
 const DEFAULT_SETUP_VERSION = "1.0.237";
+/** Link Setup (admin / email / SMS) — default 7 ditë. */
+const DEFAULT_SETUP_LINK_TTL_HOURS = 168;
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
@@ -41,8 +43,12 @@ function getSupportEmail() {
 
 /** URL për shkarkim Setup — njerëzit e marrin vetë nga webfaqja (default i gatshëm). */
 function getSetupDownloadUrl(plan) {
-  const fallback =
+  const fallbackRaw =
     process.env.SETUP_DOWNLOAD_URL?.trim() || DEFAULT_SETUP_DOWNLOAD_URL;
+  /* URL të vjetra / emra të gabuar → fallback i saktë (KAFENE-Setup.exe) */
+  const fallback = /KAFENE-Setup\.exe$/i.test(fallbackRaw)
+    ? fallbackRaw
+    : DEFAULT_SETUP_DOWNLOAD_URL;
   const key = String(plan || "").toLowerCase();
   const byPlan = {
     p1:
@@ -62,7 +68,11 @@ function getSetupDownloadUrl(plan) {
       process.env.SETUP_DOWNLOAD_FULL_URL?.trim() ||
       fallback,
   };
-  return byPlan[key] || fallback;
+  const url = byPlan[key] || fallback;
+  if (/github\.com\/.+\/releases\/download\//i.test(url) && !/KAFENE-Setup\.exe$/i.test(url)) {
+    return DEFAULT_SETUP_DOWNLOAD_URL;
+  }
+  return url;
 }
 
 /** Versioni i Setup që shfaqet në webfaqe (p.sh. 1.0.231). */
@@ -108,6 +118,7 @@ module.exports = {
   DEFAULT_SUPPORT_EMAIL,
   DEFAULT_SETUP_DOWNLOAD_URL,
   DEFAULT_SETUP_VERSION,
+  DEFAULT_SETUP_LINK_TTL_HOURS,
   getPublicAppOrigin,
   getSupportPhone,
   getSupportPhoneDigits,

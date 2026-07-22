@@ -17,18 +17,20 @@ function isSetupDownloadConfigured() {
   return Boolean(setupDownloadSecret());
 }
 
+const { DEFAULT_SETUP_LINK_TTL_HOURS } = require("./publicOrigin");
+
 /**
- * Token i vlefshëm për `ttlHours` (default 72h).
+ * Token i vlefshëm për `ttlHours` (default 7 ditë = 168h).
  * Format: base64url(expMs.hmac)
  */
-function createSetupDownloadToken({ ttlHours = 72, plan = "" } = {}) {
+function createSetupDownloadToken({ ttlHours = DEFAULT_SETUP_LINK_TTL_HOURS, plan = "" } = {}) {
   const secret = setupDownloadSecret();
   if (!secret) {
     const err = new Error("SETUP_DOWNLOAD_SECRET mungon në server.");
     err.code = "SETUP_SECRET_MISSING";
     throw err;
   }
-  const hours = Math.min(720, Math.max(1, Number(ttlHours) || 72));
+  const hours = Math.min(720, Math.max(1, Number(ttlHours) || DEFAULT_SETUP_LINK_TTL_HOURS));
   const exp = Date.now() + hours * 60 * 60 * 1000;
   const planKey = String(plan || "").trim().toLowerCase().slice(0, 8);
   const payload = `${exp}.${planKey || "any"}`;

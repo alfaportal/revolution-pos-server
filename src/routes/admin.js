@@ -820,7 +820,7 @@ router.post("/clients/:id/link-owner", asyncHandler(async (req, res) => {
 
 /**
  * Link zyrtar Setup (me token) — jo publik.
- * GET /api/admin/setup-download-link?ttlHours=72&plan=p1
+ * GET /api/admin/setup-download-link?ttlHours=168&plan=p1
  */
 router.get(
   "/setup-download-link",
@@ -829,14 +829,18 @@ router.get(
       createSetupDownloadToken,
       isSetupDownloadConfigured,
     } = require("../lib/setupDownloadAuth");
-    const { getPublicAppOrigin, getSetupVersion } = require("../lib/publicOrigin");
+    const {
+      getPublicAppOrigin,
+      getSetupVersion,
+      DEFAULT_SETUP_LINK_TTL_HOURS,
+    } = require("../lib/publicOrigin");
     if (!isSetupDownloadConfigured()) {
       return res.status(503).json({
         ok: false,
         gabim: "Vendosni SETUP_DOWNLOAD_SECRET (ose JWT_SECRET) në Railway.",
       });
     }
-    const ttlHours = Number(req.query.ttlHours || 72);
+    const ttlHours = Number(req.query.ttlHours || DEFAULT_SETUP_LINK_TTL_HOURS);
     const plan = String(req.query.plan || "").trim().toLowerCase();
     const token = createSetupDownloadToken({ ttlHours, plan });
     const origin = getPublicAppOrigin();
@@ -853,7 +857,10 @@ router.get(
       ok: true,
       url,
       setup_version: getSetupVersion(),
-      expires_in_hours: Math.min(720, Math.max(1, ttlHours || 72)),
+      expires_in_hours: Math.min(
+        720,
+        Math.max(1, ttlHours || DEFAULT_SETUP_LINK_TTL_HOURS),
+      ),
     });
   }),
 );
