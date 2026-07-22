@@ -620,9 +620,31 @@ function bindLicenseActions(root) {
   });
 }
 
+function formatLicenseHwId(raw) {
+  const hex = String(raw || "")
+    .replace(/[^a-fA-F0-9]/g, "")
+    .toUpperCase();
+  if (hex.length !== 16) return "";
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+}
+
 async function loadLicenses() {
-  const d = await api("/api/super/dashboard/licenses");
-  const list = d.licenses || [];
+  /* I njëjti API si telefoni — ID + çelësi të njëjtë pas Ruaj / Rifresko */
+  const d = await api("/api/admin/licenses");
+  const list = (d.licenses || []).map((l) => {
+    const hw =
+      formatLicenseHwId(l.hardware_id) ||
+      formatLicenseHwId(l.display_device_id) ||
+      formatLicenseHwId(l.device_id) ||
+      "";
+    return {
+      id: l.id,
+      client_name: l.clients?.emri || "—",
+      hardware_id: hw,
+      license_key: l.celesi || "",
+      statusi: l.statusi,
+    };
+  });
 
   const cards = document.getElementById("licenses-cards");
   if (cards) {
@@ -630,9 +652,8 @@ async function loadLicenses() {
       ? list
           .map((l) => {
             const active = l.statusi === "aktive";
-            const hw = l.hardware_id && l.hardware_id !== "—" ? l.hardware_id : "";
-            const device = l.device_id && l.device_id !== "—" ? l.device_id : "";
-            const key = l.license_key && l.license_key !== "—" ? l.license_key : "";
+            const hw = l.hardware_id || "";
+            const key = l.license_key || "";
             return `<div class="license-card" data-license-card="${esc(l.id)}">
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
@@ -664,8 +685,8 @@ async function loadLicenses() {
     body.innerHTML = list
       .map((l) => {
         const active = l.statusi === "aktive";
-        const hw = l.hardware_id && l.hardware_id !== "—" ? l.hardware_id : "";
-        const key = l.license_key && l.license_key !== "—" ? l.license_key : "";
+        const hw = l.hardware_id || "";
+        const key = l.license_key || "";
         return `<tr>
           <td>${esc(l.client_name)}</td>
           <td>
@@ -684,7 +705,7 @@ async function loadLicenses() {
           </td>
         </tr>`;
       })
-      .join("") || `<tr><td colspan="6" style="color:var(--muted)">Nuk ka licenca</td></tr>`;
+      .join("") || `<tr><td colspan="5" style="color:var(--muted)">Nuk ka licenca</td></tr>`;
     bindLicenseActions(body);
   }
 }

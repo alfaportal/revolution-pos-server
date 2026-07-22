@@ -168,29 +168,32 @@ function licenseIsExpired(l) {
 
 function licenseProblems(l) {
   const problems = [];
-  if (l.last_validation_error) problems.push(String(l.last_validation_error));
+  const err = String(l.last_validation_error || "");
+  /* Mos trajto meta HW si gabim (përdoret për sync kur mungon kolona hardware_id) */
+  if (err && !err.startsWith("__LIC_HW__:")) problems.push(err);
   if (l.statusi === "revokuar") problems.push("Liçenca është revokuar.");
   if (l.statusi === "pezulluar") problems.push("Liçenca është pezulluar.");
   if (l.statusi === "skaduar") problems.push("Liçenca është shënuar si skaduar.");
   if (licenseIsExpired(l) && l.statusi === "aktive") {
     problems.push("Data e skadimit ka kaluar.");
   }
+  /* Vetëm kur ka MË SHUMË terminale se lejohet — jo kur janë thjesht 2/2 */
+  if (l.terminal_over_limit) {
+    problems.push(`Tepricë terminalesh: ${terminalCountLabel(l)}`);
+  }
   return [...new Set(problems)];
 }
 
 function licenseStatusCell(l) {
   const problems = licenseProblems(l);
-  if (l.terminal_limit_reached) {
-    problems.push(`Terminale: ${terminalCountLabel(l)}`);
-  }
   const warn = problems.length
     ? `<span class="license-warn" title="${esc(problems.join(" — "))}" aria-label="Problem">⚠️</span> `
     : "";
   let extra = "";
   if (l.terminal_over_limit && l.terminal_in_grace) {
-    extra = ` <span class="badge badge-stock-warning">Grace</span>`;
-  } else if (l.terminal_limit_reached) {
-    extra = ` <span class="badge badge-stock-out">Limit</span>`;
+    extra = ` <span class="badge badge-stock-warning">Grace terminale</span>`;
+  } else if (l.terminal_over_limit) {
+    extra = ` <span class="badge badge-stock-out">Tepricë terminale</span>`;
   }
   return `${warn}${badge(l.statusi)}${extra}`;
 }
@@ -1379,7 +1382,9 @@ function openEditLicense(id) {
     <input value="${esc(fmtDateTime(l.last_activated_at))}" readonly style="opacity:0.85">
     <label>IP e fundit</label>
     <input value="${esc(l.last_ip || "—")}" readonly class="mono" style="opacity:0.85">
-    ${l.last_validation_error ? `<div class="alert alert-error" style="margin-bottom:0.75rem">⚠️ ${esc(l.last_validation_error)}</div>` : ""}
+    ${l.last_validation_error && !String(l.last_validation_error).startsWith("__LIC_HW__:")
+      ? `<div class="alert alert-error" style="margin-bottom:0.75rem">⚠️ ${esc(l.last_validation_error)}</div>`
+      : ""}
     <label>Data e skadimit</label>
     <input type="date" name="data_skadimit" required value="${esc(l.data_skadimit)}">
     <label>Statusi</label>
@@ -1859,10 +1864,31 @@ async function saveLicenseDeviceId(licenseId, deviceId, btn) {
       btn.disabled = true;
       btn.textContent = "Duke ruajtur…";
     }
-    await api(`/api/admin/licenses/${licenseId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ device_id: deviceId }),
-    });
+    const idRaw = String(deviceId || "").trim();
+    const hex = idRaw.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+    const body = {};
+    if (hex.length === 16) {
+      body.hardware_id = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+    } else if (hex.length === 12) {
+      body.device_id = hex;
+    } else if (idRaw) {
+      body.device_id = idRaw;
+    } else {
+      throw new Error("Fut ID (16 shenja).");
+    }
+    try {
+      await api(`/api/admin/licenses/${licenseId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      const msg = String(err.message || "");
+      if (/hardware_id|schema cache/i.test(msg) && body.hardware_id) {
+        /* Backend e ruan si meta — provo prapë vetëm me device nëse 12 */
+        throw err;
+      }
+      throw err;
+    }
     await loadLicenses();
     if (btn) {
       btn.textContent = "U ruajt!";

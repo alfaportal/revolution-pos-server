@@ -259,15 +259,42 @@ const OPTIONAL_LICENSE_META = [
 
 async function patchLicenseMeta(licenseId, patch) {
   const db = getSupabase();
-  const { error } = await db.from("licenses").update(patch).eq("id", licenseId);
+  let { error } = await db.from("licenses").update(patch).eq("id", licenseId);
   if (!error) return;
+
+  const msg = String(error.message || error.details || "");
+  /* Kolona hardware_id mungon — ruaj HW në last_validation_error si meta sync */
+  if (/hardware_id|schema cache/i.test(msg) && patch.hardware_id != null) {
+    const withMeta = { ...patch };
+    delete withMeta.hardware_id;
+    const existingErr = String(withMeta.last_validation_error || "");
+    if (!existingErr || existingErr.startsWith(HW_META_PREFIX)) {
+      withMeta.last_validation_error =
+        encodeHwMeta(patch.hardware_id) || existingErr || "";
+    }
+    const retryHw = await db.from("licenses").update(withMeta).eq("id", licenseId);
+    if (!retryHw.error) return;
+    error = retryHw.error;
+  }
 
   const optionalInPatch = OPTIONAL_LICENSE_META.filter((k) => k in patch);
   if (!optionalInPatch.length) throw error;
 
   const fallback = { ...patch };
   for (const k of optionalInPatch) delete fallback[k];
-  if (!Object.keys(fallback).length) return;
+  /* Mos humb HW kur heqim hardware_id nga retry */
+  if (patch.hardware_id && !("last_validation_error" in fallback)) {
+    fallback.last_validation_error = encodeHwMeta(patch.hardware_id);
+  }
+  if (!Object.keys(fallback).length) {
+    if (patch.hardware_id) {
+      const onlyMeta = { last_validation_error: encodeHwMeta(patch.hardware_id) };
+      const metaOnly = await db.from("licenses").update(onlyMeta).eq("id", licenseId);
+      if (metaOnly.error) throw metaOnly.error;
+      return;
+    }
+    return;
+  }
 
   const retry = await db.from("licenses").update(fallback).eq("id", licenseId);
   if (retry.error) throw retry.error;
@@ -337,7 +364,8 @@ async function reportHardwareId({ device_id, hardware_id, celesi }) {
   } catch (err) {
     const msg = String(err?.message || err || "");
     if (!/hardware_id|schema cache/i.test(msg)) throw err;
-    /* Kolona ende nuk ekziston — mos blloko POS */
+    /* Kolona ende nuk ekziston — ruaj si meta që admin të shohë të njëjtën ID */
+    await patchLicenseMeta(license.id, { last_validation_error: encodeHwMeta(hw) });
     return { ok: true, license_id: license.id, hardware_id: hw, stored: false };
   }
   return { ok: true, license_id: license.id, hardware_id: hw, stored: true };
@@ -532,6 +560,7 @@ async function listLicenses() {
       } catch {
         return {
           ...lic,
+          hardware_id: resolveLicenseHardwareId(lic),
           active_terminal_count: lic.device_id ? 1 : 0,
           max_terminals: Number(lic.max_terminals) || 1,
           terminal_limit_reached: false,
@@ -806,7 +835,7 @@ async function updateLicense(id, body) {
       patch.hardware_id = normalizeHardwareIdStored(hexDev);
     } else {
       patch.device_id = rawDev;
-      patch.last_validation_error = "";
+      /* Mos fshi __LIC_HW__ meta — përndryshe panel↔telefon humbin ID 16 */
       if (patch.device_id) {
         patch.last_activated_at = new Date().toISOString();
       }
