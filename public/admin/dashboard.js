@@ -423,8 +423,14 @@ function bindLicenseActions(root) {
       const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
       const keyEl = root.querySelector(`[data-key-input="${id}"]`);
       const hardwareId = String(hwEl?.value || "").trim();
+      const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
       if (!hardwareId) {
-        alert("Shkruaj Hardware ID (nga ekrani Aktivizo KAFENE).");
+        alert("Shkruaj Hardware ID me 16 shenja (XXXX-XXXX-XXXX-XXXX) nga ekrani Aktivizo KAFENE.");
+        hwEl?.focus();
+        return;
+      }
+      if (hwHex.length !== 16) {
+        alert("Hardware ID duhet 16 shenja hex. Device ID me 12 shenja nuk pranohet — merre ID nga «Aktivizo KAFENE».");
         hwEl?.focus();
         return;
       }
@@ -476,8 +482,9 @@ function bindLicenseActions(root) {
       const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
       const keyEl = root.querySelector(`[data-key-input="${id}"]`);
       const msgEl = card.querySelector(`[data-save-msg="${id}"]`) || root.querySelector(`[data-save-msg="${id}"]`);
-      const device_id = String(hwEl?.value || "").trim();
+      const hwRaw = String(hwEl?.value || "").trim();
       const celesi = String(keyEl?.value || "").trim();
+      const hwHex = hwRaw.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
       if (!celesi) {
         if (msgEl) {
           msgEl.textContent = "Shkruaj ose gjenero License Key.";
@@ -496,9 +503,12 @@ function bindLicenseActions(root) {
         msgEl.classList.remove("err");
       }
       try {
+        /* device_id cloud = 12 hex; Hardware ID 16 mos e ruaj si device_id */
+        const patch = { celesi };
+        if (hwHex.length === 12) patch.device_id = hwHex;
         await api(`/api/admin/licenses/${id}`, {
           method: "PATCH",
-          body: JSON.stringify({ celesi, device_id }),
+          body: JSON.stringify(patch),
         });
         btn.textContent = "U ruajt ✓";
         if (msgEl) {
@@ -547,14 +557,16 @@ async function loadLicenses() {
           .map((l) => {
             const active = l.statusi === "aktive";
             const hw = l.hardware_id && l.hardware_id !== "—" ? l.hardware_id : "";
+            const device = l.device_id && l.device_id !== "—" ? l.device_id : "";
             const key = l.license_key && l.license_key !== "—" ? l.license_key : "";
             return `<div class="license-card" data-license-card="${esc(l.id)}">
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
               </h4>
               <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.35rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
+              ${device ? `<div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.5rem">Device cloud: <span class="mono">${esc(device)}</span></div>` : ""}
               <div class="lic-field-block">
-                <label class="lic-field-label">Hardware ID (vetëm ID)</label>
+                <label class="lic-field-label">Hardware ID (16 shenja — nga Aktivizo KAFENE)</label>
                 <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
                 <div class="lic-field-actions">
                   <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
@@ -1071,8 +1083,14 @@ async function boot() {
     const box = document.getElementById("gen-result");
     const hwEl = document.getElementById("gen-hw");
     const hardwareId = String(hwEl?.value || "").trim();
+    const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
     if (!hardwareId) {
-      box.textContent = "Shkruaj Hardware ID (nga ekrani i klientit).";
+      box.textContent = "Shkruaj Hardware ID me 16 shenja (XXXX-XXXX-XXXX-XXXX) nga ekrani i klientit.";
+      hwEl?.focus();
+      return;
+    }
+    if (hwHex.length !== 16) {
+      box.textContent = "Hardware ID duhet 16 shenja. Device ID me 12 shenja nuk pranohet — merre nga «Aktivizo KAFENE».";
       hwEl?.focus();
       return;
     }

@@ -602,16 +602,25 @@ async function getClientDetail(clientId) {
 async function getLicensesView() {
   const licenses = await listLicenses();
   return {
-    licenses: licenses.map((l) => ({
-      id: l.id,
-      client_id: l.client_id || l.clients?.id,
-      client_name: l.clients?.emri || "—",
-      hardware_id: l.display_device_id || l.device_id || "",
-      license_key: l.celesi || "",
-      statusi: l.statusi,
-      activated_at: l.last_activated_at || l.created_at,
-      last_seen_at: licenseLastSeen(l),
-    })),
+    licenses: licenses.map((l) => {
+      const device = String(l.display_device_id || l.device_id || "").trim();
+      const hex = device.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+      /* Vetëm ID me 16 hex = Hardware ID për çelës; 12 = device cloud (mos e ngatërro) */
+      const hardware_id = hex.length === 16
+        ? `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`
+        : "";
+      return {
+        id: l.id,
+        client_id: l.client_id || l.clients?.id,
+        client_name: l.clients?.emri || "—",
+        device_id: device,
+        hardware_id,
+        license_key: l.celesi || "",
+        statusi: l.statusi,
+        activated_at: l.last_activated_at || l.created_at,
+        last_seen_at: licenseLastSeen(l),
+      };
+    }),
   };
 }
 

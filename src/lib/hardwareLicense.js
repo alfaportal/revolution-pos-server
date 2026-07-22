@@ -62,7 +62,7 @@ function generateHardwareLicenseKey(hardwareIdInput, opts = {}) {
   const id = normalizeHardwareId(hardwareIdInput);
   if (id.length < 16) {
     throw new Error(
-      "HARDWARE_ID duhet të ketë 16 karaktere hex (formati XXXX-XXXX-XXXX-XXXX).",
+      "HARDWARE_ID duhet 16 shenja hex (XXXX-XXXX-XXXX-XXXX) nga ekrani «Aktivizo KAFENE». Jo Device ID me 12 shenja.",
     );
   }
   const licenseType =
