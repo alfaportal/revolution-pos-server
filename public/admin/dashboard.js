@@ -42,7 +42,7 @@ function ensureNineSectors(apiSectors) {
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
   klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
-  licencat: ["Licencat", "ID + Gjenero Licencë"],
+  licencat: ["Licencat", "Gjenero ID + Gjenero Licencë"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
   raportet: ["Probleme", "Vetëm probleme — pa shitje"],
@@ -417,6 +417,29 @@ function bindLicenseActions(root) {
       loadLicenses();
     });
   });
+  root.querySelectorAll("[data-gen-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.genId;
+      const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
+      const msgEl =
+        btn.closest("[data-license-card]")?.querySelector(`[data-save-msg="${id}"]`) ||
+        root.querySelector(`[data-save-msg="${id}"]`);
+      /* ID 16 shenja — i njëjti format si POS */
+      const bytes = new Uint8Array(8);
+      crypto.getRandomValues(bytes);
+      const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+      const hw =
+        `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+      if (hwEl) hwEl.value = hw;
+      if (msgEl) {
+        msgEl.classList.remove("err");
+        msgEl.textContent = `ID: ${hw}`;
+      }
+      /* Pastaj gjenero edhe licencën (siç u kërkua) */
+      const genLic = root.querySelector(`[data-gen-from-hw="${id}"]`);
+      if (genLic) genLic.click();
+    });
+  });
   root.querySelectorAll("[data-gen-from-hw]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.dataset.genFromHw;
@@ -619,7 +642,7 @@ async function loadLicenses() {
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
               </h4>
               <div class="lic-field-block">
-                <label class="lic-field-label">ID (nga POS)</label>
+                <label class="lic-field-label">ID</label>
                 <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
               </div>
               <div class="lic-field-block">
@@ -628,7 +651,10 @@ async function loadLicenses() {
               </div>
               <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
               <div class="lic-card-actions">
+                <button type="button" class="btn btn-ok" data-gen-id="${esc(l.id)}">Gjenero ID</button>
                 <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
+              </div>
+              <div class="lic-card-actions" style="margin-top:0.5rem">
                 ${
                   active
                     ? `<button type="button" class="btn btn-danger" data-block="${esc(l.id)}">Çaktivizo</button>`
@@ -659,6 +685,7 @@ async function loadLicenses() {
           </td>
           <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
           <td style="white-space:nowrap">
+            <button type="button" class="btn btn-ok btn-sm" data-gen-id="${esc(l.id)}">Gjenero ID</button>
             <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
             ${
