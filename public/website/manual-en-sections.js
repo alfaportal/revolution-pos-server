@@ -17,7 +17,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>The owner panel works as a web app (PWA). After installing it on your home screen, it opens without a long URL and with the Revolution Invest POS icon.</p>
         </div>
 
@@ -31,7 +31,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>The owner email (<code>/owner/login</code>) is <strong>not</strong> the same as Super Admin sign-in. Waiters <strong>do not</strong> use email — they sign in only with a 4-digit PIN on the tablet.</p>
         </div>
 
@@ -46,7 +46,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>If you do not receive the email, check that you entered the correct owner email. If the problem continues, contact Revolution Invest support — the administrator can send a password reset from the Super Admin panel.</p>
         </div>`,
 
@@ -75,7 +75,7 @@
           <li>Wait for the confirmation message — the new price applies across all modules.</li>
         </ol>
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Remember to click <strong>Save</strong> after every change. Unsaved changes are lost when you refresh the page.</p>
         </div>
 
@@ -88,7 +88,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Use square or landscape photos with the product centered. To remove a photo, click <strong>«Remove»</strong> then <strong>«Save»</strong>.</p>
         </div>
 
@@ -101,7 +101,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Hidden items (<em>Inactive</em>) do not appear for waiters and the kiosk, but remain in past order history. Permanent deletion removes them completely.</p>
         </div>`,
 
@@ -123,7 +123,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Copy the waiter link from <em>Venue links → Waiters (phone)</em> and send it to the tablets. The link contains <code>?key=</code> — do not share it publicly.</p>
         </div>
 
@@ -157,7 +157,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>If the ATK fiscal register is enabled, the receipt is also recorded fiscally. Make sure the connection to the register (COM Port) works before closing the table.</p>
         </div>`,
 
@@ -175,7 +175,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Each QR links to a specific URL: <code>/kiosk/[slug]?key=SECRET&amp;table=N</code>. Table N must match the physical number (T5 → table=5).</p>
         </div>
 
@@ -190,7 +190,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>The kiosk requires internet. If the menu is empty, the owner must add items on the Menu tab or sync the menu from the local POS.</p>
         </div>`,
 
@@ -203,12 +203,12 @@
           <li>Open the kitchen link: <code>/kitchen/[slug]?key=...</code> (copied from the panel → <em>Links → Kitchen KDS</em>).</li>
           <li>Leave the page open on the kitchen screen — it refreshes automatically.</li>
           <li>Each order appears as a <strong>ticket</strong> with: table number (T3), time, waiter name, and item list.</li>
-          <li>The source is shown with an icon: ðŸ“± Waiter, ðŸª‘ Table (kiosk), ðŸ›µ Delivery, ðŸ¥¡ Takeaway.</li>
+          <li>The source is shown with an icon: 📱 Waiter, 🪑 Table (kiosk), 🛵 Delivery, 🥡 Takeaway.</li>
           <li>New orders are highlighted visually until you read them.</li>
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Set the tablet to «keep screen on» mode and use a stable Wi‑Fi connection. The link with <code>?key=</code> should be kept private.</p>
         </div>
 
@@ -221,7 +221,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Marking «Ready» removes the order from the kitchen screen, but <strong>does not</strong> close the table and <strong>does not</strong> print a receipt. Closing and payment are done from the waiter module or POS.</p>
         </div>`,
 
@@ -239,7 +239,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>The <strong>Live Tables</strong> tab shows the current state of tables (available / occupied) and refreshes every 15 seconds — useful during a shift.</p>
         </div>
 
@@ -253,7 +253,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Z-Report is linked to the ATK fiscal register. Make sure fiscal settings (the <strong>Fiscal</strong> tab) are correct: Fiscal No., COM Port, operator. Day close should be done once per day, usually after closing the venue.</p>
         </div>
 
@@ -284,7 +284,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>To remove the logo, click <strong>«Remove logo»</strong> then <strong>«Save public page»</strong>. Use the <strong>«View page»</strong> button to see the live result.</p>
         </div>
 
@@ -309,7 +309,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Online orders do not process payment automatically — staff confirm and handle the order manually. For delivery, the customer's address is required.</p>
         </div>`,
 
@@ -325,7 +325,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Use a strong password (min. 6 characters, with letters and numbers). Do not share the owner email with waiters — they use PIN only.</p>
         </div>
 
@@ -340,12 +340,12 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>The emergency code is <strong>sensitive</strong> — do not distribute it publicly. Use it only when POS cannot connect online. Master PIN is configured by the administrator in the server variable <code>MASTER_EMERGENCY_PIN</code>.</p>
         </div>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>Each waiter has their own PIN — reset it immediately if an employee leaves. Links with <code>?key=</code> (kitchen, waiter, kiosk) should stay inside the venue.</p>
         </div>`,
 
@@ -400,7 +400,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>If you buy a new POS computer, activate the license there — the new terminal appears automatically in the list after the first internet connection.</p>
         </div>
 
@@ -418,7 +418,7 @@
         </ol>
 
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>The 24-hour trial period starts when you first exceed the limit. Do not delay — contact Revolution Invest as soon as possible to add terminals and avoid blocking.</p>
         </div>
 
@@ -436,7 +436,7 @@
         </ol>
 
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>License price = base price + (extra terminals × price per terminal). Package details are discussed with the Revolution Invest team before activation.</p>
         </div>`,
 
@@ -480,7 +480,7 @@
           <li>Our technician connects remotely, fixes the issue, and explains what was done.</li>
         </ol>
         <div class="box box-warning">
-          <div class="box-title">âš ï¸ Warning</div>
+          <div class="box-title">⚠️ Warning</div>
           <p>Do not accept AnyDesk requests from unknown people. Connect only with the Revolution Invest team.</p>
         </div>
 
@@ -501,7 +501,7 @@
           <li>We confirm receipt and notify you when it is fixed.</li>
         </ol>
         <div class="box box-tip">
-          <div class="box-title">ðŸ’¡ Tip</div>
+          <div class="box-title">💡 Tip</div>
           <p>More detail (step by step + photo) means we find and fix the issue faster.</p>
         </div>`
 
