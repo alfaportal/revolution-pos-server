@@ -586,12 +586,13 @@ function bindLicenseActions(root) {
         btn.textContent = "U ruajt ✓";
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = "U ruajt. Kopjo kodin dhe aktivizo te POS.";
+          msgEl.textContent = "U ruajt — i njëjti ID/licencë te telefon + panel.";
         }
         setTimeout(() => {
           btn.textContent = prev;
           btn.disabled = false;
-        }, 1500);
+          loadLicenses().catch(() => {});
+        }, 800);
       } catch (ex) {
         btn.textContent = prev;
         btn.disabled = false;

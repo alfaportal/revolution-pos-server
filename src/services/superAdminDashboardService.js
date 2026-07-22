@@ -5,7 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getSupabase } = require("../db");
-const { listClients, listLicenses, normalizeHardwareIdStored } = require("./licenseService");
+const { listClients, listLicenses, normalizeHardwareIdStored, resolveLicenseHardwareId } = require("./licenseService");
 const { listAiUsageSummary } = require("./aiUsageReportService");
 const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, featuresForTier } = require("../lib/packages");
@@ -607,12 +607,7 @@ async function getLicensesView() {
   return {
     licenses: licenses.map((l) => {
       const device = String(l.display_device_id || l.device_id || "").trim();
-      let hardware_id = "";
-      try {
-        hardware_id = normalizeHardwareIdStored(l.hardware_id || "");
-      } catch {
-        hardware_id = "";
-      }
+      const hardware_id = resolveLicenseHardwareId(l);
       return {
         id: l.id,
         client_id: l.client_id || l.clients?.id,

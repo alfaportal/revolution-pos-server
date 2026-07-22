@@ -31,8 +31,10 @@ function enrichLicenseRowWithTerminals(lic, summary) {
   const latest = pickLatestTerminal(summary.terminals);
   const displayDeviceId =
     normalizeDeviceId(lic.device_id) || (latest?.device_id ? normalizeDeviceId(latest.device_id) : "");
+  const hardware_id = resolveLicenseHardwareId(lic);
   return {
     ...lic,
+    hardware_id,
     active_terminal_count: summary.active_terminal_count,
     max_terminals: summary.max_terminals,
     terminal_limit_reached: summary.limit_reached,
@@ -53,9 +55,10 @@ async function syncLicenseDeviceFromTerminals(licenseId, lic, summary) {
   const latest = pickLatestTerminal(summary.terminals);
   const deviceId = normalizeDeviceId(lic.device_id) || (latest ? normalizeDeviceId(latest.device_id) : "");
   if (!deviceId || normalizeDeviceId(lic.device_id) === deviceId) return;
+  const hwKeep = resolveLicenseHardwareId(lic);
   const patch = {
     device_id: deviceId,
-    last_validation_error: "",
+    last_validation_error: hwKeep ? encodeHwMeta(hwKeep) : "",
     ...(latest?.device_hostname ? { device_hostname: latest.device_hostname } : {}),
     ...(latest?.last_ip ? { last_ip: latest.last_ip } : {}),
     ...(latest?.last_seen_at ? { last_activated_at: latest.last_seen_at } : {}),
@@ -288,6 +291,28 @@ function normalizeHardwareIdStored(input) {
   return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
 }
 
+const HW_META_PREFIX = "__LIC_HW__:";
+
+function encodeHwMeta(hw) {
+  const n = normalizeHardwareIdStored(hw);
+  return n ? `${HW_META_PREFIX}${n}` : "";
+}
+
+function decodeHwMeta(raw) {
+  const s = String(raw || "");
+  if (!s.startsWith(HW_META_PREFIX)) return "";
+  return normalizeHardwareIdStored(s.slice(HW_META_PREFIX.length));
+}
+
+/** ID 16 për licencë — nga kolona ose meta (kur kolona mungon). */
+function resolveLicenseHardwareId(lic) {
+  return (
+    normalizeHardwareIdStored(lic?.hardware_id || "") ||
+    decodeHwMeta(lic?.last_validation_error) ||
+    ""
+  );
+}
+
 /** Ruaj Hardware ID 16 nga POS (sipas device_id) — për admin Gjenero një shtypje. */
 async function reportHardwareId({ device_id, hardware_id, celesi }) {
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
@@ -359,14 +384,16 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     );
   }
 
-  const hwStored = normalizeHardwareIdStored(hardware_id);
+  const hwStored = normalizeHardwareIdStored(hardware_id) || resolveLicenseHardwareId(license);
   const successPatch = {
     last_activated_at: now,
     last_validation_at: now,
-    last_validation_error: "",
+    last_validation_error: hwStored && !normalizeHardwareIdStored(license.hardware_id || "")
+      ? encodeHwMeta(hwStored)
+      : "",
     ...(ip ? { last_ip: ip } : {}),
     ...(host ? { device_hostname: host } : {}),
-    ...(hwStored ? { hardware_id: hwStored } : {}),
+    ...(normalizeHardwareIdStored(hardware_id) ? { hardware_id: normalizeHardwareIdStored(hardware_id) } : {}),
   };
   if (deviceId) {
     successPatch.device_id = deviceId;
@@ -826,12 +853,13 @@ async function updateLicense(id, body) {
 
   let { data, error } = await doUpdate(patch);
 
-  /* Kolona hardware_id mund të mungojë ende — ruaj çelësin gjithsesi */
+  /* Kolona hardware_id mund të mungojë ende — ruaj çelësin + meta HW për sync panel↔telefon */
   if (error && patch.hardware_id != null) {
     const msg = String(error.message || error.details || "");
     if (/hardware_id|schema cache/i.test(msg)) {
       const fallback = { ...patch };
       delete fallback.hardware_id;
+      fallback.last_validation_error = encodeHwMeta(patch.hardware_id);
       if (Object.keys(fallback).length) {
         ({ data, error } = await doUpdate(fallback));
       }
@@ -840,6 +868,11 @@ async function updateLicense(id, body) {
 
   if (error) throw error;
   if (!data) throw new Error("Liçenca nuk u gjet.");
+  if (data && !data.hardware_id && patch.hardware_id) {
+    data.hardware_id = patch.hardware_id;
+  } else if (data) {
+    data.hardware_id = resolveLicenseHardwareId(data);
+  }
 
   if (patch.device_id) {
     try {
@@ -1165,6 +1198,7 @@ module.exports = {
   validateLicense,
   reportHardwareId,
   normalizeHardwareIdStored,
+  resolveLicenseHardwareId,
   getLicenseAccessLinks,
   listClients,
   listLicenses,
