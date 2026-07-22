@@ -42,7 +42,7 @@ function ensureNineSectors(apiSectors) {
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
   klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
-  licencat: ["Licencat", "Hardware ID, çelësa, aktivizim"],
+  licencat: ["Licencat", "ID pajisjeje, çelësa, aktivizim"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
   raportet: ["Probleme", "Vetëm probleme — pa shitje"],
@@ -322,7 +322,7 @@ async function openClientDetail(id) {
         .map(
           (l) => `<div class="lic-detail-row" style="margin-bottom:0.75rem">
             <span class="badge ${l.statusi === "aktive" ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span>
-            <div class="mono">HW: ${esc(l.device_id || "—")}</div>
+            <div class="mono">ID: ${esc(l.hardware_id || "—")}</div>
             <div class="mono">Key: ${esc(l.celesi || "—")}</div>
             <div style="color:var(--muted);font-size:0.85rem;margin:0.2rem 0">Skadon: ${esc(l.data_skadimit || "—")}</div>
             <div class="prob-actions" style="margin-top:0.4rem">
@@ -1153,7 +1153,7 @@ async function boot() {
       if (hwEl && data.hardwareId) hwEl.value = data.hardwareId;
       box.innerHTML = `
         <div class="copy-row" style="margin-top:0.5rem">
-          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Hardware ID</div>${esc(hw)}</div>
+          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">ID e pajisjes</div>${esc(hw)}</div>
           <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo ID</button>
         </div>
         <div class="copy-row" style="margin-top:0.5rem">

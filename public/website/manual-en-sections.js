@@ -391,7 +391,7 @@
           <li>In the terminals section you see: <strong>«Active terminals: X / Y allowed»</strong>.</li>
           <li>The list shows each device with:
             <ul style="margin:0.5rem 0 0;padding-left:1.1rem;color:#cbd5e1">
-              <li><strong>Device ID</strong> — unique 12-digit installation code</li>
+              <li><strong>Device ID (for license)</strong> — 16 characters (<code>XXXX-XXXX-XXXX-XXXX</code>), shown automatically on the POS after install (Activate screen or Admin → License)</li>
               <li><strong>Computer</strong> — host name (e.g. KASA-1)</li>
               <li><strong>Last seen</strong> — when POS last connected to the server</li>
             </ul>

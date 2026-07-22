@@ -587,6 +587,7 @@ async function getClientDetail(clientId) {
       id: l.id,
       celesi: l.celesi,
       device_id: l.display_device_id || l.device_id || "",
+      hardware_id: normalizeHardwareIdStored(l.hardware_id || ""),
       statusi: l.statusi,
       activated_at: l.last_activated_at || l.created_at,
       last_seen_at: licenseLastSeen(l),
