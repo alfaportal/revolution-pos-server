@@ -24,7 +24,7 @@
         <h3 id="hyrja-pc">How to sign in from a computer / touchscreen</h3>
         <ol class="steps">
           <li><strong>Owner panel (web):</strong> Open your browser and go to <code>/owner/login</code>. Use the same email and password as on your phone. Ideal for managing the menu, reports, and public page.</li>
-          <li><strong>POS application (register):</strong> Open the Revolution Invest POS program on the register computer. Activate the license under <strong>Admin → License</strong> with the key provided by your administrator (format: <code>XXXX-XXXX-XXXX-XXXX</code>).</li>
+          <li><strong>POS application (register):</strong> After install (website or USB), open the program. It automatically shows a <strong>16-character device ID</strong> (<code>XXXX-XXXX-XXXX-XXXX</code>) — send it to your administrator. Activate with the key they give you under <strong>Admin → License</strong>.</li>
           <li><strong>Waiter module (tablet):</strong> Open the waiter link from the panel (<em>Venue links → Waiters</em>). Format: <code>/waiter/[slug]?key=...</code>. Set it as the home page on the tablet.</li>
           <li><strong>Kitchen display:</strong> Open the KDS link on the kitchen screen: <code>/kitchen/[slug]?key=...</code>. Leave it open — orders refresh automatically.</li>
           <li><strong>Table kiosk:</strong> Customers scan the table QR code (see section 4). Link: <code>/kiosk/[slug]?key=...&amp;table=N</code>.</li>
