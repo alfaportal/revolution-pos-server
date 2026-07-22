@@ -1,13 +1,18 @@
 /**
  * Kërkesë publike për link Setup (email / SMS) — me rate-limit.
+ * SMS: Vonage opsional; pa të — njoftim te admin (email/Telegram) për dërgim me numër Kosove.
  */
 const {
   createSetupDownloadToken,
   isSetupDownloadConfigured,
 } = require("../lib/setupDownloadAuth");
 const { getPublicAppOrigin, getSetupVersion } = require("../lib/publicOrigin");
-const { deliverEmail, isEmailConfigured } = require("./emailService");
-const { sendSms, isSmsConfigured, normalizePhone } = require("./smsService");
+const {
+  deliverEmail,
+  isEmailConfigured,
+  resolveAdminNotifyEmail,
+} = require("./emailService");
+const { sendSms, isSmsConfigured } = require("./smsService");
 
 const IP_WINDOW_MS = 60 * 60 * 1000;
 const IP_MAX = 5;
@@ -36,6 +41,33 @@ function allowHit(key, windowMs, max) {
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+}
+
+/**
+ * Vetëm numra të Kosovës (+383).
+ * Pranon: +38348…, 38348…, 048…, 48…
+ */
+function normalizeKosovoPhone(raw) {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.startsWith("383")) {
+    /* ok */
+  } else if (d.startsWith("0") && d.length >= 9) {
+    d = `383${d.slice(1)}`;
+  } else if (d.length === 8 || d.length === 9) {
+    /* 48xxxxxx / 049xxxxxx */
+    d = `383${d}`;
+  } else {
+    return "";
+  }
+  if (!d.startsWith("383") || d.length < 11 || d.length > 12) return "";
+  return `+${d}`;
+}
+
+function isSmsChannelAvailable() {
+  /* Pa Vonage: admin merr njoftim dhe dërgon SMS nga numri i Kosovës */
+  return isSmsConfigured() || isEmailConfigured();
 }
 
 function buildSetupUrl(plan = "") {
@@ -83,13 +115,48 @@ async function sendSetupLinkEmail({ to, url, lang = "sq" }) {
   return deliverEmail({ to, subject, text, html });
 }
 
-async function sendSetupLinkSms({ to, url, lang = "sq" }) {
+async function notifyAdminToSmsKosovo({ phone, url, lang = "sq" }) {
   const version = getSetupVersion();
-  const text =
+  const to = resolveAdminNotifyEmail();
+  const smsBody =
     lang === "en"
-      ? `Revolution POS Setup v${version}: ${url} (expires ~${TOKEN_TTL_HOURS}h)`
+      ? `Revolution POS Setup v${version}: ${url} (~${TOKEN_TTL_HOURS}h)`
       : `Revolution POS Setup v${version}: ${url} (skadon ~${TOKEN_TTL_HOURS}h)`;
-  return sendSms(to, text);
+  const subject = `SMS Setup → ${phone}`;
+  const text = [
+    "Klienti kërkoi Setup me SMS (numër Kosove).",
+    "",
+    `Dërgo SMS te: ${phone}`,
+    "",
+    "Teksti i SMS:",
+    smsBody,
+    "",
+    `(Pa Vonage — dërgo nga telefoni yt +383.)`,
+  ].join("\n");
+  const html = `
+    <p><strong>Klienti kërkoi Setup me SMS</strong> (numër Kosove).</p>
+    <p>Dërgo SMS te: <a href="sms:${phone}?body=${encodeURIComponent(smsBody)}"><strong>${phone}</strong></a></p>
+    <p>Teksti:</p>
+    <pre style="white-space:pre-wrap;background:#f1f5f9;padding:12px;border-radius:8px">${smsBody}</pre>
+    <p style="color:#666;font-size:13px">Pa Vonage — dërgo nga telefoni yt i Kosovës.</p>
+  `;
+  await deliverEmail({ to, subject, text, html });
+
+  try {
+    const { isTelegramConfigured, sendTelegramMessage } = require("./telegramService");
+    const chatId =
+      process.env.TELEGRAM_ADMIN_CHAT_ID?.trim() ||
+      process.env.TELEGRAM_NOTIFY_CHAT_ID?.trim() ||
+      "";
+    if (chatId && isTelegramConfigured()) {
+      await sendTelegramMessage(
+        chatId,
+        `📱 Setup SMS → ${phone}\n${smsBody}`,
+      );
+    }
+  } catch (e) {
+    console.warn("[setup-link] telegram admin:", e.message || e);
+  }
 }
 
 /**
@@ -169,7 +236,8 @@ async function requestSetupLink(opts = {}) {
     };
   }
 
-  if (!isSmsConfigured()) {
+  /* ——— SMS (vetëm +383) ——— */
+  if (!isSmsChannelAvailable()) {
     const err = new Error(
       lang === "en"
         ? "SMS is not available right now. Use email or WhatsApp."
@@ -178,12 +246,13 @@ async function requestSetupLink(opts = {}) {
     err.code = "SMS_OFF";
     throw err;
   }
-  const phone = normalizePhone(opts.phone);
-  if (!phone || phone.length < 8) {
+
+  const phone = normalizeKosovoPhone(opts.phone);
+  if (!phone) {
     const err = new Error(
       lang === "en"
-        ? "Enter a valid phone number (e.g. +38348…)."
-        : "Vendosni numër telefoni të vlefshëm (p.sh. +38348…).",
+        ? "Enter a Kosovo mobile number (+383…)."
+        : "Vendosni numër celular të Kosovës (+383… ose 04x…).",
     );
     err.code = "BAD_PHONE";
     throw err;
@@ -197,21 +266,42 @@ async function requestSetupLink(opts = {}) {
     err.code = "RATE_LIMIT";
     throw err;
   }
-  await sendSetupLinkSms({ to: phone, url, lang });
+
+  const smsText =
+    lang === "en"
+      ? `Revolution POS Setup v${getSetupVersion()}: ${url} (expires ~${TOKEN_TTL_HOURS}h)`
+      : `Revolution POS Setup v${getSetupVersion()}: ${url} (skadon ~${TOKEN_TTL_HOURS}h)`;
+
+  if (isSmsConfigured()) {
+    await sendSms(phone, smsText);
+    return {
+      ok: true,
+      channel: "sms",
+      message:
+        lang === "en"
+          ? "Setup link sent by SMS."
+          : "Linku i Setup u dërgua me SMS.",
+    };
+  }
+
+  /* Pa Vonage: njoftim te admin — dërgon SMS nga telefoni i Kosovës */
+  await notifyAdminToSmsKosovo({ phone, url, lang });
   return {
     ok: true,
     channel: "sms",
+    relay: "admin",
     message:
       lang === "en"
-        ? "Setup link sent by SMS."
-        : "Linku i Setup u dërgua me SMS.",
+        ? "Request received. You will get the Setup link by SMS on your Kosovo number shortly."
+        : "Kërkesa u pranua. Linku i Setup do t’ju vijë me SMS në numrin tuaj të Kosovës së shpejti.",
   };
 }
 
 function setupLinkChannelsStatus() {
   return {
     email: isEmailConfigured(),
-    sms: isSmsConfigured(),
+    sms: isSmsChannelAvailable(),
+    sms_auto: isSmsConfigured(),
     download_configured: isSetupDownloadConfigured(),
   };
 }
@@ -219,5 +309,6 @@ function setupLinkChannelsStatus() {
 module.exports = {
   requestSetupLink,
   setupLinkChannelsStatus,
+  normalizeKosovoPhone,
   TOKEN_TTL_HOURS,
 };
