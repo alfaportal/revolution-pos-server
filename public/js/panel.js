@@ -209,7 +209,34 @@ function terminalCountLabel(l) {
 }
 
 function licenseDeviceId(l) {
+  const hwRaw = String(l.hardware_id || "").trim();
+  const hwHex = hwRaw.replace(/[^a-fA-F0-9]/g, "");
+  if (hwHex.length === 16) return formatHwIdInput(hwHex);
   return String(l.display_device_id || l.device_id || "").trim().toUpperCase();
+}
+
+function generateHwId16Local() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+  return formatHwIdInput(hex);
+}
+
+function buildLicenseSavePatch(celesi, idOrHw) {
+  const patch = {};
+  const key = String(celesi || "").trim();
+  if (key) patch.celesi = key;
+  const hex = String(idOrHw || "")
+    .replace(/[^a-fA-F0-9]/g, "")
+    .toUpperCase();
+  if (hex.length === 16) {
+    patch.hardware_id = formatHwIdInput(hex);
+  } else if (hex.length === 12) {
+    patch.device_id = hex;
+  }
+  return patch;
 }
 
 function licenseDeviceIds(l) {
@@ -1853,23 +1880,38 @@ async function saveLicenseDeviceId(licenseId, deviceId, btn) {
       btn.disabled = true;
       btn.textContent = "Duke ruajtur…";
     }
-    await api(`/api/admin/licenses/${licenseId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ device_id: deviceId }),
-    });
+    const patch = buildLicenseSavePatch("", deviceId);
+    if (!Object.keys(patch).length) throw new Error("Fut ID (16 shenja).");
+    try {
+      await api(`/api/admin/licenses/${licenseId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+    } catch (err) {
+      if (patch.hardware_id && patch.celesi) {
+        await api(`/api/admin/licenses/${licenseId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ celesi: patch.celesi }),
+        });
+      } else if (patch.hardware_id) {
+        throw err;
+      } else {
+        throw err;
+      }
+    }
     await loadLicenses();
     if (btn) {
       btn.textContent = "U ruajt!";
       setTimeout(() => {
         btn.disabled = false;
-        btn.textContent = "Ruaj ID";
+        btn.textContent = "Ruaj";
       }, 1200);
     }
   } catch (err) {
     alert(err.message || "Ruajtja e ID-së dështoi.");
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "Ruaj ID";
+      btn.textContent = "Ruaj";
     }
   }
 }
@@ -1903,8 +1945,7 @@ function bindLicenseDeviceActions(scope) {
     btn.addEventListener("click", async () => {
       try {
         const input = scope.querySelector(`[data-device-input="${btn.dataset.genDeviceRow}"]`);
-        const device_id = await apiGenerateDeviceId();
-        if (input) input.value = device_id;
+        if (input) input.value = generateHwId16Local();
       } catch (err) {
         alert(err.message || "Gjenerimi dështoi.");
       }
@@ -1943,13 +1984,25 @@ async function saveLicenseKeyAndDevice(licenseId, celesi, deviceId, btn) {
       btn.disabled = true;
       btn.textContent = "Duke ruajtur…";
     }
-    await api(`/api/admin/licenses/${licenseId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        celesi: String(celesi || "").trim(),
-        device_id: String(deviceId || "").trim(),
-      }),
-    });
+    const key = String(celesi || "").trim();
+    if (!key) throw new Error("Mungon kodi i licencës — shtyp Gjenero Licencë.");
+    const patch = buildLicenseSavePatch(key, deviceId);
+    try {
+      await api(`/api/admin/licenses/${licenseId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      });
+    } catch (err) {
+      const msg = String(err.message || "");
+      if (/hardware_id|schema cache/i.test(msg) && patch.celesi) {
+        await api(`/api/admin/licenses/${licenseId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ celesi: patch.celesi }),
+        });
+      } else {
+        throw err;
+      }
+    }
     await loadLicenses();
     if (btn) {
       btn.textContent = "U ruajt!";
@@ -1968,15 +2021,15 @@ async function saveLicenseKeyAndDevice(licenseId, celesi, deviceId, btn) {
 }
 
 function bindMobileLicenseActions(scope) {
-  scope.querySelectorAll("[data-mobile-copy-key]").forEach(btn => {
+  scope.querySelectorAll("[data-mobile-device-input]").forEach((el) => bindHwIdAutoFormat(el));
+
+  scope.querySelectorAll("[data-mobile-gen-device]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const input = scope.querySelector(`[data-mobile-key-input="${btn.dataset.mobileCopyKey}"]`);
-      const key = (input?.value || "").trim();
-      if (key) copyText(key, btn);
-      else alert("Nuk ka çelës.");
+      const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileGenDevice}"]`);
+      if (input) input.value = generateHwId16Local();
     });
   });
-  scope.querySelectorAll("[data-mobile-device-input]").forEach((el) => bindHwIdAutoFormat(el));
+
   scope.querySelectorAll("[data-mobile-gen-key]").forEach(btn => {
     btn.addEventListener("click", async () => {
       try {
@@ -1984,8 +2037,9 @@ function bindMobileLicenseActions(scope) {
         const input = scope.querySelector(`[data-mobile-key-input="${id}"]`);
         const deviceInput = scope.querySelector(`[data-mobile-device-input="${id}"]`);
         const hw = String(deviceInput?.value || "").trim();
-        if (!hw) {
-          alert("Shkruaj ID e pajisjes (nga ekrani Aktivizo KAFENE), pastaj Gjenero nga ID.");
+        const hwHex = hw.replace(/[^a-fA-F0-9]/g, "");
+        if (hwHex.length !== 16) {
+          alert("Së pari Gjenero ID (16 shenja), pastaj Gjenero Licencë.");
           deviceInput?.focus();
           return;
         }
@@ -2000,87 +2054,31 @@ function bindMobileLicenseActions(scope) {
       }
     });
   });
-  scope.querySelectorAll("[data-mobile-save-key]").forEach(btn => {
+
+  scope.querySelectorAll("[data-mobile-save]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const id = btn.dataset.mobileSaveKey;
+      const id = btn.dataset.mobileSave;
       const keyEl = scope.querySelector(`[data-mobile-key-input="${id}"]`);
       const devEl = scope.querySelector(`[data-mobile-device-input="${id}"]`);
-      if (!keyEl) return;
-      btn.dataset.restoreLabel = "Ruaj çelësin";
-      saveLicenseKeyAndDevice(id, keyEl.value.trim(), (devEl?.value || "").trim(), btn);
-    });
-  });
-  scope.querySelectorAll("[data-mobile-gen-device]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      try {
-        const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileGenDevice}"]`);
-        const device_id = await apiGenerateDeviceId();
-        if (input) input.value = device_id;
-      } catch (err) {
-        alert(err.message || "Gjenerimi i ID-së dështoi.");
-      }
-    });
-  });
-  scope.querySelectorAll("[data-mobile-copy-device]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileCopyDevice}"]`);
-      const id = (input?.value || "").trim();
-      if (id) copyText(id, btn);
-      else alert("Nuk ka ID pajisje.");
-    });
-  });
-  scope.querySelectorAll("[data-mobile-save-device]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const input = scope.querySelector(`[data-mobile-device-input="${btn.dataset.mobileSaveDevice}"]`);
-      if (!input) return;
-      saveLicenseDeviceId(btn.dataset.mobileSaveDevice, input.value.trim(), btn);
-    });
-  });
-  scope.querySelectorAll("[data-mobile-save-both]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.mobileSaveBoth;
-      const keyEl = scope.querySelector(`[data-mobile-key-input="${id}"]`);
-      const devEl = scope.querySelector(`[data-mobile-device-input="${id}"]`);
-      btn.dataset.restoreLabel = "Ruaj të dyja";
+      btn.dataset.restoreLabel = "Ruaj";
       saveLicenseKeyAndDevice(id, (keyEl?.value || "").trim(), (devEl?.value || "").trim(), btn);
     });
   });
-  scope.querySelectorAll("[data-mobile-reset-device]").forEach(btn => {
-    btn.addEventListener("click", () => resetLicenseDevice(btn.dataset.mobileResetDevice));
-  });
-  scope.querySelectorAll("[data-mobile-edit-license]").forEach(btn => {
-    btn.addEventListener("click", () => openEditLicense(btn.dataset.mobileEditLicense));
-  });
-  scope.querySelectorAll("[data-mobile-fix-license]").forEach(btn => {
-    btn.addEventListener("click", () => openFixLicenseCodes(btn.dataset.mobileFixLicense));
-  });
-  scope.querySelectorAll("[data-mobile-block-license]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (!confirm("Blloko POS-in e këtij klienti?")) return;
-      try {
-        const res = await api(`/api/admin/licenses/${btn.dataset.mobileBlockLicense}/block`, { method: "POST" });
-        alert(res.message || "POS u bllokua.");
-        await loadLicenses();
-      } catch (err) {
-        alert(err.message || "Bllokimi dështoi.");
+
+  scope.querySelectorAll("[data-mobile-copy]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.mobileCopy;
+      const keyEl = scope.querySelector(`[data-mobile-key-input="${id}"]`);
+      const devEl = scope.querySelector(`[data-mobile-device-input="${id}"]`);
+      const key = (keyEl?.value || "").trim();
+      const hw = (devEl?.value || "").trim();
+      const text = key || hw;
+      if (!text) {
+        alert("Nuk ka ID as licencë për kopjim.");
+        return;
       }
+      copyText(key && hw ? `ID: ${hw}\nLicenca: ${key}` : text, btn);
     });
-  });
-  scope.querySelectorAll("[data-mobile-unblock-license]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      try {
-        await api(`/api/admin/licenses/${btn.dataset.mobileUnblockLicense}/unblock`, { method: "POST" });
-        await loadLicenses();
-      } catch (err) {
-        alert(err.message || "Hapja dështoi.");
-      }
-    });
-  });
-  scope.querySelectorAll("[data-mobile-del-license]").forEach(btn => {
-    btn.addEventListener("click", () => confirmDelete(
-      "Fshi këtë liçencë? Ky veprim nuk kthehet mbrapsht.",
-      () => api(`/api/admin/licenses/${btn.dataset.mobileDelLicense}`, { method: "DELETE" }),
-    ));
   });
 }
 
@@ -2099,59 +2097,39 @@ function renderMobileLicenseCards(licenses) {
               <div class="license-mobile-meta">${licenseAppTypeLabel(l)} · ${licenseStatusCell(l)}</div>
             </div>
           </div>
-          <div class="license-mobile-pair">
-            <div class="license-mobile-field">
-              <label>ID e pajisjes (shkruaj nga klienti OSE Gjenero ID)</label>
-              <input
-                type="text"
-                class="device-id-input mono"
-                data-mobile-device-input="${l.id}"
-                value="${esc(devId)}"
-                placeholder="XXXX-XXXX-XXXX-XXXX"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                inputmode="text"
-              >
-              <div class="license-mobile-field-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-gen-device="${l.id}">Gjenero ID</button>
-                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-device="${l.id}">Ruaj ID</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-device="${l.id}">Kopjo ID</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-reset-device="${l.id}">Reset ID</button>
-              </div>
-            </div>
-            <div class="license-mobile-field">
-              <label>Çelësi i licencës (gjenerohet nga ID)</label>
-              <input
-                type="text"
-                class="device-id-input mono license-key-input"
-                data-mobile-key-input="${l.id}"
-                value="${esc(l.celesi || "")}"
-                placeholder="Shtyp «Gjenero nga ID»"
-                autocomplete="off"
-                autocapitalize="characters"
-                spellcheck="false"
-                inputmode="text"
-              >
-              <div class="license-mobile-field-actions">
-                <button type="button" class="btn btn-accent btn-sm" data-mobile-gen-key="${l.id}">Gjenero nga ID</button>
-                <button type="button" class="btn btn-primary btn-sm" data-mobile-save-key="${l.id}">Ruaj çelësin</button>
-                <button type="button" class="btn btn-ghost btn-sm" data-mobile-copy-key="${l.id}">Kopjo</button>
-                <button type="button" class="btn btn-accent btn-sm" data-mobile-save-both="${l.id}">Ruaj të dyja</button>
-              </div>
-            </div>
+          <div class="license-mobile-field">
+            <label>ID</label>
+            <input
+              type="text"
+              class="device-id-input mono"
+              data-mobile-device-input="${l.id}"
+              value="${esc(devId)}"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              inputmode="text"
+            >
           </div>
-          <div class="license-mobile-meta">
-            ${l.device_hostname ? `Kompjuteri: ${esc(l.device_hostname)} · ` : ""}
-            Terminale: ${terminalCountLabel(l)} · Skadon: ${esc(l.data_skadimit)}
+          <div class="license-mobile-field">
+            <label>Licenca</label>
+            <input
+              type="text"
+              class="device-id-input mono license-key-input"
+              data-mobile-key-input="${l.id}"
+              value="${esc(l.celesi || "")}"
+              placeholder="—"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              inputmode="text"
+            >
           </div>
-          <div class="license-mobile-actions">
-            <button type="button" class="btn btn-accent btn-sm" data-mobile-fix-license="${l.id}">Rregullo kod/ID</button>
-            <button type="button" class="btn btn-ghost btn-sm" data-mobile-edit-license="${l.id}">Ndrysho liçencën</button>
-            ${l.statusi === "aktive"
-              ? `<button type="button" class="btn btn-danger btn-sm" data-mobile-block-license="${l.id}">Blloko POS</button>`
-              : `<button type="button" class="btn btn-primary btn-sm" data-mobile-unblock-license="${l.id}">Hape POS</button>`}
-            <button type="button" class="btn btn-danger btn-sm" data-mobile-del-license="${l.id}">Fshi</button>
+          <div class="license-mobile-field-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem">
+            <button type="button" class="btn btn-ok" data-mobile-gen-device="${l.id}">Gjenero ID</button>
+            <button type="button" class="btn btn-primary" data-mobile-gen-key="${l.id}">Gjenero Licencë</button>
+            <button type="button" class="btn btn-accent" data-mobile-save="${l.id}">Ruaj</button>
+            <button type="button" class="btn btn-ghost" data-mobile-copy="${l.id}">Kopjo</button>
           </div>
         </article>`;
       }).join("")

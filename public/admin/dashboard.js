@@ -42,7 +42,7 @@ function ensureNineSectors(apiSectors) {
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
   klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
-  licencat: ["Licencat", "Gjenero ID + Gjenero Licencë"],
+  licencat: ["Licencat", "ID · Licencë · Ruaj · Kopjo"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
   raportet: ["Probleme", "Vetëm probleme — pa shitje"],
@@ -424,7 +424,6 @@ function bindLicenseActions(root) {
       const msgEl =
         btn.closest("[data-license-card]")?.querySelector(`[data-save-msg="${id}"]`) ||
         root.querySelector(`[data-save-msg="${id}"]`);
-      /* ID 16 shenja — i njëjti format si POS */
       const bytes = new Uint8Array(8);
       crypto.getRandomValues(bytes);
       const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
@@ -435,9 +434,21 @@ function bindLicenseActions(root) {
         msgEl.classList.remove("err");
         msgEl.textContent = `ID: ${hw}`;
       }
-      /* Pastaj gjenero edhe licencën (siç u kërkua) */
-      const genLic = root.querySelector(`[data-gen-from-hw="${id}"]`);
-      if (genLic) genLic.click();
+    });
+  });
+  root.querySelectorAll("[data-copy-pair]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.copyPair;
+      const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
+      const keyEl = root.querySelector(`[data-key-input="${id}"]`);
+      const hw = String(hwEl?.value || "").trim();
+      const key = String(keyEl?.value || "").trim();
+      const text = key && hw ? `ID: ${hw}\nLicenca: ${key}` : key || hw;
+      if (!text) {
+        alert("Nuk ka ID as licencë.");
+        return;
+      }
+      copyText(text, btn);
     });
   });
   root.querySelectorAll("[data-gen-from-hw]").forEach((btn) => {
@@ -488,35 +499,19 @@ function bindLicenseActions(root) {
         if (hwEl) hwEl.value = hwOut;
         if (keyEl) {
           keyEl.value = key;
+          keyEl.readOnly = false;
           keyEl.focus();
           keyEl.select();
         }
-        /* Ruaj çelësin — hardware_id opsional (nëse kolona mungon, prapë ruhet kodi) */
-        try {
-          await api(`/api/admin/licenses/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ celesi: key, hardware_id: hwOut }),
-          });
-        } catch {
-          await api(`/api/admin/licenses/${id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ celesi: key }),
-          });
-        }
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = `Licenca: ${key}`;
-        }
-        try {
-          await navigator.clipboard.writeText(key);
-        } catch {
-          /* ignore */
+          msgEl.textContent = `Licenca u gjenerua — shtyp Ruaj`;
         }
         btn.textContent = "U gjenerua ✓";
         setTimeout(() => {
           btn.textContent = prev;
           btn.disabled = false;
-        }, 1600);
+        }, 1200);
       } catch (ex) {
         btn.textContent = prev;
         btn.disabled = false;
@@ -647,19 +642,14 @@ async function loadLicenses() {
               </div>
               <div class="lic-field-block">
                 <label class="lic-field-label">Licenca</label>
-                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" readonly autocomplete="off">
+                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" autocomplete="off">
               </div>
               <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
-              <div class="lic-card-actions">
+              <div class="lic-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
                 <button type="button" class="btn btn-ok" data-gen-id="${esc(l.id)}">Gjenero ID</button>
                 <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
-              </div>
-              <div class="lic-card-actions" style="margin-top:0.5rem">
-                ${
-                  active
-                    ? `<button type="button" class="btn btn-danger" data-block="${esc(l.id)}">Çaktivizo</button>`
-                    : `<button type="button" class="btn btn-ghost" data-unblock="${esc(l.id)}">Riaktivizo</button>`
-                }
+                <button type="button" class="btn btn-accent" data-save-license="${esc(l.id)}">Ruaj</button>
+                <button type="button" class="btn btn-ghost" data-copy-pair="${esc(l.id)}">Kopjo</button>
               </div>
             </div>`;
           })
@@ -681,18 +671,15 @@ async function loadLicenses() {
             <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
           </td>
           <td>
-            <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" readonly autocomplete="off" spellcheck="false">
+            <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" autocomplete="off" spellcheck="false">
           </td>
           <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
           <td style="white-space:nowrap">
             <button type="button" class="btn btn-ok btn-sm" data-gen-id="${esc(l.id)}">Gjenero ID</button>
             <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
+            <button type="button" class="btn btn-accent btn-sm" data-save-license="${esc(l.id)}">Ruaj</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-pair="${esc(l.id)}">Kopjo</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
-            ${
-              active
-                ? `<button type="button" class="btn btn-danger btn-sm" data-block="${esc(l.id)}">Çaktivizo</button>`
-                : `<button type="button" class="btn btn-ghost btn-sm" data-unblock="${esc(l.id)}">Riaktivizo</button>`
-            }
           </td>
         </tr>`;
       })
