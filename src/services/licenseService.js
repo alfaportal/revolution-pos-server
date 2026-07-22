@@ -251,6 +251,7 @@ const OPTIONAL_LICENSE_META = [
   "last_validation_at",
   "last_validation_error",
   "last_ip",
+  "hardware_id",
 ];
 
 async function patchLicenseMeta(licenseId, patch) {
@@ -278,7 +279,39 @@ async function recordValidationFailure(license, code, message, client_ip) {
   });
 }
 
-async function validateLicense({ celesi, device_id, app_type, hostname, client_ip }) {
+function normalizeHardwareIdStored(input) {
+  const hex = String(input || "")
+    .replace(/[^a-fA-F0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 16);
+  if (hex.length !== 16) return "";
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+}
+
+/** Ruaj Hardware ID 16 nga POS (sipas device_id) — për admin Gjenero një shtypje. */
+async function reportHardwareId({ device_id, hardware_id, celesi }) {
+  const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
+  await ensureLicenseHardwareSchema();
+  const hw = normalizeHardwareIdStored(hardware_id);
+  if (!hw) {
+    throw new Error("Hardware ID duhet 16 shenja hex (XXXX-XXXX-XXXX-XXXX).");
+  }
+  let license = null;
+  const key = String(celesi || "").trim();
+  if (key) {
+    license = await findLicenseByKey(key);
+  }
+  if (!license && device_id) {
+    license = await findLicenseByDeviceId(device_id);
+  }
+  if (!license) {
+    return { ok: false, code: "NOT_FOUND", message: "Licenca nuk u gjet për këtë pajisje." };
+  }
+  await patchLicenseMeta(license.id, { hardware_id: hw });
+  return { ok: true, license_id: license.id, hardware_id: hw };
+}
+
+async function validateLicense({ celesi, device_id, app_type, hostname, client_ip, hardware_id }) {
   const license = await findLicenseByKey(celesi);
   if (!license) {
     return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë)." };
@@ -319,12 +352,14 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     );
   }
 
+  const hwStored = normalizeHardwareIdStored(hardware_id);
   const successPatch = {
     last_activated_at: now,
     last_validation_at: now,
     last_validation_error: "",
     ...(ip ? { last_ip: ip } : {}),
     ...(host ? { device_hostname: host } : {}),
+    ...(hwStored ? { hardware_id: hwStored } : {}),
   };
   if (deviceId) {
     successPatch.device_id = deviceId;
@@ -727,11 +762,25 @@ async function updateLicense(id, body) {
   }
   if (body.device_id != null) {
     // Super Admin: çdo vlerë e lirë (pa limit gjatësie / formati)
-    patch.device_id = String(body.device_id).trim().toUpperCase().replace(/\s+/g, "");
-    patch.last_validation_error = "";
-    if (patch.device_id) {
-      patch.last_activated_at = new Date().toISOString();
+    // Vetëm device_id 12 (terminale) — mos ruaj Hardware ID 16 këtu
+    const rawDev = String(body.device_id).trim().toUpperCase().replace(/\s+/g, "");
+    const hexDev = rawDev.replace(/[^A-F0-9]/g, "");
+    if (hexDev.length === 16) {
+      patch.hardware_id = normalizeHardwareIdStored(hexDev);
+    } else {
+      patch.device_id = rawDev;
+      patch.last_validation_error = "";
+      if (patch.device_id) {
+        patch.last_activated_at = new Date().toISOString();
+      }
     }
+  }
+  if (body.hardware_id != null) {
+    const hw = normalizeHardwareIdStored(body.hardware_id);
+    if (String(body.hardware_id).trim() && !hw) {
+      throw new Error("Hardware ID duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).");
+    }
+    patch.hardware_id = hw;
   }
   if (body.celesi != null) {
     // Super Admin: çelës i plotë i editueshëm — pa regex / pa format të detyruar
@@ -1087,6 +1136,8 @@ module.exports = {
   generateDeviceId,
   provisionLicenseDevice,
   validateLicense,
+  reportHardwareId,
+  normalizeHardwareIdStored,
   getLicenseAccessLinks,
   listClients,
   listLicenses,

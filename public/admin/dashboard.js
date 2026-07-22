@@ -422,19 +422,26 @@ function bindLicenseActions(root) {
       const id = btn.dataset.genFromHw;
       const hwEl = root.querySelector(`[data-hw-input="${id}"]`);
       const keyEl = root.querySelector(`[data-key-input="${id}"]`);
+      const msgEl =
+        btn.closest("[data-license-card]")?.querySelector(`[data-save-msg="${id}"]`) ||
+        root.querySelector(`[data-save-msg="${id}"]`);
       const hardwareId = String(hwEl?.value || "").trim();
       const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
-      if (!hardwareId) {
-        alert("Shkruaj Hardware ID me 16 shenja (XXXX-XXXX-XXXX-XXXX) nga ekrani Aktivizo KAFENE.");
-        hwEl?.focus();
-        return;
-      }
-      if (hwHex.length !== 16) {
-        alert("Hardware ID duhet 16 shenja hex. Device ID me 12 shenja nuk pranohet — merre ID nga «Aktivizo KAFENE».");
+      if (!hardwareId || hwHex.length !== 16) {
+        const msg =
+          "Ngjit ID e pajisjes nga ekrani «Aktivizo» te POS (16 shenja: XXXX-XXXX-XXXX-XXXX). Pastaj shtyp përsëri Gjenero.";
+        if (msgEl) {
+          msgEl.classList.add("err");
+          msgEl.textContent = msg;
+        } else {
+          alert(msg);
+        }
         hwEl?.focus();
         return;
       }
       btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = "Duke gjeneruar…";
       try {
         const licenseType =
           String(document.getElementById("gen-license-type")?.value || "annual").toLowerCase() ===
@@ -454,24 +461,37 @@ function bindLicenseActions(root) {
           });
         }
         const key = data.licenseKey || data.celesi || "";
-        if (data.hardwareId && hwEl) hwEl.value = data.hardwareId;
+        const hwOut = data.hardwareId || hardwareId;
+        if (hwEl) hwEl.value = hwOut;
         if (keyEl) {
           keyEl.value = key;
           keyEl.focus();
           keyEl.select();
         }
-        const typeLabel = data.licenseType === "trial" ? "Trial (7 ditë)" : "Vjetor";
-        const exp =
-          data.licenseType === "trial"
-            ? "7 ditë nga aktivizimi"
-            : data.expiresAt
-              ? `skadon ${data.expiresAt}`
-              : "";
-        alert(`U gjenerua: ${typeLabel}\nLICENSE_KEY: ${key}${exp ? `\n${exp}` : ""}`);
+        /* Ruaj automatikisht — një shtypje = kod + ruajtje */
+        await api(`/api/admin/licenses/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ celesi: key, hardware_id: hwOut }),
+        });
+        if (msgEl) {
+          msgEl.classList.remove("err");
+          msgEl.textContent = "Kodi u gjenerua dhe u ruajt ✓";
+        }
+        btn.textContent = "U gjenerua ✓";
+        setTimeout(() => {
+          btn.textContent = prev;
+          btn.disabled = false;
+        }, 1600);
       } catch (ex) {
-        alert(ex.message || "Gjenerimi dështoi.");
-      } finally {
+        btn.textContent = prev;
         btn.disabled = false;
+        const err = ex.message || "Gjenerimi dështoi.";
+        if (msgEl) {
+          msgEl.classList.add("err");
+          msgEl.textContent = err;
+        } else {
+          alert(err);
+        }
       }
     });
   });
@@ -487,12 +507,23 @@ function bindLicenseActions(root) {
       const hwHex = hwRaw.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
       if (!celesi) {
         if (msgEl) {
-          msgEl.textContent = "Shkruaj ose gjenero License Key.";
+          msgEl.textContent = "Shkruaj ose gjenero kodin e licencës.";
           msgEl.classList.add("err");
         } else {
-          alert("Shkruaj ose gjenero License Key.");
+          alert("Shkruaj ose gjenero kodin e licencës.");
         }
         keyEl?.focus();
+        return;
+      }
+      if (hwRaw && hwHex.length !== 16) {
+        const msg = "ID e pajisjes duhet 16 shenja (XXXX-XXXX-XXXX-XXXX) nga POS Aktivizo.";
+        if (msgEl) {
+          msgEl.textContent = msg;
+          msgEl.classList.add("err");
+        } else {
+          alert(msg);
+        }
+        hwEl?.focus();
         return;
       }
       btn.disabled = true;
@@ -503,9 +534,8 @@ function bindLicenseActions(root) {
         msgEl.classList.remove("err");
       }
       try {
-        /* device_id cloud = 12 hex; Hardware ID 16 mos e ruaj si device_id */
         const patch = { celesi };
-        if (hwHex.length === 12) patch.device_id = hwHex;
+        if (hwHex.length === 16) patch.hardware_id = hwRaw;
         await api(`/api/admin/licenses/${id}`, {
           method: "PATCH",
           body: JSON.stringify(patch),
@@ -513,7 +543,7 @@ function bindLicenseActions(root) {
         btn.textContent = "U ruajt ✓";
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = "Sistemi e ruajti ID + License Key.";
+          msgEl.textContent = "U ruajt ID + kodi.";
         }
         setTimeout(() => {
           btn.textContent = prev;
@@ -563,25 +593,24 @@ async function loadLicenses() {
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
               </h4>
-              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.35rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
-              ${device ? `<div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.5rem">Device cloud: <span class="mono">${esc(device)}</span></div>` : ""}
+              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.5rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
               <div class="lic-field-block">
-                <label class="lic-field-label">Hardware ID (16 shenja — nga Aktivizo KAFENE)</label>
+                <label class="lic-field-label">ID e pajisjes (nga POS Aktivizo)</label>
                 <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
                 <div class="lic-field-actions">
                   <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
                 </div>
               </div>
               <div class="lic-field-block">
-                <label class="lic-field-label">License Key (vetëm licenca)</label>
+                <label class="lic-field-label">Kodi i licencës</label>
                 <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
                 <div class="lic-field-actions">
-                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo licencën</button>
+                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo kodin</button>
                 </div>
               </div>
               <div class="lic-card-actions">
-                <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero kod nga ID</button>
-                <button type="button" class="btn btn-ok" data-save-license="${esc(l.id)}">Ruaj ID + kod</button>
+                <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero Kod</button>
+                <button type="button" class="btn btn-ok" data-save-license="${esc(l.id)}">Ruaj</button>
                 <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
                 ${
                   active
@@ -1085,12 +1114,12 @@ async function boot() {
     const hardwareId = String(hwEl?.value || "").trim();
     const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
     if (!hardwareId) {
-      box.textContent = "Shkruaj Hardware ID me 16 shenja (XXXX-XXXX-XXXX-XXXX) nga ekrani i klientit.";
+      box.textContent = "Ngjit ID e pajisjes nga POS Aktivizo (XXXX-XXXX-XXXX-XXXX), pastaj Gjenero Kod.";
       hwEl?.focus();
       return;
     }
     if (hwHex.length !== 16) {
-      box.textContent = "Hardware ID duhet 16 shenja. Device ID me 12 shenja nuk pranohet — merre nga «Aktivizo KAFENE».";
+      box.textContent = "ID e pajisjes duhet 16 shenja. Merre nga ekrani «Aktivizo» te POS (jo ID e shkurtër 12).";
       hwEl?.focus();
       return;
     }

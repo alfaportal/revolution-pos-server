@@ -1,6 +1,6 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
-const { validateLicense, getLicenseAccessLinks } = require("../services/licenseService");
+const { validateLicense, getLicenseAccessLinks, reportHardwareId } = require("../services/licenseService");
 const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
@@ -64,7 +64,7 @@ async function resolveLicenseClient(req) {
  */
 router.post("/validate", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const { celesi, license_key, device_id, app_type, hostname, hardware_id } = req.body;
     const key = celesi || license_key;
     if (!key) {
       return res.status(400).json({ valid: false, gabim: "Mungon çelësi i licencës." });
@@ -75,6 +75,7 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
       device_id,
       app_type,
       hostname,
+      hardware_id,
       client_ip: clientIp(req),
     });
 
@@ -82,6 +83,27 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
     res.status(status).json(result);
   } catch (e) {
     res.status(500).json({ valid: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/report-hardware
+ * POS dërgon Hardware ID 16 — admini e sheh te Licencat dhe Gjenero funksionon me një shtypje.
+ */
+router.post("/report-hardware", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { device_id, hardware_id, celesi, license_key } = req.body || {};
+    const result = await reportHardwareId({
+      device_id,
+      hardware_id,
+      celesi: celesi || license_key,
+    });
+    if (!result.ok) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, gabim: e.message || String(e) });
   }
 });
 
@@ -116,7 +138,7 @@ router.post("/access-links", licenseApiKeyOptional, async (req, res) => {
  */
 router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname } = req.body;
+    const { celesi, license_key, device_id, app_type, hostname, hardware_id } = req.body;
     const key = celesi || license_key;
     if (!key) {
       return res.status(400).json({ ok: false, valid: false, gabim: "Mungon çelësi i licencës." });
@@ -127,6 +149,7 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
       device_id,
       app_type,
       hostname,
+      hardware_id,
       client_ip: clientIp(req),
     });
 
@@ -140,6 +163,7 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
           device_id,
           app_type,
           hostname,
+          hardware_id,
           client_ip: clientIp(req),
         });
         if (result.valid) {

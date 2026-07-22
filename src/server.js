@@ -522,6 +522,18 @@ async function start() {
     console.warn("  ⚠️  Refuzim porosie schema:", formatError(e));
   }
 
+  try {
+    const { ensureLicenseHardwareSchema } = require("./lib/ensureLicenseHardwareSchema");
+    const hwOk = await ensureLicenseHardwareSchema();
+    if (hwOk) {
+      console.log("  ✅ Licenca: hardware_id (16) kolonë");
+    } else {
+      console.warn("  ⚠️  Licenca hardware_id: vendosni DATABASE_URL për auto-migrim 058");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  Licenca hardware_id schema:", formatError(e));
+  }
+
   startLicenseExpiryCron();
   startRefusedOrdersExpiryJob();
   startTrialNotificationCron();

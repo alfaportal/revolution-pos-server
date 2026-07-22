@@ -5,8 +5,8 @@ const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
 /** Setup Windows — shkarkim i drejtpërdrejtë (pa Railway Variables). */
 const DEFAULT_SETUP_DOWNLOAD_URL =
-  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.235/KAFENE-Setup.exe";
-const DEFAULT_SETUP_VERSION = "1.0.235";
+  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.236/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.236";
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();

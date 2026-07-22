@@ -5,7 +5,7 @@
 const fs = require("fs");
 const path = require("path");
 const { getSupabase } = require("../db");
-const { listClients, listLicenses } = require("./licenseService");
+const { listClients, listLicenses, normalizeHardwareIdStored } = require("./licenseService");
 const { listAiUsageSummary } = require("./aiUsageReportService");
 const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, featuresForTier } = require("../lib/packages");
@@ -600,15 +600,13 @@ async function getClientDetail(clientId) {
 }
 
 async function getLicensesView() {
+  const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
+  await ensureLicenseHardwareSchema().catch(() => false);
   const licenses = await listLicenses();
   return {
     licenses: licenses.map((l) => {
       const device = String(l.display_device_id || l.device_id || "").trim();
-      const hex = device.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
-      /* Vetëm ID me 16 hex = Hardware ID për çelës; 12 = device cloud (mos e ngatërro) */
-      const hardware_id = hex.length === 16
-        ? `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`
-        : "";
+      const hardware_id = normalizeHardwareIdStored(l.hardware_id || "");
       return {
         id: l.id,
         client_id: l.client_id || l.clients?.id,
