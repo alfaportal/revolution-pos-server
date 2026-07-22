@@ -1404,6 +1404,66 @@ a.article-card {
   width: min(480px, 100%);
 }
 
+.setup-channel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.setup-channel-btn {
+  flex: 1 1 auto;
+  min-width: 5.5rem;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-weight: 650;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.setup-channel-btn.is-active {
+  border-color: #e63946;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.setup-channel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.setup-ch-panel label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: #334155;
+}
+
+.setup-ch-panel input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+}
+
+.setup-link-msg {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.setup-link-msg.ok {
+  color: #15803d;
+}
+
+.setup-link-msg.err {
+  color: #b91c1c;
+}
+
 .bank-intro {
   margin: 0;
   font-size: 0.9rem;

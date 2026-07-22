@@ -105,6 +105,38 @@ app.get("/api/public/config", (_req, res) => {
 });
 
 /**
+ * Kërkesë Setup link — email ose SMS (pa WhatsApp). Rate-limited.
+ * Body: { channel: 'email'|'sms', email?, phone?, plan?, lang? }
+ */
+app.post("/api/public/setup-link-request", async (req, res) => {
+  try {
+    const { requestSetupLink } = require("./services/setupLinkRequestService");
+    const ip =
+      req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      "";
+    const result = await requestSetupLink({
+      channel: req.body?.channel,
+      email: req.body?.email,
+      phone: req.body?.phone || req.body?.telefon,
+      plan: req.body?.plan,
+      lang: req.body?.lang,
+      ip,
+    });
+    res.json(result);
+  } catch (e) {
+    const code = e.code || "ERROR";
+    const status =
+      code === "RATE_LIMIT"
+        ? 429
+        : code === "SETUP_SECRET_MISSING" || code === "EMAIL_OFF" || code === "SMS_OFF"
+          ? 503
+          : 400;
+    res.status(status).json({ ok: false, gabim: e.message, code });
+  }
+});
+
+/**
  * Shkarkim Setup — VETËM me token të nënshkruar (Super Admin).
  * Pa token → 403 (jo më publik i hapur).
  */
