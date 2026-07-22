@@ -607,7 +607,12 @@ async function getLicensesView() {
   return {
     licenses: licenses.map((l) => {
       const device = String(l.display_device_id || l.device_id || "").trim();
-      const hardware_id = normalizeHardwareIdStored(l.hardware_id || "");
+      let hardware_id = "";
+      try {
+        hardware_id = normalizeHardwareIdStored(l.hardware_id || "");
+      } catch {
+        hardware_id = "";
+      }
       return {
         id: l.id,
         client_id: l.client_id || l.clients?.id,

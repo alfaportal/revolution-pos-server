@@ -468,14 +468,21 @@ function bindLicenseActions(root) {
           keyEl.focus();
           keyEl.select();
         }
-        /* Ruaj automatikisht — një shtypje = kod + ruajtje */
-        await api(`/api/admin/licenses/${id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ celesi: key, hardware_id: hwOut }),
-        });
+        /* Ruaj çelësin — hardware_id opsional (nëse kolona mungon, prapë ruhet kodi) */
+        try {
+          await api(`/api/admin/licenses/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ celesi: key, hardware_id: hwOut }),
+          });
+        } catch {
+          await api(`/api/admin/licenses/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ celesi: key }),
+          });
+        }
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = "Kodi u gjenerua dhe u ruajt ✓";
+          msgEl.textContent = `Kodi u gjenerua: ${key} — kopjoje dhe aktivizo te POS ✓`;
         }
         btn.textContent = "U gjenerua ✓";
         setTimeout(() => {
@@ -535,15 +542,28 @@ function bindLicenseActions(root) {
       }
       try {
         const patch = { celesi };
-        if (hwHex.length === 16) patch.hardware_id = hwRaw;
-        await api(`/api/admin/licenses/${id}`, {
-          method: "PATCH",
-          body: JSON.stringify(patch),
-        });
+        if (hwHex.length === 16) {
+          try {
+            await api(`/api/admin/licenses/${id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ celesi, hardware_id: hwRaw }),
+            });
+          } catch {
+            await api(`/api/admin/licenses/${id}`, {
+              method: "PATCH",
+              body: JSON.stringify(patch),
+            });
+          }
+        } else {
+          await api(`/api/admin/licenses/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          });
+        }
         btn.textContent = "U ruajt ✓";
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = "U ruajt ID + kodi.";
+          msgEl.textContent = "U ruajt. Kopjo kodin dhe aktivizo te POS.";
         }
         setTimeout(() => {
           btn.textContent = prev;

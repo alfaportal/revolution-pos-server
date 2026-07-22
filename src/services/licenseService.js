@@ -307,8 +307,15 @@ async function reportHardwareId({ device_id, hardware_id, celesi }) {
   if (!license) {
     return { ok: false, code: "NOT_FOUND", message: "Licenca nuk u gjet për këtë pajisje." };
   }
-  await patchLicenseMeta(license.id, { hardware_id: hw });
-  return { ok: true, license_id: license.id, hardware_id: hw };
+  try {
+    await patchLicenseMeta(license.id, { hardware_id: hw });
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    if (!/hardware_id|schema cache/i.test(msg)) throw err;
+    /* Kolona ende nuk ekziston — mos blloko POS */
+    return { ok: true, license_id: license.id, hardware_id: hw, stored: false };
+  }
+  return { ok: true, license_id: license.id, hardware_id: hw, stored: true };
 }
 
 async function validateLicense({ celesi, device_id, app_type, hostname, client_ip, hardware_id }) {
@@ -753,6 +760,9 @@ async function createLicense(body) {
 
 async function updateLicense(id, body) {
   const db = getSupabase();
+  const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
+  await ensureLicenseHardwareSchema().catch(() => false);
+
   const patch = {};
   if (body.data_skadimit != null) patch.data_skadimit = String(body.data_skadimit).slice(0, 10);
   if (body.statusi != null) {
@@ -810,7 +820,24 @@ async function updateLicense(id, body) {
   }
   if (!Object.keys(patch).length) throw new Error("Nuk ka fusha për përditësim.");
 
-  const { data, error } = await db.from("licenses").update(patch).eq("id", id).select("*, clients(emri, tipi)").single();
+  async function doUpdate(p) {
+    return db.from("licenses").update(p).eq("id", id).select("*, clients(emri, tipi)").single();
+  }
+
+  let { data, error } = await doUpdate(patch);
+
+  /* Kolona hardware_id mund të mungojë ende — ruaj çelësin gjithsesi */
+  if (error && patch.hardware_id != null) {
+    const msg = String(error.message || error.details || "");
+    if (/hardware_id|schema cache/i.test(msg)) {
+      const fallback = { ...patch };
+      delete fallback.hardware_id;
+      if (Object.keys(fallback).length) {
+        ({ data, error } = await doUpdate(fallback));
+      }
+    }
+  }
+
   if (error) throw error;
   if (!data) throw new Error("Liçenca nuk u gjet.");
 
