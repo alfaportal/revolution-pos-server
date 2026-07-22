@@ -96,52 +96,38 @@
 
         <!-- LICENCAT -->
         <section class="section" id="sec-licencat">
-          <div class="card gen-box">
-            <div class="card-title">Gjenero kod licence</div>
-            <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.95rem">
-              Ngjit <strong>ID e pajisjes</strong> nga ekrani «Aktivizo» te POS
-              (<span class="mono">XXXX-XXXX-XXXX-XXXX</span>), pastaj shtyp <strong>Gjenero Kod</strong>.
-              Sistemi e krijon kodin automatikisht.
+          <div class="card">
+            <div class="card-title">Licencat</div>
+            <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.9rem">
+              Ngjit ID-në 16 nga POS → <strong>Gjenero Licencë</strong>. Kodi ruhet vetë.
             </p>
-            <div class="field">
-              <label for="gen-hw">ID e pajisjes (nga POS)</label>
-              <input id="gen-hw" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" inputmode="text" autocapitalize="characters" spellcheck="false">
-            </div>
-            <div class="field">
-              <label for="gen-license-type">Lloji i licencës</label>
+            <div class="field" style="margin-bottom:0.75rem">
+              <label for="gen-license-type">Lloji</label>
               <select id="gen-license-type">
                 <option value="trial">Trial (7 ditë)</option>
-                <option value="annual" selected>Vjetor (1 vit nga sot)</option>
+                <option value="annual" selected>Vjetor (1 vit)</option>
               </select>
             </div>
-            <button type="button" class="btn btn-primary" id="btn-gen-key">Gjenero Kod</button>
-            <div id="gen-result" style="color:var(--accent)"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Link Setup zyrtar (i mbrojtur)</div>
-            <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.95rem">
-              Setup nuk shkarkohet publikisht. Gjenero link me token (skadon) dhe dërgoja klientit në WhatsApp.
-            </p>
-            <div class="field">
-              <label for="setup-ttl">Vlefshmëria (orë)</label>
-              <input id="setup-ttl" type="number" min="1" max="720" value="72">
-            </div>
-            <button type="button" class="btn btn-ok" id="btn-setup-link">Gjenero link shkarkimi</button>
-            <div id="setup-link-result" style="margin-top:0.75rem;word-break:break-all;color:var(--accent)"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">Lista e licencave</div>
             <div class="license-cards mobile-only" id="licenses-cards"></div>
             <div class="table-wrap desktop-only">
               <table class="sa-table">
                 <thead>
                   <tr>
-                    <th>Klienti</th><th>ID pajisjeje</th><th>Kodi i licencës</th><th>Statusi</th><th>Aktivizimi</th><th></th>
+                    <th>Klienti</th><th>ID</th><th>Licenca</th><th>Statusi</th><th></th>
                   </tr>
                 </thead>
                 <tbody id="licenses-body"></tbody>
               </table>
             </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Link Setup</div>
+            <div class="field">
+              <label for="setup-ttl">Orë</label>
+              <input id="setup-ttl" type="number" min="1" max="720" value="72">
+            </div>
+            <button type="button" class="btn btn-ok" id="btn-setup-link">Gjenero link</button>
+            <div id="setup-link-result" style="margin-top:0.75rem;word-break:break-all;color:var(--accent)"></div>
           </div>
         </section>
 

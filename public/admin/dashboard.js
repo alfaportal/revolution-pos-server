@@ -42,7 +42,7 @@ function ensureNineSectors(apiSectors) {
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
   klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
-  licencat: ["Licencat", "ID pajisjeje, çelësa, aktivizim"],
+  licencat: ["Licencat", "ID + Gjenero Licencë"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
   raportet: ["Probleme", "Vetëm probleme — pa shitje"],
@@ -482,7 +482,12 @@ function bindLicenseActions(root) {
         }
         if (msgEl) {
           msgEl.classList.remove("err");
-          msgEl.textContent = `Kodi u gjenerua: ${key} — kopjoje dhe aktivizo te POS ✓`;
+          msgEl.textContent = `Licenca: ${key}`;
+        }
+        try {
+          await navigator.clipboard.writeText(key);
+        } catch {
+          /* ignore */
         }
         btn.textContent = "U gjenerua ✓";
         setTimeout(() => {
@@ -613,25 +618,17 @@ async function loadLicenses() {
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
               </h4>
-              <div style="color:var(--muted);font-size:0.95rem;margin-bottom:0.5rem">Aktivizimi: ${esc(fmtDate(l.activated_at))}</div>
               <div class="lic-field-block">
-                <label class="lic-field-label">ID e pajisjes (nga POS Aktivizo)</label>
+                <label class="lic-field-label">ID (nga POS)</label>
                 <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-                <div class="lic-field-actions">
-                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
-                </div>
               </div>
               <div class="lic-field-block">
-                <label class="lic-field-label">Kodi i licencës</label>
-                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-                <div class="lic-field-actions">
-                  <button type="button" class="btn btn-ghost btn-copy" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo kodin</button>
-                </div>
+                <label class="lic-field-label">Licenca</label>
+                <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" readonly autocomplete="off">
               </div>
+              <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
               <div class="lic-card-actions">
-                <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero Kod</button>
-                <button type="button" class="btn btn-ok" data-save-license="${esc(l.id)}">Ruaj</button>
-                <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
+                <button type="button" class="btn btn-primary" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
                 ${
                   active
                     ? `<button type="button" class="btn btn-danger" data-block="${esc(l.id)}">Çaktivizo</button>`
@@ -655,18 +652,14 @@ async function loadLicenses() {
         return `<tr>
           <td>${esc(l.client_name)}</td>
           <td>
-            <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" title="Vetëm Hardware ID">
-            <button type="button" class="btn btn-ghost btn-sm btn-copy" style="margin-top:0.35rem" data-copy-from="[data-hw-input='${esc(l.id)}']">Kopjo ID</button>
+            <input type="text" class="lic-edit-input mono" data-hw-input="${esc(l.id)}" value="${esc(hw)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
           </td>
           <td>
-            <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" title="Vetëm License Key">
-            <button type="button" class="btn btn-ghost btn-sm btn-copy" style="margin-top:0.35rem" data-copy-from="[data-key-input='${esc(l.id)}']">Kopjo licencën</button>
+            <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" readonly autocomplete="off" spellcheck="false">
           </td>
           <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
-          <td>${esc(fmtDate(l.activated_at))}</td>
           <td style="white-space:nowrap">
-            <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero</button>
-            <button type="button" class="btn btn-ok btn-sm" data-save-license="${esc(l.id)}">Ruaj</button>
+            <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
             ${
               active
@@ -1127,81 +1120,6 @@ async function boot() {
       box.textContent = ex.message || String(ex);
     }
   });
-
-  document.getElementById("btn-gen-key").addEventListener("click", async () => {
-    const box = document.getElementById("gen-result");
-    const hwEl = document.getElementById("gen-hw");
-    const hardwareId = String(hwEl?.value || "").trim();
-    const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
-    if (!hardwareId) {
-      box.textContent = "Ngjit ID e pajisjes nga POS Aktivizo (XXXX-XXXX-XXXX-XXXX), pastaj Gjenero Kod.";
-      hwEl?.focus();
-      return;
-    }
-    if (hwHex.length !== 16) {
-      box.textContent = "ID e pajisjes duhet 16 shenja. Merre nga ekrani «Aktivizo» te POS (jo ID e shkurtër 12).";
-      hwEl?.focus();
-      return;
-    }
-    const licenseType =
-      String(document.getElementById("gen-license-type")?.value || "annual").toLowerCase() ===
-      "trial"
-        ? "trial"
-        : "annual";
-    try {
-      let data;
-      try {
-        data = await api("/api/admin/licenses/generate-hardware-key", {
-          method: "POST",
-          body: JSON.stringify({ hardwareId, licenseType }),
-        });
-      } catch {
-        data = await api("/api/super/generate-license-key", {
-          method: "POST",
-          body: JSON.stringify({ hardwareId, licenseType }),
-        });
-      }
-      const key = data.licenseKey || data.celesi || "";
-      const hw = data.hardwareId || hardwareId;
-      const typeLabel = data.licenseType === "trial" ? "Trial (7 ditë)" : "Vjetor (1 vit)";
-      const expLine =
-        data.licenseType === "trial"
-          ? "7 ditë nga aktivizimi i parë"
-          : data.expiresAt
-            ? `Skadon: ${data.expiresAt}`
-            : "";
-      if (hwEl && data.hardwareId) hwEl.value = data.hardwareId;
-      box.innerHTML = `
-        <div class="copy-row" style="margin-top:0.5rem">
-          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">ID e pajisjes</div>${esc(hw)}</div>
-          <button type="button" class="btn btn-ghost btn-copy" data-copy="${esc(hw)}">Kopjo ID</button>
-        </div>
-        <div class="copy-row" style="margin-top:0.5rem">
-          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">Lloji</div>${esc(typeLabel)}${expLine ? `<div style="margin-top:0.25rem;font-size:0.9rem">${esc(expLine)}</div>` : ""}</div>
-        </div>
-        <div class="copy-row" style="margin-top:0.5rem">
-          <div class="mono-box"><div style="color:var(--muted);font-size:0.85rem;margin-bottom:0.25rem">License Key</div>${esc(key)}</div>
-          <button type="button" class="btn btn-primary btn-copy" id="btn-copy-gen-key" data-copy="${esc(key)}">Kopjo kodin</button>
-        </div>`;
-      box.querySelectorAll("[data-copy]").forEach((btn) => {
-        btn.addEventListener("click", (ev) => copyText(btn.dataset.copy, ev.currentTarget));
-      });
-    } catch (ex) {
-      box.textContent = ex.message;
-    }
-  });
-
-  const genHw = document.getElementById("gen-hw");
-  if (genHw) {
-    genHw.addEventListener("input", () => {
-      const hex = String(genHw.value || "").replace(/[^a-fA-F0-9]/g, "").toUpperCase().slice(0, 16);
-      let next = hex;
-      if (hex.length > 12) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12)}`;
-      else if (hex.length > 8) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}`;
-      else if (hex.length > 4) next = `${hex.slice(0, 4)}-${hex.slice(4)}`;
-      if (next !== genHw.value) genHw.value = next;
-    });
-  }
 
   document.getElementById("btn-ai-load").addEventListener("click", () => loadAi().catch(alert));
   document.getElementById("btn-bank-pay-refresh")?.addEventListener("click", () => {
