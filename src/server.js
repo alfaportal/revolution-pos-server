@@ -137,35 +137,46 @@ app.post("/api/public/setup-link-request", async (req, res) => {
 });
 
 /**
- * Shkarkim Setup — VETËM me token të nënshkruar (Super Admin).
- * Pa token → 403 (jo më publik i hapur).
+ * Shkarkim Setup — publik (pa login).
+ * Token opsional (?t=) për linkë admin të vjetër — ende valid.
  */
 app.get("/api/public/setup-download", (req, res) => {
   const {
     verifySetupDownloadToken,
     isSetupDownloadConfigured,
   } = require("./lib/setupDownloadAuth");
-  if (!isSetupDownloadConfigured()) {
+  let plan = String(req.query.plan || "").trim().toLowerCase();
+  const token = String(req.query.t || req.query.token || "").trim();
+  if (token) {
+    if (!isSetupDownloadConfigured()) {
+      return res.status(503).json({
+        ok: false,
+        gabim: "Shkarkimi i Setup kërkon SETUP_DOWNLOAD_SECRET në server.",
+        code: "SETUP_SECRET_MISSING",
+      });
+    }
+    const check = verifySetupDownloadToken(token);
+    if (!check.ok) {
+      return res.status(403).json({
+        ok: false,
+        gabim:
+          check.reason === "expired"
+            ? "Linku i shkarkimit ka skaduar. Shkarkoni përsëri nga revolution-pos.com."
+            : "Linku i shkarkimit nuk është i vlefshëm.",
+        code: "SETUP_TOKEN_INVALID",
+      });
+    }
+    if (!plan && check.plan) plan = check.plan;
+  }
+  const url = getSetupDownloadUrl(plan);
+  if (!url) {
     return res.status(503).json({
       ok: false,
-      gabim: "Shkarkimi i Setup kërkon SETUP_DOWNLOAD_SECRET në server.",
-      code: "SETUP_SECRET_MISSING",
+      gabim: "URL e Setup nuk është konfiguruar.",
+      code: "SETUP_URL_MISSING",
     });
   }
-  const token = String(req.query.t || req.query.token || "").trim();
-  const check = verifySetupDownloadToken(token);
-  if (!check.ok) {
-    return res.status(403).json({
-      ok: false,
-      gabim:
-        check.reason === "expired"
-          ? "Linku i shkarkimit ka skaduar. Kërkoni link të ri nga Revolution Invest."
-          : "Shkarkimi i Setup nuk është publik. Kontaktoni Revolution Invest për link zyrtar.",
-      code: "SETUP_TOKEN_REQUIRED",
-    });
-  }
-  const plan = String(req.query.plan || check.plan || "").trim().toLowerCase();
-  const url = getSetupDownloadUrl(plan);
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.redirect(302, url);
 });
 

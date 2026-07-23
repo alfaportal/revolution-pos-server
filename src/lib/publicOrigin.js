@@ -85,7 +85,6 @@ function getSetupVersion() {
 }
 
 function getPublicAppConfig() {
-  const { isSetupDownloadConfigured } = require("./setupDownloadAuth");
   let setup_email = false;
   let setup_sms = false;
   try {
@@ -102,12 +101,12 @@ function getPublicAppConfig() {
     support_phone_digits: getSupportPhoneDigits(),
     support_email: getSupportEmail(),
     setup_version: getSetupVersion(),
-    setup_requires_token: true,
-    setup_download_configured: isSetupDownloadConfigured(),
+    /* Download publik — pa login / pa WhatsApp (aktivizimi mbetet manual) */
+    setup_requires_token: false,
+    setup_download_configured: true,
     setup_via_email: setup_email,
     setup_via_sms: setup_sms,
-    /* URL direkte NUK ekspozohet publike — vetëm me token */
-    setup_download_url: null,
+    setup_download_url: `${getPublicAppOrigin()}/api/public/setup-download`,
     setup_downloads: null,
   };
 }

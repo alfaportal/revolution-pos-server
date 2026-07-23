@@ -57,7 +57,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
             <button type="button" data-lang="sq" class="${lang === "sq" ? "active" : ""}">SQ</button>
             <button type="button" data-lang="en" class="${lang === "en" ? "active" : ""}">EN</button>
           </div>
-          <a class="btn btn-primary header-cta-desktop" href="${sectionHref("kontakt")}">${t("cta.startFree")}</a>
+          <a class="btn btn-primary header-cta-desktop" href="/api/public/setup-download">${t("getStarted.cta")}</a>
           <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="nav-mobile" aria-label="${t("nav.openMenu")}">☰</button>
         </div>
       </div>
@@ -66,7 +66,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
         ${items.map(navItemHtml).join("")}
         <a href="/website/manual.html">${t("nav.manual")}</a>
         ${sectionLink("kontakt", t("nav.contact"), activeNav, "contact")}
-        <a class="btn btn-primary" href="${sectionHref("kontakt")}">${t("cta.startFree")}</a>
+        <a class="btn btn-primary" href="/api/public/setup-download">${t("getStarted.cta")}</a>
       </nav>
     </header>
   `;

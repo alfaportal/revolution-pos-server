@@ -254,161 +254,50 @@ function setupWhatsAppHref(digits = "38348707880", plan = "") {
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 
-/** @deprecated Setup nuk është më publik — përdor WhatsApp / token admin */
+/** URL publike për Setup — pa login / pa token. */
 function setupDownloadHref(plan) {
-  return setupWhatsAppHref("38348707880", plan);
+  const key = String(plan || "").trim().toLowerCase();
+  return key
+    ? `/api/public/setup-download?plan=${encodeURIComponent(key)}`
+    : "/api/public/setup-download";
+}
+
+function startSetupDownload(plan = "") {
+  window.location.assign(setupDownloadHref(plan));
 }
 
 function setupWaTextEncoded() {
   return encodeURIComponent(
     getLang() === "en"
-      ? "Hello, I need the official protected Setup download link and a trial / license key."
-      : "Përshëndetje, më duhet linku zyrtar i mbrojtur për Setup dhe çelës trial / licencë.",
+      ? "Hello, here is my Hardware ID from KAFENE activation (please send License Key): "
+      : "Përshëndetje, ja Hardware ID nga aktivizimi i KAFENE (ju lutem dërgoni License Key): ",
   );
 }
 
 async function openSetupLinkModal(plan = "") {
-  const existing = document.getElementById("setup-link-modal");
-  if (existing) existing.remove();
-
-  let digits = "38348707880";
-  let emailOn = true;
-  let smsOn = true;
-  try {
-    const res = await fetch("/api/public/config");
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      if (data.support_phone_digits) digits = data.support_phone_digits;
-      emailOn = data.setup_via_email === true;
-      smsOn = data.setup_via_sms === true;
-    }
-  } catch {
-    /* defaults */
-  }
-
-  const waHref = `https://wa.me/${digits}?text=${setupWaTextEncoded()}`;
-  const modal = document.createElement("div");
-  modal.id = "setup-link-modal";
-  modal.className = "checkout-modal";
-  modal.innerHTML = `
-    <div class="checkout-modal-card checkout-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="setup-link-title">
-      <h3 id="setup-link-title">${t("setupModal.title")}</h3>
-      <p class="trial-modal-body">${t("setupModal.body")}</p>
-      <div class="setup-channel-tabs" role="tablist">
-        <button type="button" class="setup-channel-btn is-active" data-setup-ch="email"${emailOn ? "" : " disabled"}>${t("setupModal.email")}</button>
-        <button type="button" class="setup-channel-btn" data-setup-ch="sms"${smsOn ? "" : " disabled"}>${t("setupModal.sms")}</button>
-        <button type="button" class="setup-channel-btn" data-setup-ch="whatsapp">${t("setupModal.whatsapp")}</button>
-      </div>
-      <div id="setup-ch-email" class="setup-ch-panel">
-        <label for="setup-email-input">${t("setupModal.email")}</label>
-        <input type="email" id="setup-email-input" autocomplete="email" placeholder="${t("setupModal.emailPlaceholder")}" />
-      </div>
-      <div id="setup-ch-sms" class="setup-ch-panel" hidden>
-        <label for="setup-phone-input">${t("setupModal.sms")}</label>
-        <input type="tel" id="setup-phone-input" autocomplete="tel" placeholder="${t("setupModal.phonePlaceholder")}" />
-      </div>
-      <div id="setup-ch-whatsapp" class="setup-ch-panel" hidden>
-        <p class="trial-modal-body">${t("setupModal.waHint")}</p>
-      </div>
-      <p class="setup-link-msg" id="setup-link-msg" hidden></p>
-      <div class="checkout-actions">
-        <button type="button" class="btn btn-primary" id="setup-link-send">${t("setupModal.send")}</button>
-        <a class="btn btn-ghost" id="setup-link-wa" href="${waHref}" target="_blank" rel="noopener noreferrer" hidden>${t("setupModal.whatsapp")}</a>
-        <button type="button" class="btn btn-ghost" id="setup-link-close">${t("setupModal.close")}</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  let channel = emailOn ? "email" : smsOn ? "sms" : "whatsapp";
-  const panels = {
-    email: modal.querySelector("#setup-ch-email"),
-    sms: modal.querySelector("#setup-ch-sms"),
-    whatsapp: modal.querySelector("#setup-ch-whatsapp"),
-  };
-  const sendBtn = modal.querySelector("#setup-link-send");
-  const waBtn = modal.querySelector("#setup-link-wa");
-  const msgEl = modal.querySelector("#setup-link-msg");
-
-  function setChannel(ch) {
-    channel = ch;
-    modal.querySelectorAll(".setup-channel-btn").forEach((b) => {
-      b.classList.toggle("is-active", b.dataset.setupCh === ch);
-    });
-    Object.entries(panels).forEach(([k, el]) => {
-      if (el) el.hidden = k !== ch;
-    });
-    if (sendBtn) sendBtn.hidden = ch === "whatsapp";
-    if (waBtn) waBtn.hidden = ch !== "whatsapp";
-    if (msgEl) {
-      msgEl.hidden = true;
-      msgEl.textContent = "";
-    }
-  }
-
-  modal.querySelectorAll("[data-setup-ch]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (btn.disabled) return;
-      setChannel(btn.dataset.setupCh);
-    });
-  });
-  setChannel(channel);
-
-  const close = () => modal.remove();
-  modal.querySelector("#setup-link-close")?.addEventListener("click", close);
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) close();
-  });
-
-  sendBtn?.addEventListener("click", async () => {
-    if (channel === "whatsapp") return;
-    msgEl.hidden = false;
-    msgEl.className = "setup-link-msg";
-    msgEl.textContent = t("setupModal.sending");
-    sendBtn.disabled = true;
-    try {
-      const body = {
-        channel,
-        plan: plan || sessionStorage.getItem("selectedPackage") || "",
-        lang: getLang(),
-      };
-      if (channel === "email") body.email = modal.querySelector("#setup-email-input")?.value || "";
-      if (channel === "sms") body.phone = modal.querySelector("#setup-phone-input")?.value || "";
-      const res = await fetch("/api/public/setup-link-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        msgEl.className = "setup-link-msg err";
-        msgEl.textContent = data.gabim || t("setupModal.pickChannel");
-        return;
-      }
-      msgEl.className = "setup-link-msg ok";
-      msgEl.textContent = data.message || t("setupModal.send");
-    } catch {
-      msgEl.className = "setup-link-msg err";
-      msgEl.textContent =
-        getLang() === "en" ? "Network error. Try again." : "Gabim rrjeti. Provoni përsëri.";
-    } finally {
-      sendBtn.disabled = false;
-    }
-  });
+  /* Download direkt — pa Email/SMS/WhatsApp për Setup */
+  startSetupDownload(plan);
 }
 
 function bindGetStartedDownload() {
   const help = document.getElementById("get-started-wa");
   const verEl = document.getElementById("setup-version-label");
-
-  document.getElementById("get-started-download")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openSetupLinkModal();
-  });
+  const mainBtn = document.getElementById("get-started-download");
+  if (mainBtn) {
+    if (mainBtn.tagName === "A") {
+      mainBtn.setAttribute("href", setupDownloadHref());
+    } else {
+      mainBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        startSetupDownload();
+      });
+    }
+  }
 
   document.getElementById("package-detail-download")?.addEventListener("click", (e) => {
     e.preventDefault();
     const plan = sessionStorage.getItem("selectedPackage") || "";
-    openSetupLinkModal(plan);
+    startSetupDownload(plan);
   });
 
   (async () => {
@@ -423,6 +312,9 @@ function bindGetStartedDownload() {
       const digits = data.support_phone_digits || "38348707880";
       const wa = `https://wa.me/${digits}?text=${setupWaTextEncoded()}`;
       if (help) help.href = wa;
+      if (mainBtn?.tagName === "A" && data.setup_download_url) {
+        mainBtn.setAttribute("href", data.setup_download_url.replace(/^https?:\/\/[^/]+/i, "") || setupDownloadHref());
+      }
     } catch {
       if (help) help.href = `https://wa.me/38348707880?text=${setupWaTextEncoded()}`;
     }
@@ -610,7 +502,7 @@ function bindPackageCards() {
       openStripeCheckoutModal(plan);
       return;
     }
-    window.open(setupWhatsAppHref(digits, plan || "p1"), "_blank", "noopener,noreferrer");
+    startSetupDownload(plan || "p1");
   });
 
   const saved = sessionStorage.getItem("selectedPackage");
@@ -661,7 +553,7 @@ async function openTrialModal() {
   modal.querySelector("#trial-close")?.addEventListener("click", close);
   modal.querySelector("#trial-setup-link")?.addEventListener("click", () => {
     close();
-    openSetupLinkModal(plan);
+    startSetupDownload(plan);
   });
   modal.addEventListener("click", (e) => {
     if (e.target === modal) close();
@@ -995,7 +887,7 @@ export function renderHome() {
           <h1>${t("hero.title")}</h1>
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
-            <button type="button" class="btn btn-hero-primary" data-trial-modal>${t("hero.cta.primary")}</button>
+            <a class="btn btn-hero-primary" href="/api/public/setup-download">${t("getStarted.cta")}</a>
             <button type="button" class="btn btn-hero-secondary" data-equip-modal>${t("nav.equipment")}</button>
             <a class="btn btn-hero-ghost" href="#pakot">${t("hero.cta.secondary")}</a>
           </div>
@@ -1062,7 +954,7 @@ export function renderHome() {
           </ol>
           <p class="setup-version-banner" id="setup-version-label" hidden></p>
           <div class="get-started-actions">
-            <button type="button" class="btn btn-primary" id="get-started-download">${t("getStarted.cta")}</button>
+            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download">${t("getStarted.cta")}</a>
             <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
             <a class="btn btn-ghost" id="get-started-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("getStarted.ctaHelp")}</a>
           </div>
