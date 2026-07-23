@@ -1305,7 +1305,7 @@
         <a class="how-card-link" href="${n}">${e("how.readManual")}</a>
       </div>
     </article>
-  `}const Oe=[{id:"1",image:"images/pillars/01-kontroll-total.png"},{id:"2",image:"images/pillars/02-ai-punon.png"},{id:"3",image:"images/pillars/03-me-pak-gabime.png"},{id:"4",image:"images/pillars/04-kursen-para.png"},{id:"5",image:"images/pillars/06-fjetur-i-qete-atk.png"},{id:"6",image:"images/pillars/05-pronari-ka-kohe.png"}];function Ie(t){const a=t.id;return`
+  `}const Oe=[{id:"1",image:"images/pillars/01-kontroll-total.png"},{id:"2",image:"images/pillars/02-ai-punon.png"},{id:"3",image:"images/pillars/03-me-pak-gabime.png"},{id:"4",image:"images/pillars/04-kursen-para.png"},{id:"5",image:"images/pillars/05-atk-kontabilist.png"},{id:"6",image:"images/pillars/06-pronari-ka-kohe.png"}];function Ie(t){const a=t.id;return`
     <a
       class="pillar-card"
       id="shtylla-${a}"

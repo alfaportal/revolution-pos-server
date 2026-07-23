@@ -100,11 +100,11 @@ const PILLARS = [
   },
   {
     id: "5",
-    image: "images/pillars/06-fjetur-i-qete-atk.png",
+    image: "images/pillars/05-atk-kontabilist.png",
   },
   {
     id: "6",
-    image: "images/pillars/05-pronari-ka-kohe.png",
+    image: "images/pillars/06-pronari-ka-kohe.png",
   },
 ];
 
