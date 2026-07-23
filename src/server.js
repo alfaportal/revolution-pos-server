@@ -580,18 +580,6 @@ async function start() {
   }
 
   try {
-    const { ensureKetujemiSchema } = require("./lib/ensureKetujemiSchema");
-    const kjOk = await ensureKetujemiSchema();
-    if (kjOk) {
-      console.log("  ✅ SEO KetuJemi (059): ketujemi_url reciprocal");
-    } else {
-      console.warn("  ⚠️  KetuJemi URL: vendosni DATABASE_URL në Railway për auto-migrim 059");
-    }
-  } catch (e) {
-    console.warn("  ⚠️  KetuJemi schema:", formatError(e));
-  }
-
-  try {
     const { ensureOrderAcceptanceSchema } = require("./lib/ensureOrderAcceptanceSchema");
     const accOk = await ensureOrderAcceptanceSchema();
     if (accOk) {

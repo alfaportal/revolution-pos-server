@@ -63,7 +63,6 @@ function buildJsonLd(page, { storefront, origin }) {
   if (page.phone) data.telephone = page.phone;
   if (page.logo_url) data.image = absoluteUrl(page.logo_url, origin);
   if (page.maps_url) data.hasMap = page.maps_url;
-  if (page.ketujemi_url) data.sameAs = [page.ketujemi_url];
 
   if (!isShop && Array.isArray(page.menu) && page.menu.length) {
     data.hasMenu = url;
@@ -87,10 +86,6 @@ function buildHeadInjection(page, { storefront, origin }) {
   const ogImage = absoluteUrl(page.cover_url || page.logo_url || "/logo-source.png", origin);
   const jsonLd = buildJsonLd(page, { storefront, origin });
 
-  const ketujemiLink = page.ketujemi_url
-    ? `<link rel="me" href="${escapeAttr(page.ketujemi_url)}">`
-    : "";
-
   return {
     title,
     injection: `
@@ -105,14 +100,12 @@ function buildHeadInjection(page, { storefront, origin }) {
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeAttr(title)}">
   <meta name="twitter:description" content="${escapeAttr(description)}">
-  ${ketujemiLink}
   <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>`,
     canonical,
-    ketujemiUrl: page.ketujemi_url || "",
   };
 }
 
-function injectIntoShell(html, { title, injection, ketujemiUrl }) {
+function injectIntoShell(html, { title, injection }) {
   let out = String(html || "");
   if (/<title>[\s\S]*?<\/title>/i.test(out)) {
     out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
@@ -124,19 +117,6 @@ function injectIntoShell(html, { title, injection, ketujemiUrl }) {
     throw new Error("HTML shell mungon </head>");
   }
   out = out.replace(/<\/head>/i, `${injection}\n</head>`);
-
-  const ketujemiBlock = ketujemiUrl
-    ? `<p class="seo-ketujemi"><a href="${escapeAttr(ketujemiUrl)}" rel="noopener noreferrer" target="_blank">Shiko edhe në KetuJemi</a></p>`
-    : "";
-
-  if (out.includes("<!--SEO_KETUJEMI-->")) {
-    out = out.replace("<!--SEO_KETUJEMI-->", ketujemiBlock);
-  } else if (ketujemiBlock) {
-    out = out.replace(
-      /<footer class="site-footer">/i,
-      `${ketujemiBlock}\n    <footer class="site-footer">`,
-    );
-  }
 
   return out;
 }

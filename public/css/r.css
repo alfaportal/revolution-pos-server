@@ -884,25 +884,6 @@ body.menu-lightbox-open {
   font-size: 0.75rem;
 }
 
-.seo-ketujemi,
-#ketujemi-link-wrap {
-  text-align: center;
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-}
-
-.seo-ketujemi a,
-#btn-ketujemi {
-  color: var(--accent, #c2410c);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.seo-ketujemi a:hover,
-#btn-ketujemi:hover {
-  text-decoration: underline;
-}
-
 /* Order CTA */
 .order-bar[hidden] { display: none !important; }
 

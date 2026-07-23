@@ -2012,8 +2012,6 @@ async function loadPublicPage() {
     document.getElementById("public-social-facebook").value = data.social_facebook || "";
     document.getElementById("public-social-tiktok").value = data.social_tiktok || "";
     document.getElementById("public-whatsapp").value = data.public_whatsapp || "";
-    const ketujemiEl = document.getElementById("public-ketujemi-url");
-    if (ketujemiEl) ketujemiEl.value = data.ketujemi_url || "";
 
     renderPublicHoursGrid(data.public_hours);
   } catch (err) {
@@ -2035,7 +2033,6 @@ async function savePublicPage() {
       public_social_facebook: document.getElementById("public-social-facebook").value,
       public_social_tiktok: document.getElementById("public-social-tiktok").value,
       public_whatsapp: document.getElementById("public-whatsapp").value,
-      ketujemi_url: document.getElementById("public-ketujemi-url")?.value || "",
     };
     if (publicPageLogoDirty) {
       body.public_logo = publicPageLogoData || "";

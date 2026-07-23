@@ -451,21 +451,6 @@
     }
 
     wrap.classList.toggle("hidden", !any);
-
-    const ketujemiWrap = document.getElementById("ketujemi-link-wrap");
-    const ketujemiBtn = document.getElementById("btn-ketujemi");
-    const ketujemiUrl = String(data?.ketujemi_url || "").trim();
-    if (ketujemiWrap && ketujemiBtn) {
-      if (ketujemiUrl) {
-        ketujemiBtn.href = ketujemiUrl;
-        ketujemiWrap.classList.remove("hidden");
-        ketujemiWrap.hidden = false;
-      } else {
-        ketujemiBtn.removeAttribute("href");
-        ketujemiWrap.classList.add("hidden");
-        ketujemiWrap.hidden = true;
-      }
-    }
   }
 
   function openPhotoLightbox(url, name) {
