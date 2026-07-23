@@ -100,6 +100,10 @@ const PILLARS = [
   },
   {
     id: "5",
+    image: "images/pillars/06-fjetur-i-qete-atk.png",
+  },
+  {
+    id: "6",
     image: "images/pillars/05-pronari-ka-kohe.png",
   },
 ];
@@ -322,8 +326,37 @@ function setupDownloadHref(plan) {
     : "/api/public/setup-download";
 }
 
+function isMobileClient() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+    navigator.userAgent || "",
+  );
+}
+
+function showDesktopOnlyDownloadNotice() {
+  alert(t("download.desktopOnly"));
+}
+
 function startSetupDownload(plan = "") {
+  if (isMobileClient()) {
+    showDesktopOnlyDownloadNotice();
+    return;
+  }
   window.location.assign(setupDownloadHref(plan));
+}
+
+function bindDesktopOnlyDownloads() {
+  document.addEventListener(
+    "click",
+    (e) => {
+      const link = e.target.closest('a[href*="/api/public/setup-download"]');
+      if (!link) return;
+      if (!isMobileClient()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      showDesktopOnlyDownloadNotice();
+    },
+    true,
+  );
 }
 
 function setupWaTextEncoded() {
@@ -1136,6 +1169,7 @@ export function renderHome() {
   bindPackageCards();
   bindCollapsibleCards();
   bindGetStartedDownload();
+  bindDesktopOnlyDownloads();
   bindPaymentSection();
   bindTrialModal();
   bindEquipmentModal();

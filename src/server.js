@@ -139,8 +139,23 @@ app.post("/api/public/setup-link-request", async (req, res) => {
 /**
  * Shkarkim Setup — publik (pa login).
  * Token opsional (?t=) për linkë admin të vjetër — ende valid.
+ * Vetëm desktop/Windows — telefonët bllokohen.
  */
 app.get("/api/public/setup-download", (req, res) => {
+  const ua = String(req.headers["user-agent"] || "");
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  if (isMobile) {
+    res.set("Cache-Control", "no-store");
+    const wantsHtml = String(req.headers.accept || "").includes("text/html");
+    if (wantsHtml) {
+      return res.status(403).type("html").send(`<!doctype html><html lang="sq"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Vetëm nga kompjuteri</title><style>body{font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:1.25rem;line-height:1.5;color:#111}a{color:#2563eb}</style></head><body><h1>Shkarkimi vetëm nga kompjuteri</h1><p>Setup i KAFENE shkarkohet vetëm nga Windows / kompjuteri. Nga telefoni nuk lejohet.</p><p><a href="/">← Kthehu te faqja</a></p></body></html>`);
+    }
+    return res.status(403).json({
+      ok: false,
+      gabim: "Shkarkimi i Setup funksionon vetëm nga kompjuteri (Windows). Nga telefoni nuk lejohet.",
+      code: "DESKTOP_ONLY",
+    });
+  }
   const {
     verifySetupDownloadToken,
     isSetupDownloadConfigured,
