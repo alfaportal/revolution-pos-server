@@ -81,6 +81,78 @@ function howCard(imagePath, titleKey, descKey, manualHref) {
   `;
 }
 
+const PILLARS = [
+  {
+    id: "1",
+    image: "images/pillars/01-kontroll-total.png",
+    bullets: ["b1", "b2", "b3", "b4"],
+  },
+  {
+    id: "2",
+    image: "images/pillars/02-ai-punon.png",
+    bullets: ["b1", "b2", "b3", "b4"],
+  },
+  {
+    id: "3",
+    image: "images/pillars/03-me-pak-gabime.png",
+    bullets: ["b1", "b2", "b3"],
+  },
+  {
+    id: "4",
+    image: "images/pillars/04-kursen-para.png",
+    bullets: ["b1", "b2", "b3", "b4"],
+  },
+  {
+    id: "5",
+    image: "images/pillars/05-pronari-ka-kohe.png",
+    bullets: ["b1", "b2", "b3", "b4"],
+  },
+];
+
+function pillarPanel(p, index) {
+  const n = p.id;
+  const reverse = index % 2 === 1 ? " pillar-panel--reverse" : "";
+  const bullets = (p.bullets || [])
+    .map((b) => `<li>${t(`pillars.${n}.${b}`)}</li>`)
+    .join("");
+  return `
+    <article class="pillar-panel${reverse}" id="shtylla-${n}">
+      <div class="pillar-panel-media">
+        <img
+          src="${assetPath(p.image)}"
+          alt="${t(`pillars.${n}.title`)}"
+          loading="${index === 0 ? "eager" : "lazy"}"
+          width="1200"
+          height="675"
+        />
+      </div>
+      <div class="pillar-panel-copy">
+        <span class="pillar-badge">${t(`pillars.${n}.badge`)}</span>
+        <h3>${t(`pillars.${n}.title`)}</h3>
+        <p>${t(`pillars.${n}.desc`)}</p>
+        <ul class="pillar-bullets">${bullets}</ul>
+        <a class="btn btn-pillar-cta" href="/api/public/setup-download">${t("pillars.cta")}</a>
+      </div>
+    </article>
+  `;
+}
+
+function pillarsSection() {
+  return `
+    <section class="pillars-section" id="shtyllat">
+      <div class="container">
+        <div class="section-head">
+          <h2>${t("spotlight.title")}</h2>
+          <p>${t("spotlight.subtitle")}</p>
+        </div>
+        <div class="pillars-stack">
+          ${PILLARS.map((p, i) => pillarPanel(p, i)).join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function spotlightVisual(variant) {
   if (variant === "ai") {
     return `
@@ -887,7 +959,7 @@ export function renderHome() {
           <h1>${t("hero.title")}</h1>
           <p class="hero-home-subtitle">${t("hero.subtitle")}</p>
           <div class="hero-actions">
-            <a class="btn btn-hero-primary" href="/api/public/setup-download">${t("getStarted.cta")}</a>
+            <a class="btn btn-hero-primary" href="/api/public/setup-download">${t("pillars.cta")}</a>
             <button type="button" class="btn btn-hero-secondary" data-equip-modal>${t("nav.equipment")}</button>
             <a class="btn btn-hero-ghost" href="#pakot">${t("hero.cta.secondary")}</a>
           </div>
@@ -901,24 +973,7 @@ export function renderHome() {
         </div>
       </section>
 
-      <section class="site-section spotlight-section" id="veçorite">
-        <div class="container">
-          <div class="section-head">
-            <h2>${t("spotlight.title")}</h2>
-            <p>${t("spotlight.subtitle")}</p>
-          </div>
-          <div class="spotlight-grid spotlight-grid--single">
-            ${spotlightCard({
-              variant: "platform",
-              categoryKey: "spotlight.card2.category",
-              titleKey: "spotlight.card2.title",
-              descKey: "spotlight.card2.desc",
-              linkKey: "spotlight.card2.link",
-              href: "#pakot",
-            })}
-          </div>
-        </div>
-      </section>
+      ${pillarsSection()}
 
       <section class="site-section get-started-section" id="si-ta-ngarkoni">
         <div class="container">

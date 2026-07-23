@@ -21,6 +21,7 @@ export function renderHeader({ activeNav = "home" } = {}) {
   const lang = getLang();
   const items = [
     { id: "home", label: t("nav.home"), section: "ballina" },
+    { id: "pillars", label: t("nav.pillars"), section: "shtyllat" },
     { id: "get-started", label: t("nav.getStarted"), section: "si-ta-ngarkoni" },
     { id: "how-it-works", label: t("nav.howItWorks"), section: "si-funksionon" },
     { id: "packages", label: t("nav.packages"), section: "pakot" },

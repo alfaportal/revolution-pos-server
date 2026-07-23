@@ -1238,6 +1238,179 @@ a.article-card {
   color: var(--text-muted);
 }
 
+/* —— 5 shtylla marketing —— */
+.pillars-section {
+  padding: 3.5rem 0 4.5rem;
+  background: #0b1220;
+  color: #f8fafc;
+}
+
+.pillars-section .section-head h2 {
+  color: #fff;
+}
+
+.pillars-section .section-head p {
+  color: rgba(248, 250, 252, 0.72);
+}
+
+.pillars-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.pillar-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr);
+  gap: 1.5rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+}
+
+.pillar-panel--reverse {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+}
+
+.pillar-panel--reverse .pillar-panel-media {
+  order: 2;
+}
+
+.pillar-panel--reverse .pillar-panel-copy {
+  order: 1;
+}
+
+.pillar-panel-media {
+  min-height: 100%;
+  background: #111827;
+}
+
+.pillar-panel-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  aspect-ratio: 16 / 10;
+}
+
+.pillar-panel-copy {
+  padding: 1.75rem 1.75rem 1.9rem;
+}
+
+.pillar-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #e63946;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+
+.pillar-panel-copy h3 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.pillar-panel-copy > p {
+  margin: 0 0 1rem;
+  color: rgba(248, 250, 252, 0.78);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.pillar-bullets {
+  list-style: none;
+  margin: 0 0 1.35rem;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pillar-bullets li {
+  position: relative;
+  padding-left: 1.15rem;
+  color: rgba(248, 250, 252, 0.9);
+  font-size: 0.95rem;
+}
+
+.pillar-bullets li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #e63946;
+}
+
+.btn-pillar-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: #e63946;
+  color: #fff !important;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.35rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(230, 57, 70, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-pillar-cta:hover {
+  background: #c92a38;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 900px) {
+  .pillar-panel,
+  .pillar-panel--reverse {
+    grid-template-columns: 1fr;
+  }
+
+  .pillar-panel--reverse .pillar-panel-media,
+  .pillar-panel--reverse .pillar-panel-copy {
+    order: unset;
+  }
+
+  .pillar-panel-copy {
+    padding: 1.25rem 1.15rem 1.5rem;
+  }
+
+  .pillar-panel-media img {
+    aspect-ratio: 16 / 11;
+  }
+}
+
+@media (max-width: 640px) {
+  .pillars-section {
+    padding: 2.5rem 0 3rem;
+  }
+
+  .pillars-stack {
+    gap: 1.35rem;
+  }
+
+  .pillar-panel {
+    border-radius: 16px;
+  }
+}
+
 .how-grid,
 .packages-grid {
   display: grid;
