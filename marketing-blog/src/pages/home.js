@@ -85,68 +85,56 @@ const PILLARS = [
   {
     id: "1",
     image: "images/pillars/01-kontroll-total.png",
-    bullets: ["b1", "b2", "b3", "b4"],
   },
   {
     id: "2",
     image: "images/pillars/02-ai-punon.png",
-    bullets: ["b1", "b2", "b3", "b4"],
   },
   {
     id: "3",
     image: "images/pillars/03-me-pak-gabime.png",
-    bullets: ["b1", "b2", "b3"],
   },
   {
     id: "4",
     image: "images/pillars/04-kursen-para.png",
-    bullets: ["b1", "b2", "b3", "b4"],
   },
   {
     id: "5",
     image: "images/pillars/05-pronari-ka-kohe.png",
-    bullets: ["b1", "b2", "b3", "b4"],
   },
 ];
 
-function pillarPanel(p, index) {
+function pillarPanel(p) {
   const n = p.id;
-  const reverse = index % 2 === 1 ? " pillar-panel--reverse" : "";
-  const bullets = (p.bullets || [])
-    .map((b) => `<li>${t(`pillars.${n}.${b}`)}</li>`)
-    .join("");
   return `
-    <article class="pillar-panel${reverse}" id="shtylla-${n}">
-      <div class="pillar-panel-media">
-        <img
-          src="${assetPath(p.image)}"
-          alt="${t(`pillars.${n}.title`)}"
-          loading="${index === 0 ? "eager" : "lazy"}"
-          width="1200"
-          height="675"
-        />
-      </div>
-      <div class="pillar-panel-copy">
-        <span class="pillar-badge">${t(`pillars.${n}.badge`)}</span>
-        <h3>${t(`pillars.${n}.title`)}</h3>
-        <p>${t(`pillars.${n}.desc`)}</p>
-        <ul class="pillar-bullets">${bullets}</ul>
-        <a class="btn btn-pillar-cta" href="/api/public/setup-download">${t("pillars.cta")}</a>
-      </div>
-    </article>
+    <a
+      class="pillar-card"
+      id="shtylla-${n}"
+      href="/api/public/setup-download"
+      aria-label="${t(`pillars.${n}.badge`)} — ${t("pillars.cta")}"
+    >
+      <img
+        src="${assetPath(p.image)}"
+        alt="${t(`pillars.${n}.title`)}"
+        loading="lazy"
+        decoding="async"
+        width="560"
+        height="530"
+      />
+    </a>
   `;
 }
 
 function pillarsSection() {
   return `
     <section class="pillars-section" id="shtyllat">
-      <div class="container">
+      <div class="container pillars-container">
         <div class="section-head">
           <h2>${t("spotlight.title")}</h2>
           <p>${t("spotlight.subtitle")}</p>
         </div>
-        <div class="pillars-stack">
-          ${PILLARS.map((p, i) => pillarPanel(p, i)).join("")}
+        <div class="pillars-grid">
+          ${PILLARS.map((p) => pillarPanel(p)).join("")}
         </div>
       </div>
     </section>
@@ -601,7 +589,6 @@ async function openTrialModal() {
   }
 
   const waText = encodeURIComponent(t("wa.trial"));
-  const plan = sessionStorage.getItem("selectedPackage") || "p1";
   const modal = document.createElement("div");
   modal.id = "trial-modal";
   modal.className = "checkout-modal";
@@ -614,7 +601,7 @@ async function openTrialModal() {
         <a href="tel:+${digits}">${phone}</a>
       </p>
       <div class="checkout-actions">
-        <button type="button" class="btn btn-primary" id="trial-setup-link">${t("getStarted.cta")}</button>
+        <a class="btn btn-primary" id="trial-setup-link" href="/api/public/setup-download">${t("pillars.cta")}</a>
         <a class="btn btn-ghost" href="https://wa.me/${digits}?text=${waText}" target="_blank" rel="noopener noreferrer">${t("trialModal.wa")}</a>
         <button type="button" class="btn btn-ghost" id="trial-close">${t("trialModal.close")}</button>
       </div>
@@ -625,7 +612,6 @@ async function openTrialModal() {
   modal.querySelector("#trial-close")?.addEventListener("click", close);
   modal.querySelector("#trial-setup-link")?.addEventListener("click", () => {
     close();
-    startSetupDownload(plan);
   });
   modal.addEventListener("click", (e) => {
     if (e.target === modal) close();
@@ -1009,7 +995,7 @@ export function renderHome() {
           </ol>
           <p class="setup-version-banner" id="setup-version-label" hidden></p>
           <div class="get-started-actions">
-            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download">${t("getStarted.cta")}</a>
+            <a class="btn btn-primary" id="get-started-download" href="/api/public/setup-download">${t("pillars.cta")}</a>
             <a class="btn btn-ghost" href="#pakot">${t("nav.packages")}</a>
             <a class="btn btn-ghost" id="get-started-wa" href="https://wa.me/38348707880" target="_blank" rel="noopener noreferrer">${t("getStarted.ctaHelp")}</a>
           </div>
