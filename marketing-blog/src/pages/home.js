@@ -82,50 +82,39 @@ function howCard(imagePath, titleKey, descKey, manualHref) {
 }
 
 const PILLARS = [
-  {
-    id: "1",
-    image: "images/pillars/01-kontroll-total.png",
-  },
-  {
-    id: "2",
-    image: "images/pillars/02-ai-punon.png",
-  },
-  {
-    id: "3",
-    image: "images/pillars/03-me-pak-gabime.png",
-  },
-  {
-    id: "4",
-    image: "images/pillars/04-kursen-para.png",
-  },
-  {
-    id: "5",
-    image: "images/pillars/05-atk-kontabilist.png",
-  },
-  {
-    id: "6",
-    image: "images/pillars/06-pronari-ka-kohe.png",
-  },
+  { id: "1", image: "images/pillars/bg-01.jpg", bullets: ["b1", "b2", "b3", "b4"] },
+  { id: "2", image: "images/pillars/bg-02.jpg", bullets: ["b1", "b2", "b3", "b4"] },
+  { id: "3", image: "images/pillars/bg-03.jpg", bullets: ["b1", "b2", "b3"] },
+  { id: "4", image: "images/pillars/bg-04.jpg", bullets: ["b1", "b2", "b3", "b4"] },
+  { id: "5", image: "images/pillars/bg-05.jpg", bullets: ["b1", "b2", "b3", "b4"] },
+  { id: "6", image: "images/pillars/bg-06.jpg", bullets: ["b1", "b2", "b3", "b4"] },
 ];
 
 function pillarPanel(p) {
   const n = p.id;
+  const bullets = (p.bullets || [])
+    .map((key) => `<li>${t(`pillars.${n}.${key}`)}</li>`)
+    .join("");
   return `
-    <a
-      class="pillar-card"
-      id="shtylla-${n}"
-      href="/api/public/setup-download"
-      aria-label="${t(`pillars.${n}.badge`)} — ${t("pillars.cta")}"
-    >
-      <img
-        src="${assetPath(p.image)}"
-        alt="${t(`pillars.${n}.title`)}"
-        loading="lazy"
-        decoding="async"
-        width="560"
-        height="530"
-      />
-    </a>
+    <article class="pillar-card" id="shtylla-${n}">
+      <div class="pillar-card-media">
+        <img
+          src="${assetPath(p.image)}"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width="900"
+          height="675"
+        />
+      </div>
+      <div class="pillar-card-body">
+        <span class="pillar-badge">${t(`pillars.${n}.badge`)}</span>
+        <h3 class="pillar-title">${t(`pillars.${n}.title`)}</h3>
+        <p class="pillar-desc">${t(`pillars.${n}.desc`)}</p>
+        <ul class="pillar-list">${bullets}</ul>
+        <a class="btn pillar-cta" href="/api/public/setup-download">${t("pillars.cta")}</a>
+      </div>
+    </article>
   `;
 }
 
