@@ -492,6 +492,25 @@ body {
   font-size: 0.8rem;
 }
 
+.seo-ketujemi,
+#ketujemi-link-wrap {
+  text-align: center;
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.seo-ketujemi a,
+#btn-ketujemi {
+  color: var(--accent, #2563eb);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.seo-ketujemi a:hover,
+#btn-ketujemi:hover {
+  text-decoration: underline;
+}
+
 .shop-order-bar {
   position: fixed;
   bottom: 0;

@@ -148,6 +148,24 @@ function normalizeSocialUrl(raw) {
   return `https://${s.replace(/^\/+/, "")}`.slice(0, 500);
 }
 
+/** Vetëm link reciprocal te ketujemi.com — pa sync të dhënash. */
+function normalizeKetuJemiUrl(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  let url;
+  try {
+    url = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
+  } catch {
+    throw new Error("URL e KetuJemi nuk është e vlefshme.");
+  }
+  const host = url.hostname.replace(/^www\./i, "").toLowerCase();
+  if (host !== "ketujemi.com") {
+    throw new Error("Lejohet vetëm link nga ketujemi.com (SEO reciprocal).");
+  }
+  url.protocol = "https:";
+  return url.toString().slice(0, 500);
+}
+
 function normalizeWhatsAppPhone(raw) {
   const digits = String(raw || "").replace(/\D/g, "");
   if (digits.length < 8) return "";
@@ -173,6 +191,12 @@ function settingsProfileFields(settings, pageSlug, apiPrefix = "r") {
   const tiktok = normalizeSocialUrl(settings?.public_social_tiktok);
   const dailyOffer = String(settings?.public_daily_offer || "").trim().slice(0, MAX_DAILY_OFFER);
   const enc = encodeURIComponent(pageSlug);
+  let ketujemiUrl = null;
+  try {
+    ketujemiUrl = normalizeKetuJemiUrl(settings?.ketujemi_url || "") || null;
+  } catch {
+    ketujemiUrl = null;
+  }
 
   return {
     cover_url: settings?.public_cover ? `/api/${apiPrefix}/${enc}/cover` : null,
@@ -186,6 +210,7 @@ function settingsProfileFields(settings, pageSlug, apiPrefix = "r") {
     },
     whatsapp_url: buildWhatsAppUrl(whatsapp),
     whatsapp_phone: whatsapp || null,
+    ketujemi_url: ketujemiUrl,
   };
 }
 
@@ -199,6 +224,7 @@ function ownerProfileFields(settings) {
     social_facebook: String(settings?.public_social_facebook || "").trim(),
     social_tiktok: String(settings?.public_social_tiktok || "").trim(),
     public_whatsapp: String(settings?.public_whatsapp || "").trim(),
+    ketujemi_url: String(settings?.ketujemi_url || "").trim(),
   };
 }
 
@@ -417,6 +443,9 @@ async function updateOwnerPublicPageSettings(clientId, body) {
   if (body.public_whatsapp != null) {
     patch.public_whatsapp = normalizeWhatsAppPhone(body.public_whatsapp);
   }
+  if (body.ketujemi_url != null) {
+    patch.ketujemi_url = normalizeKetuJemiUrl(body.ketujemi_url);
+  }
 
   if (Object.keys(patch).length <= 1) throw new Error("Nuk ka fusha për përditësim.");
 
@@ -440,6 +469,7 @@ async function updateOwnerPublicPageSettings(clientId, body) {
     public_social_facebook: existing?.public_social_facebook || "",
     public_social_tiktok: existing?.public_social_tiktok || "",
     public_whatsapp: existing?.public_whatsapp || "",
+    ketujemi_url: existing?.ketujemi_url || "",
     ...patch,
   });
   if (error) throw error;
@@ -818,4 +848,5 @@ module.exports = {
   updateOwnerKitchenSlug,
   getOwnerPublicPageQr,
   getOwnerPublicPageQrPng,
+  normalizeKetuJemiUrl,
 };

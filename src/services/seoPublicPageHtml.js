@@ -1,0 +1,186 @@
+/**
+ * SSR meta + JSON-LD për /r/:slug dhe /s/:slug.
+ * Lexon vetëm getPublic*Page — nuk prek porosi/sync.
+ */
+const fs = require("fs");
+const path = require("path");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const {
+  getPublicRestaurantPage,
+  getPublicShopPage,
+} = require("./publicPageService");
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/'/g, "&#39;");
+}
+
+function absoluteUrl(maybeRelative, origin) {
+  const raw = String(maybeRelative || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = String(origin || getPublicAppOrigin()).replace(/\/+$/, "");
+  return `${base}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
+function truncate(text, max = 160) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1).trim()}…`;
+}
+
+function buildJsonLd(page, { storefront, origin }) {
+  const isShop = storefront === "s";
+  const type = isShop ? "Store" : "Restaurant";
+  const url = page.public_url || `${origin}/${storefront}/${encodeURIComponent(page.slug)}`;
+  const description =
+    page.description ||
+    (isShop
+      ? `Dyqani ${page.name} — Revolution Invest POS`
+      : `Restoranti ${page.name} — Revolution Invest POS`);
+
+  const data = {
+    "@context": "https://schema.org",
+    "@type": type,
+    name: page.name,
+    description,
+    url,
+  };
+
+  if (page.address) {
+    data.address = {
+      "@type": "PostalAddress",
+      streetAddress: page.address,
+    };
+  }
+  if (page.phone) data.telephone = page.phone;
+  if (page.logo_url) data.image = absoluteUrl(page.logo_url, origin);
+  if (page.maps_url) data.hasMap = page.maps_url;
+  if (page.ketujemi_url) data.sameAs = [page.ketujemi_url];
+
+  if (!isShop && Array.isArray(page.menu) && page.menu.length) {
+    data.hasMenu = url;
+  }
+
+  return data;
+}
+
+function buildHeadInjection(page, { storefront, origin }) {
+  const isShop = storefront === "s";
+  const title = `${page.name} | Revolution Invest POS`;
+  const description = truncate(
+    page.description ||
+      (page.address
+        ? `${page.name} — ${page.address}`
+        : isShop
+          ? `Produktet dhe dyqani ${page.name}`
+          : `Menuja dhe restoranti ${page.name}`),
+  );
+  const canonical = page.public_url || `${origin}/${storefront}/${encodeURIComponent(page.slug)}`;
+  const ogImage = absoluteUrl(page.cover_url || page.logo_url || "/logo-source.png", origin);
+  const jsonLd = buildJsonLd(page, { storefront, origin });
+
+  const ketujemiLink = page.ketujemi_url
+    ? `<link rel="me" href="${escapeAttr(page.ketujemi_url)}">`
+    : "";
+
+  return {
+    title,
+    injection: `
+  <meta name="description" content="${escapeAttr(description)}">
+  <link rel="canonical" href="${escapeAttr(canonical)}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Revolution Invest POS">
+  <meta property="og:title" content="${escapeAttr(title)}">
+  <meta property="og:description" content="${escapeAttr(description)}">
+  <meta property="og:url" content="${escapeAttr(canonical)}">
+  <meta property="og:image" content="${escapeAttr(ogImage)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeAttr(title)}">
+  <meta name="twitter:description" content="${escapeAttr(description)}">
+  ${ketujemiLink}
+  <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>`,
+    canonical,
+    ketujemiUrl: page.ketujemi_url || "",
+  };
+}
+
+function injectIntoShell(html, { title, injection, ketujemiUrl }) {
+  let out = String(html || "");
+  if (/<title>[\s\S]*?<\/title>/i.test(out)) {
+    out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+  } else {
+    out = out.replace(/<head([^>]*)>/i, `<head$1>\n  <title>${escapeHtml(title)}</title>`);
+  }
+
+  if (!/<\/head>/i.test(out)) {
+    throw new Error("HTML shell mungon </head>");
+  }
+  out = out.replace(/<\/head>/i, `${injection}\n</head>`);
+
+  const ketujemiBlock = ketujemiUrl
+    ? `<p class="seo-ketujemi"><a href="${escapeAttr(ketujemiUrl)}" rel="noopener noreferrer" target="_blank">Shiko edhe në KetuJemi</a></p>`
+    : "";
+
+  if (out.includes("<!--SEO_KETUJEMI-->")) {
+    out = out.replace("<!--SEO_KETUJEMI-->", ketujemiBlock);
+  } else if (ketujemiBlock) {
+    out = out.replace(
+      /<footer class="site-footer">/i,
+      `${ketujemiBlock}\n    <footer class="site-footer">`,
+    );
+  }
+
+  return out;
+}
+
+async function renderPublicStorefrontHtml({ slug, storefront }) {
+  const origin = getPublicAppOrigin();
+  const baseUrl = origin;
+  const page =
+    storefront === "s"
+      ? await getPublicShopPage(slug, baseUrl)
+      : await getPublicRestaurantPage(slug, baseUrl);
+
+  if (!page) return { status: 404, html: null };
+
+  const shellName = storefront === "s" ? "s.html" : "r.html";
+  const shellPath = path.join(__dirname, "../../public", shellName);
+  const shell = fs.readFileSync(shellPath, "utf8");
+  const head = buildHeadInjection(page, { storefront, origin });
+  const html = injectIntoShell(shell, head);
+
+  return { status: 200, html, page };
+}
+
+function renderNotFoundHtml(kind = "restorant") {
+  const label = kind === "shop" ? "Dyqani" : "Restoranti";
+  return `<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>${label} nuk u gjet</title>
+</head>
+<body style="font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:1.5rem;line-height:1.5">
+  <h1>${label} nuk u gjet</h1>
+  <p>Faqja publike nuk është e disponueshme.</p>
+  <p><a href="/restorante">← Shiko lokalet</a></p>
+</body>
+</html>`;
+}
+
+module.exports = {
+  renderPublicStorefrontHtml,
+  renderNotFoundHtml,
+  buildHeadInjection,
+  injectIntoShell,
+};

@@ -57,6 +57,12 @@ const {
 } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 const { paymentsConfigured } = require("./lib/stripeConfig");
+const seoRoutes = require("./routes/seo");
+const { asyncHandler } = require("./lib/asyncHandler");
+const {
+  renderPublicStorefrontHtml,
+  renderNotFoundHtml,
+} = require("./services/seoPublicPageHtml");
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
@@ -82,6 +88,12 @@ app.use(jsonErrorHandler);
 app.use(cookieParser());
 app.use(requestLogger);
 app.use(noCachePanel);
+
+/** API private — mos indekso */
+app.use("/api", (_req, res, next) => {
+  res.set("X-Robots-Tag", "noindex, nofollow");
+  next();
+});
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -291,6 +303,9 @@ app.get("/blog/:slug", (req, res, next) => {
 app.get("/privacy", (_req, res) => sendMarketingPage(res, SITE_INDEX));
 app.get("/terms", (_req, res) => sendMarketingPage(res, SITE_INDEX));
 
+/** SEO — robots, sitemap, /restorante (para static) */
+app.use(seoRoutes);
+
 app.use(express.static(SITE_DIR));
 
 app.use((req, res, next) => {
@@ -456,10 +471,30 @@ app.get("/r/:slug/order", (_req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/r-order.html"));
 });
-app.get("/r/:slug", (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/r.html"));
-});
+app.get(
+  "/r/:slug",
+  asyncHandler(async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    try {
+      const result = await renderPublicStorefrontHtml({
+        slug: req.params.slug,
+        storefront: "r",
+      });
+      if (!result.html) {
+        return res.status(404).type("html").send(renderNotFoundHtml("restorant"));
+      }
+      return res.type("html").send(result.html);
+    } catch (err) {
+      if (err.code === "WRONG_STOREFRONT") {
+        return res.redirect(302, `/s/${encodeURIComponent(req.params.slug)}`);
+      }
+      if (err.code === "PACKAGE") {
+        return res.status(404).type("html").send(renderNotFoundHtml("restorant"));
+      }
+      throw err;
+    }
+  }),
+);
 
 app.get("/s/:slug/manifest.json", shopManifestHandler);
 app.get("/s/:slug/sw.js", resolvePublicClient, shopServiceWorkerHandler);
@@ -467,10 +502,30 @@ app.get("/s/:slug/order", (_req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/s-order.html"));
 });
-app.get("/s/:slug", (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/s.html"));
-});
+app.get(
+  "/s/:slug",
+  asyncHandler(async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    try {
+      const result = await renderPublicStorefrontHtml({
+        slug: req.params.slug,
+        storefront: "s",
+      });
+      if (!result.html) {
+        return res.status(404).type("html").send(renderNotFoundHtml("shop"));
+      }
+      return res.type("html").send(result.html);
+    } catch (err) {
+      if (err.code === "WRONG_STOREFRONT") {
+        return res.redirect(302, `/r/${encodeURIComponent(req.params.slug)}`);
+      }
+      if (err.code === "PACKAGE") {
+        return res.status(404).type("html").send(renderNotFoundHtml("shop"));
+      }
+      throw err;
+    }
+  }),
+);
 
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
@@ -522,6 +577,18 @@ async function start() {
     }
   } catch (e) {
     console.warn("  ⚠️  Dyqani schema:", formatError(e));
+  }
+
+  try {
+    const { ensureKetujemiSchema } = require("./lib/ensureKetujemiSchema");
+    const kjOk = await ensureKetujemiSchema();
+    if (kjOk) {
+      console.log("  ✅ SEO KetuJemi (059): ketujemi_url reciprocal");
+    } else {
+      console.warn("  ⚠️  KetuJemi URL: vendosni DATABASE_URL në Railway për auto-migrim 059");
+    }
+  } catch (e) {
+    console.warn("  ⚠️  KetuJemi schema:", formatError(e));
   }
 
   try {
@@ -579,6 +646,7 @@ async function start() {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
     console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
     console.log(`  🏠 Website:     /  (revolution-pos.com)`);
+    console.log(`  🔎 SEO:         /robots.txt  /sitemap.xml  /restorante`);
     console.log(`  🏪 Pronarët:    /owner/login`);
     console.log(`  🍹 Banak:       /bar/:slug?key=...  (porosi tavolinë/online/POS)`);
     console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...  (ushqim)`);
