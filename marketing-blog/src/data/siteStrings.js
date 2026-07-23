@@ -126,7 +126,7 @@ export const siteStrings = {
     "hero.badge": "Provë falas 7 ditë",
     "hero.title": "Kontrollo çdo Porosi. Çdo Tavolinë. Çdo Ditë.",
     "hero.subtitle":
-      "Nga kasa te kuzhina, nga kamarieri te pronari — plus stok, fatura, faqe publike për restorante & dyqane, porosi online dhe punë offline. Gjithçka në një platformë.",
+      "Për kafene, restorante, bare, piceri, fast-food, kebab, pastiçeri, akullore dhe gjeltore. Nga kasa te kuzhina, nga kamarieri te pronari — plus stok, fatura, faqe publike, porosi online dhe punë offline. Gjithçka në një platformë.",
     "hero.cta.primary": "Provoje falas për 7 ditë",
     "hero.cta.secondary": "Shiko veçoritë →",
     "trialModal.title": "Provë falas — 7 ditë",
@@ -424,7 +424,7 @@ export const siteStrings = {
     "hero.badge": "7-day free trial",
     "hero.title": "Control Every Order. Every Table. Every Day.",
     "hero.subtitle":
-      "From register to kitchen, waiter to owner — plus stock, invoices, public pages for restaurants & shops, online orders and offline work. All in one platform.",
+      "For cafés, restaurants, bars, pizzerias, fast food, kebab shops, pastry shops, ice cream parlours and rotisseries. From register to kitchen, waiter to owner — plus stock, invoices, public pages, online orders and offline work. All in one platform.",
     "hero.cta.primary": "Try free for 7 days",
     "hero.cta.secondary": "See features →",
     "trialModal.title": "Free trial — 7 days",
