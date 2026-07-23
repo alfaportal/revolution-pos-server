@@ -74,7 +74,7 @@ app.set("trust proxy", 1);
 
 app.use(corsMiddleware);
 
-// Stripe webhook — RAW body (para express.json), si KetuJemi
+// Stripe webhook — RAW body (para express.json)
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
