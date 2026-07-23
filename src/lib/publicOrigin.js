@@ -5,8 +5,8 @@ const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
 /** Setup Windows — emri i asset-it në GitHub Releases (duhet të përputhet saktë). */
 const DEFAULT_SETUP_DOWNLOAD_URL =
-  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.237/KAFENE-Setup.exe";
-const DEFAULT_SETUP_VERSION = "1.0.237";
+  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.238/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.238";
 /** Link Setup (admin / email / SMS) — default 7 ditë. */
 const DEFAULT_SETUP_LINK_TTL_HOURS = 168;
 
