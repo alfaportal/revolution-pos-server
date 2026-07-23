@@ -17,7 +17,7 @@ window.SITE_STRINGS = {
     "nav.langLabel": "Gjuha",
 
     "cta.startFree": "Fillo Falas",
-    "cta.start3Months": "Fillo 7 Ditë Falas",
+    "cta.start3Months": "Shkarko KAFENE",
     "cta.viewDemo": "Shiko Demo",
     "cta.choosePackage": "Zgjidh Pakon",
     "cta.contactUs": "Na Kontaktoni",
@@ -151,7 +151,7 @@ window.SITE_STRINGS = {
     "nav.langLabel": "Language",
 
     "cta.startFree": "Start Free",
-    "cta.start3Months": "Start 7 Days Free",
+    "cta.start3Months": "Download KAFENE",
     "cta.viewDemo": "View Demo",
     "cta.choosePackage": "Choose Plan",
     "cta.contactUs": "Contact Us",
