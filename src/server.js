@@ -53,7 +53,6 @@ const { router: paymentsRouter, stripeWebhookHandler } = require("./routes/payme
 const {
   getPublicAppConfig,
   getPublicAppOrigin,
-  getSetupDownloadUrl,
 } = require("./lib/publicOrigin");
 const { adminPanelPath } = require("./lib/admin-path");
 const { paymentsConfigured } = require("./lib/stripeConfig");
