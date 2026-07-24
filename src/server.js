@@ -150,11 +150,11 @@ app.post("/api/public/setup-link-request", async (req, res) => {
 
 /**
  * Shkarkim Setup — publik (pa login).
- * Token opsional (?t=) për linkë admin të vjetër — ende valid.
+ * Token opsional (?t=) për linkë admin.
  * Vetëm desktop/Windows — telefonët bllokohen.
- * Safari/Edge: faqe HTML me link direkt (302 te GitHub shpesh dështon).
+ * Klienti sheh VETËM domain-in tonë (stream) — ASNJËHERË redirect te GitHub.
  */
-app.get("/api/public/setup-download", (req, res) => {
+app.get("/api/public/setup-download", async (req, res) => {
   const ua = String(req.headers["user-agent"] || "");
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
   if (isMobile) {
@@ -173,6 +173,14 @@ app.get("/api/public/setup-download", (req, res) => {
     verifySetupDownloadToken,
     isSetupDownloadConfigured,
   } = require("./lib/setupDownloadAuth");
+  const {
+    streamSetupInstaller,
+    buildSameOriginDownloadPath,
+    resolveSetupSource,
+    SETUP_FILENAME,
+  } = require("./lib/setupInstallerStream");
+  const { getSetupVersion } = require("./lib/publicOrigin");
+
   let plan = String(req.query.plan || "").trim().toLowerCase();
   const token = String(req.query.t || req.query.token || "").trim();
   if (token) {
@@ -196,33 +204,34 @@ app.get("/api/public/setup-download", (req, res) => {
     }
     if (!plan && check.plan) plan = check.plan;
   }
-  const url = getSetupDownloadUrl(plan);
-  if (!url) {
+
+  if (!resolveSetupSource(plan)) {
     return res.status(503).json({
       ok: false,
-      gabim: "URL e Setup nuk është konfiguruar.",
+      gabim: "Setup nuk është i disponueshëm. Kontaktoni Revolution Invest.",
       code: "SETUP_URL_MISSING",
     });
   }
+
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
 
+  const forceFile = String(req.query.dl || req.query.file || "") === "1";
   const accept = String(req.headers.accept || "");
-  const forceRedirect = String(req.query.redirect || "") === "1";
-  const wantsHtml = !forceRedirect && (accept.includes("text/html") || !accept.includes("application/json"));
-  /* Safari / Edge (dhe shumica e klikimeve nga browser) — faqe HTML me link direkt te .exe */
+  const wantsHtml =
+    !forceFile && (accept.includes("text/html") || !accept.includes("application/json"));
+
+  /* Faqe e thjeshtë instalimi — linku është GJITHMONË same-origin (jo GitHub) */
   if (wantsHtml) {
-    const filename = "KAFENE-Setup.exe";
-    const safeHref = String(url)
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/</g, "&lt;");
+    const dlPath = buildSameOriginDownloadPath(req.query);
+    const safeHref = dlPath.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    const ver = getSetupVersion() || "";
     return res.type("html").send(`<!doctype html>
 <html lang="sq">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="refresh" content="3;url=${safeHref}">
-<title>Shkarko KAFENE Setup</title>
+<meta http-equiv="refresh" content="2;url=${safeHref}">
+<title>Instalo KAFENE</title>
 <style>
 body{font-family:system-ui,-apple-system,sans-serif;max-width:28rem;margin:3rem auto;padding:1.25rem;line-height:1.5;color:#111;text-align:center}
 a.btn{display:inline-block;margin-top:1rem;padding:.9rem 1.35rem;background:#ea580c;color:#fff;text-decoration:none;border-radius:10px;font-weight:700}
@@ -230,23 +239,23 @@ p.hint{color:#555;font-size:.95rem}
 </style>
 </head>
 <body>
-<h1>Shkarkimi po fillon…</h1>
-<p class="hint">Nëse nuk fillon automatikisht (Safari / Edge), kliko butonin më poshtë.</p>
-<p><a class="btn" id="dl" href="${safeHref}" download="${filename}" rel="noopener">Shkarko KAFENE Setup</a></p>
+<h1>Instalimi i KAFENE</h1>
+<p class="hint">Shkarkimi i instaluesit po fillon${ver ? ` (v${ver})` : ""}…</p>
+<p class="hint">Pas shkarkimit hapni skedarin Setup dhe ndiqni hapat e instalimit.</p>
+<p><a class="btn" id="dl" href="${safeHref}" download="${SETUP_FILENAME}">Shkarko instaluesin</a></p>
 <script>
 (function () {
-  var u = ${JSON.stringify(url)};
+  var u = ${JSON.stringify(dlPath)};
   function go() {
     try {
       var a = document.createElement("a");
       a.href = u;
-      a.setAttribute("download", ${JSON.stringify(filename)});
-      a.rel = "noopener";
+      a.setAttribute("download", ${JSON.stringify(SETUP_FILENAME)});
       document.body.appendChild(a);
       a.click();
       a.remove();
     } catch (e) {}
-    setTimeout(function () { window.location.replace(u); }, 600);
+    setTimeout(function () { window.location.replace(u); }, 800);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go);
   else go();
@@ -255,7 +264,24 @@ p.hint{color:#555;font-size:.95rem}
 </body>
 </html>`);
   }
-  return res.redirect(302, url);
+
+  try {
+    const ok = await streamSetupInstaller(res, plan);
+    if (!ok && !res.headersSent) {
+      return res.status(503).json({
+        ok: false,
+        gabim: "Setup nuk është i disponueshëm. Kontaktoni Revolution Invest.",
+        code: "SETUP_URL_MISSING",
+      });
+    }
+  } catch (e) {
+    if (res.headersSent) return;
+    return res.status(502).json({
+      ok: false,
+      gabim: "Shkarkimi dështoi. Provoni përsëri ose kontaktoni Revolution Invest.",
+      code: e.code || "SETUP_STREAM_FAILED",
+    });
+  }
 });
 /** Ndihmë AI për manualin publik — max 3 pyetje / sesion, përgjigje të shkurtra. */
 app.get("/api/public/manual-help/status", (req, res) => {
