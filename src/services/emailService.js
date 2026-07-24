@@ -555,6 +555,61 @@ async function sendAdminClientOfflineEmail(opts) {
   });
 }
 
+/** Njoftim sigurie KAFENE → Naseri (from sistemi, jo inbox personal). */
+async function sendKafeneSecurityAlertEmail({
+  to,
+  type,
+  hardwareId,
+  count24h,
+  urgent,
+  attemptKeyHash,
+  appVersion,
+  hostname,
+  platform,
+  buildFingerprint,
+  watermarkOk,
+  message,
+  at,
+}) {
+  const dest = String(to || "revolutioninvest05@gmail.com").trim().toLowerCase();
+  const urgentTag = urgent ? "URGJENT — " : "";
+  const typeLabel =
+    type === "license_activate_urgent"
+      ? "Tentativë thyerjeje licence (>3 / 24h)"
+      : type === "license_activate_failed"
+        ? "Licenca dështoi (çelës gabim / HW)"
+        : type === "devtools_attempt"
+          ? "DevTools i bllokuar"
+          : String(type || "Alert");
+
+  const subject = `${urgentTag}KAFENE Siguri: ${typeLabel} — ${hardwareId || "?"}`;
+  const lines = [
+    "Sistemi automatik KAFENE — njoftim sigurie",
+    "",
+    `Lloji: ${typeLabel}`,
+    `Hardware ID: ${hardwareId || "—"}`,
+    `Koha: ${at || new Date().toISOString()}`,
+    `Tentativa (24h): ${Number(count24h) || 0}`,
+    urgent ? "Niveli: URGJENT" : "Niveli: normal",
+    attemptKeyHash ? `Hash i kodit të provuar: ${attemptKeyHash}` : null,
+    appVersion ? `Version: ${appVersion}` : null,
+    hostname ? `Hostname: ${hostname}` : null,
+    platform ? `Platform: ${platform}` : null,
+    buildFingerprint ? `Build fingerprint: ${buildFingerprint}` : null,
+    `Watermark OK: ${watermarkOk === false ? "JO" : "PO"}`,
+    message ? `Mesazh: ${message}` : null,
+    "",
+    "Ky email dërgohet automatikisht nga Revolution POS — jo nga një person.",
+  ].filter((x) => x != null);
+
+  const text = lines.join("\n");
+  const html = `<pre style="font-family:ui-monospace,monospace;font-size:13px;line-height:1.45">${text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")}</pre>`;
+
+  return deliverEmail({ to: dest, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   deliverEmail,
@@ -574,4 +629,5 @@ module.exports = {
   sendWeeklyAiReportEmail,
   sendOwnerClientOfflineEmail,
   sendAdminClientOfflineEmail,
+  sendKafeneSecurityAlertEmail,
 };

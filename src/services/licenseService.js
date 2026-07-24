@@ -377,14 +377,30 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë)." };
   }
 
+  const REVOKED_MSG = "Licenca është çaktivizuar. Kontaktoni Revolution Invest.";
+  const hwForCheck = normalizeHardwareIdStored(hardware_id) || resolveLicenseHardwareId(license);
+  const hwControl = await getHardwareControl(license.id, hwForCheck);
+  const wipePending =
+    Boolean(license.force_factory_reset_at) || Boolean(hwControl?.wipe_requested_at);
+
   const fail = async (code, message) => {
     await recordValidationFailure(license, code, message, client_ip);
     const forceLogout = ["REVOKED", "SUSPENDED", "EXPIRED", "DEVICE_MISMATCH", "TERMINAL_LIMIT_EXCEEDED"].includes(code);
-    return { valid: false, code, message, force_logout: forceLogout };
+    return {
+      valid: false,
+      code,
+      message,
+      force_logout: forceLogout,
+      force_factory_reset: wipePending,
+      force_factory_reset_at: license.force_factory_reset_at || hwControl?.wipe_requested_at || null,
+    };
   };
 
   if (license.statusi === "revokuar") {
-    return fail("REVOKED", "Liçenca është revokuar.");
+    return fail("REVOKED", REVOKED_MSG);
+  }
+  if (hwControl?.revoked_at) {
+    return fail("REVOKED", REVOKED_MSG);
   }
   if (license.statusi === "pezulluar") {
     return fail("SUSPENDED", "Liçenca është pezulluar.");
@@ -412,7 +428,7 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     );
   }
 
-  const hwStored = normalizeHardwareIdStored(hardware_id) || resolveLicenseHardwareId(license);
+  const hwStored = hwForCheck;
   const successPatch = {
     last_activated_at: now,
     last_validation_at: now,
@@ -469,8 +485,8 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
     message,
-    force_factory_reset: Boolean(license.force_factory_reset_at),
-    force_factory_reset_at: license.force_factory_reset_at || null,
+    force_factory_reset: Boolean(license.force_factory_reset_at) || Boolean(hwControl?.wipe_requested_at),
+    force_factory_reset_at: license.force_factory_reset_at || hwControl?.wipe_requested_at || null,
     terminal_warning: warning,
     terminal_code: terminalAccess.code || null,
     terminals_active: terminalSummary.active_terminal_count,
@@ -1002,11 +1018,200 @@ async function requestFactoryResetForClient(clientId) {
   return { ok: true, licenses_flagged: (data || []).length, at: now };
 }
 
+async function getHardwareControl(licenseId, hardwareId) {
+  const hw = normalizeHardwareIdStored(hardwareId);
+  if (!licenseId || !hw) return null;
+  const db = getSupabase();
+  const { data, error } = await db
+    .from("license_hardware_controls")
+    .select("id, license_id, hardware_id, revoked_at, wipe_requested_at, reason")
+    .eq("license_id", licenseId)
+    .eq("hardware_id", hw)
+    .maybeSingle();
+  if (error) {
+    if (/license_hardware_controls|schema cache|does not exist/i.test(String(error.message || ""))) {
+      return null;
+    }
+    throw error;
+  }
+  return data || null;
+}
+
+async function upsertHardwareControl(licenseId, hardwareId, patch) {
+  const hw = normalizeHardwareIdStored(hardwareId);
+  if (!licenseId || !hw) throw new Error("Hardware ID mungon.");
+  const db = getSupabase();
+  const now = new Date().toISOString();
+  const { data, error } = await db
+    .from("license_hardware_controls")
+    .upsert(
+      {
+        license_id: licenseId,
+        hardware_id: hw,
+        ...patch,
+        updated_at: now,
+      },
+      { onConflict: "license_id,hardware_id" },
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function writeRemoteAudit({ licenseId, hardwareId, action, reason, actor }) {
+  const db = getSupabase();
+  const { error } = await db.from("license_remote_audit").insert({
+    license_id: licenseId || null,
+    hardware_id: normalizeHardwareIdStored(hardwareId) || null,
+    action: String(action || "").trim(),
+    reason: String(reason || "").trim(),
+    actor_user_id: actor?.id || null,
+    actor_email: actor?.email || null,
+  });
+  if (error && !/license_remote_audit|schema cache|does not exist/i.test(String(error.message || ""))) {
+    throw error;
+  }
+}
+
+/**
+ * Çaktivizo menjëherë — license-wide dhe/ose Hardware ID specifik.
+ * Heartbeat → POS force_logout me REVOKED.
+ */
+async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}) {
+  const id = String(licenseId || "").trim();
+  if (!id) throw new Error("ID e liçencës mungon.");
+  const db = getSupabase();
+  const { data: lic, error } = await db
+    .from("licenses")
+    .select("id, celesi, hardware_id, statusi")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lic) throw new Error("Liçenca nuk u gjet.");
+
+  const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
+  const now = new Date().toISOString();
+  const why = String(reason || "").trim();
+
+  if (hw) {
+    await upsertHardwareControl(id, hw, {
+      revoked_at: now,
+      reason: why,
+    });
+  }
+
+  /* Licenca kryesore: statusi revokuar që POS të ndalet menjëherë */
+  const license = await updateLicenseStatus(id, "revokuar");
+  await writeRemoteAudit({
+    licenseId: id,
+    hardwareId: hw,
+    action: "revoke",
+    reason: why,
+    actor,
+  });
+  return { ok: true, license, hardware_id: hw || null };
+}
+
+/** Riaktivizo pas çaktivizimit. */
+async function reactivateLicenseRemote(licenseId, { hardwareId, reason, actor } = {}) {
+  const id = String(licenseId || "").trim();
+  if (!id) throw new Error("ID e liçencës mungon.");
+  const db = getSupabase();
+  const { data: lic, error } = await db
+    .from("licenses")
+    .select("id, celesi, hardware_id, statusi")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lic) throw new Error("Liçenca nuk u gjet.");
+
+  const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
+  const why = String(reason || "").trim();
+
+  if (hw) {
+    await upsertHardwareControl(id, hw, {
+      revoked_at: null,
+      reason: why,
+    });
+  } else {
+    /* Pastro të gjitha revoke flags për këtë licencë */
+    try {
+      await db
+        .from("license_hardware_controls")
+        .update({ revoked_at: null, updated_at: new Date().toISOString() })
+        .eq("license_id", id);
+    } catch {
+      /* tabela mund të mungojë para migrimit */
+    }
+  }
+
+  const license = await updateLicenseStatus(id, "aktive");
+  await writeRemoteAudit({
+    licenseId: id,
+    hardwareId: hw,
+    action: "reactivate",
+    reason: why,
+    actor,
+  });
+  return { ok: true, license, hardware_id: hw || null };
+}
+
+/**
+ * Fshi të dhënat lokale (factory reset) — NUK çaktivizon licencën.
+ * Kërkon confirm === "FSHI TE DHENAT".
+ */
+async function requestWipeDataForLicense(licenseId, { hardwareId, reason, confirm, actor } = {}) {
+  const confirmOk = String(confirm || "").trim().toUpperCase().replace(/\s+/g, " ");
+  if (confirmOk !== "FSHI TE DHENAT") {
+    throw new Error('Shkruani FSHI TE DHENAT për të konfirmuar.');
+  }
+  const id = String(licenseId || "").trim();
+  if (!id) throw new Error("ID e liçencës mungon.");
+  const db = getSupabase();
+  const { data: lic, error } = await db
+    .from("licenses")
+    .select("id, celesi, hardware_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!lic) throw new Error("Liçenca nuk u gjet.");
+
+  const now = new Date().toISOString();
+  const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
+  const why = String(reason || "").trim();
+
+  await patchLicenseMeta(id, { force_factory_reset_at: now });
+  if (hw) {
+    await upsertHardwareControl(id, hw, {
+      wipe_requested_at: now,
+      reason: why,
+    });
+  }
+
+  await writeRemoteAudit({
+    licenseId: id,
+    hardwareId: hw,
+    action: "wipe_data",
+    reason: why,
+    actor,
+  });
+  return { ok: true, license_id: id, hardware_id: hw || null, force_factory_reset_at: now };
+}
+
 /** POS: pas urdhrit, pastro flag-un që të mos përsëritet. */
-async function ackFactoryResetByKey(celesi) {
+async function ackFactoryResetByKey(celesi, hardwareId) {
   const license = await findLicenseByKey(celesi);
   if (!license) throw new Error("Liçenca nuk u gjet.");
   await patchLicenseMeta(license.id, { force_factory_reset_at: null });
+  const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(license);
+  if (hw) {
+    try {
+      await upsertHardwareControl(license.id, hw, { wipe_requested_at: null });
+    } catch {
+      /* ignore if migration not applied */
+    }
+  }
   return { ok: true, license_id: license.id };
 }
 
@@ -1244,6 +1449,9 @@ module.exports = {
   unblockLicense,
   resetLicenseDevice,
   requestFactoryResetForClient,
+  requestWipeDataForLicense,
+  revokeLicenseRemote,
+  reactivateLicenseRemote,
   ackFactoryResetByKey,
   findUserByEmail,
   verifyUserPassword,

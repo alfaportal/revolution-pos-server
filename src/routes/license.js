@@ -248,13 +248,13 @@ router.post("/update-info", licenseApiKeyOptional, async (req, res) => {
  */
 router.post("/ack-factory-reset", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key } = req.body || {};
+    const { celesi, license_key, hardware_id } = req.body || {};
     const key = celesi || license_key;
     if (!key) {
       return res.status(400).json({ ok: false, gabim: "Mungon çelësi i licencës." });
     }
     const { ackFactoryResetByKey } = require("../services/licenseService");
-    const result = await ackFactoryResetByKey(key);
+    const result = await ackFactoryResetByKey(key, hardware_id);
     res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
@@ -717,6 +717,23 @@ router.post("/refused-orders", licenseApiKeyOptional, async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/security-alert — KAFENE: licence fail / DevTools / urgent
+ * Auth: HMAC alert_sig (pa nevojë për licencë aktive — dështon para aktivizimit).
+ */
+router.post("/security-alert", async (req, res) => {
+  try {
+    const { handleSecurityAlert } = require("../services/licenseSecurityAlertService");
+    const result = await handleSecurityAlert(req.body || {}, { clientIp: clientIp(req) });
+    if (!result.ok) {
+      return res.status(403).json(result);
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, gabim: e.message || String(e) });
   }
 });
 

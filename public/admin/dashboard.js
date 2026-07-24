@@ -325,15 +325,16 @@ async function openClientDetail(id) {
             <div class="mono">ID: ${esc(l.hardware_id || "—")}</div>
             <div class="mono">Key: ${esc(l.celesi || "—")}</div>
             <div style="color:var(--muted);font-size:0.85rem;margin:0.2rem 0">Skadon: ${esc(l.data_skadimit || "—")}</div>
-            <div class="prob-actions" style="margin-top:0.4rem">
+            <div class="prob-actions" style="margin-top:0.4rem;display:flex;flex-wrap:wrap;gap:0.35rem">
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
               <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
               ${
                 ["pezulluar", "revokuar"].includes(String(l.statusi || ""))
-                  ? `<button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
-                  : ""
+                  ? `<button type="button" class="btn btn-ok btn-sm" data-drawer-reactivate="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Riaktivizo</button>`
+                  : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo Menjëherë</button>`
               }
+              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
             </div>
           </div>`,
         )
@@ -388,6 +389,74 @@ function bindDrawerLicenseFix(root, clientId) {
       }
     });
   });
+  root.querySelectorAll("[data-drawer-revoke]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const reason = prompt("Çaktivizo menjëherë? Arsyeja (opsionale):", "");
+      if (reason === null) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerRevoke}/revoke`, {
+          method: "POST",
+          body: JSON.stringify({
+            hardware_id: btn.dataset.hw || undefined,
+            reason: String(reason || "").trim(),
+          }),
+        });
+        await refreshClientsAndProblems();
+        if (clientId) await openClientDetail(clientId);
+      } catch (ex) {
+        alert(ex.message || "Çaktivizimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-drawer-reactivate]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Riaktivizo licencën?")) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerReactivate}/reactivate`, {
+          method: "POST",
+          body: JSON.stringify({ hardware_id: btn.dataset.hw || undefined }),
+        });
+        await refreshClientsAndProblems();
+        if (clientId) await openClientDetail(clientId);
+      } catch (ex) {
+        alert(ex.message || "Riaktivizimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-drawer-wipe]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Fshi të dhënat lokale te POS? (Cloud nuk fshihet)")) return;
+      const typed = prompt('Shkruani FSHI TE DHENAT për të konfirmuar:', "");
+      if (typed === null) return;
+      if (String(typed).trim().toUpperCase().replace(/\s+/g, " ") !== "FSHI TE DHENAT") {
+        alert("Konfirmimi nuk përputhet.");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerWipe}/wipe-data`, {
+          method: "POST",
+          body: JSON.stringify({
+            confirm: "FSHI TE DHENAT",
+            hardware_id: btn.dataset.hw || undefined,
+          }),
+        });
+        alert("Urdhri i fshirjes u dërgua te POS.");
+        await refreshClientsAndProblems();
+        if (clientId) await openClientDetail(clientId);
+      } catch (ex) {
+        alert(ex.message || "Fshirja dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 function closeDrawer() {
@@ -415,6 +484,86 @@ function bindLicenseActions(root) {
     btn.addEventListener("click", async () => {
       await api(`/api/super/dashboard/licenses/${btn.dataset.unblock}/unblock`, { method: "POST" });
       loadLicenses();
+    });
+  });
+  root.querySelectorAll("[data-revoke]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const reason = prompt(
+        "Çaktivizo menjëherë këtë licencë / Hardware ID?\nPOS mbyllet brenda ~15 sekondash.\nArsyeja (opsionale):",
+        "",
+      );
+      if (reason === null) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.revoke}/revoke`, {
+          method: "POST",
+          body: JSON.stringify({
+            hardware_id: btn.dataset.hw || undefined,
+            reason: String(reason || "").trim(),
+          }),
+        });
+        alert("Licenca u çaktivizua. POS do të mbyllet në heartbeat-in e radhës.");
+        loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Çaktivizimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-reactivate]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Riaktivizo licencën? Klienti mund të hapë POS përsëri.")) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.reactivate}/reactivate`, {
+          method: "POST",
+          body: JSON.stringify({
+            hardware_id: btn.dataset.hw || undefined,
+          }),
+        });
+        alert("Licenca u riaktivizua.");
+        loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Riaktivizimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-wipe]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (
+        !confirm(
+          "Fshi të dhënat LOKALE te POS (SQLite / rivendos si të re)?\n\nKjo NUK çaktivizon licencën.\nCloud NUK fshihet.\n\nVazhdo?",
+        )
+      ) {
+        return;
+      }
+      const typed = prompt('Shkruani FSHI TE DHENAT për të konfirmuar:', "");
+      if (typed === null) return;
+      if (String(typed).trim().toUpperCase().replace(/\s+/g, " ") !== "FSHI TE DHENAT") {
+        alert("Konfirmimi nuk përputhet. Asgjë nuk u ndryshua.");
+        return;
+      }
+      const reason = prompt("Arsyeja (opsionale):", "") || "";
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.wipe}/wipe-data`, {
+          method: "POST",
+          body: JSON.stringify({
+            confirm: "FSHI TE DHENAT",
+            hardware_id: btn.dataset.hw || undefined,
+            reason: String(reason).trim(),
+          }),
+        });
+        alert("Urdhri u dërgua. POS do të rivendosë të dhënat lokale në heartbeat-in e radhës.");
+        loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Fshirja dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
     });
   });
   root.querySelectorAll("[data-gen-id]").forEach((btn) => {
@@ -673,6 +822,14 @@ async function loadLicenses() {
                 <button type="button" class="btn btn-accent" data-save-license="${esc(l.id)}">Ruaj</button>
                 <button type="button" class="btn btn-ghost" data-copy-pair="${esc(l.id)}">Kopjo</button>
               </div>
+              <div class="lic-card-actions" style="display:grid;grid-template-columns:1fr;gap:0.4rem;margin-top:0.55rem">
+                ${
+                  ["revokuar", "pezulluar"].includes(String(l.statusi || ""))
+                    ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
+                    : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
+                }
+                <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
+              </div>
             </div>`;
           })
           .join("")
@@ -701,6 +858,12 @@ async function loadLicenses() {
             <button type="button" class="btn btn-primary btn-sm" data-gen-from-hw="${esc(l.id)}">Gjenero Licencë</button>
             <button type="button" class="btn btn-accent btn-sm" data-save-license="${esc(l.id)}">Ruaj</button>
             <button type="button" class="btn btn-ghost btn-sm" data-copy-pair="${esc(l.id)}">Kopjo</button>
+            ${
+              ["revokuar", "pezulluar"].includes(String(l.statusi || ""))
+                ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
+                : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
+            }
+            <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
           </td>
         </tr>`;

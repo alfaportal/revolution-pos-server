@@ -26,7 +26,15 @@ const {
   updateBillingInvoiceStatus,
   buildBillingInvoicePdf,
 } = require("../services/superAdminDashboardService");
-const { blockLicense, unblockLicense, updateLicense, updateLicenseStatus } = require("../services/licenseService");
+const {
+  blockLicense,
+  unblockLicense,
+  updateLicense,
+  updateLicenseStatus,
+  revokeLicenseRemote,
+  reactivateLicenseRemote,
+  requestWipeDataForLicense,
+} = require("../services/licenseService");
 const { addMonthsISO, todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, activityFromReq } = require("../services/activityLogService");
 
@@ -177,6 +185,73 @@ router.post(
       targetLabel: license.celesi,
     }).catch(() => {});
     res.json({ ok: true, license });
+  }),
+);
+
+/** Çaktivizo menjëherë (REVOKED) — heartbeat mbyll POS. */
+router.post(
+  "/dashboard/licenses/:id/revoke",
+  asyncHandler(async (req, res) => {
+    const result = await revokeLicenseRemote(req.params.id, {
+      hardwareId: req.body?.hardware_id || req.body?.hardwareId,
+      reason: req.body?.reason,
+      actor: req.user,
+    });
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_revoke",
+      targetType: "license",
+      targetId: result.license.id,
+      targetLabel: result.license.celesi,
+      details: { hardware_id: result.hardware_id, reason: req.body?.reason || "" },
+    }).catch(() => {});
+    res.json({ ok: true, ...result });
+  }),
+);
+
+/** Riaktivizo pas çaktivizimit. */
+router.post(
+  "/dashboard/licenses/:id/reactivate",
+  asyncHandler(async (req, res) => {
+    const result = await reactivateLicenseRemote(req.params.id, {
+      hardwareId: req.body?.hardware_id || req.body?.hardwareId,
+      reason: req.body?.reason,
+      actor: req.user,
+    });
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_reactivate",
+      targetType: "license",
+      targetId: result.license.id,
+      targetLabel: result.license.celesi,
+      details: { hardware_id: result.hardware_id, reason: req.body?.reason || "" },
+    }).catch(() => {});
+    res.json({ ok: true, ...result });
+  }),
+);
+
+/**
+ * Fshi të dhënat lokale te POS (factory reset) — NUK çaktivizon licencën.
+ * Body: { confirm: "FSHI TE DHENAT", reason?, hardware_id? }
+ */
+router.post(
+  "/dashboard/licenses/:id/wipe-data",
+  asyncHandler(async (req, res) => {
+    const result = await requestWipeDataForLicense(req.params.id, {
+      hardwareId: req.body?.hardware_id || req.body?.hardwareId,
+      reason: req.body?.reason,
+      confirm: req.body?.confirm,
+      actor: req.user,
+    });
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_wipe_data",
+      targetType: "license",
+      targetId: result.license_id,
+      targetLabel: result.hardware_id || result.license_id,
+      details: { hardware_id: result.hardware_id, reason: req.body?.reason || "" },
+    }).catch(() => {});
+    res.json({ ok: true, ...result });
   }),
 );
 
