@@ -152,6 +152,7 @@ app.post("/api/public/setup-link-request", async (req, res) => {
  * Shkarkim Setup — publik (pa login).
  * Token opsional (?t=) për linkë admin të vjetër — ende valid.
  * Vetëm desktop/Windows — telefonët bllokohen.
+ * Safari/Edge: faqe HTML me link direkt (302 te GitHub shpesh dështon).
  */
 app.get("/api/public/setup-download", (req, res) => {
   const ua = String(req.headers["user-agent"] || "");
@@ -204,9 +205,58 @@ app.get("/api/public/setup-download", (req, res) => {
     });
   }
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.redirect(302, url);
-});
 
+  const accept = String(req.headers.accept || "");
+  const forceRedirect = String(req.query.redirect || "") === "1";
+  const wantsHtml = !forceRedirect && (accept.includes("text/html") || !accept.includes("application/json"));
+  /* Safari / Edge (dhe shumica e klikimeve nga browser) — faqe HTML me link direkt te .exe */
+  if (wantsHtml) {
+    const filename = "KAFENE-Setup.exe";
+    const safeHref = String(url)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;");
+    return res.type("html").send(`<!doctype html>
+<html lang="sq">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="refresh" content="3;url=${safeHref}">
+<title>Shkarko KAFENE Setup</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:28rem;margin:3rem auto;padding:1.25rem;line-height:1.5;color:#111;text-align:center}
+a.btn{display:inline-block;margin-top:1rem;padding:.9rem 1.35rem;background:#ea580c;color:#fff;text-decoration:none;border-radius:10px;font-weight:700}
+p.hint{color:#555;font-size:.95rem}
+</style>
+</head>
+<body>
+<h1>Shkarkimi po fillon…</h1>
+<p class="hint">Nëse nuk fillon automatikisht (Safari / Edge), kliko butonin më poshtë.</p>
+<p><a class="btn" id="dl" href="${safeHref}" download="${filename}" rel="noopener">Shkarko KAFENE Setup</a></p>
+<script>
+(function () {
+  var u = ${JSON.stringify(url)};
+  function go() {
+    try {
+      var a = document.createElement("a");
+      a.href = u;
+      a.setAttribute("download", ${JSON.stringify(filename)});
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {}
+    setTimeout(function () { window.location.replace(u); }, 600);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go);
+  else go();
+})();
+</script>
+</body>
+</html>`);
+  }
+  return res.redirect(302, url);
+});
 /** Ndihmë AI për manualin publik — max 3 pyetje / sesion, përgjigje të shkurtra. */
 app.get("/api/public/manual-help/status", (req, res) => {
   try {

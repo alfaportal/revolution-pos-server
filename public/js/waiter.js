@@ -1463,10 +1463,15 @@
     } catch { /* SSE refresh — poll/bootstrap log own errors */ }
   }
 
+  let sseReconnectTimer = null;
   function connectWaiterSse() {
     if (!slug || !kitchenKey || typeof EventSource === "undefined") return;
+    if (sseReconnectTimer) {
+      clearTimeout(sseReconnectTimer);
+      sseReconnectTimer = null;
+    }
     if (waiterEventSource) {
-      waiterEventSource.close();
+      try { waiterEventSource.close(); } catch { /* ignore */ }
       waiterEventSource = null;
     }
     const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
@@ -1476,16 +1481,25 @@
     });
     waiterEventSource.onerror = () => {
       if (waiterEventSource) {
-        waiterEventSource.close();
+        try { waiterEventSource.close(); } catch { /* ignore */ }
         waiterEventSource = null;
       }
-      setTimeout(connectWaiterSse, 5000);
+      if (!activeWaiter) return;
+      if (sseReconnectTimer) clearTimeout(sseReconnectTimer);
+      sseReconnectTimer = setTimeout(() => {
+        sseReconnectTimer = null;
+        if (activeWaiter) connectWaiterSse();
+      }, 4000);
     };
   }
 
   function disconnectWaiterSse() {
+    if (sseReconnectTimer) {
+      clearTimeout(sseReconnectTimer);
+      sseReconnectTimer = null;
+    }
     if (waiterEventSource) {
-      waiterEventSource.close();
+      try { waiterEventSource.close(); } catch { /* ignore */ }
       waiterEventSource = null;
     }
   }
@@ -1541,14 +1555,30 @@
     }
   }
 
-  // Ri-kërko wake lock + rifresko gjendjen kur faqja kthehet visible (pa reload faqeje)
-  document.addEventListener("visibilitychange", function() {
-    if (document.visibilityState === "visible" && activeWaiter) {
+  /**
+   * Safari / Edge (sidomos telefon) ngrin timer-at + SSE kur faqja është në background.
+   * Kur kthehet: rifillo polling + SSE menjëherë — pa refresh manual.
+   */
+  let resumeRealtimeTimer = null;
+  function resumeWaiterRealtime() {
+    if (!activeWaiter) return;
+    if (resumeRealtimeTimer) clearTimeout(resumeRealtimeTimer);
+    resumeRealtimeTimer = setTimeout(() => {
+      resumeRealtimeTimer = null;
+      if (!activeWaiter) return;
       requestWakeLock();
+      startAcceptPolling();
       connectWaiterSse();
       refreshWaiterLiveState().catch(() => {});
-    }
+    }, 120);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") resumeWaiterRealtime();
   });
+  window.addEventListener("pageshow", () => resumeWaiterRealtime());
+  window.addEventListener("focus", () => resumeWaiterRealtime());
+  window.addEventListener("online", () => resumeWaiterRealtime());
 
   function enterWaiterSession(waiter) {
     activeWaiter = { id: waiter.id, name: waiter.name };

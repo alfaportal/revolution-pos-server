@@ -8,15 +8,23 @@ function subscribe(clientId, res) {
   subscribers.get(id).add(res);
 
   res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
   });
+  if (typeof res.flushHeaders === "function") {
+    try { res.flushHeaders(); } catch { /* ignore */ }
+  }
   res.write(": connected\n\n");
 
   const heartbeat = setInterval(() => {
-    res.write(": ping\n\n");
-  }, 25000);
+    try {
+      res.write(": ping\n\n");
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 15000);
 
   res.on("close", () => {
     clearInterval(heartbeat);

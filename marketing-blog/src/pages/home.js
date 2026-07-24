@@ -330,7 +330,18 @@ function startSetupDownload(plan = "") {
     showDesktopOnlyDownloadNotice();
     return;
   }
-  window.location.assign(setupDownloadHref(plan));
+  /* Navigim i plotë te faqja e shkarkimit (HTML) — Safari/Edge nuk i duan mirë 302 te .exe */
+  const href = setupDownloadHref(plan);
+  try {
+    const a = document.createElement("a");
+    a.href = href;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    window.location.assign(href);
+  }
 }
 
 function bindDesktopOnlyDownloads() {
