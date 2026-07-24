@@ -28,7 +28,7 @@ const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json
  * Pako 1 → pako_3, Pako 2 → pako_4, Pako 3 → pako_2, Pako 4 → pako_5
  */
 const DEFAULT_SETTINGS = {
-  admin_name: "Naser",
+  admin_name: "Super Admin",
   admin_email: "admin@revolutioninvest.com",
   package_prices: {
     pako_3: 150, // Pako 1

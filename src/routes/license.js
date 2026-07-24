@@ -64,7 +64,16 @@ async function resolveLicenseClient(req) {
  */
 router.post("/validate", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { celesi, license_key, device_id, app_type, hostname, hardware_id } = req.body;
+    const {
+      celesi,
+      license_key,
+      device_id,
+      app_type,
+      hostname,
+      hardware_id,
+      contact_email,
+      activation_email,
+    } = req.body;
     const key = celesi || license_key;
     if (!key) {
       return res.status(400).json({ valid: false, gabim: "Mungon çelësi i licencës." });
@@ -76,6 +85,8 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
       app_type,
       hostname,
       hardware_id,
+      contact_email: contact_email || activation_email,
+      activation_email,
       client_ip: clientIp(req),
     });
 
@@ -92,11 +103,14 @@ router.post("/validate", licenseApiKeyOptional, async (req, res) => {
  */
 router.post("/report-hardware", licenseApiKeyOptional, async (req, res) => {
   try {
-    const { device_id, hardware_id, celesi, license_key } = req.body || {};
+    const { device_id, hardware_id, celesi, license_key, contact_email, activation_email } =
+      req.body || {};
     const result = await reportHardwareId({
       device_id,
       hardware_id,
       celesi: celesi || license_key,
+      contact_email: contact_email || activation_email,
+      activation_email,
     });
     if (!result.ok) {
       return res.status(404).json(result);

@@ -255,7 +255,39 @@ const OPTIONAL_LICENSE_META = [
   "last_validation_error",
   "last_ip",
   "hardware_id",
+  "activation_email",
 ];
+
+function normalizeContactEmail(input) {
+  const e = String(input || "").trim().toLowerCase();
+  if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return "";
+  return e.slice(0, 200);
+}
+
+async function saveActivationEmail(license, email) {
+  const e = normalizeContactEmail(email);
+  if (!e || !license?.id) return;
+  try {
+    await patchLicenseMeta(license.id, { activation_email: e });
+  } catch {
+    /* kolona mund të mungojë para migrimit */
+  }
+  if (license.client_id) {
+    try {
+      const db = getSupabase();
+      const { data: client } = await db
+        .from("clients")
+        .select("id, email")
+        .eq("id", license.client_id)
+        .maybeSingle();
+      if (client && !String(client.email || "").trim()) {
+        await db.from("clients").update({ email: e }).eq("id", client.id);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 async function patchLicenseMeta(licenseId, patch) {
   const db = getSupabase();
@@ -341,7 +373,7 @@ function resolveLicenseHardwareId(lic) {
 }
 
 /** Ruaj Hardware ID 16 nga POS (sipas device_id) — për admin Gjenero një shtypje. */
-async function reportHardwareId({ device_id, hardware_id, celesi }) {
+async function reportHardwareId({ device_id, hardware_id, celesi, contact_email, activation_email }) {
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
   await ensureLicenseHardwareSchema();
   const hw = normalizeHardwareIdStored(hardware_id);
@@ -366,12 +398,23 @@ async function reportHardwareId({ device_id, hardware_id, celesi }) {
     if (!/hardware_id|schema cache/i.test(msg)) throw err;
     /* Kolona ende nuk ekziston — ruaj si meta që admin të shohë të njëjtën ID */
     await patchLicenseMeta(license.id, { last_validation_error: encodeHwMeta(hw) });
+    await saveActivationEmail(license, contact_email || activation_email);
     return { ok: true, license_id: license.id, hardware_id: hw, stored: false };
   }
+  await saveActivationEmail(license, contact_email || activation_email);
   return { ok: true, license_id: license.id, hardware_id: hw, stored: true };
 }
 
-async function validateLicense({ celesi, device_id, app_type, hostname, client_ip, hardware_id }) {
+async function validateLicense({
+  celesi,
+  device_id,
+  app_type,
+  hostname,
+  client_ip,
+  hardware_id,
+  contact_email,
+  activation_email,
+}) {
   const license = await findLicenseByKey(celesi);
   if (!license) {
     return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë)." };
@@ -446,6 +489,11 @@ async function validateLicense({ celesi, device_id, app_type, hostname, client_i
   await patchLicenseMeta(license.id, successPatch);
   if (deviceId) license.device_id = deviceId;
   if (host) license.device_hostname = host;
+
+  const contactEmail = normalizeContactEmail(contact_email || activation_email);
+  if (contactEmail) {
+    await saveActivationEmail(license, contactEmail);
+  }
 
   const terminalSummary = await getTerminalSummaryForLicense(license);
   const warning = Boolean(terminalAccess.warning);

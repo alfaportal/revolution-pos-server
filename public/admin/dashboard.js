@@ -792,6 +792,7 @@ async function loadLicenses() {
       hardware_id: hw,
       license_key: l.celesi || "",
       statusi: l.statusi,
+      activation_email: l.activation_email || "",
     };
   });
 
@@ -815,6 +816,11 @@ async function loadLicenses() {
                 <label class="lic-field-label">Licenca</label>
                 <input type="text" class="lic-edit-input mono" data-key-input="${esc(l.id)}" value="${esc(key)}" placeholder="—" autocomplete="off">
               </div>
+              ${
+                l.activation_email
+                  ? `<div class="lic-field-block"><label class="lic-field-label">Email aktivizimi</label><div class="mono" style="font-size:0.9rem">${esc(l.activation_email)}</div></div>`
+                  : ""
+              }
               <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
               <div class="lic-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
                 <button type="button" class="btn btn-ok" data-gen-id="${esc(l.id)}">Gjenero ID</button>
