@@ -1074,35 +1074,60 @@ async function writeRemoteAudit({ licenseId, hardwareId, action, reason, actor }
   }
 }
 
+async function loadLicenseForRemoteControl(licenseId) {
+  const id = String(licenseId || "").trim();
+  if (!id) throw new Error("ID e liçencës mungon.");
+  try {
+    const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
+    await ensureLicenseHardwareSchema();
+  } catch {
+    /* ignore — vazhdo edhe pa kolonën hardware_id */
+  }
+  const db = getSupabase();
+  let { data: lic, error } = await db
+    .from("licenses")
+    .select("id, celesi, hardware_id, statusi, last_validation_error")
+    .eq("id", id)
+    .maybeSingle();
+  if (error && /hardware_id|schema cache/i.test(String(error.message || ""))) {
+    const retry = await db
+      .from("licenses")
+      .select("id, celesi, statusi, last_validation_error")
+      .eq("id", id)
+      .maybeSingle();
+    lic = retry.data;
+    error = retry.error;
+  }
+  if (error) throw error;
+  if (!lic) throw new Error("Liçenca nuk u gjet.");
+  return lic;
+}
+
 /**
  * Çaktivizo menjëherë — license-wide dhe/ose Hardware ID specifik.
  * Heartbeat → POS force_logout me REVOKED.
  */
 async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}) {
-  const id = String(licenseId || "").trim();
-  if (!id) throw new Error("ID e liçencës mungon.");
-  const db = getSupabase();
-  const { data: lic, error } = await db
-    .from("licenses")
-    .select("id, celesi, hardware_id, statusi")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!lic) throw new Error("Liçenca nuk u gjet.");
-
+  const lic = await loadLicenseForRemoteControl(licenseId);
+  const id = lic.id;
   const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
   const now = new Date().toISOString();
   const why = String(reason || "").trim();
 
+  /* Së pari statusi — kjo e mbyll POS edhe nëse tabela per-HW dështon */
+  const license = await updateLicenseStatus(id, "revokuar");
+
   if (hw) {
-    await upsertHardwareControl(id, hw, {
-      revoked_at: now,
-      reason: why,
-    });
+    try {
+      await upsertHardwareControl(id, hw, {
+        revoked_at: now,
+        reason: why,
+      });
+    } catch (err) {
+      console.warn("[revokeLicenseRemote] hardware control:", err?.message || err);
+    }
   }
 
-  /* Licenca kryesore: statusi revokuar që POS të ndalet menjëherë */
-  const license = await updateLicenseStatus(id, "revokuar");
   await writeRemoteAudit({
     licenseId: id,
     hardwareId: hw,
@@ -1115,38 +1140,30 @@ async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}
 
 /** Riaktivizo pas çaktivizimit. */
 async function reactivateLicenseRemote(licenseId, { hardwareId, reason, actor } = {}) {
-  const id = String(licenseId || "").trim();
-  if (!id) throw new Error("ID e liçencës mungon.");
+  const lic = await loadLicenseForRemoteControl(licenseId);
+  const id = lic.id;
   const db = getSupabase();
-  const { data: lic, error } = await db
-    .from("licenses")
-    .select("id, celesi, hardware_id, statusi")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!lic) throw new Error("Liçenca nuk u gjet.");
-
   const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
   const why = String(reason || "").trim();
 
-  if (hw) {
-    await upsertHardwareControl(id, hw, {
-      revoked_at: null,
-      reason: why,
-    });
-  } else {
-    /* Pastro të gjitha revoke flags për këtë licencë */
-    try {
+  const license = await updateLicenseStatus(id, "aktive");
+
+  try {
+    if (hw) {
+      await upsertHardwareControl(id, hw, {
+        revoked_at: null,
+        reason: why,
+      });
+    } else {
       await db
         .from("license_hardware_controls")
         .update({ revoked_at: null, updated_at: new Date().toISOString() })
         .eq("license_id", id);
-    } catch {
-      /* tabela mund të mungojë para migrimit */
     }
+  } catch (err) {
+    console.warn("[reactivateLicenseRemote] hardware control:", err?.message || err);
   }
 
-  const license = await updateLicenseStatus(id, "aktive");
   await writeRemoteAudit({
     licenseId: id,
     hardwareId: hw,
@@ -1166,27 +1183,22 @@ async function requestWipeDataForLicense(licenseId, { hardwareId, reason, confir
   if (confirmOk !== "FSHI TE DHENAT") {
     throw new Error('Shkruani FSHI TE DHENAT për të konfirmuar.');
   }
-  const id = String(licenseId || "").trim();
-  if (!id) throw new Error("ID e liçencës mungon.");
-  const db = getSupabase();
-  const { data: lic, error } = await db
-    .from("licenses")
-    .select("id, celesi, hardware_id")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!lic) throw new Error("Liçenca nuk u gjet.");
-
+  const lic = await loadLicenseForRemoteControl(licenseId);
+  const id = lic.id;
   const now = new Date().toISOString();
   const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
   const why = String(reason || "").trim();
 
   await patchLicenseMeta(id, { force_factory_reset_at: now });
   if (hw) {
-    await upsertHardwareControl(id, hw, {
-      wipe_requested_at: now,
-      reason: why,
-    });
+    try {
+      await upsertHardwareControl(id, hw, {
+        wipe_requested_at: now,
+        reason: why,
+      });
+    } catch (err) {
+      console.warn("[requestWipeDataForLicense] hardware control:", err?.message || err);
+    }
   }
 
   await writeRemoteAudit({
