@@ -201,6 +201,28 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
   }
 });
 
+/** true vetëm nëse latest > current (semver i thjeshtë). */
+function isNewerSetupVersion(latestRaw, currentRaw) {
+  const parse = (v) =>
+    String(v || "")
+      .replace(/^v/i, "")
+      .trim()
+      .split(/[.+-]/)
+      .map((p) => parseInt(p, 10))
+      .filter((n) => Number.isFinite(n));
+  const a = parse(latestRaw);
+  const b = parse(currentRaw);
+  if (!a.length || !b.length) return false;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const x = a[i] || 0;
+    const y = b[i] || 0;
+    if (x > y) return true;
+    if (x < y) return false;
+  }
+  return false;
+}
+
 /**
  * POST /api/v1/license/update-info — update VETËM nëse licenca është valide.
  * Kthen link shkarkimi me token (jo URL publike e hapur).
@@ -232,7 +254,8 @@ router.post("/update-info", licenseApiKeyOptional, async (req, res) => {
 
     const latest = getSetupVersion();
     const current = String(current_version || "").replace(/^v/i, "").trim();
-    const updateAvailable = Boolean(latest && current && latest !== current);
+    /* Vetëm kur cloud ka version MË TË RI — kurrë downgrade (p.sh. 239 → 238). */
+    const updateAvailable = isNewerSetupVersion(latest, current);
 
     let download_url = null;
     if (updateAvailable && isSetupDownloadConfigured()) {
