@@ -230,7 +230,7 @@ app.get("/api/public/setup-download", async (req, res) => {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta http-equiv="refresh" content="2;url=${safeHref}">
-<title>Instalo KAFENE</title>
+<title>Instalo Revolution POS</title>
 <style>
 body{font-family:system-ui,-apple-system,sans-serif;max-width:28rem;margin:3rem auto;padding:1.25rem;line-height:1.5;color:#111;text-align:center}
 a.btn{display:inline-block;margin-top:1rem;padding:.9rem 1.35rem;background:#ea580c;color:#fff;text-decoration:none;border-radius:10px;font-weight:700}
@@ -238,7 +238,7 @@ p.hint{color:#555;font-size:.95rem}
 </style>
 </head>
 <body>
-<h1>Instalimi i KAFENE</h1>
+<h1>Instalimi i Revolution POS</h1>
 <p class="hint">Shkarkimi i instaluesit po fillon${ver ? ` (v${ver})` : ""}…</p>
 <p class="hint">Pas shkarkimit hapni skedarin Setup dhe ndiqni hapat e instalimit.</p>
 <p><a class="btn" id="dl" href="${safeHref}" download="${SETUP_FILENAME}">Shkarko instaluesin</a></p>
