@@ -7,12 +7,23 @@ const path = require("path");
 const { Readable } = require("stream");
 const { getSetupDownloadUrl, getSetupVersion } = require("./publicOrigin");
 
-const SETUP_FILENAME = "KAFENE-Setup.exe";
+/** Emri që sheh klienti kur shkarkon (jo emri i burimit intern). */
+const SETUP_FILENAME = "Revolution-POS-Setup.exe";
+/** Emri i skedarit lokal / burim GitHub (mbetet KAFENE-Setup.exe). */
+const SETUP_SOURCE_FILENAME = "KAFENE-Setup.exe";
 
 function localSetupPath() {
   const fromEnv = String(process.env.SETUP_LOCAL_PATH || "").trim();
   if (fromEnv) return fromEnv;
-  return path.join(__dirname, "..", "..", "public", "downloads", SETUP_FILENAME);
+  const downloads = path.join(__dirname, "..", "..", "public", "downloads");
+  const preferred = path.join(downloads, SETUP_FILENAME);
+  const legacy = path.join(downloads, SETUP_SOURCE_FILENAME);
+  try {
+    if (fs.existsSync(preferred) && fs.statSync(preferred).isFile()) return preferred;
+  } catch {
+    /* ignore */
+  }
+  return legacy;
 }
 
 function resolveSetupSource(plan) {
@@ -31,26 +42,33 @@ function resolveSetupSource(plan) {
 
 function setupContentDisposition() {
   const ver = getSetupVersion();
-  const name = ver ? `KAFENE-Setup-${ver}.exe` : SETUP_FILENAME;
+  const name = ver ? `Revolution-POS-Setup-${ver}.exe` : SETUP_FILENAME;
   return `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
+function setSetupDownloadHeaders(res, contentLength) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("Content-Type", "application/octet-stream");
+  res.set("Content-Disposition", setupContentDisposition());
+  if (contentLength != null && contentLength !== "") {
+    res.set("Content-Length", String(contentLength));
+  }
 }
 
 /**
  * Stream Setup te klienti (attachment). Asnjë redirect te GitHub.
+ * Header-at e attachment vendosen VETËM pasi burimi është i vlefshëm —
+ * përndryshe browseri merr 502 me emër .exe → ERR_INVALID_RESPONSE.
  * @returns {Promise<boolean>} true nëse stream filloi
  */
 async function streamSetupInstaller(res, plan) {
   const source = resolveSetupSource(plan);
   if (!source) return false;
 
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.set("X-Content-Type-Options", "nosniff");
-  res.set("Content-Type", "application/octet-stream");
-  res.set("Content-Disposition", setupContentDisposition());
-
   if (source.type === "file") {
     const stat = fs.statSync(source.path);
-    res.set("Content-Length", String(stat.size));
+    setSetupDownloadHeaders(res, stat.size);
     fs.createReadStream(source.path).pipe(res);
     return true;
   }
@@ -65,8 +83,7 @@ async function streamSetupInstaller(res, plan) {
     err.status = upstream.status;
     throw err;
   }
-  const len = upstream.headers.get("content-length");
-  if (len) res.set("Content-Length", len);
+  setSetupDownloadHeaders(res, upstream.headers.get("content-length"));
   Readable.fromWeb(upstream.body).pipe(res);
   return true;
 }

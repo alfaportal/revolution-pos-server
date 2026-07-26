@@ -5,8 +5,8 @@ const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
 /** Setup Windows — burim interne (serveri e proxy). Klienti NUK hap GitHub. */
 const DEFAULT_SETUP_DOWNLOAD_URL =
-  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.239/KAFENE-Setup.exe";
-const DEFAULT_SETUP_VERSION = "1.0.239";
+  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.244/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.244";
 /** Link Setup (admin / email / SMS) — default 7 ditë. */
 const DEFAULT_SETUP_LINK_TTL_HOURS = 168;
 
