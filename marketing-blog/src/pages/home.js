@@ -999,6 +999,7 @@ export function renderHome() {
           <div class="section-head">
             <h2>${t("getStarted.title")}</h2>
             <p>${t("getStarted.subtitle")}</p>
+            <p class="download-warning">${t("getStarted.downloadWarning")}</p>
           </div>
           <ol class="get-started-steps">
             <li>
