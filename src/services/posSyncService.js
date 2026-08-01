@@ -62,7 +62,8 @@ function buildMenuRow(clientId, m, i, photoByLocalId, stockByLocalId) {
     category: String(m.category || m.kategoria || "").trim(),
     price: Number(m.price ?? m.cmimi ?? 0) || 0,
     active: m.active !== false && m.active !== 0,
-    photo: photoByLocalId.get(localId) || "",
+    // Prefero foton nga POS; nëse mungon, ruaj foton e mëparshme cloud (mos e fshi).
+    photo: String(m.photo || "").trim() || photoByLocalId.get(localId) || "",
     description: String(m.description || "").trim().slice(0, 2000),
     sku: String(m.sku || "").trim().slice(0, 64),
     track_stock: trackStock,
