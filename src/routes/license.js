@@ -809,7 +809,6 @@ router.get("/health", (_req, res) => {
     ok: true,
     service: "revolution-pos-license",
     emergency_pin_configured: isMasterPinConfigured(),
-    /* kodi emergjence NUK shfaqet — vetëm email te pronari */
   });
 });
 

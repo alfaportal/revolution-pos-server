@@ -51,7 +51,7 @@ const {
   getClientAdminSettings,
   updateClientAdminSettings,
 } = require("../services/clientAdminService");
-const { isMasterPinConfigured } = require("../lib/emergencyPin");
+const { getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, listAdminActivityLog, activityFromReq } = require("../services/activityLogService");
 const {
@@ -145,11 +145,10 @@ router.get("/emergency-code", (_req, res) => {
   res.json({
     ok: true,
     configured: isMasterPinConfigured(),
-    /* Kodi NUK kthehet / NUK shfaqet në panel — dërgohet vetëm me email te pronari. */
-    daily_code: null,
+    daily_code: isMasterPinConfigured() ? getDailyEmergencyCode() : null,
     code_version: 2,
     hint:
-      "Kodi emergjence nuk shfaqet këtu. Kur kamarieri shtyp «Harruat PIN-in?» në POS, kodi dërgohet automatikisht në email-in e pronarit të lokalit.",
+      "Kodi ditor 6 shifra (vetëm numra) — hap panelin e Pronarit në POS. Ndryshon automatikisht çdo 24 orë. Rifreskoni pas mesnatës ose me butonin Rifresko.",
     valid_for_date: todayISO(),
   });
 });

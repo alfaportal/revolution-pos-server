@@ -2388,20 +2388,39 @@ const ACTION_LABELS = {
 
 async function loadEmergencyCode() {
   const hint = document.getElementById("emergency-code-hint");
-  if (!hint) return;
+  const codeEl = document.getElementById("emergency-daily-code");
+  if (!hint || !codeEl) return;
   try {
     const data = await api(`/api/admin/emergency-code?_=${Date.now()}`);
     if (!data.configured) {
-      hint.textContent = "Vendosni MASTER_EMERGENCY_PIN në Railway. Kodi nuk shfaqet këtu — dërgohet me email te pronari kur kamarieri kërkon «Harruat PIN-in?».";
+      hint.textContent = "Vendosni MASTER_EMERGENCY_PIN në Railway për kod emergjence.";
+      codeEl.textContent = "—";
+      emergencyCodeDate = null;
       return;
     }
+    const code = String(data.daily_code || "").trim();
+    const dateLabel = data.valid_for_date ? ` · data ${data.valid_for_date}` : "";
+    const timeLabel = ` · rifreskuar ${new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`;
     hint.textContent =
-      data.hint ||
-      "Kodi emergjence nuk shfaqet në panel. Dërgohet vetëm me email te pronari kur kamarieri shtyp «Harruat PIN-in?» në POS.";
+      (data.hint || "Kodi ditor 6 shifra — hap panelin Pronari në POS. Ndryshon çdo 24 orë.")
+      + dateLabel
+      + timeLabel;
+    codeEl.textContent = code || "—";
+    emergencyCodeDate = data.valid_for_date || new Date().toISOString().slice(0, 10);
   } catch (e) {
-    hint.textContent = e.message || "Nuk u ngarkua statusi i kodit emergjence.";
+    hint.textContent = e.message || "Nuk u ngarkua kodi emergjence.";
+    codeEl.textContent = "—";
+    emergencyCodeDate = null;
   }
 }
+
+let emergencyCodeDate = null;
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  if (emergencyCodeDate && emergencyCodeDate !== today) {
+    loadEmergencyCode().catch(() => {});
+  }
+}, 60000);
 
 async function loadActivityLog() {
   const tbl = document.getElementById("tbl-activity");
@@ -2762,6 +2781,18 @@ document.getElementById("btn-ai-usage-csv-detail")?.addEventListener("click", as
 
 document.getElementById("ai-usage-month")?.addEventListener("change", () => {
   loadAiUsage().catch((err) => showMsg("ai-usage-msg", err.message, false));
+});
+
+document.getElementById("btn-refresh-emergency")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btn-refresh-emergency");
+  if (btn) btn.disabled = true;
+  try {
+    await loadEmergencyCode();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 });
 
 document.getElementById("form-client").addEventListener("submit", async e => {
