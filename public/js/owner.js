@@ -82,7 +82,7 @@ function initPwaInstallBanner() {
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.register("/owner/sw.js", { scope: "/owner/" }).catch(() => {});
+  navigator.serviceWorker.register("/owner/sw.js?v=8", { scope: "/owner/" }).catch(() => {});
 }
 
 async function api(path, opts = {}) {

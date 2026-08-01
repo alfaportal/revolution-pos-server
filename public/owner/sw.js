@@ -1,18 +1,9 @@
 /* PWA vetëm për pronarët — scope /owner/ */
-const CACHE_NAME = "ri-pos-owner-v7";
+const CACHE_NAME = "ri-pos-owner-v8";
 const PRECACHE = [
-  "/owner/panel",
-  "/owner/login",
   "/owner/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
-  "/css/panel.css",
-  "/css/owner.css",
-  "/js/offlineQueue.js",
-  "/js/qrcode.js",
-  "/js/owner.js",
-  "/js/owner-stock.js",
-  "/js/owner-inventory.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -30,10 +21,12 @@ self.addEventListener("activate", (event) => {
 });
 
 function shouldCache(pathname) {
+  /* Mos cache HTML/JS të panelit — laptiopi mbante version të vjetër. */
+  if (pathname === "/owner/panel" || pathname === "/owner/login") return false;
+  if (pathname.startsWith("/js/")) return false;
+  if (pathname.startsWith("/css/")) return false;
   return (
     pathname.startsWith("/owner/") ||
-    pathname.startsWith("/css/") ||
-    pathname.startsWith("/js/") ||
     pathname.startsWith("/icons/")
   );
 }
@@ -66,25 +59,17 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.pathname.startsWith("/api/")) return;
 
-  /* CSS/JS — gjithmonë nga rrjeti që ndryshimet në telefon shfaqen menjëherë */
-  if (url.pathname.startsWith("/css/") || url.pathname.startsWith("/js/")) {
+  /* HTML / CSS / JS — gjithmonë nga rrjeti */
+  if (
+    url.pathname === "/owner/panel"
+    || url.pathname === "/owner/login"
+    || url.pathname.startsWith("/css/")
+    || url.pathname.startsWith("/js/")
+    || request.mode === "navigate"
+  ) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response.ok && shouldCache(url.pathname)) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || network;
-    }),
-  );
+  event.respondWith(networkFirst(request));
 });

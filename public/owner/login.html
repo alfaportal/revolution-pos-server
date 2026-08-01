@@ -50,6 +50,22 @@
     </div>
   </div>
   <script>
+    /* Laptiopi i Ketujemit: fshi cache të vjetër të panelit që bllokonte hyrjen */
+    (async function clearStaleOwnerCache() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        if (window.caches) {
+          const keys = await caches.keys();
+          await Promise.all(
+            keys.filter((k) => k.startsWith("ri-pos-owner")).map((k) => caches.delete(k)),
+          );
+        }
+      } catch (_) { /* ignore */ }
+    })();
+
     const MIN_PASSWORD = 6;
     let mode = "login";
 
