@@ -24,11 +24,12 @@ function mapOwnerMenuItem(row) {
     price: Number(row.price),
     vat_category: normalizeVatCategory(row.vat_category),
     active: row.active !== false,
+    barcode: String(row.barcode || "").trim(),
     has_photo: Boolean(String(row.photo || "").trim()),
   };
 }
 
-const MENU_ITEM_SELECT = "id, local_id, name, category, price, vat_category, active, photo";
+const MENU_ITEM_SELECT = "id, local_id, name, category, price, vat_category, active, barcode, photo";
 
 async function touchMenuSync(clientId) {
   const db = getSupabase();
@@ -156,6 +157,7 @@ async function addMenuItem(clientId, body) {
   const localId = await nextLocalId(clientId);
   const db = getSupabase();
 
+  const barcode = body.barcode != null ? String(body.barcode).trim() : "";
   const row = {
     client_id: clientId,
     local_id: localId,
@@ -164,6 +166,7 @@ async function addMenuItem(clientId, body) {
     price,
     vat_category: normalizeVatCategory(body.vat_category),
     active: true,
+    barcode: barcode || null,
   };
   if (Object.prototype.hasOwnProperty.call(body, "photo") && body.photo) {
     row.photo = validateMenuPhotoInput(body.photo);
@@ -251,6 +254,10 @@ async function updateMenuItem(clientId, itemId, body, actorEmail = "") {
   }
   if (body.vat_category != null) {
     patch.vat_category = normalizeVatCategory(body.vat_category);
+  }
+  if (body.barcode !== undefined) {
+    const bc = body.barcode == null ? "" : String(body.barcode).trim();
+    patch.barcode = bc || null;
   }
   if (body.active != null) {
     patch.active = Boolean(body.active);

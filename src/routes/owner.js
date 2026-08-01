@@ -574,6 +574,21 @@ router.post("/menu", async (req, res) => {
   }
 });
 
+/** Open Food Facts — USB barcode scanner (numra + Enter) → emër produkti. */
+router.get("/menu/barcode-lookup/:code", async (req, res) => {
+  try {
+    const { lookupOpenFoodFacts } = require("../lib/barcodeLookup");
+    const result = await lookupOpenFoodFacts(req.params.code);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(502).json({
+      ok: false,
+      found: false,
+      gabim: e.message || "Open Food Facts nuk u përgjigj",
+    });
+  }
+});
+
 router.get("/menu/catalog", async (req, res) => {
   try {
     const catalog = await listCatalogForOwner(req.user.client_id);

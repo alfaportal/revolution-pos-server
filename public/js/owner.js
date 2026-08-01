@@ -1236,7 +1236,7 @@ function renderMenuTable() {
   if (!body) return;
   const items = ownerMenuCache.items || [];
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="color:var(--muted)">Nuk ka artikuj. Shtoni të parin më sipër ose sinkronizoni nga POS.</td></tr>';
     return;
   }
 
@@ -1252,6 +1252,10 @@ function renderMenuTable() {
           <input type="file" id="menu-photo-${item.id}" class="menu-photo-input" accept="image/png,image/jpeg,image/jpg" hidden data-id="${item.id}">
           ${item.has_photo ? `<button type="button" class="btn btn-ghost btn-sm btn-menu-photo-remove" data-id="${item.id}">Hiq foton</button>` : ""}
         </div>
+      </td>
+      <td>
+        <input type="text" class="menu-edit-barcode" inputmode="numeric" autocomplete="off" value="${escAttr(item.barcode || "")}" placeholder="Barcode" title="USB scanner dërgon numrin + Enter">
+        <small class="menu-barcode-status" style="display:block;color:var(--muted);font-size:0.75rem"></small>
       </td>
       <td><input type="text" class="menu-edit-name" value="${escAttr(item.name)}"></td>
       <td>
@@ -1292,6 +1296,18 @@ function renderMenuTable() {
   });
   body.querySelectorAll(".btn-menu-photo-remove").forEach(btn => {
     btn.addEventListener("click", () => removeMenuPhoto(btn.dataset.id));
+  });
+  body.querySelectorAll(".menu-edit-barcode").forEach((input) => {
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter") return;
+      ev.preventDefault();
+      const row = input.closest("tr");
+      lookupBarcodeFillName(
+        input,
+        row?.querySelector(".menu-edit-name"),
+        row?.querySelector(".menu-barcode-status"),
+      );
+    });
   });
 }
 
@@ -1376,6 +1392,7 @@ async function saveMenuRow(row) {
   const category = row.querySelector(".menu-edit-category")?.value?.trim();
   const price = Number(row.querySelector(".menu-edit-price")?.value);
   const vat_category = row.querySelector(".menu-edit-vat")?.value;
+  const barcode = row.querySelector(".menu-edit-barcode")?.value?.trim() || "";
   if (!name || !category) {
     setMenuMsg("Emri dhe kategoria janë të detyrueshme.", false);
     return;
@@ -1384,7 +1401,7 @@ async function saveMenuRow(row) {
     setMenuMsg("");
     const { item, synced_at } = await api(`/api/owner/menu/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ name, category, price, vat_category }),
+      body: JSON.stringify({ name, category, price, vat_category, barcode }),
     });
     const idx = ownerMenuCache.items.findIndex(i => i.id === id);
     if (idx >= 0) ownerMenuCache.items[idx] = item;
@@ -2455,6 +2472,63 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
   location.href = "/owner/login";
 });
 
+document.getElementById("btn-owner-password-save")?.addEventListener("click", async () => {
+  const msg = document.getElementById("owner-password-msg");
+  const current = document.getElementById("owner-pw-current")?.value || "";
+  const next = document.getElementById("owner-pw-new")?.value || "";
+  const next2 = document.getElementById("owner-pw-new2")?.value || "";
+  if (msg) {
+    msg.textContent = "";
+    msg.className = "owner-license-msg";
+  }
+  if (!current || !next) {
+    if (msg) {
+      msg.textContent = "Plotësoni fjalëkalimin aktual dhe të riun.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  if (next.length < 6) {
+    if (msg) {
+      msg.textContent = "Fjalëkalimi i ri duhet min. 6 karaktere.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  if (next !== next2) {
+    if (msg) {
+      msg.textContent = "Fjalëkalimet e reja nuk përputhen.";
+      msg.className = "owner-license-msg err";
+    }
+    return;
+  }
+  try {
+    const data = await api("/api/auth/owner/password/change", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: current,
+        new_password: next,
+        new_password2: next2,
+      }),
+    });
+    if (msg) {
+      msg.textContent = data.message || "Fjalëkalimi u ndryshua. I njëjti vlen edhe në telefon.";
+      msg.className = "owner-license-msg ok";
+    }
+    const curEl = document.getElementById("owner-pw-current");
+    const n1 = document.getElementById("owner-pw-new");
+    const n2 = document.getElementById("owner-pw-new2");
+    if (curEl) curEl.value = "";
+    if (n1) n1.value = "";
+    if (n2) n2.value = "";
+  } catch (err) {
+    if (msg) {
+      msg.textContent = err.message || "Ndryshimi dështoi.";
+      msg.className = "owner-license-msg err";
+    }
+  }
+});
+
 document.getElementById("btn-raport").addEventListener("click", loadReport);
 document.getElementById("btn-audit-log-refresh")?.addEventListener("click", loadAuditLog);
 document.getElementById("btn-filter-orders").addEventListener("click", loadOrders);
@@ -2584,11 +2658,48 @@ document.getElementById("btn-register-mode-save")?.addEventListener("click", asy
   }
 });
 
+async function lookupBarcodeFillName(barcodeInput, nameInput, statusEl) {
+  const code = String(barcodeInput?.value || "").trim();
+  if (!statusEl) statusEl = { textContent: "" };
+  if (!code || code.length < 4) {
+    statusEl.textContent = "";
+    return;
+  }
+  statusEl.textContent = "Duke kërkuar në Open Food Facts…";
+  try {
+    const data = await api(`/api/owner/menu/barcode-lookup/${encodeURIComponent(code)}`);
+    if (data?.found && data.name) {
+      if (nameInput) {
+        nameInput.value = data.name;
+        nameInput.dataset.barcodeFilled = "1";
+      }
+      statusEl.textContent = `✓ U gjet: ${data.name}`;
+    } else {
+      statusEl.textContent = "Barkodi nuk u gjet — shkruani emrin manualisht.";
+    }
+  } catch (err) {
+    statusEl.textContent = err.message || "Kërkimi dështoi — shkruani emrin manualisht.";
+  }
+}
+
+const menuAddBarcodeEl = document.getElementById("menu-add-barcode");
+const menuAddNameEl = document.getElementById("menu-add-name");
+const menuAddBarcodeStatus = document.getElementById("menu-add-barcode-status");
+menuAddBarcodeEl?.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter") return;
+  ev.preventDefault();
+  lookupBarcodeFillName(menuAddBarcodeEl, menuAddNameEl, menuAddBarcodeStatus);
+});
+menuAddNameEl?.addEventListener("input", () => {
+  if (menuAddNameEl.dataset.barcodeFilled === "1") menuAddNameEl.dataset.barcodeFilled = "0";
+});
+
 document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
   const name = document.getElementById("menu-add-name")?.value?.trim();
   const category = document.getElementById("menu-add-category")?.value?.trim();
   const price = Number(document.getElementById("menu-add-price")?.value);
   const vat_category = document.getElementById("menu-add-vat")?.value || "A";
+  const barcode = document.getElementById("menu-add-barcode")?.value?.trim() || "";
   if (!name || !category) {
     setMenuMsg("Shkruani emrin dhe kategorinë.", false);
     return;
@@ -2597,7 +2708,7 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     setMenuMsg("");
     const { item, synced_at } = await api("/api/owner/menu", {
       method: "POST",
-      body: JSON.stringify({ name, category, price, vat_category }),
+      body: JSON.stringify({ name, category, price, vat_category, barcode }),
     });
     ownerMenuCache.items.push(item);
     if (!ownerMenuCache.categories.includes(item.category)) {
@@ -2605,6 +2716,9 @@ document.getElementById("btn-menu-add")?.addEventListener("click", async () => {
     }
     document.getElementById("menu-add-name").value = "";
     document.getElementById("menu-add-price").value = "";
+    document.getElementById("menu-add-barcode").value = "";
+    if (menuAddBarcodeStatus) menuAddBarcodeStatus.textContent = "";
+    if (menuAddNameEl) menuAddNameEl.dataset.barcodeFilled = "0";
     renderMenuCategoryOptions(ownerMenuCache.categories);
     renderMenuTable();
     updateOwnerMenuSyncHint(synced_at);

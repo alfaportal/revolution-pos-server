@@ -18,6 +18,7 @@ const {
   handleOwnerWrongPassword,
   requestOwnerPasswordReset,
   completeOwnerPasswordReset,
+  changeOwnerPassword,
   MIN_PASSWORD,
 } = require("../services/ownerPasswordReset");
 const { buildOwnerAuthContext } = require("../services/ownerGroupService");
@@ -312,6 +313,47 @@ router.post("/owner/password/reset", async (req, res) => {
       gabim: e.message,
       code: e.code || null,
     });
+  }
+});
+
+/** Ndrysho fjalëkalimin (telefon + panel) — i njëjti password për të dyja. */
+router.post("/owner/password/change", authOwner, async (req, res) => {
+  try {
+    const current =
+      req.body?.current_password ?? req.body?.old_password ?? req.body?.password;
+    const next = req.body?.new_password ?? req.body?.password_new;
+    const confirm = req.body?.new_password2 ?? req.body?.confirm_password;
+    if (confirm != null && String(confirm) !== String(next || "")) {
+      return res.status(400).json({
+        gabim: "Fjalëkalimet e reja nuk përputhen.",
+        code: "MISMATCH",
+      });
+    }
+    const user = await changeOwnerPassword(req.user.sub, current, next);
+    res.json({
+      ok: true,
+      message: "Fjalëkalimi u ndryshua. Përdoreni të njëjtin edhe në telefon dhe në panel.",
+      user: {
+        id: user.id,
+        emri: user.emri,
+        email: user.email,
+        roli: user.roli,
+        client_id: user.client_id,
+      },
+      min_password: MIN_PASSWORD,
+    });
+  } catch (e) {
+    const status =
+      e.code === "INVALID_CURRENT" ||
+      e.code === "WEAK_PASSWORD" ||
+      e.code === "SAME_PASSWORD" ||
+      e.code === "CURRENT_REQUIRED" ||
+      e.code === "NOT_FOUND"
+        ? 400
+        : e.code === "UNAUTHORIZED"
+          ? 401
+          : 500;
+    res.status(status).json({ gabim: e.message, code: e.code || null });
   }
 });
 

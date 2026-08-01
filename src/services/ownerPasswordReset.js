@@ -169,6 +169,71 @@ async function completeOwnerPasswordReset(email, code, newPassword) {
   return user;
 }
 
+/**
+ * Ndryshim fjalëkalimi kur pronari është i kyçur (telefon ose panel web).
+ * I njëjti hash në `users.passwordi` — vlen për të dyja.
+ */
+async function changeOwnerPassword(userId, currentPassword, newPassword) {
+  const id = String(userId || "").trim();
+  const current = String(currentPassword || "");
+  const next = String(newPassword || "").trim();
+
+  if (!id) {
+    const err = new Error("Sesioni nuk është i vlefshëm.");
+    err.code = "UNAUTHORIZED";
+    throw err;
+  }
+  if (!current) {
+    const err = new Error("Shkruani fjalëkalimin aktual.");
+    err.code = "CURRENT_REQUIRED";
+    throw err;
+  }
+  if (next.length < MIN_PASSWORD) {
+    const err = new Error(`Fjalëkalimi i ri duhet min. ${MIN_PASSWORD} karaktere.`);
+    err.code = "WEAK_PASSWORD";
+    throw err;
+  }
+  if (current === next) {
+    const err = new Error("Fjalëkalimi i ri duhet të jetë i ndryshëm nga aktual.");
+    err.code = "SAME_PASSWORD";
+    throw err;
+  }
+
+  const db = getSupabase();
+  const { data: user, error } = await db
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!isResettableOwner(user)) {
+    const err = new Error("Llogaria nuk u gjet ose nuk është e aktivizuar.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+
+  const ok = await bcrypt.compare(current, user.passwordi);
+  if (!ok) {
+    const err = new Error("Fjalëkalimi aktual është i gabuar.");
+    err.code = "INVALID_CURRENT";
+    throw err;
+  }
+
+  const hash = await bcrypt.hash(next, 12);
+  const nowIso = new Date().toISOString();
+  const { error: updErr } = await db
+    .from("users")
+    .update({
+      passwordi: hash,
+      password_set_at: nowIso,
+    })
+    .eq("id", user.id);
+  if (updErr) throw updErr;
+
+  await clearFailCount(user.email);
+  return user;
+}
+
 module.exports = {
   FAIL_THRESHOLD,
   MIN_PASSWORD,
@@ -176,5 +241,6 @@ module.exports = {
   handleOwnerWrongPassword,
   requestOwnerPasswordReset,
   completeOwnerPasswordReset,
+  changeOwnerPassword,
   isEmailConfigured,
 };

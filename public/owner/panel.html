@@ -162,6 +162,11 @@
         </div>
         <div class="filter-row menu-add-row">
           <div>
+            <label for="menu-add-barcode">Barcode</label>
+            <input type="text" id="menu-add-barcode" inputmode="numeric" autocomplete="off" placeholder="Skano ose shkruaj barkodin" title="USB scanner dërgon numrin + Enter">
+            <small id="menu-add-barcode-status" style="display:block;margin-top:0.25rem;color:var(--muted);font-size:0.8rem"></small>
+          </div>
+          <div>
             <label for="menu-add-name">Emri</label>
             <input type="text" id="menu-add-name" placeholder="Emri i artikullit">
           </div>
@@ -196,7 +201,7 @@
           <table class="menu-owner-table">
             <thead>
               <tr>
-                <th>Foto</th><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>TVSH</th><th>Statusi</th><th class="col-actions">Veprime</th>
+                <th>Foto</th><th>Barcode</th><th>Emri</th><th>Kategoria</th><th>Çmimi</th><th>TVSH</th><th>Statusi</th><th class="col-actions">Veprime</th>
               </tr>
             </thead>
             <tbody id="menu-items-body"></tbody>
@@ -946,6 +951,26 @@
     </div>
 
     <div id="panel-licenca" class="panel-section hidden">
+      <div class="card" id="owner-password-card">
+        <div class="card-title">Fjalëkalimi i pronarit</div>
+        <p class="links-hint">
+          I njëjti fjalëkalim vlen për <strong>telefon</strong> dhe <strong>panel web</strong>. Nëse e ndryshon këtu, hyni me të ri edhe në app.
+        </p>
+        <div class="link-row">
+          <label for="owner-pw-current">Fjalëkalimi aktual</label>
+          <input type="password" id="owner-pw-current" autocomplete="current-password" minlength="6" placeholder="••••••••">
+        </div>
+        <div class="link-row">
+          <label for="owner-pw-new">Fjalëkalimi i ri</label>
+          <input type="password" id="owner-pw-new" autocomplete="new-password" minlength="6" placeholder="min. 6 karaktere">
+        </div>
+        <div class="link-row">
+          <label for="owner-pw-new2">Përsërit fjalëkalimin e ri</label>
+          <input type="password" id="owner-pw-new2" autocomplete="new-password" minlength="6" placeholder="••••••••">
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-owner-password-save">Ndrysho fjalëkalimin</button>
+        <div id="owner-password-msg" class="owner-license-msg" role="status"></div>
+      </div>
       <div class="card">
         <div class="card-title">Licenca e aplikacionit POS</div>
         <p class="links-hint">
