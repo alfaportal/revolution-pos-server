@@ -329,7 +329,8 @@ router.post("/owner/password/change", authOwner, async (req, res) => {
         code: "MISMATCH",
       });
     }
-    const user = await changeOwnerPassword(req.user.sub, current, next);
+    const userId = req.user?.sub || req.user?.id;
+    const user = await changeOwnerPassword(userId, current, next);
     res.json({
       ok: true,
       message: "Fjalëkalimi u ndryshua. Përdoreni të njëjtin edhe në telefon dhe në panel.",
