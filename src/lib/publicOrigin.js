@@ -3,12 +3,18 @@
 const DEFAULT_PUBLIC_ORIGIN = "https://revolution-pos.com";
 const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
-/** Setup Windows — burim interne (serveri e proxy). Klienti NUK hap GitHub. */
+/** Fallback i fundit nëse GitHub API / cache dështon. */
 const DEFAULT_SETUP_DOWNLOAD_URL =
-  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.244/KAFENE-Setup.exe";
-const DEFAULT_SETUP_VERSION = "1.0.244";
+  "https://github.com/alfaportal/revolution-pos-server/releases/download/setup-v1.0.247/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.247";
 /** Link Setup (admin / email / SMS) — default 7 ditë. */
 const DEFAULT_SETUP_LINK_TTL_HOURS = 168;
+
+const {
+  cachedSetupDownloadUrl,
+  cachedSetupVersion,
+  kickSetupReleaseRefresh,
+} = require("./setupReleaseMeta");
 
 function getPublicAppOrigin() {
   const raw = process.env.PUBLIC_APP_ORIGIN?.trim();
@@ -41,46 +47,84 @@ function getSupportEmail() {
   return DEFAULT_SUPPORT_EMAIL;
 }
 
-/** URL për shkarkim Setup — njerëzit e marrin vetë nga webfaqja (default i gatshëm). */
-function getSetupDownloadUrl(plan) {
-  const fallbackRaw =
-    process.env.SETUP_DOWNLOAD_URL?.trim() || DEFAULT_SETUP_DOWNLOAD_URL;
-  /* URL të vjetra / emra të gabuar → fallback i saktë (KAFENE-Setup.exe) */
-  const fallback = /KAFENE-Setup\.exe$/i.test(fallbackRaw)
-    ? fallbackRaw
-    : DEFAULT_SETUP_DOWNLOAD_URL;
+function isSetupDownloadPinned() {
+  const v = String(process.env.SETUP_DOWNLOAD_PINNED || "")
+    .trim()
+    .toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+function envPlanSetupUrl(plan) {
   const key = String(plan || "").toLowerCase();
   const byPlan = {
     p1:
       process.env.SETUP_DOWNLOAD_P1_URL?.trim() ||
       process.env.SETUP_DOWNLOAD_STANDARD_URL?.trim() ||
-      fallback,
+      "",
     p2:
       process.env.SETUP_DOWNLOAD_P2_URL?.trim() ||
       process.env.SETUP_DOWNLOAD_PRO_URL?.trim() ||
-      fallback,
+      "",
     p3:
       process.env.SETUP_DOWNLOAD_P3_URL?.trim() ||
       process.env.SETUP_DOWNLOAD_FULL_URL?.trim() ||
-      fallback,
+      "",
     p4:
       process.env.SETUP_DOWNLOAD_P4_URL?.trim() ||
       process.env.SETUP_DOWNLOAD_FULL_URL?.trim() ||
-      fallback,
+      "",
   };
-  const url = byPlan[key] || fallback;
-  if (/github\.com\/.+\/releases\/download\//i.test(url) && !/KAFENE-Setup\.exe$/i.test(url)) {
-    return DEFAULT_SETUP_DOWNLOAD_URL;
+  return byPlan[key] || "";
+}
+
+function pinnedOrEnvFallbackUrl() {
+  const fallbackRaw =
+    process.env.SETUP_DOWNLOAD_URL?.trim() || DEFAULT_SETUP_DOWNLOAD_URL;
+  return /KAFENE-Setup\.exe$/i.test(fallbackRaw)
+    ? fallbackRaw
+    : DEFAULT_SETUP_DOWNLOAD_URL;
+}
+
+/** URL për shkarkim Setup — auto nga GitHub latest (ose pin via env). */
+function getSetupDownloadUrl(plan) {
+  const planEnv = envPlanSetupUrl(plan);
+  if (planEnv) {
+    if (/github\.com\/.+\/releases\/download\//i.test(planEnv) && !/\.exe$/i.test(planEnv)) {
+      /* ignore bad plan URL */
+    } else {
+      return planEnv;
+    }
   }
-  return url;
+
+  if (isSetupDownloadPinned()) {
+    return pinnedOrEnvFallbackUrl();
+  }
+
+  /* Auto: release i fundit nga restaurant-system (cache). */
+  kickSetupReleaseRefresh();
+  const auto = cachedSetupDownloadUrl(plan);
+  if (auto) return auto;
+
+  return pinnedOrEnvFallbackUrl();
 }
 
 /** Versioni i Setup që shfaqet në webfaqe (p.sh. 1.0.231). */
 function getSetupVersion() {
-  const fromEnv = process.env.SETUP_VERSION?.trim();
-  if (fromEnv) return fromEnv.replace(/^v/i, "");
+  if (isSetupDownloadPinned()) {
+    const fromEnv = process.env.SETUP_VERSION?.trim();
+    if (fromEnv) return fromEnv.replace(/^v/i, "");
+  } else {
+    kickSetupReleaseRefresh();
+    const autoVer = cachedSetupVersion();
+    if (autoVer) return autoVer.replace(/^v/i, "");
+    const fromEnv = process.env.SETUP_VERSION?.trim();
+    if (fromEnv) return fromEnv.replace(/^v/i, "");
+  }
   const url = getSetupDownloadUrl();
-  const m = String(url).match(/setup-v?(\d+\.\d+\.\d+)/i) || String(url).match(/(\d+\.\d+\.\d+)/);
+  const m =
+    String(url).match(/setup-v?(\d+\.\d+\.\d+)/i) ||
+    String(url).match(/\/v?(\d+\.\d+\.\d+)\//) ||
+    String(url).match(/(\d+\.\d+\.\d+)/);
   return (m && m[1]) || DEFAULT_SETUP_VERSION;
 }
 
@@ -125,4 +169,5 @@ module.exports = {
   getSetupDownloadUrl,
   getSetupVersion,
   getPublicAppConfig,
+  isSetupDownloadPinned,
 };
