@@ -20,6 +20,7 @@ const {
   getSetupVersion,
   getPublicAppOrigin,
 } = require("../src/lib/publicOrigin.js");
+const { ensureSetupReleaseMeta } = require("../src/lib/setupReleaseMeta.js");
 
 const args = process.argv.slice(2);
 const originIdx = args.indexOf("--url");
@@ -28,11 +29,6 @@ const publicOrigin =
   process.env.VERIFY_PUBLIC_ORIGIN ||
   getPublicAppOrigin() ||
   "https://revolution-pos.com";
-
-const expectedVer = getSetupVersion() || DEFAULT_SETUP_VERSION;
-const sourceUrl = getSetupDownloadUrl() || DEFAULT_SETUP_DOWNLOAD_URL;
-const proxyHtml = `${publicOrigin.replace(/\/+$/, "")}/api/public/setup-download`;
-const proxyDl = `${proxyHtml}?dl=1`;
 
 let failed = 0;
 function ok(msg) {
@@ -56,6 +52,18 @@ async function headOrGet(url, opts = {}) {
 }
 
 async function main() {
+  try {
+    await ensureSetupReleaseMeta();
+    ok("GitHub releases/latest u lexua (auto-publish)");
+  } catch (e) {
+    fail(`GitHub releases/latest: ${e.message}`);
+  }
+
+  const expectedVer = getSetupVersion() || DEFAULT_SETUP_VERSION;
+  const sourceUrl = getSetupDownloadUrl() || DEFAULT_SETUP_DOWNLOAD_URL;
+  const proxyHtml = `${publicOrigin.replace(/\/+$/, "")}/api/public/setup-download`;
+  const proxyDl = `${proxyHtml}?dl=1`;
+
   console.log("\n[verify-setup] Kontroll Setup para publikimit");
   console.log(`  version: ${expectedVer}`);
   console.log(`  source:  ${sourceUrl}`);

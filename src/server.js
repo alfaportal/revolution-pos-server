@@ -107,7 +107,13 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.get("/api/public/config", (_req, res) => {
+app.get("/api/public/config", async (_req, res) => {
+  try {
+    const { ensureSetupReleaseMeta } = require("./lib/setupReleaseMeta");
+    await ensureSetupReleaseMeta();
+  } catch {
+    /* fallback te cache/DEFAULT */
+  }
   res.json({
     ok: true,
     ...getPublicAppConfig(),

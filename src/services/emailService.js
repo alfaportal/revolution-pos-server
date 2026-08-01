@@ -76,6 +76,45 @@ async function sendOwnerPasswordResetEmail({ to, code }) {
   return deliverEmail({ to, subject, text, html });
 }
 
+/** Kod emergjence për hyrje kamarieri (Harruat PIN?) — vetëm te email i pronarit. */
+async function sendOwnerEmergencyCodeEmail({
+  to,
+  ownerName,
+  clientName,
+  code,
+  waiterName,
+  validForDate,
+}) {
+  const biz = String(clientName || "Lokali juaj").trim();
+  const who = String(waiterName || "").trim();
+  const subject = `Kod emergjence PIN kamarier — ${biz}`;
+  const text = [
+    ownerName ? `Përshëndetje ${ownerName},` : "Përshëndetje,",
+    "",
+    `Një kamarier në «${biz}» kërkoi kod emergjence sepse harroi PIN-in.`,
+    who ? `Kamarieri: ${who}` : null,
+    "",
+    `Kodi emergjence (6 shifra): ${code}`,
+    validForDate ? `I vlefshëm për datën: ${validForDate}` : null,
+    "",
+    "Jepjani këtë kod kamarierit që të hyjë në POS.",
+    "Mos e ndani publikisht. Nëse nuk e keni kërkuar ju, kontaktoni Revolution Invest.",
+  ]
+    .filter((x) => x != null)
+    .join("\n");
+
+  const html = `
+    <p>${ownerName ? `Përshëndetje <strong>${ownerName}</strong>,` : "Përshëndetje,"}</p>
+    <p>Një kamarier në <strong>${biz}</strong> kërkoi kod emergjence sepse harroi PIN-in.</p>
+    ${who ? `<p>Kamarieri: <strong>${who}</strong></p>` : ""}
+    <p style="font-size:26px;font-weight:bold;letter-spacing:0.35em;margin:20px 0;font-family:ui-monospace,monospace">${code}</p>
+    ${validForDate ? `<p style="color:#666;font-size:13px">I vlefshëm për datën: ${validForDate}</p>` : ""}
+    <p>Jepjani këtë kod kamarierit që të hyjë në POS. Mos e ndani publikisht.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 function resolveSupportPhone() {
   return getSupportPhone();
 }
@@ -616,6 +655,7 @@ module.exports = {
   resolveSupportPhone,
   resolveAdminNotifyEmail,
   sendOwnerPasswordResetEmail,
+  sendOwnerEmergencyCodeEmail,
   sendOwnerInviteEmail,
   sendTrialExpiry7DayEmail,
   sendTrialExpiry1DayEmail,

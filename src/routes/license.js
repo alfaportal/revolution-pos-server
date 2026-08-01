@@ -1,7 +1,7 @@
 const express = require("express");
 const { licenseApiKeyOptional } = require("../middleware/auth");
 const { validateLicense, getLicenseAccessLinks, reportHardwareId } = require("../services/licenseService");
-const { verifyMasterPin, verifyDailyEmergencyCode, getDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
+const { verifyMasterPin, verifyDailyEmergencyCode, isMasterPinConfigured } = require("../lib/emergencyPin");
 const { logAdminActivity } = require("../services/activityLogService");
 const { verifyWaiterPin, listWaitersForOwner } = require("../services/waiterPinService");
 const { getClientById } = require("../services/salesService");
@@ -295,6 +295,36 @@ router.post("/ack-factory-reset", licenseApiKeyOptional, async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message });
+  }
+});
+
+/**
+ * POST /api/v1/license/emergency-code-request — kamarieri «Harruat PIN?» → email te pronari.
+ * Body: { celesi|license_key, device_id?, waiter_name? } — kodi NUK kthehet në JSON.
+ */
+router.post("/emergency-code-request", licenseApiKeyOptional, async (req, res) => {
+  try {
+    const { requestEmergencyCodeEmail } = require("../services/emergencyCodeEmailService");
+    const result = await requestEmergencyCodeEmail(req.body || {});
+    res.json(result);
+  } catch (e) {
+    const status =
+      e.code === "RATE_LIMIT" || e.code === "DAILY_LIMIT"
+        ? 429
+        : e.code === "LICENSE_INVALID" || e.code === "NO_LICENSE"
+          ? 403
+          : e.code === "EMAIL_NOT_CONFIGURED" || e.code === "NOT_CONFIGURED"
+            ? 503
+            : e.code === "NO_OWNER_EMAIL"
+              ? 400
+              : 500;
+    res.status(status).json({
+      ok: false,
+      sent: false,
+      gabim: e.message,
+      code: e.code || null,
+      message: "Kodi u dërgua te pronari juaj — kontaktoni pronarin.",
+    });
   }
 });
 
@@ -779,7 +809,7 @@ router.get("/health", (_req, res) => {
     ok: true,
     service: "revolution-pos-license",
     emergency_pin_configured: isMasterPinConfigured(),
-    daily_emergency_code: isMasterPinConfigured() ? getDailyEmergencyCode() : null,
+    /* kodi emergjence NUK shfaqet — vetëm email te pronari */
   });
 });
 

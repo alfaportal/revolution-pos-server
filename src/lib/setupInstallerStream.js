@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { Readable } = require("stream");
 const { getSetupDownloadUrl, getSetupVersion } = require("./publicOrigin");
+const { ensureSetupReleaseMeta } = require("./setupReleaseMeta");
 
 /** Emri që sheh klienti kur shkarkon (jo emri i burimit intern). */
 const SETUP_FILENAME = "Revolution-POS-Setup.exe";
@@ -63,6 +64,12 @@ function setSetupDownloadHeaders(res, contentLength) {
  * @returns {Promise<boolean>} true nëse stream filloi
  */
 async function streamSetupInstaller(res, plan) {
+  /* Siguro meta të freskët nga GitHub para se të zgjidhet URL (auto-publish). */
+  try {
+    await ensureSetupReleaseMeta();
+  } catch {
+    /* fallback te DEFAULT / env */
+  }
   const source = resolveSetupSource(plan);
   if (!source) return false;
 
