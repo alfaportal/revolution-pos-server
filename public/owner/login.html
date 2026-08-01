@@ -204,8 +204,8 @@
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value,
+            email: document.getElementById("email").value.trim().toLowerCase(),
+            password: document.getElementById("password").value.trim(),
           }),
         });
         const data = await res.json();
