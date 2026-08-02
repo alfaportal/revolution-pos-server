@@ -5,7 +5,12 @@ function normCat(name) {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/\p{M}/gu, "");
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Vetëm a-z0-9 — për match agresiv (shmang karaktere “të ngjashme”). */
+function foldAscii(name) {
+  return normCat(name).replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 /**
@@ -15,15 +20,13 @@ function normCat(name) {
 function isDrinkCategory(category) {
   const n = normCat(category);
   if (!n) return false;
+  const f = foldAscii(category);
 
   // Ushqim i qartë — mos e trajto si pije
   if (
-    /\b(pizza|pasta|mish|supa|supe|salat|sandwi|hamburger|fast\s*food|mengjes|mengjes|embelsira|embel|desert|peshk|fruta\s*deti|tradicionale|shoqerime|femij|nugget|qofte|wrap|rizotto|risotto)\b/.test(
-      n,
-    ) ||
-    n.includes("hamburger") ||
-    n.includes("sandwi") ||
-    n.includes("tradicionale")
+    /\b(pizza|pasta|mish|supa|supe|salat|sandwi|hamburger|fast\s*food|mengjes|embelsira|embel|desert|peshk|fruta\s*deti|tradicionale|shoqerime|femij|nugget|qofte|wrap|rizotto|risotto)\b/.test(
+      f,
+    )
   ) {
     return false;
   }
@@ -68,7 +71,10 @@ function isDrinkCategory(category) {
     n.includes("qumesht") ||
     n.includes("milk") ||
     n.includes("smoothie") ||
-    n.includes("shake")
+    n.includes("shake") ||
+    f.includes("espress") ||
+    f.includes("kafe") ||
+    f.includes("pije")
   );
 }
 
@@ -78,31 +84,81 @@ function isFoodCategory(category) {
   return !isDrinkCategory(n);
 }
 
-/** Emri i artikullit — fallback kur kategoria mungon / është e gabuar */
+/**
+ * Emri i artikullit — PRIORITET mbi kategorinë.
+ * "Espresso i dyfishtë" = pije edhe nëse kategoria thotë Pizza/Ushqim.
+ */
 function isDrinkItemName(name) {
-  const n = normCat(name);
-  if (!n) return false;
+  const f = foldAscii(name);
+  if (!f) return false;
+
+  // Ushqim i qartë në EMËR (jo kategori)
   if (
-    /\b(pizza|pasta|mish|supa|supe|salat|sandwi|hamburger|burger|nugget|qofte|wrap|rizotto|risotto|steak|file|skara)\b/.test(
-      n,
+    /\b(pizza|pasta|mish|supa|supe|salat|sandwi|hamburger|burger|nugget|qofte|wrap|rizotto|risotto|steak|fileto|skara)\b/.test(
+      f,
     )
   ) {
-    return false;
+    // Emër i përzier "Pizza + birra" — nëse ka sinjal pije, mbetet pije
+    if (
+      !(
+        f.includes("espress") ||
+        f.includes("cappuccin") ||
+        f.includes("kafe") ||
+        f.includes("coffee") ||
+        f.includes("birra") ||
+        f.includes("pije")
+      )
+    ) {
+      return false;
+    }
   }
-  return (
-    /\b(espresso|cappuccino|latte|americano|macchiato|moka|mocha|frappe|frape|nescafe|kafe|coffee|tea|caj|birra|beer|wine|vere|vera|cocktail|koktej|coca|cola|fanta|sprite|pepsi|uje|water|sok|juice|smoothie|milkshake|milk\s*shake|energji|energy|red\s*bull|tonic|gin|raki|viski|whisky|whiskey|vodka|mojito|ayran|airan|boza|limonad|lemonade|ice\s*tea|iced\s*tea|qumesht|milk|shaorma\s*pije)\b/.test(
-      n,
-    ) ||
-    n.includes("espresso") ||
-    n.includes("cappuccino") ||
-    n.startsWith("kafe") ||
-    n.includes(" kafe") ||
-    n.endsWith(" kafe")
-  );
+
+  // Match agresiv me includes — pa u mbështetur vetëm te \b
+  if (
+    f.includes("espress") ||
+    f.includes("cappuccin") ||
+    f.includes("macchiato") ||
+    f.includes("americano") ||
+    f.includes("latte") ||
+    f.includes("mocha") ||
+    f.includes("frappe") ||
+    f.includes("frape") ||
+    f.includes("nescafe") ||
+    f.includes("coffee") ||
+    f.includes("kafe") ||
+    f.includes("cappuccino") ||
+    f.includes("birra") ||
+    f.includes("beer") ||
+    f.includes("cocktail") ||
+    f.includes("koktej") ||
+    f.includes("coca") ||
+    f.includes("cola") ||
+    f.includes("fanta") ||
+    f.includes("sprite") ||
+    f.includes("pepsi") ||
+    f.includes("smoothie") ||
+    f.includes("milkshake") ||
+    f.includes("energji") ||
+    f.includes("redbull") ||
+    f.includes("mojito") ||
+    f.includes("ayran") ||
+    f.includes("limonad") ||
+    f.includes("qumesht") ||
+    f.includes("icetea") ||
+    f.includes("ice tea") ||
+    /\b(tea|caj|uje|water|sok|juice|wine|vere|vera|raki|viski|whisky|whiskey|vodka|gin|tonic|pije)\b/.test(
+      f,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 module.exports = {
   normCat,
+  foldAscii,
   isDrinkCategory,
   isFoodCategory,
   isDrinkItemName,

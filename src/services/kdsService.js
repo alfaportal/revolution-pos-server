@@ -327,18 +327,19 @@ function resolveItemCategory(item, lookup) {
 }
 
 function isKitchenItem(item, lookup) {
-  const cat = resolveItemCategory(item, lookup);
-  const name = String(item?.name || "");
-  // Emri i pijes (espresso/kafe) — kurrë te kuzhina, edhe nëse kategoria është gabim
+  const name = String(item?.name || item?.emri || "");
+  // Emri i pijes (Espresso i dyfishtë etj.) — KURRË te kuzhina, edhe me kategori ushqimi.
   if (isDrinkItemName(name)) return false;
+  const cat = resolveItemCategory(item, lookup);
+  if (cat && isDrinkCategory(cat)) return false;
   if (cat) return isFoodCategory(cat);
   return false;
 }
 
 function isBarItem(item, lookup) {
-  const cat = resolveItemCategory(item, lookup);
-  const name = String(item?.name || "");
+  const name = String(item?.name || item?.emri || "");
   if (isDrinkItemName(name)) return true;
+  const cat = resolveItemCategory(item, lookup);
   if (cat) return isDrinkCategory(cat);
   return true;
 }

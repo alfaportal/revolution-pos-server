@@ -155,30 +155,85 @@
     }
   }
 
-  /** Fallback UI: hiq pijet nga ekrani i kuzhinës (espresso/kafe etj.) */
+  /** Fallback UI: hiq pijet — emri ka prioritet mbi kategorinë (Espresso i dyfishtë). */
   function isDrinkLikeItem(it) {
-    const blob = `${it?.category || it?.kategoria || ""} ${it?.name || ""}`
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "");
-    if (/\b(pizza|pasta|mish|supa|salat|sandwi|hamburger|burger|nugget|qofte|wrap|rizotto)\b/.test(blob)) {
-      return false;
+    const rawName = String(it?.name || it?.emri || "");
+    const rawCat = String(it?.category || it?.kategoria || "");
+    const fold = (s) =>
+      String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const name = fold(rawName);
+    const cat = fold(rawCat);
+    if (!name && !cat) return false;
+
+    const drinkName =
+      name.includes("espress") ||
+      name.includes("cappuccin") ||
+      name.includes("macchiato") ||
+      name.includes("americano") ||
+      name.includes("latte") ||
+      name.includes("frappe") ||
+      name.includes("frape") ||
+      name.includes("nescafe") ||
+      name.includes("coffee") ||
+      name.includes("kafe") ||
+      name.includes("birra") ||
+      name.includes("beer") ||
+      name.includes("cocktail") ||
+      name.includes("koktej") ||
+      name.includes("coca") ||
+      name.includes("cola") ||
+      name.includes("fanta") ||
+      name.includes("sprite") ||
+      name.includes("pepsi") ||
+      name.includes("smoothie") ||
+      name.includes("energji") ||
+      name.includes("mojito") ||
+      name.includes("ayran") ||
+      name.includes("limonad") ||
+      name.includes("qumesht") ||
+      /\b(tea|caj|uje|water|sok|juice|wine|vere|vera|raki|viski|vodka|gin|pije|drink)\b/.test(
+        name,
+      );
+
+    // Emri i pijes fiton gjithmonë — edhe nëse kategoria është Pizza/Ushqim
+    if (drinkName) return true;
+
+    if (
+      cat.includes("pije") ||
+      cat.includes("kafe") ||
+      cat.includes("espress") ||
+      cat.includes("coffee") ||
+      cat.includes("drink") ||
+      cat.includes("bar")
+    ) {
+      return true;
     }
-    return (
-      /\b(espresso|cappuccino|latte|americano|macchiato|moka|frappe|frape|nescafe|kafe|coffee|tea|caj|birra|beer|wine|ver[eë]|cocktail|koktej|coca|cola|fanta|sprite|pepsi|uje|water|sok|juice|energji|raki|viski|vodka|ayran|limonad|qumesht|smoothie|drink|pije)\b/.test(
-        blob,
-      ) ||
-      blob.includes("espresso") ||
-      blob.startsWith("kafe") ||
-      blob.includes(" pije")
-    );
+    return false;
+  }
+
+  function normalizeOrderItems(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+      try {
+        const p = JSON.parse(raw);
+        return Array.isArray(p) ? p : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
   }
 
   function filterKitchenViewOrders(orders) {
-    if (waiterMode) return orders || [];
+    // Edhe në waiterMode te /kitchen/ — mos shfaq pije në listën e ushqimit
     return (orders || [])
       .map((o) => {
-        const items = (o.items_json || []).filter((it) => !isDrinkLikeItem(it));
+        const items = normalizeOrderItems(o.items_json).filter((it) => !isDrinkLikeItem(it));
         if (!items.length) return null;
         return { ...o, items_json: items };
       })
