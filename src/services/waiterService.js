@@ -56,7 +56,12 @@ async function getActiveTableOrders(clientId) {
       items = mergeOrderItems(items, row.items_json);
     }
     const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    const primary = rows.find(r => String(r.device_id || "").toUpperCase() !== WEB_WAITER) || rows[0];
+    const withLocalId = rows.filter(r => String(r.local_order_id || "").trim());
+    const primary =
+      withLocalId.find(r => String(r.device_id || "").toUpperCase() !== WEB_WAITER)
+      || withLocalId[0]
+      || rows.find(r => String(r.device_id || "").toUpperCase() !== WEB_WAITER)
+      || rows[0];
     byTable.set(n, {
       ...primary,
       items_json: items,
@@ -453,13 +458,12 @@ async function closeWaiterTable(clientId, body) {
   const now = new Date().toISOString();
   const license = await getLicenseForClient(clientId);
   const receiptNumber = `R-${Date.now().toString(36).toUpperCase()}`;
-  const localOrderId = String(existing.local_order_id || "").trim();
-  const deviceId = String(existing.device_id || WEB_DEVICE).trim().toUpperCase();
-  if (!localOrderId) {
-    throw new Error(closeTableNum >= 1
-      ? `Porosia në cloud për T${closeTableNum} nuk ka local_order_id.`
-      : "Porosia online nuk ka local_order_id.");
-  }
+  // Fallback: porosi të vjetra / merge pa local_order_id — mos e blloko mbylljen nga telefoni.
+  const localOrderId =
+    String(existing.local_order_id || "").trim()
+    || String(existing.id || "").trim()
+    || `web-close-${uuidv4()}`;
+  const deviceId = String(existing.device_id || WEB_DEVICE).trim().toUpperCase() || WEB_DEVICE;
 
   const saleResult = await syncSaleFromPos({
     celesi: license.celesi,

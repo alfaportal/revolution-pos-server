@@ -155,10 +155,35 @@
     }
   }
 
+  /** Fallback UI: hiq pijet nga ekrani i kuzhinës (espresso/kafe etj.) */
+  function isDrinkLikeItem(it) {
+    const blob = `${it?.category || it?.kategoria || ""} ${it?.name || ""}`
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "");
+    if (/\b(pizza|pasta|mish|supa|salat|sandwi|hamburger|burger|nugget|qofte)\b/.test(blob)) {
+      return false;
+    }
+    return /\b(espresso|cappuccino|latte|americano|macchiato|kafe|coffee|tea|caj|birra|beer|wine|ver[eë]|cocktail|koktej|coca|fanta|sprite|pepsi|uje|water|sok|juice|energji|raki|viski|vodka)\b/.test(
+      blob,
+    );
+  }
+
+  function filterKitchenViewOrders(orders) {
+    if (waiterMode) return orders || [];
+    return (orders || [])
+      .map((o) => {
+        const items = (o.items_json || []).filter((it) => !isDrinkLikeItem(it));
+        if (!items.length) return null;
+        return { ...o, items_json: items };
+      })
+      .filter(Boolean);
+  }
+
   function renderOrders(orders, cancelledOrders) {
     hideError();
-    const active = orders || [];
-    const cancelled = cancelledOrders || [];
+    const active = filterKitchenViewOrders(orders);
+    const cancelled = filterKitchenViewOrders(cancelledOrders);
     let hasNew = false;
     for (const o of active) {
       if (!knownIds.has(o.id)) hasNew = true;
@@ -169,7 +194,8 @@
     }
 
     updateAlarmState(active);
-    countEl.textContent = `${active.length} porosi`;
+    const n = active.length;
+    countEl.textContent = n === 1 ? "1 porosi" : `${n} porosi`;
     syncEl.textContent = `Rifreskuar: ${formatTime(new Date().toISOString())}`;
 
     if (!active.length && !cancelled.length) {
@@ -251,7 +277,9 @@
       return;
     }
     try {
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`, {
+      // Kuzhina: vetëm ushqim (/orders). Kamarieri me ?w= mban /bar/orders (pranim i plotë).
+      const ordersPath = waiterMode ? "bar/orders" : "orders";
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/${ordersPath}${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();

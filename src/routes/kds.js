@@ -1,7 +1,18 @@
 const express = require("express");
 const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
-const { listKitchenOrders, listBarOrders, listRecentlyCancelledOrders, listBarCancelledOrders, markKitchenOrderReady, fetchOrderedSales, fetchRefusalGraceOrders, mergeOrdersById, filterWaiterAcceptOrders, filterOrdersForWaiterPolling, buildOnlineSlotLayout } = require("../services/kdsService");
+const {
+  listKitchenOrders,
+  listKitchenCancelledOrders,
+  listRecentlyCancelledOrders,
+  markKitchenOrderReady,
+  fetchOrderedSales,
+  fetchRefusalGraceOrders,
+  mergeOrdersById,
+  filterWaiterAcceptOrders,
+  filterOrdersForWaiterPolling,
+  buildOnlineSlotLayout,
+} = require("../services/kdsService");
 const { getLiveTablesForOwner } = require("../services/salesService");
 const { subscribe } = require("../services/kdsEvents");
 const { getRegisterSwitchState } = require("../services/registerSwitchService");
@@ -119,8 +130,9 @@ router.get("/:slug/bar/orders", resolveKitchenClient, requirePackageFeature("kds
 router.get("/:slug/orders", resolveKitchenClient, requirePackageFeature("kds"), async (req, res) => {
   try {
     const client = req.kitchenClient;
-    const orders = await listBarOrders(client.id);
-    const cancelled = await listBarCancelledOrders(client.id);
+    // Ekrani /kitchen/ — vetëm artikuj ushqimi (jo pije të barit)
+    const orders = await listKitchenOrders(client.id);
+    const cancelled = await listKitchenCancelledOrders(client.id);
     const branding = await getStaffBrandingForClient(client, req.params.slug);
     res.json({
       ok: true,

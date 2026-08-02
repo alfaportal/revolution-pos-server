@@ -26,7 +26,15 @@ function dateRanges() {
 }
 
 function normalizeItems(raw) {
-  const arr = Array.isArray(raw) ? raw : [];
+  let parsed = raw;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      parsed = [];
+    }
+  }
+  const arr = Array.isArray(parsed) ? parsed : [];
   return arr
     .map(it => ({
       name: String(it.name || it.emri || "").trim(),
@@ -394,6 +402,8 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
         kds.notifyKitchenUpdate(license.client_id, {
           order_id: data?.id,
           status: finalStatus,
+          local_order_id: localOrderId,
+          device_id: deviceId,
           ...(tableNum >= 1 ? { table_number: tableNum } : {}),
           ...(finalStatus === "closed"
             ? { payment_method: body.payment_method || data?.payment_method || "cash" }
@@ -403,6 +413,10 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
           kds.notifyKitchenUpdate(license.client_id, {
             table_number: tableNum,
             status: "free",
+            order_id: data?.id,
+            local_order_id: localOrderId,
+            device_id: deviceId,
+            payment_method: body.payment_method || data?.payment_method || "cash",
           });
         }
       } catch {
@@ -838,6 +852,7 @@ async function getOwnerReport(clientId, from, to) {
 /** Porosi të mbyllura (të gjitha kanalet) — për sync në daily_log të POS-it. */
 async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   const db = getSupabase();
+  const { isRemoteActiveTableOrder } = require("../lib/orderSource");
   let q = db
     .from("sales_orders")
     .select(
@@ -851,9 +866,14 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
   if (since) q = q.gte("closed_at", since);
   const { data, error } = await q;
   if (error) throw error;
-  const rows = (data || []).slice().sort((a, b) =>
-    String(a.closed_at || "").localeCompare(String(b.closed_at || "")),
-  );
+  // Vetëm porosi nga telefon/QR/web — JO mbylljet e panelit POS.
+  // Përndryshe closeTable lokale + pushSale + re-import = dyfishim daily_log / faturë.
+  const rows = (data || [])
+    .filter(row => isRemoteActiveTableOrder(row.device_id))
+    .slice()
+    .sort((a, b) =>
+      String(a.closed_at || "").localeCompare(String(b.closed_at || "")),
+    );
   console.log(
     "[sales/waiter-closed] client=",
     clientId,
@@ -861,6 +881,7 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
     since || "(all)",
     "found=",
     rows.length,
+    "(web-only; POS closes excluded)",
   );
   return rows.map(row => ({
     id: row.id,
@@ -873,6 +894,7 @@ async function listClosedWebWaiterSalesForPos(clientId, sinceIso = "") {
     closed_at: row.closed_at || null,
     payment_method: row.payment_method || "cash",
     local_order_id: String(row.local_order_id || "").trim(),
+    device_id: String(row.device_id || "").trim(),
   }));
 }
 

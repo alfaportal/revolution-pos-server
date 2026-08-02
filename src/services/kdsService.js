@@ -2,7 +2,7 @@ const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder, isStaffWaiterOrder, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
-const { isDrinkCategory, isFoodCategory } = require("../lib/menuGroups");
+const { isDrinkCategory, isFoodCategory, isDrinkItemName } = require("../lib/menuGroups");
 const { selectWithAcceptanceFallback, updateOrdersAcceptance, normalizeAcceptanceFields, isMissingAcceptanceColumnError } = require("../lib/salesOrderSelect");
 const { getPgPool } = require("../lib/pgPool");
 
@@ -328,12 +328,17 @@ function resolveItemCategory(item, lookup) {
 
 function isKitchenItem(item, lookup) {
   const cat = resolveItemCategory(item, lookup);
+  const name = String(item?.name || "");
+  // Emri i pijes (espresso/kafe) — kurrë te kuzhina, edhe nëse kategoria është gabim
+  if (isDrinkItemName(name)) return false;
   if (cat) return isFoodCategory(cat);
   return false;
 }
 
 function isBarItem(item, lookup) {
   const cat = resolveItemCategory(item, lookup);
+  const name = String(item?.name || "");
+  if (isDrinkItemName(name)) return true;
   if (cat) return isDrinkCategory(cat);
   return true;
 }
@@ -804,6 +809,19 @@ async function listBarCancelledOrders(clientId, windowSec = 30) {
   return orders.filter(isBanakOrder);
 }
 
+async function listKitchenCancelledOrders(clientId, windowSec = 30) {
+  const orders = await listRecentlyCancelledOrders(clientId, windowSec);
+  const lookup = await loadCategoryLookup(clientId);
+  const result = [];
+  for (const order of orders) {
+    if (isDirectCustomerKitchenOrder(order)) continue;
+    const items = normalizeItems(order.items_json).filter((it) => isKitchenItem(it, lookup));
+    const mapped = mapOrderWithItems(order, items);
+    if (mapped) result.push({ ...mapped, cancelled: true });
+  }
+  return result;
+}
+
 module.exports = {
   getClientForKitchen,
   listKitchenOrders,
@@ -813,6 +831,7 @@ module.exports = {
   mergeOrdersById,
   listRecentlyCancelledOrders,
   listBarCancelledOrders,
+  listKitchenCancelledOrders,
   acceptBarOrder,
   refuseBarOrderWithGrace,
   filterWaiterAcceptOrders,

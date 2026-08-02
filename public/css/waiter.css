@@ -684,6 +684,9 @@ html, body {
   max-height: min(55dvh, 420px);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .cart-bar-head {
@@ -810,6 +813,11 @@ html, body {
 
 .cart-pay-row {
   margin-top: 0.5rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--card);
+  padding-top: 0.35rem;
 }
 
 .cart-pay-row.hidden { display: none; }

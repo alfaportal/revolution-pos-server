@@ -11,7 +11,7 @@
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js?v=15", { scope: "/waiter/" })
+    navigator.serviceWorker.register("/sw.js?v=16", { scope: "/waiter/" })
       .then((reg) => {
         reg.update?.();
         if (reg.waiting) {
@@ -1983,6 +1983,12 @@
     if (paymentMethod === "karte" && btnCard) btnCard.textContent = "Duke mbyllur...";
 
     const closedTable = tableNumber;
+    // Lista e plotë e faturës (tavolina + shporta) — para se të pastrohet cart.
+    const closeItems = getCloseTableItems(closedTable);
+    if (!closeItems.length) {
+      showErr(err, "Nuk ka artikuj për të mbyllur tavolinën.");
+      return;
+    }
     tableClosing = true;
     try {
       // Nëse ka artikuj në shportë, dërgoji si porosi para mbylljes
@@ -2003,13 +2009,14 @@
         renderCart();
       }
 
-      // Mbyll tavolinën PA items — serveri i ka tashmë
+      // Dërgo items eksplicit — mos u mbështet vetëm te bootstrap i vjetër në telefon.
       const data = await api(`/api/waiter/${encodeURIComponent(slug)}/orders/close${apiQuery()}`, {
         method: "POST",
         body: JSON.stringify({
           ...waiterPayload(),
           table_number: closedTable,
           payment_method: paymentMethod,
+          items: closeItems,
         }),
       });
       cart = [];
@@ -2028,6 +2035,7 @@
       scheduleIdleLock();
     } catch (e) {
       showErr(err, e.message);
+      showSuccessToast(e.message || "Nuk u mbyll pagesa.");
     } finally {
       tableClosing = false;
       if (btnCash) {
