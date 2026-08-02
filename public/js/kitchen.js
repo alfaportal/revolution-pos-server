@@ -161,11 +161,16 @@
       .toLowerCase()
       .normalize("NFD")
       .replace(/\p{M}/gu, "");
-    if (/\b(pizza|pasta|mish|supa|salat|sandwi|hamburger|burger|nugget|qofte)\b/.test(blob)) {
+    if (/\b(pizza|pasta|mish|supa|salat|sandwi|hamburger|burger|nugget|qofte|wrap|rizotto)\b/.test(blob)) {
       return false;
     }
-    return /\b(espresso|cappuccino|latte|americano|macchiato|kafe|coffee|tea|caj|birra|beer|wine|ver[eë]|cocktail|koktej|coca|fanta|sprite|pepsi|uje|water|sok|juice|energji|raki|viski|vodka)\b/.test(
-      blob,
+    return (
+      /\b(espresso|cappuccino|latte|americano|macchiato|moka|frappe|frape|nescafe|kafe|coffee|tea|caj|birra|beer|wine|ver[eë]|cocktail|koktej|coca|cola|fanta|sprite|pepsi|uje|water|sok|juice|energji|raki|viski|vodka|ayran|limonad|qumesht|smoothie|drink|pije)\b/.test(
+        blob,
+      ) ||
+      blob.includes("espresso") ||
+      blob.startsWith("kafe") ||
+      blob.includes(" pije")
     );
   }
 

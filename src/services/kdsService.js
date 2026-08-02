@@ -375,8 +375,9 @@ async function listBarOrders(clientId) {
 
   for (const order of orders) {
     if (!isBanakOrder(order)) continue;
+    // Vetëm pije — mos e kthe të gjithë porosinë (ushqim) kur s’ka pije.
     const items = normalizeItems(order.items_json).filter(it => isBarItem(it, lookup));
-    const mapped = mapOrderWithItems(order, items.length ? items : normalizeItems(order.items_json));
+    const mapped = mapOrderWithItems(order, items);
     if (mapped) result.push(mapped);
   }
 
