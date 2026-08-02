@@ -332,9 +332,8 @@
       return;
     }
     try {
-      // Kuzhina: vetëm ushqim (/orders). Kamarieri me ?w= mban /bar/orders (pranim i plotë).
-      const ordersPath = waiterMode ? "bar/orders" : "orders";
-      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/${ordersPath}${apiQuery()}`, {
+      // Kuzhina: GJITHMONË /orders (vetëm ushqim). ?w= ridrejtohet te /waiter/.
+      const res = await fetch(`/api/kds/${encodeURIComponent(slug)}/orders${apiQuery()}`, {
         headers: apiHeaders(),
       });
       const data = await res.json();

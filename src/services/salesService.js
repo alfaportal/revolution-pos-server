@@ -36,12 +36,17 @@ function normalizeItems(raw) {
   }
   const arr = Array.isArray(parsed) ? parsed : [];
   return arr
-    .map(it => ({
-      name: String(it.name || it.emri || "").trim(),
-      quantity: Number(it.quantity ?? it.sasia ?? 1) || 1,
-      price: Number(it.price ?? it.cmimi ?? 0) || 0,
-      menu_id: it.menu_id ?? it.id ?? it.local_id ?? null,
-    }))
+    .map(it => {
+      const row = {
+        name: String(it.name || it.emri || "").trim(),
+        quantity: Number(it.quantity ?? it.sasia ?? 1) || 1,
+        price: Number(it.price ?? it.cmimi ?? 0) || 0,
+        menu_id: it.menu_id ?? it.id ?? it.local_id ?? null,
+      };
+      const cat = String(it.category || it.kategoria || "").trim();
+      if (cat) row.category = cat;
+      return row;
+    })
     .filter(it => it.name);
 }
 
@@ -409,16 +414,9 @@ async function upsertSaleFromPos(body, { defaultStatus = "closed" } = {}) {
             ? { payment_method: body.payment_method || data?.payment_method || "cash" }
             : {}),
         });
-        if (finalStatus === "closed" && tableNum >= 1) {
-          kds.notifyKitchenUpdate(license.client_id, {
-            table_number: tableNum,
-            status: "free",
-            order_id: data?.id,
-            local_order_id: localOrderId,
-            device_id: deviceId,
-            payment_method: body.payment_method || data?.payment_method || "cash",
-          });
-        }
+        // Mos dërgo «free» menjëherë pas «closed» — POS e liron tavolinën
+        // PAS printimit të faturës. «free» i menjëhershëm anulonte porosinë
+        // lokale para printClosing → fatura e mbylljes nuk dilte.
       } catch {
         /* optional */
       }

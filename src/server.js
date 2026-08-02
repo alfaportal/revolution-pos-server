@@ -390,7 +390,7 @@ app.use(seoRoutes);
 app.use(express.static(SITE_DIR));
 
 app.use((req, res, next) => {
-  if (req.path === "/js/waiter.js" || req.path === "/sw.js") {
+  if (req.path === "/js/waiter.js" || req.path === "/js/kitchen.js" || req.path === "/sw.js") {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   }
   next();
@@ -461,6 +461,8 @@ app.get("/kitchen/:slug", (req, res) => {
     const q = new URLSearchParams(req.query);
     return res.redirect(302, `/waiter/${encodeURIComponent(req.params.slug)}?${q.toString()}`);
   }
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.set("Pragma", "no-cache");
   res.sendFile(path.join(__dirname, "../public/kitchen.html"));
 });
 
