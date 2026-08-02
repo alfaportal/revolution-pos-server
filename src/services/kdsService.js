@@ -2,7 +2,7 @@ const { getClientById, normalizeItems } = require("./salesService");
 const { getSupabase } = require("../db");
 const { notifyKitchenUpdate } = require("./kdsEvents");
 const { isBarMobileOrder, isKioskWaiterName, isDirectCustomerKitchenOrder, isStaffWaiterOrder, WEB_KIOSK, WEB_PUBLIC } = require("../lib/orderSource");
-const { isDrinkCategory, isFoodCategory, isDrinkItemName } = require("../lib/menuGroups");
+const { isDrinkCategory, isDrinkItemName, isKitchenRouteItem } = require("../lib/menuGroups");
 const { selectWithAcceptanceFallback, updateOrdersAcceptance, normalizeAcceptanceFields, isMissingAcceptanceColumnError } = require("../lib/salesOrderSelect");
 const { getPgPool } = require("../lib/pgPool");
 
@@ -328,20 +328,14 @@ function resolveItemCategory(item, lookup) {
 
 function isKitchenItem(item, lookup) {
   const name = String(item?.name || item?.emri || "");
-  // Emri i pijes (Espresso i dyfishtë etj.) — KURRË te kuzhina, edhe me kategori ushqimi.
-  if (isDrinkItemName(name)) return false;
   const cat = resolveItemCategory(item, lookup);
-  if (cat && isDrinkCategory(cat)) return false;
-  if (cat) return isFoodCategory(cat);
-  return false;
+  // Vetëm ushqim i qartë — TË GJITHA pijet + unknown → JO te kuzhina
+  return isKitchenRouteItem(name, cat);
 }
 
 function isBarItem(item, lookup) {
-  const name = String(item?.name || item?.emri || "");
-  if (isDrinkItemName(name)) return true;
-  const cat = resolveItemCategory(item, lookup);
-  if (cat) return isDrinkCategory(cat);
-  return true;
+  // Çdo gjë që NUK është ushqim kuzhine → bar (pije + unknown)
+  return !isKitchenItem(item, lookup);
 }
 
 function itemsTotal(items) {

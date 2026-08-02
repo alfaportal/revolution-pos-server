@@ -155,61 +155,56 @@
     }
   }
 
-  /** Fallback UI: hiq pijet — emri ka prioritet mbi kategorinë (Espresso i dyfishtë). */
+  function foldText(s) {
+    return String(s || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  /** Të GJITHA pijet — hiq nga kuzhina. */
   function isDrinkLikeItem(it) {
-    const rawName = String(it?.name || it?.emri || "");
-    const rawCat = String(it?.category || it?.kategoria || "");
-    const fold = (s) =>
-      String(s || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-    const name = fold(rawName);
-    const cat = fold(rawCat);
+    const name = foldText(it?.name || it?.emri || "");
+    const cat = foldText(it?.category || it?.kategoria || "");
     if (!name && !cat) return false;
 
-    const drinkName =
-      name.includes("espress") ||
-      name.includes("cappuccin") ||
-      name.includes("macchiato") ||
-      name.includes("americano") ||
-      name.includes("latte") ||
-      name.includes("frappe") ||
-      name.includes("frape") ||
-      name.includes("nescafe") ||
-      name.includes("coffee") ||
-      name.includes("kafe") ||
-      name.includes("birra") ||
-      name.includes("beer") ||
-      name.includes("cocktail") ||
-      name.includes("koktej") ||
-      name.includes("coca") ||
-      name.includes("cola") ||
-      name.includes("fanta") ||
-      name.includes("sprite") ||
-      name.includes("pepsi") ||
-      name.includes("smoothie") ||
-      name.includes("energji") ||
-      name.includes("mojito") ||
-      name.includes("ayran") ||
-      name.includes("limonad") ||
-      name.includes("qumesht") ||
-      /\b(tea|caj|uje|water|sok|juice|wine|vere|vera|raki|viski|vodka|gin|pije|drink)\b/.test(
+    const drinkHit =
+      /espress|cappuccin|macchiato|americano|latte|frappe|frape|nescafe|neskafe|coffee|kafe|\bcafe\b|birra|\bbeer\b|cocktail|koktej|coca|\bcola\b|fanta|sprite|pepsi|smoothie|energji|energy|redbull|mojito|ayran|limonad|qumesht|\bmilk\b|icetea|ice tea|tonic|soda|gazuar|mineral|whisky|whiskey|viski|vodka|tequila|raki|prosecco|\b(tea|caj|uje|water|sok|juice|wine|vere|vera|pije|drink|gin|rum)\b/.test(
         name,
       );
 
-    // Emri i pijes fiton gjithmonë — edhe nëse kategoria është Pizza/Ushqim
-    if (drinkName) return true;
+    if (drinkHit) return true;
 
+    return /pije|kafe|espress|coffee|drink|beverage|\bbar\b|ftoht|ngroht|alkool|birra/.test(
+      cat,
+    );
+  }
+
+  /** Vetëm ushqim i qartë — mbetet te kuzhina. */
+  function isFoodLikeItem(it) {
+    if (isDrinkLikeItem(it)) return false;
+    const name = foldText(it?.name || it?.emri || "");
+    const cat = foldText(it?.category || it?.kategoria || "");
+    const foodRe =
+      /\b(pizza|pica|pasta|mish|supa|supe|salat\w*|sallat\w*|sandwi\w*|hamburger|burger|nugget|qofte|wrap|rizotto|risotto|steak|fileto|skara|grill|zgar|qebap|kebab|byrek|burek|omlet\w*|patate|fries|sushi|lasagn\w*|makaron|spaghetti|pule|chicken|toast|schnitzel|pjate|pjata|embel|desert|dessert|kapreze|caprese)\b/;
     if (
-      cat.includes("pije") ||
-      cat.includes("kafe") ||
-      cat.includes("espress") ||
-      cat.includes("coffee") ||
-      cat.includes("drink") ||
-      cat.includes("bar")
+      foodRe.test(name) ||
+      name.includes("sallat") ||
+      name.includes("salat") ||
+      name.includes("pizza") ||
+      name.includes("kapreze")
+    ) {
+      return true;
+    }
+    if (
+      foodRe.test(cat) ||
+      cat.includes("ushqim") ||
+      cat.includes("food") ||
+      cat.includes("kuzhin") ||
+      cat.includes("sallat") ||
+      cat.includes("embels")
     ) {
       return true;
     }
@@ -230,10 +225,10 @@
   }
 
   function filterKitchenViewOrders(orders) {
-    // Edhe në waiterMode te /kitchen/ — mos shfaq pije në listën e ushqimit
+    // Vetëm ushqim — çdo pije / unknown hiqet nga ekrani i kuzhinës
     return (orders || [])
       .map((o) => {
-        const items = normalizeOrderItems(o.items_json).filter((it) => !isDrinkLikeItem(it));
+        const items = normalizeOrderItems(o.items_json).filter((it) => isFoodLikeItem(it));
         if (!items.length) return null;
         return { ...o, items_json: items };
       })
