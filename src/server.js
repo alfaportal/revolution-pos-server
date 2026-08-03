@@ -610,6 +610,11 @@ app.get(
   }),
 );
 
+// SecureTrack proxy - redirect /security/* to SecureTrack app
+app.get('/security*', (req, res) => {
+  res.redirect('https://securetrack-production.up.railway.app/#' + req.path.replace('/security', ''));
+});
+
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
   if (!res.headersSent) {
