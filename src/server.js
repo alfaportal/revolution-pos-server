@@ -612,15 +612,15 @@ app.get(
 );
 
 // SecureTrack — reverse proxy (URL mbetet revolution-pos.com/security)
-app.get("/security", (_req, res) => {
-  res.redirect(301, "/security/");
-});
 app.use(
   "/security",
   createProxyMiddleware({
     target: "https://securetrack-production.up.railway.app",
     changeOrigin: true,
-    pathRewrite: { "^/security": "" },
+    pathRewrite: {
+      "^/security$": "/",
+      "^/security/": "/",
+    },
     xfwd: true,
   }),
 );
