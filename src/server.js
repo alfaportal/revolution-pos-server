@@ -610,10 +610,12 @@ app.get(
   }),
 );
 
-// SecureTrack proxy - redirect /security/* to SecureTrack app
-app.get('/security*', (req, res) => {
-  res.redirect('https://securetrack-production.up.railway.app/#' + req.path.replace('/security', ''));
-});
+const { createProxyMiddleware } = require('http-proxy-middleware');
+app.use('/security', createProxyMiddleware({
+  target: 'https://securetrack-production.up.railway.app',
+  changeOrigin: true,
+  pathRewrite: { '^/security': '' },
+}));
 
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
