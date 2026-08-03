@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const { logEnvStatus } = require("./lib/env");
 const { formatError } = require("./lib/errors");
@@ -610,12 +611,19 @@ app.get(
   }),
 );
 
-const { createProxyMiddleware } = require('http-proxy-middleware');
-app.use('/security', createProxyMiddleware({
-  target: 'https://securetrack-production.up.railway.app',
-  changeOrigin: true,
-  pathRewrite: { '^/security': '' },
-}));
+// SecureTrack — reverse proxy (URL mbetet revolution-pos.com/security)
+app.get("/security", (_req, res) => {
+  res.redirect(301, "/security/");
+});
+app.use(
+  "/security",
+  createProxyMiddleware({
+    target: "https://securetrack-production.up.railway.app",
+    changeOrigin: true,
+    pathRewrite: { "^/security": "" },
+    xfwd: true,
+  }),
+);
 
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
