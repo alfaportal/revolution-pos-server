@@ -29,6 +29,7 @@ const {
 } = require("../services/superAdminDashboardService");
 const {
   createSecurityClient,
+  updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
 } = require("../services/securityAdminBridge");
@@ -38,6 +39,7 @@ const {
   unblockLicense,
   updateLicense,
   updateLicenseStatus,
+  updateClient,
   revokeLicenseRemote,
   reactivateLicenseRemote,
   requestWipeDataForLicense,
@@ -164,6 +166,90 @@ router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
     res.json({ ok: true, ...(await getClientDetail(req.params.id)) });
+  }),
+);
+
+/**
+ * Master Admin — ruaj klient (+ licenca) pa kufizime.
+ * Body: { product_line?, emri, email, telefoni, …, licenses?: [{ id, celesi, hardware_id, device_id, statusi, data_skadimit }] }
+ */
+router.patch(
+  "/dashboard/clients/:id",
+  asyncHandler(async (req, res) => {
+    const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(
+      req.body?.product_line || req.query.product || "kafene",
+    );
+    const body = req.body || {};
+    const licPatches = Array.isArray(body.licenses) ? body.licenses : [];
+
+    if (product === "security") {
+      const data = await updateSecurityClient(id, body);
+      const licenses = [];
+      for (const lp of licPatches) {
+        if (!lp?.id) continue;
+        if (lp.statusi || lp.status) {
+          const updated = await setSecurityLicenseStatus(lp.id, lp.statusi || lp.status);
+          licenses.push(updated.license || updated);
+        }
+      }
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_client_update",
+        targetType: "client",
+        targetId: id,
+        targetLabel: data.client?.emri || body.emri,
+      }).catch(() => {});
+      return res.json({ ok: true, client: data.client || data, licenses, product_line: "security" });
+    }
+
+    const client = await updateClient(id, body);
+    const licenses = [];
+    for (const lp of licPatches) {
+      if (!lp?.id) continue;
+      const patch = {};
+      const key = String(lp.celesi || lp.license_key || "").trim();
+      if (key) patch.celesi = key;
+      if (lp.hardware_id != null || lp.hardwareId != null) {
+        patch.hardware_id = lp.hardware_id || lp.hardwareId || "";
+      }
+      if (lp.device_id != null) patch.device_id = lp.device_id;
+      if (lp.statusi != null && String(lp.statusi).trim()) patch.statusi = lp.statusi;
+      if (lp.data_skadimit != null && String(lp.data_skadimit).trim()) {
+        patch.data_skadimit = lp.data_skadimit;
+      }
+      if (lp.max_terminals != null) patch.max_terminals = lp.max_terminals;
+      if (!Object.keys(patch).length) continue;
+      const license = await updateLicense(lp.id, patch);
+      licenses.push(license);
+    }
+
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_update",
+      targetType: "client",
+      targetId: client.id,
+      targetLabel: client.emri,
+      details: { licenses_updated: licenses.map((l) => l.id) },
+    }).catch(() => {});
+
+    res.json({ ok: true, client, licenses, product_line: "kafene" });
+  }),
+);
+
+/** Master Admin — patch i lirë i çdo fushe licence */
+router.patch(
+  "/dashboard/licenses/:id",
+  asyncHandler(async (req, res) => {
+    const license = await updateLicense(req.params.id, req.body || {});
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_update",
+      targetType: "license",
+      targetId: license.id,
+      targetLabel: license.celesi,
+    }).catch(() => {});
+    res.json({ ok: true, license });
   }),
 );
 

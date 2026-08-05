@@ -190,6 +190,19 @@ async function createSecurityClient(body) {
   });
 }
 
+async function updateSecurityClient(id, body) {
+  return securityAdminFetch(`/api/admin/clients/${id}`, {
+    method: "PATCH",
+    body: {
+      emri: body.emri || body.name,
+      email: body.email,
+      telefon: body.telefon || body.telefoni,
+      adresa: body.adresa,
+      veprimtari: body.veprimtari || body.tipi,
+    },
+  });
+}
+
 async function issueSecurityLicense(body) {
   return securityAdminFetch("/api/admin/licenses", {
     method: "POST",
@@ -228,6 +241,7 @@ module.exports = {
   getSecurityLicensesView,
   getSecurityOverview,
   createSecurityClient,
+  updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
 };

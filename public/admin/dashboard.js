@@ -226,13 +226,25 @@ async function loadOverview() {
   list.innerHTML = problems.length
     ? problems
         .map(
-          (p) => `<li>
+          (p) => `<li class="prob-overview-row" data-open-client="${esc(p.id)}" role="button" tabindex="0" style="cursor:pointer">
             <div><strong>${esc(p.emri)}</strong><div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.product_line ? ` · ${esc(p.product_line)}` : ""}</div></div>
-            <div>${(p.reasons || []).map((r) => `<span class="badge badge-warn">${esc(r)}</span>`).join(" ")}</div>
+            <div>${(p.reasons || []).map((r) => `<span class="badge badge-warn">${esc(r)}</span>`).join(" ")}
+              <span class="badge badge-ok" style="margin-left:0.25rem">Edito</span>
+            </div>
           </li>`,
         )
         .join("")
     : `<li style="color:var(--muted)">Nuk ka klientë me probleme.</li>`;
+  list.querySelectorAll("[data-open-client]").forEach((row) => {
+    const open = () => openClientDetail(row.dataset.openClient).catch((ex) => alert(ex.message || ex));
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
 }
 
 function normalizeSearch(s) {
@@ -364,35 +376,153 @@ async function copyText(text, btn) {
   }
 }
 
+const DRAWER_TIPI_OPTS = [
+  ["kafene", "Kafene"],
+  ["restorant", "Restorant"],
+  ["bar", "Bar"],
+  ["piceri", "Piceri"],
+  ["fast_food", "Fast Food"],
+  ["kebab", "Kebab"],
+  ["pasticeri", "Pastiçeri"],
+  ["furre_buke", "Furrë Buke"],
+  ["hotel_restorant", "Hotel Restorant"],
+  ["market", "Market"],
+  ["minimarket", "Minimarket"],
+  ["berber", "Berber"],
+  ["sallon_bukurie", "Sallon Bukurie"],
+  ["farmaci", "Farmaci"],
+  ["tjeter", "Tjetër"],
+];
+
+const DRAWER_PAKO_OPTS = [
+  ["pako_3", "Pako 1"],
+  ["pako_4", "Pako 2"],
+  ["pako_2", "Pako 3"],
+  ["pako_5", "Pako 4 (AI)"],
+];
+
+function selectOpts(options, selected) {
+  const sel = String(selected || "");
+  const has = options.some(([v]) => v === sel);
+  const list = has || !sel ? options : [[sel, sel], ...options];
+  return list
+    .map(([v, lab]) => `<option value="${esc(v)}"${v === sel ? " selected" : ""}>${esc(lab)}</option>`)
+    .join("");
+}
+
 async function openClientDetail(id) {
-  if (currentProduct === "security" || productQuery(true) === "security") {
+  const isSecurity = currentProduct === "security" || productQuery(true) === "security";
+  if (isSecurity) {
     const hit = (sectorsCache || []).flatMap((s) => s.clients || []).find((c) => String(c.id) === String(id));
     document.getElementById("drawer-root").classList.remove("hidden");
     document.getElementById("drawer-title").textContent = `🛡️ ${hit?.emri || "Klient Security"}`;
-    document.getElementById("drawer-sub").textContent = `${hit?.tipi_label || hit?.veprimtari || "Security"} · ${hit?.email || ""}`;
+    document.getElementById("drawer-sub").textContent = "Edito të dhënat — Ruaj për të aplikuar";
     document.getElementById("drawer-body").innerHTML = `
       <div class="detail-block">
-        <h4>Revolution Security</h4>
-        <div>Email: <strong>${esc(hit?.email || "—")}</strong></div>
-        <div>Telefon: <strong>${esc(hit?.telefoni || "—")}</strong></div>
-        <div>Veprimtari: <strong>${esc(hit?.veprimtari || hit?.tipi_label || "—")}</strong></div>
-        <p style="color:var(--muted);font-size:0.9rem;margin:0.75rem 0 0">
-          Licencat menaxhohen te skeda <strong>Licencat</strong> me filtrin Security.
+        <h4>Të dhënat e klientit</h4>
+        <div class="drawer-form">
+          <label>Emri<input id="dr-emri" value="${esc(hit?.emri || "")}" required></label>
+          <label>Email<input id="dr-email" type="email" value="${esc(hit?.email || "")}"></label>
+          <label>Telefon<input id="dr-tel" value="${esc(hit?.telefoni || "")}"></label>
+          <label>Veprimtari
+            <select id="dr-veprimtari">
+              ${selectOpts(
+                [
+                  ["kompani_sigurie", "Kompani sigurie"],
+                  ["objekt", "Objekt / Ndërtesë"],
+                  ["hotel", "Hotel"],
+                  ["tjeter", "Tjetër"],
+                ],
+                hit?.veprimtari || "kompani_sigurie",
+              )}
+            </select>
+          </label>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
+        <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
+      </div>
+      <div class="detail-block">
+        <h4>Licencat</h4>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0">
+          Statusi i licencave: skeda <strong>Licencat</strong> → filtri Security (Revoko / Pezullo / Riaktivizo).
         </p>
       </div>`;
+    bindDrawerSave(id, "security");
     return;
   }
+
   const d = await api(`/api/super/dashboard/clients/${id}`);
   const c = d.client || {};
   document.getElementById("drawer-root").classList.remove("hidden");
   document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
-  document.getElementById("drawer-sub").textContent = `${c.tipi_label || ""} · ${c.package_label || ""} · ${c.email || ""}`;
+  document.getElementById("drawer-sub").textContent = "Edito klientin & licencat — një Ruaj";
   const sales = d.sales || {};
   const stock = d.stock || {};
   const waiters = d.waiters || [];
   const licenses = d.licenses || [];
   const ai = d.ai_usage || {};
   document.getElementById("drawer-body").innerHTML = `
+    <div class="detail-block">
+      <h4>Të dhënat e klientit</h4>
+      <div class="drawer-form">
+        <label>Emri<input id="dr-emri" value="${esc(c.emri || "")}" required></label>
+        <label>Email<input id="dr-email" type="email" value="${esc(c.email || "")}"></label>
+        <label>Telefon<input id="dr-tel" value="${esc(c.telefoni || "")}"></label>
+        <label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+        <label>Sektori<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
+        <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
+      <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
+    </div>
+    <div class="detail-block">
+      <h4>Licenca (edito ID / çelës / status)</h4>
+      ${licenses
+        .map(
+          (l) => `<div class="lic-detail-row" data-lic-edit="${esc(l.id)}" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">
+            <div class="drawer-form">
+              <label>Statusi
+                <select data-lic-status="${esc(l.id)}">
+                  ${selectOpts(
+                    [
+                      ["aktive", "aktive"],
+                      ["pezulluar", "pezulluar"],
+                      ["revokuar", "revokuar"],
+                      ["skaduar", "skaduar"],
+                    ],
+                    l.statusi || "aktive",
+                  )}
+                </select>
+              </label>
+              <label>Hardware ID (16)
+                <input class="mono" data-lic-hw="${esc(l.id)}" value="${esc(l.hardware_id || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
+              </label>
+              <label>Çelësi i licencës
+                <input class="mono" data-lic-key="${esc(l.id)}" value="${esc(l.celesi || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
+              </label>
+              <label>Device ID (terminal)
+                <input class="mono" data-lic-dev="${esc(l.id)}" value="${esc(l.device_id || "")}" placeholder="opsionale">
+              </label>
+              <label>Skadon
+                <input type="date" data-lic-exp="${esc(l.id)}" value="${esc(String(l.data_skadimit || "").slice(0, 10))}">
+              </label>
+            </div>
+            <div class="prob-actions" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem">
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
+              <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
+              ${
+                ["pezulluar", "revokuar"].includes(String(l.statusi || ""))
+                  ? `<button type="button" class="btn btn-ok btn-sm" data-drawer-reactivate="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Riaktivizo</button>
+                     <button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
+                  : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo</button>`
+              }
+              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
+            </div>
+          </div>`,
+        )
+        .join("") || "<div style=\"color:var(--muted)\">Nuk ka licenca</div>"}
+    </div>
     <div class="detail-block">
       <h4>Shitjet</h4>
       <div>Sot: <strong>${euro(sales.today)}</strong></div>
@@ -412,37 +542,84 @@ async function openClientDetail(id) {
       </ul>
     </div>
     <div class="detail-block">
-      <h4>Licenca</h4>
-      ${licenses
-        .map(
-          (l) => `<div class="lic-detail-row" style="margin-bottom:0.75rem">
-            <span class="badge ${l.statusi === "aktive" ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span>
-            <div class="mono">ID: ${esc(l.hardware_id || "—")}</div>
-            <div class="mono">Key: ${esc(l.celesi || "—")}</div>
-            <div style="color:var(--muted);font-size:0.85rem;margin:0.2rem 0">Skadon: ${esc(l.data_skadimit || "—")}</div>
-            <div class="prob-actions" style="margin-top:0.4rem;display:flex;flex-wrap:wrap;gap:0.35rem">
-              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
-              <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
-              ${
-                ["pezulluar", "revokuar"].includes(String(l.statusi || ""))
-                  ? `<button type="button" class="btn btn-ok btn-sm" data-drawer-reactivate="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Riaktivizo</button>`
-                  : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo Menjëherë</button>`
-              }
-              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
-            </div>
-          </div>`,
-        )
-        .join("") || "<div>—</div>"}
-    </div>
-    <div class="detail-block">
       <h4>AI Usage (muaji aktual)</h4>
       <div>Tokena: <strong>${Number(ai.tokens_total || 0).toLocaleString("sq-AL")}</strong></div>
       <div>Kosto: <strong>${euro(ai.cost_eur_total)}</strong></div>
       <div>Thirrje: <strong>${ai.calls || 0}</strong></div>
     </div>
   `;
-  bindDrawerLicenseFix(document.getElementById("drawer-body"), id);
+  const body = document.getElementById("drawer-body");
+  body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
+  bindDrawerSave(id, "kafene");
+  bindDrawerLicenseFix(body, id);
+}
+
+function bindDrawerHex16(el) {
+  if (!el || el.dataset.fmtBound === "1") return;
+  el.dataset.fmtBound = "1";
+  el.addEventListener("input", () => {
+    const hex = String(el.value || "")
+      .replace(/[^a-fA-F0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 16);
+    let next = hex;
+    if (hex.length > 12) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12)}`;
+    else if (hex.length > 8) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}`;
+    else if (hex.length > 4) next = `${hex.slice(0, 4)}-${hex.slice(4)}`;
+    if (next !== el.value) el.value = next;
+  });
+}
+
+function bindDrawerSave(clientId, productLine) {
+  const btn = document.getElementById("btn-drawer-save");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const msg = document.getElementById("dr-save-msg");
+    const emri = document.getElementById("dr-emri")?.value?.trim();
+    if (!emri) {
+      if (msg) msg.textContent = "Emri është i detyrueshëm.";
+      return;
+    }
+    const body = {
+      product_line: productLine,
+      emri,
+      email: document.getElementById("dr-email")?.value?.trim() || "",
+      telefoni: document.getElementById("dr-tel")?.value?.trim() || "",
+      telefon: document.getElementById("dr-tel")?.value?.trim() || "",
+      adresa: document.getElementById("dr-adresa")?.value?.trim() || "",
+      tipi: document.getElementById("dr-tipi")?.value,
+      package_tier: document.getElementById("dr-pako")?.value,
+      veprimtari: document.getElementById("dr-veprimtari")?.value,
+      licenses: [],
+    };
+    document.querySelectorAll("[data-lic-edit]").forEach((row) => {
+      const id = row.dataset.licEdit;
+      body.licenses.push({
+        id,
+        statusi: row.querySelector(`[data-lic-status="${id}"]`)?.value,
+        hardware_id: row.querySelector(`[data-lic-hw="${id}"]`)?.value?.trim() || "",
+        celesi: row.querySelector(`[data-lic-key="${id}"]`)?.value?.trim() || "",
+        device_id: row.querySelector(`[data-lic-dev="${id}"]`)?.value?.trim() || "",
+        data_skadimit: row.querySelector(`[data-lic-exp="${id}"]`)?.value || undefined,
+      });
+    });
+    btn.disabled = true;
+    if (msg) msg.textContent = "Duke ruajtur…";
+    try {
+      await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (msg) msg.textContent = "U ruajt.";
+      await refreshClientsAndProblems().catch(() => null);
+      await openClientDetail(clientId);
+    } catch (ex) {
+      if (msg) msg.textContent = ex.message || "Ruajtja dështoi";
+      else alert(ex.message || "Ruajtja dështoi");
+    } finally {
+      btn.disabled = false;
+    }
+  });
 }
 
 function bindDrawerLicenseFix(root, clientId) {
