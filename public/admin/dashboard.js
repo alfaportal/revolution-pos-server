@@ -9,61 +9,41 @@ let currentProduct = localStorage.getItem("rip_admin_product") || "all";
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 
-/** 9 kategoritë Kafene/POS — GJITHMONË të dukshme, edhe me (0). */
+/** REVOLUTION POS — vetëm shitje; gjithmonë të dukshme. */
 const FALLBACK_SECTORS = [
-  {
-    num: 1,
-    id: "hospitality",
-    label: "Kafene / Restorant / Bar / Piceri / Fast Food / Kebab / Pastiçeri / Ëmbëltore / Akullore / Gjeltore",
-    keywords: ["kafene", "restorant", "bar", "piceri", "fast", "food", "kebab", "pasticeri", "embeltore", "akullore", "gjeltore"],
-    clients: [],
-  },
-  { num: 2, id: "bakery", label: "Furrë Buke", keywords: ["furre", "buke"], clients: [] },
-  { num: 3, id: "hotel", label: "Hotel Restorant", keywords: ["hotel"], clients: [] },
-  { num: 4, id: "nightlife", label: "Bar Nate / Klub / Diskotekë", keywords: ["nate", "klub", "diskotek", "disco", "nightbar"], clients: [] },
-  { num: 5, id: "grocery", label: "Market / Minimarket", keywords: ["market", "minimarket"], clients: [] },
-  { num: 6, id: "fashion", label: "Dyqan Rrobash / Këpucësh", keywords: ["rroba", "kepuce", "dyqan"], clients: [] },
-  { num: 7, id: "health", label: "Farmaci / Optikë", keywords: ["farmaci", "optike"], clients: [] },
-  { num: 8, id: "beauty", label: "Berber / Sallon Bukurie", keywords: ["berber", "sallon"], clients: [] },
-  { num: 9, id: "other", label: "Shërbime të tjera", keywords: ["tjeter", "sherbime"], clients: [] },
+  { num: 1, id: "kafene", label: "Kafene", keywords: ["kafene"], clients: [] },
+  { num: 2, id: "restorant", label: "Restorant", keywords: ["restorant"], clients: [] },
+  { num: 3, id: "bar_pub", label: "Bar / Pub", keywords: ["bar", "pub"], clients: [] },
+  { num: 4, id: "nightlife", label: "Klub nate / Diskotekë", keywords: ["klub", "diskotek", "nate"], clients: [] },
+  { num: 5, id: "piceri", label: "Piceri", keywords: ["piceri"], clients: [] },
+  { num: 6, id: "fast_food", label: "Fast Food Kiosk", keywords: ["fast", "food", "kiosk"], clients: [] },
+  { num: 7, id: "dyqan_pijesh", label: "Dyqan pijesh", keywords: ["pijesh", "pije"], clients: [] },
+  { num: 8, id: "other", label: "Të tjera (klientë të vjetër)", keywords: ["tjeter"], clients: [] },
 ];
 
-/** Sektoret Security — të ndara nga Kafene; gjithmonë të dukshme. */
+/** REVOLUTION SECURITY — vetëm menaxhim punëtorësh; i ndarë nga POS. */
 const FALLBACK_SECURITY_SECTORS = [
-  { num: 1, id: "sec_kompani", label: "Kompani Sigurie", keywords: ["kompani", "sigurie"], clients: [] },
-  { num: 2, id: "sec_ndertim", label: "Ndërtimtari", keywords: ["ndertim"], clients: [] },
-  { num: 3, id: "sec_pastrim", label: "Pastrim", keywords: ["pastrim"], clients: [] },
-  { num: 4, id: "sec_transport", label: "Transport / Logjistikë", keywords: ["transport", "logjistike"], clients: [] },
-  { num: 5, id: "sec_retail", label: "Retail", keywords: ["retail"], clients: [] },
-  { num: 6, id: "sec_hotel", label: "Hotel / Restorant", keywords: ["hotel", "restorant"], clients: [] },
-  { num: 7, id: "sec_teknike", label: "Shërbime Teknike", keywords: ["teknike"], clients: [] },
-  { num: 8, id: "sec_mjekesore", label: "Shërbime Mjekësore", keywords: ["mjekesore"], clients: [] },
-  { num: 9, id: "sec_punesim", label: "Agjenci Punësimi", keywords: ["punesim"], clients: [] },
-  { num: 10, id: "sec_bujqesi", label: "Bujqësi", keywords: ["bujqesi"], clients: [] },
-  { num: 11, id: "sec_objekt", label: "Objekt / Evente / Parking / Industri", keywords: ["objekt", "event", "parking"], clients: [] },
-  { num: 12, id: "sec_tjeter", label: "Tjetër (Security)", keywords: ["tjeter"], clients: [] },
+  { num: 1, id: "sec_kompani_sigurie", label: "Kompani sigurie (roje, patrullime)", keywords: ["sigurie", "roje"], clients: [] },
+  { num: 2, id: "sec_pastrim", label: "Kompani pastrimi", keywords: ["pastrim"], clients: [] },
+  { num: 3, id: "sec_ndertimtari", label: "Ndërtimtari", keywords: ["ndertim"], clients: [] },
+  { num: 4, id: "sec_transport_logjistike", label: "Transport / Logjistikë", keywords: ["transport"], clients: [] },
+  { num: 5, id: "sec_sherbime_teknike", label: "Shërbime teknike", keywords: ["teknike"], clients: [] },
+  { num: 6, id: "sec_mirembajtje_nderte", label: "Mirëmbajtje ndërtesash", keywords: ["mirembajtje"], clients: [] },
+  { num: 7, id: "sec_agjenci_punesimi", label: "Agjenci punësimi", keywords: ["punesim"], clients: [] },
+  { num: 8, id: "sec_bujqesi", label: "Bujqësi", keywords: ["bujqesi"], clients: [] },
+  { num: 9, id: "sec_kuriere_dergesa", label: "Kurierë / Dërgesa", keywords: ["kuriere", "dergesa"], clients: [] },
 ];
 
-/** Lista e plotë — e njëjta që zgjedh pronari në regjistrim */
 const SECURITY_VEPRIMTARI_OPTS = [
-  ["kompani_sigurie", "Kompani Sigurie"],
-  ["ndertimtari", "Ndërtimtari"],
-  ["pastrim", "Pastrim"],
-  ["transport_logjistike", "Transport / Logjistikë"],
-  ["retail", "Retail"],
-  ["hotel_restorant", "Hotel / Restorant"],
-  ["sherbime_teknike", "Shërbime Teknike"],
-  ["sherbime_mjekesore", "Shërbime Mjekësore"],
-  ["agjenci_punesimi", "Agjenci Punësimi"],
-  ["bujqesi", "Bujqësi"],
-  ["objekt", "Objekt / Ndërtesë"],
-  ["event_sigurie", "Evente / Siguri eventesh"],
-  ["parking", "Parking / Zona parkimi"],
-  ["fabrika", "Fabrikë / Industri"],
-  ["shkolla", "Shkollë / Institucion"],
-  ["spitale", "Spital / Klinikë"],
-  ["banka", "Bankë / Finance"],
-  ["tjeter", "Tjetër"],
+  ["kompani_sigurie", "Kompani sigurie (roje, patrullime)"],
+  ["pastrim", "Kompani pastrimi (pastrues nëpër objekte)"],
+  ["ndertimtari", "Ndërtimtari (punëtorë kantiere)"],
+  ["transport_logjistike", "Transport / Logjistikë (shoferë, dërgesa)"],
+  ["sherbime_teknike", "Shërbime teknike (elektricistë, hidraulikë, servis)"],
+  ["mirembajtje_nderte", "Mirëmbajtje ndërtesash (maintenance)"],
+  ["agjenci_punesimi", "Agjenci punësimi (punëtorë të dërguar te klientët)"],
+  ["bujqesi", "Bujqësi (punëtorë sezone)"],
+  ["kuriere_dergesa", "Kurierë / Dërgesa"],
 ];
 
 function ensureSectors(apiSectors, fallback) {
@@ -113,10 +93,10 @@ function setProductTab(product, { reload = true } = {}) {
   if (title) {
     title.textContent =
       currentProduct === "security"
-        ? "Klientët Security"
+        ? "Klientët REVOLUTION SECURITY"
         : currentProduct === "kafene"
-          ? "Klientët Kafene & Restorante"
-          : "Klientët (Kafene — zgjidh Security për tab-in tjetër)";
+          ? "Klientët REVOLUTION POS"
+          : "Klientët — zgjidh POS ose SECURITY (të ndara)";
   }
   if (!reload) return;
   const activeSec = document.querySelector(".section.active");
@@ -433,29 +413,11 @@ async function copyText(text, btn) {
 const DRAWER_TIPI_OPTS = [
   ["kafene", "Kafene"],
   ["restorant", "Restorant"],
-  ["bar", "Bar"],
+  ["bar", "Bar / Pub"],
+  ["klub_nate", "Klub nate / Diskotekë"],
   ["piceri", "Piceri"],
-  ["fast_food", "Fast Food"],
-  ["kebab", "Kebab"],
-  ["pasticeri", "Pastiçeri / Ëmbëltore"],
-  ["akullore", "Akullore"],
-  ["gjeltore", "Gjeltore"],
-  ["bar_nate", "Bar Nate / Night Bar"],
-  ["klub", "Klub"],
-  ["diskoteke", "Diskotekë"],
-  ["pub_lounge", "Pub / Lounge"],
-  ["furre_buke", "Furrë Buke"],
-  ["hotel_restorant", "Hotel Restorant"],
-  ["market", "Market"],
-  ["minimarket", "Minimarket"],
-  ["dyqan_rroba", "Dyqan Rrobash"],
-  ["dyqan_kepuce", "Dyqan Këpucësh"],
-  ["dyqan", "Dyqan"],
-  ["farmaci", "Farmaci"],
-  ["optike", "Optikë"],
-  ["berber", "Berber"],
-  ["sallon_bukurie", "Sallon Bukurie"],
-  ["tjeter", "Tjetër"],
+  ["fast_food", "Fast Food Kiosk"],
+  ["dyqan_pijesh", "Dyqan pijesh"],
 ];
 
 const DRAWER_PAKO_OPTS = [

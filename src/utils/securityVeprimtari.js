@@ -1,128 +1,52 @@
 /**
- * Veprimtaritë Security — lista e plotë që zgjedh pronari / Master Admin.
- * Nuk përzihen me Kafene/POS (product_line = security).
+ * REVOLUTION SECURITY — biznese që MENAXHOJNË punëtorë në terren.
+ * Nuk përzihen kurrë me REVOLUTION POS (shitje ushqim/pije).
  */
 
 const SECURITY_VEPRIMTARI = [
-  { id: "kompani_sigurie", label: "Kompani Sigurie" },
-  { id: "ndertimtari", label: "Ndërtimtari" },
-  { id: "pastrim", label: "Pastrim" },
-  { id: "transport_logjistike", label: "Transport / Logjistikë" },
-  { id: "retail", label: "Retail" },
-  { id: "hotel_restorant", label: "Hotel / Restorant" },
-  { id: "sherbime_teknike", label: "Shërbime Teknike" },
-  { id: "sherbime_mjekesore", label: "Shërbime Mjekësore" },
-  { id: "agjenci_punesimi", label: "Agjenci Punësimi" },
-  { id: "bujqesi", label: "Bujqësi" },
-  { id: "objekt", label: "Objekt / Ndërtesë" },
-  { id: "event_sigurie", label: "Evente / Siguri eventesh" },
-  { id: "parking", label: "Parking / Zona parkimi" },
-  { id: "fabrika", label: "Fabrikë / Industri" },
-  { id: "shkolla", label: "Shkollë / Institucion" },
-  { id: "spitale", label: "Spital / Klinikë" },
-  { id: "banka", label: "Bankë / Finance" },
-  { id: "tjeter", label: "Tjetër" },
+  { id: "kompani_sigurie", label: "Kompani sigurie (roje, patrullime)" },
+  { id: "pastrim", label: "Kompani pastrimi (pastrues nëpër objekte)" },
+  { id: "ndertimtari", label: "Ndërtimtari (punëtorë kantiere)" },
+  { id: "transport_logjistike", label: "Transport / Logjistikë (shoferë, dërgesa)" },
+  { id: "sherbime_teknike", label: "Shërbime teknike (elektricistë, hidraulikë, servis)" },
+  { id: "mirembajtje_nderte", label: "Mirëmbajtje ndërtesash (maintenance)" },
+  { id: "agjenci_punesimi", label: "Agjenci punësimi (punëtorë të dërguar te klientët)" },
+  { id: "bujqesi", label: "Bujqësi (punëtorë sezone)" },
+  { id: "kuriere_dergesa", label: "Kurierë / Dërgesa" },
 ];
 
-/** Sektoret e listës Klientët (Security) — gjithmonë të dukshme, të ndara nga Kafene. */
-const SECURITY_SECTORS = [
-  {
-    num: 1,
-    id: "sec_kompani",
-    label: "Kompani Sigurie",
-    tipet: ["kompani_sigurie"],
-    keywords: ["kompani", "sigurie", "security", "guard"],
-  },
-  {
-    num: 2,
-    id: "sec_ndertim",
-    label: "Ndërtimtari",
-    tipet: ["ndertimtari"],
-    keywords: ["ndertim", "ndertimtari", "construction"],
-  },
-  {
-    num: 3,
-    id: "sec_pastrim",
-    label: "Pastrim",
-    tipet: ["pastrim"],
-    keywords: ["pastrim", "cleaning"],
-  },
-  {
-    num: 4,
-    id: "sec_transport",
-    label: "Transport / Logjistikë",
-    tipet: ["transport_logjistike", "transport_sigurie"],
-    keywords: ["transport", "logjistike"],
-  },
-  {
-    num: 5,
-    id: "sec_retail",
-    label: "Retail",
-    tipet: ["retail", "retail_sigurie"],
-    keywords: ["retail", "dyqan"],
-  },
-  {
-    num: 6,
-    id: "sec_hotel",
-    label: "Hotel / Restorant",
-    tipet: ["hotel_restorant", "hotel"],
-    keywords: ["hotel", "restorant"],
-  },
-  {
-    num: 7,
-    id: "sec_teknike",
-    label: "Shërbime Teknike",
-    tipet: ["sherbime_teknike"],
-    keywords: ["teknike", "teknik"],
-  },
-  {
-    num: 8,
-    id: "sec_mjekesore",
-    label: "Shërbime Mjekësore",
-    tipet: ["sherbime_mjekesore", "spitale"],
-    keywords: ["mjekesore", "spital", "klinike"],
-  },
-  {
-    num: 9,
-    id: "sec_punesim",
-    label: "Agjenci Punësimi",
-    tipet: ["agjenci_punesimi"],
-    keywords: ["punesim", "agjenci"],
-  },
-  {
-    num: 10,
-    id: "sec_bujqesi",
-    label: "Bujqësi",
-    tipet: ["bujqesi"],
-    keywords: ["bujqesi", "ferme"],
-  },
-  {
-    num: 11,
-    id: "sec_objekt",
-    label: "Objekt / Evente / Parking / Industri",
-    tipet: ["objekt", "ndertesa", "event_sigurie", "parking", "fabrika", "shkolla", "banka"],
-    keywords: ["objekt", "event", "parking", "fabrika", "shkolla", "banka"],
-  },
-  {
-    num: 12,
-    id: "sec_tjeter",
-    label: "Tjetër (Security)",
-    tipet: ["tjeter"],
-    keywords: ["tjeter", "other"],
-  },
-];
+/** Sektoret e listës Klientët (Security) — një sektor për çdo veprimtari. */
+const SECURITY_SECTORS = SECURITY_VEPRIMTARI.map((v, i) => ({
+  num: i + 1,
+  id: `sec_${v.id}`,
+  label: v.label,
+  tipet: [v.id],
+  keywords: [v.id, ...String(v.label).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)],
+}));
 
 const VEPRIMTARI_ALIASES = {
-  hotel: "hotel_restorant",
-  restorant: "hotel_restorant",
   transport: "transport_logjistike",
   transport_sigurie: "transport_logjistike",
   logjistike: "transport_logjistike",
-  retail_sigurie: "retail",
-  ndertesa: "objekt",
-  building: "objekt",
-  spitale: "sherbime_mjekesore",
-  mjekesi: "sherbime_mjekesore",
+  kuriere: "kuriere_dergesa",
+  dergesa: "kuriere_dergesa",
+  courier: "kuriere_dergesa",
+  maintenance: "mirembajtje_nderte",
+  mirembajtje: "mirembajtje_nderte",
+  // vlera të vjetra → më e afërta / ose mbeten si tjeter në UI të vjetër
+  retail: "kompani_sigurie",
+  retail_sigurie: "kompani_sigurie",
+  hotel_restorant: "kompani_sigurie",
+  hotel: "kompani_sigurie",
+  objekt: "mirembajtje_nderte",
+  event_sigurie: "kompani_sigurie",
+  parking: "kompani_sigurie",
+  fabrika: "ndertimtari",
+  shkolla: "mirembajtje_nderte",
+  spitale: "mirembajtje_nderte",
+  banka: "kompani_sigurie",
+  sherbime_mjekesore: "sherbime_teknike",
+  tjeter: "kompani_sigurie",
 };
 
 function normalizeVeprimtari(raw) {
@@ -137,7 +61,7 @@ function normalizeVeprimtari(raw) {
   if (!s) return "kompani_sigurie";
   if (VEPRIMTARI_ALIASES[s]) s = VEPRIMTARI_ALIASES[s];
   if (SECURITY_VEPRIMTARI.some((v) => v.id === s)) return s;
-  return "tjeter";
+  return "kompani_sigurie";
 }
 
 function labelForVeprimtari(id) {
@@ -150,7 +74,7 @@ function sectorForVeprimtari(veprimtari) {
   for (const s of SECURITY_SECTORS) {
     if (s.tipet.includes(t)) return s;
   }
-  return SECURITY_SECTORS[SECURITY_SECTORS.length - 1];
+  return SECURITY_SECTORS[0];
 }
 
 module.exports = {

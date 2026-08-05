@@ -6,18 +6,16 @@
 const PRODUCT_LINES = [
   {
     id: "kafene",
-    label: "Kafene & Restorante",
-    short: "Kafene",
-    description: "POS · kafene, restorant, bar, night bar, diskotekë, market, …",
+    label: "REVOLUTION POS",
+    short: "POS",
+    description: "Biznese që SHESIN — kafene, restorant, bar/pub, klub nate, piceri, fast food, dyqan pijesh",
   },
   {
     id: "security",
-    label: "Security",
+    label: "REVOLUTION SECURITY",
     short: "Security",
-    description: "Revolution Security · staf, GPS, licenca sekurim (sektore të veçanta)",
+    description: "Biznese që MENAXHOJNË punëtorë në terren — siguri, pastrim, ndërtim, transport, …",
   },
-  // Shembull për të ardhmen (mos aktivizo pa bridge):
-  // { id: "hotel", label: "Hotel", short: "Hotel", description: "…", enabled: false },
 ];
 
 function normalizeProductLine(v) {

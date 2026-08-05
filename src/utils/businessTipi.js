@@ -1,126 +1,114 @@
 /**
- * Llojet e biznesit për clients.tipi — Super Admin (telefon + desktop).
- * Sektoret e numëruara (1–9) për /admin/dashboard.
- * Hospitality = NJË kategori (e njëjta app KAFENE).
+ * REVOLUTION POS — biznese që SHESIN produkte/ushqim/pije.
+ * Nuk përzihen kurrë me REVOLUTION SECURITY (menaxhim punëtorësh).
  */
 
-/** Tipi individualë që ruhen në DB (për regjistrim). */
-const ADMIN_CLIENT_TIPI = [
+/** Tipet e reja për regjistrim nga Master Admin (POS). */
+const POS_REGISTER_TIPI = [
   "kafene",
   "restorant",
   "bar",
-  "pub_lounge",
+  "klub_nate",
   "piceri",
   "fast_food",
+  "dyqan_pijesh",
+];
+
+/**
+ * Tipet e lejuara në DB — përfshin edhe tipet e vjetra (klientë ekzistues).
+ * Regjistrimi i ri përdor vetëm POS_REGISTER_TIPI.
+ */
+const ADMIN_CLIENT_TIPI = [
+  ...POS_REGISTER_TIPI,
+  "pub_lounge",
+  "bar_nate",
+  "klub",
+  "diskoteke",
   "kebab",
   "pasticeri",
   "akullore",
   "gjeltore",
   "furre_buke",
   "hotel_restorant",
-  "bar_nate",
-  "klub",
-  "diskoteke",
   "market",
   "minimarket",
   "dyqan_rroba",
   "dyqan_kepuce",
+  "dyqan",
   "farmaci",
   "optike",
   "berber",
   "sallon_bukurie",
-  "dyqan",
   "tjeter",
 ];
 
 const ALLOWED_CLIENT_TIPI = [...ADMIN_CLIENT_TIPI];
 
-/** Tipet hospitality — e njëjta programë (KAFENE). */
-const HOSPITALITY_TIPET = [
-  "kafene",
-  "restorant",
-  "bar",
-  "piceri",
-  "fast_food",
-  "kebab",
-  "pasticeri",
-  "akullore",
-  "gjeltore",
-];
-
-/**
- * Sektoret e numëruara për Klientët — VETËM 9.
- * Kategoria 1 = krejt hospitality (jo të ndara).
- */
+/** Grupet e listës Klientët — vetëm shitje POS. */
 const CLIENT_SECTORS = [
   {
     num: 1,
-    id: "hospitality",
-    label: "Kafene / Restorant / Bar / Piceri / Fast Food / Kebab / Pastiçeri / Ëmbëltore / Akullore / Gjeltore",
-    tipet: [...HOSPITALITY_TIPET],
-    keywords: [
-      "kafene", "restorant", "bar", "piceri", "fast", "food", "kebab",
-      "pasticeri", "embeltore", "akullore", "gjeltore", "hospitality",
-      "kafe", "restaurant", "pizza", "pastry", "gelato",
-    ],
+    id: "kafene",
+    label: "Kafene",
+    tipet: ["kafene"],
+    keywords: ["kafene", "cafe", "kafe"],
   },
   {
     num: 2,
-    id: "bakery",
-    label: "Furrë Buke",
-    tipet: ["furre_buke"],
-    keywords: ["furre", "buke", "bakery", "furra"],
+    id: "restorant",
+    label: "Restorant",
+    tipet: ["restorant", "hotel_restorant"],
+    keywords: ["restorant", "restaurant"],
   },
   {
     num: 3,
-    id: "hotel",
-    label: "Hotel Restorant",
-    tipet: ["hotel_restorant"],
-    keywords: ["hotel", "hotel restorant"],
+    id: "bar_pub",
+    label: "Bar / Pub",
+    tipet: ["bar", "pub_lounge"],
+    keywords: ["bar", "pub", "lounge"],
   },
   {
     num: 4,
     id: "nightlife",
-    label: "Bar Nate / Klub / Diskotekë",
-    tipet: ["bar_nate", "klub", "diskoteke", "pub_lounge"],
-    keywords: ["nate", "klub", "club", "pub", "lounge", "nightlife", "diskotek", "disco", "nightbar", "night_bar"],
+    label: "Klub nate / Diskotekë",
+    tipet: ["klub_nate", "klub", "diskoteke", "bar_nate"],
+    keywords: ["klub", "nate", "diskotek", "disco", "night"],
   },
   {
     num: 5,
-    id: "grocery",
-    label: "Market / Minimarket",
-    tipet: ["market", "minimarket"],
-    keywords: ["market", "minimarket", "supermarket"],
+    id: "piceri",
+    label: "Piceri",
+    tipet: ["piceri"],
+    keywords: ["piceri", "pizza"],
   },
   {
     num: 6,
-    id: "fashion",
-    label: "Dyqan Rrobash / Këpucësh",
-    tipet: ["dyqan_rroba", "dyqan_kepuce", "dyqan"],
-    keywords: ["rroba", "kepuce", "dyqan", "fashion", "shoe", "clothing"],
+    id: "fast_food",
+    label: "Fast Food Kiosk",
+    tipet: ["fast_food", "kebab"],
+    keywords: ["fast", "food", "kiosk", "kebab"],
   },
   {
     num: 7,
-    id: "health",
-    label: "Farmaci / Optikë",
-    tipet: ["farmaci", "optike"],
-    keywords: ["farmaci", "optike", "pharmacy", "optic"],
+    id: "dyqan_pijesh",
+    label: "Dyqan pijesh",
+    tipet: ["dyqan_pijesh"],
+    keywords: ["pijesh", "pije", "drinks"],
   },
   {
     num: 8,
-    id: "beauty",
-    label: "Berber / Sallon Bukurie",
-    tipet: ["berber", "sallon_bukurie"],
-    keywords: ["berber", "sallon", "bukurie", "barber", "salon", "beauty"],
-  },
-  {
-    num: 9,
     id: "other",
-    label: "Shërbime të tjera",
-    tipet: ["tjeter"],
-    keywords: ["tjeter", "sherbime", "other", "shërbime"],
+    label: "Të tjera (klientë të vjetër)",
+    tipet: [
+      "pasticeri", "akullore", "gjeltore", "furre_buke", "market", "minimarket",
+      "dyqan_rroba", "dyqan_kepuce", "dyqan", "farmaci", "optike", "berber",
+      "sallon_bukurie", "tjeter",
+    ],
+    keywords: ["tjeter", "other"],
   },
 ];
+
+const HOSPITALITY_TIPET = POS_REGISTER_TIPI;
 
 const TIPI_ALIASES = {
   restaurante: "restorant",
@@ -130,60 +118,35 @@ const TIPI_ALIASES = {
   coffee: "kafene",
   cafeteria: "kafene",
   kafe: "kafene",
-  pub: "pub_lounge",
-  lounge: "pub_lounge",
-  "pub/lounge": "pub_lounge",
-  publounge: "pub_lounge",
-  pub_lounge: "pub_lounge",
+  pub: "bar",
+  lounge: "bar",
+  "pub/lounge": "bar",
+  publounge: "bar",
+  pub_lounge: "bar",
   pizza: "piceri",
   pizzeria: "piceri",
   "fast food": "fast_food",
   fastfood: "fast_food",
   "fast-food": "fast_food",
-  fast_food: "fast_food",
-  pasticeri: "pasticeri",
-  "pasticeri/embeltore": "pasticeri",
-  pasticeri_embeltore: "pasticeri",
-  embeltore: "pasticeri",
-  pastry: "pasticeri",
-  gelato: "akullore",
-  ice_cream: "akullore",
-  icecream: "akullore",
-  poultry: "gjeltore",
-  furre: "furre_buke",
-  furra: "furre_buke",
-  bakery: "furre_buke",
-  "furre buke": "furre_buke",
-  hotel: "hotel_restorant",
-  "hotel restorant": "hotel_restorant",
-  nightclub: "klub",
-  club: "klub",
-  "bar nate": "bar_nate",
-  nightbar: "bar_nate",
-  night_bar: "bar_nate",
-  "night bar": "bar_nate",
-  nightlife: "bar_nate",
-  diskoteke: "diskoteke",
-  diskoteka: "diskoteke",
-  disco: "diskoteke",
-  discotheque: "diskoteke",
-  "disko teke": "diskoteke",
-
-  shop: "dyqan",
-  store: "dyqan",
-  supermarket: "market",
-  minimarket: "minimarket",
-  pharmacy: "farmaci",
-  optic: "optike",
-  optics: "optike",
-  barber: "berber",
-  salon: "sallon_bukurie",
-  beauty: "sallon_bukurie",
-  "sallon bukurie": "sallon_bukurie",
-  clothing: "dyqan_rroba",
-  shoes: "dyqan_kepuce",
-  kepuce: "dyqan_kepuce",
-  rroba: "dyqan_rroba",
+  kiosk: "fast_food",
+  nightclub: "klub_nate",
+  club: "klub_nate",
+  klub: "klub_nate",
+  diskoteke: "klub_nate",
+  diskoteka: "klub_nate",
+  disco: "klub_nate",
+  discotheque: "klub_nate",
+  "bar nate": "klub_nate",
+  bar_nate: "klub_nate",
+  nightbar: "klub_nate",
+  night_bar: "klub_nate",
+  nightlife: "klub_nate",
+  "klub nate": "klub_nate",
+  klub_nate_diskoteke: "klub_nate",
+  dyqan_pijesh: "dyqan_pijesh",
+  "dyqan pijesh": "dyqan_pijesh",
+  pije: "dyqan_pijesh",
+  drinks: "dyqan_pijesh",
   other: "tjeter",
   tjetër: "tjeter",
   tjeter: "tjeter",
@@ -192,19 +155,22 @@ const TIPI_ALIASES = {
 const TIPI_LABELS = {
   kafene: "Kafene",
   restorant: "Restorant",
-  bar: "Bar",
-  pub_lounge: "Pub/Lounge",
+  bar: "Bar / Pub",
+  klub_nate: "Klub nate / Diskotekë",
   piceri: "Piceri",
-  fast_food: "Fast Food",
-  kebab: "Kebab",
+  fast_food: "Fast Food Kiosk",
+  dyqan_pijesh: "Dyqan pijesh",
+  // legacy labels (lexim)
+  pub_lounge: "Bar / Pub",
+  bar_nate: "Klub nate / Diskotekë",
+  klub: "Klub nate / Diskotekë",
+  diskoteke: "Klub nate / Diskotekë",
+  kebab: "Fast Food Kiosk",
   pasticeri: "Pastiçeri/Ëmbëltore",
   akullore: "Akullore",
   gjeltore: "Gjeltore",
   furre_buke: "Furrë Buke",
   hotel_restorant: "Hotel Restorant",
-  bar_nate: "Bar Nate / Night Bar",
-  klub: "Klub",
-  diskoteke: "Diskotekë",
   market: "Market",
   minimarket: "Minimarket",
   dyqan_rroba: "Dyqan Rrobash",
@@ -227,7 +193,6 @@ function normalizeClientTipi(raw) {
     .replace(/\s+/g, "_")
     .replace(/\//g, "_");
   if (TIPI_ALIASES[t]) t = TIPI_ALIASES[t];
-  // aliases with spaces already collapsed to _
   const spaced = String(raw || "")
     .trim()
     .toLowerCase()
@@ -242,13 +207,12 @@ function assertClientTipi(raw) {
   const tipi = normalizeClientTipi(raw);
   if (!ALLOWED_CLIENT_TIPI.includes(tipi)) {
     throw new Error(
-      "Tipi i biznesit nuk njihet. Zgjidhni një nga sektoret e lejuara (Kafene, Piceri, Furrë, Market, Berber, etj.).",
+      "Tipi i biznesit nuk njihet. Zgjidhni një veprimtari REVOLUTION POS (Kafene, Restorant, Bar/Pub, …).",
     );
   }
   return tipi;
 }
 
-/** Licenca cloud: vetëm kafene | restorant — hospitality tjetër → restorant. */
 function appTypeFromClientTipi(tipi) {
   return normalizeClientTipi(tipi) === "kafene" ? "kafene" : "restorant";
 }
@@ -267,6 +231,7 @@ function sectorForTipi(tipi) {
 }
 
 module.exports = {
+  POS_REGISTER_TIPI,
   ADMIN_CLIENT_TIPI,
   ALLOWED_CLIENT_TIPI,
   HOSPITALITY_TIPET,
