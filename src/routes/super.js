@@ -32,6 +32,10 @@ const {
   updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
+  getSecurityClientDetail,
+  setSecurityClientPassword,
+  requestSecurityPasswordReset,
+  updateSecurityLicense,
 } = require("../services/securityAdminBridge");
 const { normalizeProductLine } = require("../utils/productLine");
 const {
@@ -44,8 +48,14 @@ const {
   reactivateLicenseRemote,
   requestWipeDataForLicense,
 } = require("../services/licenseService");
+const {
+  setOwnerPasswordForClient,
+  sendPasswordResetForClient,
+} = require("../services/userService");
+const { sendOwnerPasswordResetEmail, isEmailConfigured } = require("../services/emailService");
 const { addMonthsISO, todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, activityFromReq } = require("../services/activityLogService");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
 
 const router = express.Router();
 
@@ -165,7 +175,99 @@ router.get(
 router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
+    const product = normalizeProductLine(req.query.product || req.query.industry || "kafene");
+    if (product === "security") {
+      return res.json({ ok: true, ...(await getSecurityClientDetail(req.params.id)) });
+    }
     res.json({ ok: true, ...(await getClientDetail(req.params.id)) });
+  }),
+);
+
+/** Master Admin — vendos fjalëkalim të ri për pronarin e klientit */
+router.post(
+  "/dashboard/clients/:id/set-password",
+  asyncHandler(async (req, res) => {
+    const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(
+      req.body?.product_line || req.query.product || "kafene",
+    );
+    const password = req.body?.password || req.body?.new_password;
+    if (product === "security") {
+      const data = await setSecurityClientPassword(id, password);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_password_set",
+        targetType: "client",
+        targetId: id,
+      }).catch(() => {});
+      return res.json({ ok: true, ...data, product_line: "security" });
+    }
+    const result = await setOwnerPasswordForClient(id, password, {
+      email: req.body?.email,
+      emri: req.body?.emri,
+      baseUrl: getPublicAppOrigin(),
+    });
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "owner_password_set",
+      targetType: "client",
+      targetId: id,
+      details: { created: result.created, owners: (result.owners || []).map((o) => o.email) },
+    }).catch(() => {});
+    res.json({ ok: true, ...result, product_line: "kafene" });
+  }),
+);
+
+/** Master Admin — dërgo kod rivendosjeje me email */
+router.post(
+  "/dashboard/clients/:id/send-password-reset",
+  asyncHandler(async (req, res) => {
+    const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(
+      req.body?.product_line || req.query.product || "kafene",
+    );
+    if (product === "security") {
+      const data = await requestSecurityPasswordReset(id);
+      // Nëse SecureTrack nuk dërgoi email, dërgo nga POS (Resend)
+      if (data?.email && data?.code && !data.email_sent) {
+        if (!isEmailConfigured()) {
+          throw Object.assign(
+            new Error("Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY në Railway (POS)."),
+            { code: "EMAIL_NOT_CONFIGURED" },
+          );
+        }
+        await sendOwnerPasswordResetEmail({ to: data.email, code: data.code });
+        data.email_sent = true;
+        data.code = undefined; // mos e kthe kodin te klienti admin UI (opsionale — e fshehim)
+      }
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_password_reset_email",
+        targetType: "client",
+        targetId: id,
+        targetLabel: data?.email,
+      }).catch(() => {});
+      return res.json({
+        ok: true,
+        message: `Kodi i rivendosjes u dërgua te ${data.email}`,
+        email: data.email,
+        product_line: "security",
+      });
+    }
+    const result = await sendPasswordResetForClient(id, getPublicAppOrigin());
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "owner_password_reset_email",
+      targetType: "client",
+      targetId: id,
+      details: { sent: result.sent },
+    }).catch(() => {});
+    res.json({
+      ok: true,
+      message: `Kodi / ftesa u dërgua te: ${(result.sent || []).map((s) => s.email).join(", ")}`,
+      ...result,
+      product_line: "kafene",
+    });
   }),
 );
 
@@ -188,10 +290,13 @@ router.patch(
       const licenses = [];
       for (const lp of licPatches) {
         if (!lp?.id) continue;
-        if (lp.statusi || lp.status) {
-          const updated = await setSecurityLicenseStatus(lp.id, lp.statusi || lp.status);
-          licenses.push(updated.license || updated);
-        }
+        const updated = await updateSecurityLicense(lp.id, {
+          statusi: lp.statusi || lp.status,
+          license_key: lp.celesi || lp.license_key,
+          hardware_id: lp.hardware_id,
+          expires_at: lp.data_skadimit || lp.expires_at,
+        });
+        licenses.push(updated.license || updated);
       }
       await logAdminActivity({
         ...activityFromReq(req),

@@ -234,14 +234,105 @@ async function setSecurityLicenseStatus(id, statusi) {
   });
 }
 
+async function updateSecurityLicense(id, patch = {}) {
+  const body = {};
+  if (patch.statusi || patch.status) {
+    const map = {
+      aktive: "active",
+      revokuar: "revoked",
+      pezulluar: "suspended",
+      skaduar: "expired",
+    };
+    const raw = String(patch.statusi || patch.status || "").toLowerCase();
+    body.status = map[raw] || raw;
+  }
+  if (patch.license_key || patch.celesi) {
+    body.license_key = patch.license_key || patch.celesi;
+  }
+  if (patch.hardware_id != null) body.hardware_id = patch.hardware_id;
+  if (patch.expires_at != null) body.expires_at = patch.expires_at;
+  if (!Object.keys(body).length) {
+    return setSecurityLicenseStatus(id, patch.statusi || "active");
+  }
+  return securityAdminFetch(`/api/admin/licenses/${id}`, {
+    method: "PATCH",
+    body,
+  });
+}
+
+async function getSecurityClientDetail(clientId) {
+  const [clientsWrap, licWrap] = await Promise.all([
+    getSecurityClientsGrouped(),
+    getSecurityLicensesView(),
+  ]);
+  const client = (clientsWrap.sectors || [])
+    .flatMap((s) => s.clients || [])
+    .find((c) => String(c.id) === String(clientId));
+  if (!client) {
+    const err = new Error("Klienti Security nuk u gjet");
+    err.status = 404;
+    throw err;
+  }
+  const licenses = (licWrap.licenses || [])
+    .filter((l) => String(l.client_id) === String(clientId))
+    .map((l) => ({
+      id: l.id,
+      celesi: l.license_key || "",
+      license_key: l.license_key || "",
+      hardware_id: l.hardware_id || "",
+      device_id: l.device_id || "",
+      statusi: l.statusi,
+      data_skadimit: l.expires_at || null,
+      product_line: "security",
+    }));
+  return {
+    client: {
+      ...client,
+      tipi_label: client.veprimtari || client.tipi_label || "Security",
+      package_label: "Security",
+      icon: "🛡️",
+      adresa: client.adresa || "",
+    },
+    licenses,
+    owners: client.email
+      ? [{ id: client.id, email: client.email, emri: client.emri, account_status: "active" }]
+      : [],
+    sales: { today: 0, last_30_days: 0, order_count_30d: 0, recent: [] },
+    stock: { alerts: [], zero_items: [], zero_count: 0 },
+    waiters: [],
+    ai_usage: { tokens_total: 0, cost_eur_total: 0, calls: 0 },
+    product_line: "security",
+    source: "securetrack",
+    bridge_error: clientsWrap.bridge_error || licWrap.bridge_error || null,
+  };
+}
+
+async function setSecurityClientPassword(id, password) {
+  return securityAdminFetch(`/api/admin/clients/${id}/password`, {
+    method: "POST",
+    body: { password },
+  });
+}
+
+async function requestSecurityPasswordReset(id) {
+  return securityAdminFetch(`/api/admin/clients/${id}/password-reset`, {
+    method: "POST",
+    body: {},
+  });
+}
+
 module.exports = {
   normalizeProductLine,
   securityUpstream,
   getSecurityClientsGrouped,
   getSecurityLicensesView,
   getSecurityOverview,
+  getSecurityClientDetail,
   createSecurityClient,
   updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
+  updateSecurityLicense,
+  setSecurityClientPassword,
+  requestSecurityPasswordReset,
 };

@@ -410,104 +410,52 @@ function selectOpts(options, selected) {
     .join("");
 }
 
-async function openClientDetail(id) {
-  const isSecurity = currentProduct === "security" || productQuery(true) === "security";
-  if (isSecurity) {
-    const hit = (sectorsCache || []).flatMap((s) => s.clients || []).find((c) => String(c.id) === String(id));
-    document.getElementById("drawer-root").classList.remove("hidden");
-    document.getElementById("drawer-title").textContent = `🛡️ ${hit?.emri || "Klient Security"}`;
-    document.getElementById("drawer-sub").textContent = "Edito të dhënat — Ruaj për të aplikuar";
-    document.getElementById("drawer-body").innerHTML = `
-      <div class="detail-block">
-        <h4>Të dhënat e klientit</h4>
+function renderLicenseEditBlocks(licenses, { security = false } = {}) {
+  return (licenses || [])
+    .map(
+      (l) => `<div class="lic-detail-row" data-lic-edit="${esc(l.id)}" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">
         <div class="drawer-form">
-          <label>Emri<input id="dr-emri" value="${esc(hit?.emri || "")}" required></label>
-          <label>Email<input id="dr-email" type="email" value="${esc(hit?.email || "")}"></label>
-          <label>Telefon<input id="dr-tel" value="${esc(hit?.telefoni || "")}"></label>
-          <label>Veprimtari
-            <select id="dr-veprimtari">
+          <label>Statusi
+            <select data-lic-status="${esc(l.id)}">
               ${selectOpts(
                 [
-                  ["kompani_sigurie", "Kompani sigurie"],
-                  ["objekt", "Objekt / Ndërtesë"],
-                  ["hotel", "Hotel"],
-                  ["tjeter", "Tjetër"],
+                  ["aktive", "aktive"],
+                  ["pezulluar", "pezulluar"],
+                  ["revokuar", "revokuar"],
+                  ["skaduar", "skaduar"],
                 ],
-                hit?.veprimtari || "kompani_sigurie",
+                l.statusi || "aktive",
               )}
             </select>
           </label>
+          <label>Hardware ID (16)
+            <input class="mono" data-lic-hw="${esc(l.id)}" value="${esc(l.hardware_id || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
+          </label>
+          <label>Çelësi i licencës
+            <input class="mono" data-lic-key="${esc(l.id)}" value="${esc(l.celesi || l.license_key || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
+          </label>
+          ${
+            security
+              ? ""
+              : `<label>Device ID (terminal)
+            <input class="mono" data-lic-dev="${esc(l.id)}" value="${esc(l.device_id || "")}" placeholder="opsionale">
+          </label>`
+          }
+          <label>Skadon
+            <input type="date" data-lic-exp="${esc(l.id)}" value="${esc(String(l.data_skadimit || "").slice(0, 10))}">
+          </label>
         </div>
-        <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
-        <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
-      </div>
-      <div class="detail-block">
-        <h4>Licencat</h4>
-        <p style="color:var(--muted);font-size:0.9rem;margin:0">
-          Statusi i licencave: skeda <strong>Licencat</strong> → filtri Security (Revoko / Pezullo / Riaktivizo).
-        </p>
-      </div>`;
-    bindDrawerSave(id, "security");
-    return;
-  }
-
-  const d = await api(`/api/super/dashboard/clients/${id}`);
-  const c = d.client || {};
-  document.getElementById("drawer-root").classList.remove("hidden");
-  document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
-  document.getElementById("drawer-sub").textContent = "Edito klientin & licencat — një Ruaj";
-  const sales = d.sales || {};
-  const stock = d.stock || {};
-  const waiters = d.waiters || [];
-  const licenses = d.licenses || [];
-  const ai = d.ai_usage || {};
-  document.getElementById("drawer-body").innerHTML = `
-    <div class="detail-block">
-      <h4>Të dhënat e klientit</h4>
-      <div class="drawer-form">
-        <label>Emri<input id="dr-emri" value="${esc(c.emri || "")}" required></label>
-        <label>Email<input id="dr-email" type="email" value="${esc(c.email || "")}"></label>
-        <label>Telefon<input id="dr-tel" value="${esc(c.telefoni || "")}"></label>
-        <label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
-        <label>Sektori<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
-        <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>
-      </div>
-      <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
-      <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
-    </div>
-    <div class="detail-block">
-      <h4>Licenca (edito ID / çelës / status)</h4>
-      ${licenses
-        .map(
-          (l) => `<div class="lic-detail-row" data-lic-edit="${esc(l.id)}" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">
-            <div class="drawer-form">
-              <label>Statusi
-                <select data-lic-status="${esc(l.id)}">
-                  ${selectOpts(
-                    [
-                      ["aktive", "aktive"],
-                      ["pezulluar", "pezulluar"],
-                      ["revokuar", "revokuar"],
-                      ["skaduar", "skaduar"],
-                    ],
-                    l.statusi || "aktive",
-                  )}
-                </select>
-              </label>
-              <label>Hardware ID (16)
-                <input class="mono" data-lic-hw="${esc(l.id)}" value="${esc(l.hardware_id || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
-              </label>
-              <label>Çelësi i licencës
-                <input class="mono" data-lic-key="${esc(l.id)}" value="${esc(l.celesi || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
-              </label>
-              <label>Device ID (terminal)
-                <input class="mono" data-lic-dev="${esc(l.id)}" value="${esc(l.device_id || "")}" placeholder="opsionale">
-              </label>
-              <label>Skadon
-                <input type="date" data-lic-exp="${esc(l.id)}" value="${esc(String(l.data_skadimit || "").slice(0, 10))}">
-              </label>
-            </div>
-            <div class="prob-actions" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem">
+        <div class="prob-actions" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem">
+          ${
+            security
+              ? `
+              ${
+                ["pezulluar", "revokuar", "skaduar"].includes(String(l.statusi || ""))
+                  ? `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
+                  : `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
+                     <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
+              }`
+              : `
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
               <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
@@ -517,12 +465,96 @@ async function openClientDetail(id) {
                      <button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
                   : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo</button>`
               }
-              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
-            </div>
-          </div>`,
-        )
-        .join("") || "<div style=\"color:var(--muted)\">Nuk ka licenca</div>"}
+              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>`
+          }
+        </div>
+      </div>`,
+    )
+    .join("") || '<div style="color:var(--muted)">Nuk ka licenca</div>';
+}
+
+function renderPasswordBlock(owners) {
+  const ownerLabel = (owners || []).length
+    ? (owners || []).map((o) => o.email).filter(Boolean).join(", ")
+    : "nuk ka llogari ende — krijohet me email + fjalëkalim";
+  return `
+    <div class="detail-block">
+      <h4>Fjalëkalimi i pronarit</h4>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 0.65rem">Llogaria: <strong>${esc(ownerLabel)}</strong></p>
+      <div class="drawer-form">
+        <label>Fjalëkalim i ri
+          <input id="dr-password" type="password" minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
+        </label>
+        <label>Përsërit fjalëkalimin
+          <input id="dr-password2" type="password" minlength="6" placeholder="përsërit" autocomplete="new-password">
+        </label>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem">
+        <button type="button" class="btn btn-ok" id="btn-drawer-set-pw">Vendos fjalëkalimin</button>
+        <button type="button" class="btn btn-ghost" id="btn-drawer-send-reset">Dërgo kod me email</button>
+      </div>
+      <p id="dr-pw-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
+    </div>`;
+}
+
+async function openClientDetail(id) {
+  const isSecurity = currentProduct === "security" || productQuery(true) === "security";
+  const product = isSecurity ? "security" : "kafene";
+  const d = await api(
+    `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
+  );
+  const c = d.client || {};
+  const licenses = d.licenses || [];
+  const owners = d.owners || [];
+  const sales = d.sales || {};
+  const stock = d.stock || {};
+  const waiters = d.waiters || [];
+  const ai = d.ai_usage || {};
+
+  document.getElementById("drawer-root").classList.remove("hidden");
+  document.getElementById("drawer-title").textContent = `${c.icon || (isSecurity ? "🛡️" : "🏪")} ${c.emri || "Klient"}`;
+  document.getElementById("drawer-sub").textContent = "Edito klientin, licencat & fjalëkalimin — Ruaj";
+
+  const sectorFields = isSecurity
+    ? `<label>Veprimtari
+        <select id="dr-veprimtari">
+          ${selectOpts(
+            [
+              ["kompani_sigurie", "Kompani sigurie"],
+              ["objekt", "Objekt / Ndërtesë"],
+              ["hotel", "Hotel"],
+              ["tjeter", "Tjetër"],
+            ],
+            c.veprimtari || "kompani_sigurie",
+          )}
+        </select>
+      </label>
+      <label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>`
+    : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+      <label>Sektori<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
+      <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
+
+  document.getElementById("drawer-body").innerHTML = `
+    <div class="detail-block">
+      <h4>Të dhënat e klientit</h4>
+      <div class="drawer-form">
+        <label>Emri<input id="dr-emri" value="${esc(c.emri || "")}" required></label>
+        <label>Email<input id="dr-email" type="email" value="${esc(c.email || "")}"></label>
+        <label>Telefon<input id="dr-tel" value="${esc(c.telefoni || "")}"></label>
+        ${sectorFields}
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
+      <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
     </div>
+    ${renderPasswordBlock(owners)}
+    <div class="detail-block">
+      <h4>Licenca (edito ID / çelës / status)</h4>
+      ${renderLicenseEditBlocks(licenses, { security: isSecurity })}
+    </div>
+    ${
+      isSecurity
+        ? ""
+        : `
     <div class="detail-block">
       <h4>Shitjet</h4>
       <div>Sot: <strong>${euro(sales.today)}</strong></div>
@@ -546,12 +578,93 @@ async function openClientDetail(id) {
       <div>Tokena: <strong>${Number(ai.tokens_total || 0).toLocaleString("sq-AL")}</strong></div>
       <div>Kosto: <strong>${euro(ai.cost_eur_total)}</strong></div>
       <div>Thirrje: <strong>${ai.calls || 0}</strong></div>
-    </div>
+    </div>`
+    }
   `;
   const body = document.getElementById("drawer-body");
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
-  bindDrawerSave(id, "kafene");
+  bindDrawerSave(id, product);
+  bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id);
+  bindLicenseActions(body);
+}
+
+function bindDrawerPassword(clientId, productLine) {
+  const msg = () => document.getElementById("dr-pw-msg");
+  document.getElementById("btn-drawer-set-pw")?.addEventListener("click", async () => {
+    const pw = document.getElementById("dr-password")?.value || "";
+    const pw2 = document.getElementById("dr-password2")?.value || "";
+    const m = msg();
+    if (pw.length < 6) {
+      if (m) m.textContent = "Fjalëkalimi min. 6 karaktere.";
+      return;
+    }
+    if (pw !== pw2) {
+      if (m) m.textContent = "Fjalëkalimet nuk përputhen.";
+      return;
+    }
+    const btn = document.getElementById("btn-drawer-set-pw");
+    if (btn) btn.disabled = true;
+    if (m) m.textContent = "Duke vendosur fjalëkalimin…";
+    try {
+      const data = await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}/set-password`, {
+        method: "POST",
+        body: JSON.stringify({
+          product_line: productLine,
+          password: pw,
+          email: document.getElementById("dr-email")?.value?.trim(),
+          emri: document.getElementById("dr-emri")?.value?.trim(),
+        }),
+      });
+      if (m) {
+        m.textContent = data.created
+          ? "Pronari u krijua dhe fjalëkalimi u vendos."
+          : "Fjalëkalimi u ndryshua.";
+      }
+      document.getElementById("dr-password").value = "";
+      document.getElementById("dr-password2").value = "";
+    } catch (ex) {
+      if (m) m.textContent = ex.message || "Dështoi";
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  document.getElementById("btn-drawer-send-reset")?.addEventListener("click", async () => {
+    const m = msg();
+    if (!confirm("Dërgo kod rivendosjeje me email te pronari?")) return;
+    const btn = document.getElementById("btn-drawer-send-reset");
+    if (btn) btn.disabled = true;
+    if (m) m.textContent = "Duke dërguar email…";
+    try {
+      // Ruaj email-in e klientit së pari nëse është ndryshuar
+      const email = document.getElementById("dr-email")?.value?.trim();
+      if (email) {
+        await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            product_line: productLine,
+            emri: document.getElementById("dr-emri")?.value?.trim(),
+            email,
+            telefoni: document.getElementById("dr-tel")?.value?.trim(),
+            telefon: document.getElementById("dr-tel")?.value?.trim(),
+          }),
+        }).catch(() => null);
+      }
+      const data = await api(
+        `/api/super/dashboard/clients/${encodeURIComponent(clientId)}/send-password-reset`,
+        {
+          method: "POST",
+          body: JSON.stringify({ product_line: productLine }),
+        },
+      );
+      if (m) m.textContent = data.message || "Kodi u dërgua me email.";
+    } catch (ex) {
+      if (m) m.textContent = ex.message || "Dërgimi dështoi";
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 }
 
 function bindDrawerHex16(el) {

@@ -366,6 +366,74 @@ async function adminResetOwnerPassword(id, baseUrl) {
   return sanitizeOwnerForAdmin(owner, baseUrl);
 }
 
+/** Pronarët e lidhur me një klient (për Master Admin). */
+async function listOwnersForClient(clientId, baseUrl) {
+  const db = getSupabase();
+  const id = String(clientId || "").trim();
+  if (!id) return [];
+  const { data, error } = await db
+    .from("users")
+    .select(OWNER_SELECT)
+    .eq("client_id", id)
+    .eq("roli", "client_admin")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data || []).map((u) => sanitizeOwnerForAdmin(u, baseUrl));
+}
+
+/**
+ * Master Admin: vendos fjalëkalim të ri për pronarin e klientit.
+ * Nëse nuk ka pronar, krijon një me email-in e klientit.
+ */
+async function setOwnerPasswordForClient(clientId, password, { email, emri, baseUrl } = {}) {
+  const pw = String(password || "").trim();
+  if (pw.length < 6) throw new Error("Fjalëkalimi min. 6 karaktere.");
+  const owners = await listOwnersForClient(clientId, baseUrl);
+  if (owners.length) {
+    const updated = [];
+    for (const o of owners) {
+      updated.push(await updateOwner(o.id, { password: pw }, baseUrl));
+    }
+    return { owners: updated, created: false };
+  }
+  const mail = String(email || "").trim().toLowerCase();
+  if (!mail) {
+    throw new Error("Vendos email të klientit para se të vendosësh fjalëkalimin.");
+  }
+  const owner = await ensureOwnerForClient(
+    {
+      client_id: clientId,
+      email: mail,
+      emri: emri || "Pronar",
+      password: pw,
+    },
+    baseUrl,
+  );
+  return { owners: [owner], created: true };
+}
+
+/** Master Admin: dërgo kod rivendosjeje me email te të gjithë pronarët e klientit. */
+async function sendPasswordResetForClient(clientId, baseUrl) {
+  const owners = await listOwnersForClient(clientId, baseUrl);
+  if (!owners.length) {
+    throw new Error("Nuk ka llogari pronari për këtë klient. Vendos email + fjalëkalim së pari.");
+  }
+  const { requestOwnerPasswordReset } = require("./ownerPasswordReset");
+  const sent = [];
+  for (const o of owners) {
+    if (!o.email) continue;
+    if (o.account_status === "pending") {
+      await regenerateOwnerInvite(o.id, baseUrl);
+      sent.push({ email: o.email, type: "invite" });
+    } else {
+      await requestOwnerPasswordReset(o.email);
+      sent.push({ email: o.email, type: "reset_code" });
+    }
+  }
+  if (!sent.length) throw new Error("Nuk u gjet email i vlefshëm për rivendosje.");
+  return { ok: true, sent };
+}
+
 async function ensureOwnerForClient({ client_id, emri, email, password }, baseUrl) {
   if (!client_id) throw new Error("Mungon client_id.");
   const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -417,6 +485,7 @@ async function ensureOwnerForClient({ client_id, emri, email, password }, baseUr
 
 module.exports = {
   listOwners,
+  listOwnersForClient,
   createOwner,
   ensureOwnerForClient,
   regenerateOwnerInvite,
@@ -430,4 +499,6 @@ module.exports = {
   ownerAccountStatus,
   buildInviteUrl,
   adminResetOwnerPassword,
+  setOwnerPasswordForClient,
+  sendPasswordResetForClient,
 };

@@ -618,8 +618,9 @@ async function getClientDetail(clientId) {
   if (error) throw error;
   if (!client) throw new Error("Klienti nuk u gjet");
 
+  const { listOwnersForClient } = require("./userService");
   const fromIso = dayStartIso(addDays(new Date(), -30));
-  const [salesRows, licenses, stockAlerts, aiSummary, staff] = await Promise.all([
+  const [salesRows, licenses, stockAlerts, aiSummary, staff, owners] = await Promise.all([
     fetchClosedSales({ fromIso }).then((rows) => rows.filter((r) => r.client_id === id)),
     listLicenses().then((all) => all.filter((l) => (l.client_id || l.clients?.id) === id)),
     listStockAlertsForAdmin()
@@ -633,6 +634,7 @@ async function getClientDetail(clientId) {
       .order("name", { ascending: true })
       .then((r) => r.data || [])
       .catch(() => []),
+    listOwnersForClient(id).catch(() => []),
   ]);
 
   const salesToday = salesRows
@@ -699,6 +701,7 @@ async function getClientDetail(clientId) {
       cost_eur_total: 0,
       calls: 0,
     },
+    owners: owners || [],
   };
 }
 
