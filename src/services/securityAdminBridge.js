@@ -1,10 +1,17 @@
 /**
  * Bridge Master Admin → SecureTrack Super Admin API
  * (klientë/licenca Security në Supabase të veçantë).
+ *
+ * Auth: Master Admin tashmë është i autentikuar me JWT (super_admin) te /api/super/*.
+ * Bridge-i server→server përdor të njëjtin secret të përbashkët me SecureTrack
+ * (jo secret të veçantë / të ndryshëm nga paneli).
  */
 const {
   normalizeProductLine,
 } = require("../utils/productLine");
+
+/** I njëjti default si SecureTrack server/routes/admin.js */
+const SHARED_MASTER_ADMIN_SECRET = "naser-security-2026";
 
 function securityUpstream() {
   return String(
@@ -16,38 +23,42 @@ function securityUpstream() {
     .replace(/\/$/, "");
 }
 
+/**
+ * Secret i përbashkët Master Admin ↔ SecureTrack.
+ * Mos përdor SUPER_ADMIN_SECRET të POS (shpesh bosh ose i ndryshëm) — shkakton 401.
+ */
 function securityAdminSecret() {
   return String(
     process.env.SECURITY_ADMIN_SECRET
-      || process.env.SUPER_ADMIN_SECRET
-      || process.env.ADMIN_SECRET
-      || "",
+      || process.env.MASTER_ADMIN_BRIDGE_SECRET
+      || process.env.SECURITY_SUPER_ADMIN_SECRET
+      || SHARED_MASTER_ADMIN_SECRET,
   ).trim();
 }
 
 async function securityAdminFetch(path, { method = "GET", body } = {}) {
   const secret = securityAdminSecret();
-  if (!secret) {
-    const err = new Error(
-      "Mungon SECURITY_ADMIN_SECRET / SUPER_ADMIN_SECRET për Security Admin.",
-    );
-    err.code = "SECURITY_ADMIN_SECRET_MISSING";
-    throw err;
-  }
   const url = `${securityUpstream()}${path.startsWith("/") ? path : `/${path}`}`;
   const res = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
       "x-admin-secret": secret,
+      "x-master-admin-bridge": "1",
+      "x-revolution-master-admin": "1",
     },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.gabim || `Security Admin HTTP ${res.status}`);
+    const raw = data.gabim || `Security Admin HTTP ${res.status}`;
+    const err = new Error(
+      /unauthorized|secret/i.test(raw)
+        ? "Security bridge: secret i panjohur. Vendos SECURITY_ADMIN_SECRET të njëjtë në POS dhe SecureTrack (default i përbashkët: naser-security-2026)."
+        : raw,
+    );
     err.status = res.status;
-    err.code = data.code;
+    err.code = data.code || "SECURITY_BRIDGE";
     throw err;
   }
   return data;
