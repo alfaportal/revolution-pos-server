@@ -915,6 +915,28 @@ function bindLicenseActions(root) {
       }
     });
   });
+  root.querySelectorAll("[data-delete-license]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteLicense;
+      const key = btn.dataset.key || id;
+      const isSec = btn.dataset.product === "security";
+      if (!confirm(`Fshi krejt licencën ${key}?\nNuk kthehet mbrapa.`)) return;
+      btn.disabled = true;
+      try {
+        const path = isSec
+          ? `/api/super/dashboard/security/licenses/${id}`
+          : `/api/super/dashboard/licenses/${id}`;
+        await api(path, { method: "DELETE" });
+        alert("Licenca u fshi.");
+        await loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Fshirja dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
   root.querySelectorAll("[data-block]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("Çaktivizo licencën?")) return;
@@ -1282,6 +1304,7 @@ async function loadLicenses() {
                          <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
                       : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
                   }
+                  <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="security" data-key="${esc(key)}">Fshi</button>
                 </div>
               </div>`;
             }
@@ -1316,6 +1339,7 @@ async function loadLicenses() {
                     : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
                 }
                 <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
+                <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi licencën</button>
               </div>
             </div>`;
           })
@@ -1345,6 +1369,7 @@ async function loadLicenses() {
                      <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
                   : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
               }
+              <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="security" data-key="${esc(key)}">Fshi</button>
             </td>
           </tr>`;
         }
@@ -1368,6 +1393,7 @@ async function loadLicenses() {
                 : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
             }
             <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
+            <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
           </td>
         </tr>`;

@@ -33,6 +33,7 @@ const {
   updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
+  deleteSecurityLicense,
   getSecurityClientDetail,
   setSecurityClientPassword,
   requestSecurityPasswordReset,
@@ -45,6 +46,7 @@ const {
   updateLicense,
   updateLicenseStatus,
   updateClient,
+  deleteLicense,
   revokeLicenseRemote,
   reactivateLicenseRemote,
   requestWipeDataForLicense,
@@ -550,6 +552,36 @@ router.post(
       details: { status: req.body?.statusi || req.body?.status },
     }).catch(() => {});
     res.json({ ok: true, license: license.license || license });
+  }),
+);
+
+/** Fshi krejt licencën (Super Admin) — POS */
+router.delete(
+  "/dashboard/licenses/:id",
+  asyncHandler(async (req, res) => {
+    await deleteLicense(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "license_delete",
+      targetType: "license",
+      targetId: req.params.id,
+    }).catch(() => {});
+    res.json({ ok: true });
+  }),
+);
+
+/** Fshi krejt licencën Security (bridge → SecureTrack) */
+router.delete(
+  "/dashboard/security/licenses/:id",
+  asyncHandler(async (req, res) => {
+    const data = await deleteSecurityLicense(req.params.id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "security_license_delete",
+      targetType: "license",
+      targetId: req.params.id,
+    }).catch(() => {});
+    res.json({ ok: true, ...(data && typeof data === "object" ? data : {}) });
   }),
 );
 

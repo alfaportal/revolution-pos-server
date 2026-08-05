@@ -250,6 +250,12 @@ async function setSecurityLicenseStatus(id, statusi) {
   });
 }
 
+async function deleteSecurityLicense(id) {
+  return securityAdminFetch(`/api/admin/licenses/${id}`, {
+    method: "DELETE",
+  });
+}
+
 async function updateSecurityLicense(id, patch = {}) {
   const body = {};
   if (patch.statusi || patch.status) {
@@ -348,6 +354,7 @@ module.exports = {
   updateSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
+  deleteSecurityLicense,
   updateSecurityLicense,
   setSecurityClientPassword,
   requestSecurityPasswordReset,
