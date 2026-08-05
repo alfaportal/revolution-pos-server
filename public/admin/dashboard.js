@@ -506,10 +506,6 @@ async function openClientDetail(id) {
   const c = d.client || {};
   const licenses = d.licenses || [];
   const owners = d.owners || [];
-  const sales = d.sales || {};
-  const stock = d.stock || {};
-  const waiters = d.waiters || [];
-  const ai = d.ai_usage || {};
 
   document.getElementById("drawer-root").classList.remove("hidden");
   document.getElementById("drawer-title").textContent = `${c.icon || (isSecurity ? "🛡️" : "🏪")} ${c.emri || "Klient"}`;
@@ -551,35 +547,6 @@ async function openClientDetail(id) {
       <h4>Licenca (edito ID / çelës / status)</h4>
       ${renderLicenseEditBlocks(licenses, { security: isSecurity })}
     </div>
-    ${
-      isSecurity
-        ? ""
-        : `
-    <div class="detail-block">
-      <h4>Shitjet</h4>
-      <div>Sot: <strong>${euro(sales.today)}</strong></div>
-      <div>30 ditë: <strong>${euro(sales.last_30_days)}</strong> (${sales.order_count_30d || 0} porosi)</div>
-    </div>
-    <div class="detail-block">
-      <h4>Stoku</h4>
-      <div>Artikuj me stok zero: <strong>${stock.zero_count || 0}</strong></div>
-      <ul style="margin:0.4rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:0.85rem">
-        ${(stock.zero_items || []).slice(0, 12).map((i) => `<li>${esc(i.name)}</li>`).join("") || "<li>—</li>"}
-      </ul>
-    </div>
-    <div class="detail-block">
-      <h4>Kamarierët</h4>
-      <ul style="margin:0;padding-left:1.1rem">
-        ${waiters.map((w) => `<li>${esc(w.name)} ${w.active === false ? "(joaktiv)" : ""}</li>`).join("") || "<li>—</li>"}
-      </ul>
-    </div>
-    <div class="detail-block">
-      <h4>AI Usage (muaji aktual)</h4>
-      <div>Tokena: <strong>${Number(ai.tokens_total || 0).toLocaleString("sq-AL")}</strong></div>
-      <div>Kosto: <strong>${euro(ai.cost_eur_total)}</strong></div>
-      <div>Thirrje: <strong>${ai.calls || 0}</strong></div>
-    </div>`
-    }
   `;
   const body = document.getElementById("drawer-body");
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
