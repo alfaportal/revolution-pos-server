@@ -226,7 +226,7 @@ async function loadOverview() {
   list.innerHTML = problems.length
     ? problems
         .map(
-          (p) => `<li class="prob-overview-row" data-open-client="${esc(p.id)}" role="button" tabindex="0" style="cursor:pointer">
+          (p) => `<li class="prob-overview-row" data-open-client="${esc(p.id)}" data-product="${esc(p.product_line || "kafene")}" role="button" tabindex="0" style="cursor:pointer">
             <div><strong>${esc(p.emri)}</strong><div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.product_line ? ` · ${esc(p.product_line)}` : ""}</div></div>
             <div>${(p.reasons || []).map((r) => `<span class="badge badge-warn">${esc(r)}</span>`).join(" ")}
               <span class="badge badge-ok" style="margin-left:0.25rem">Edito</span>
@@ -236,7 +236,10 @@ async function loadOverview() {
         .join("")
     : `<li style="color:var(--muted)">Nuk ka klientë me probleme.</li>`;
   list.querySelectorAll("[data-open-client]").forEach((row) => {
-    const open = () => openClientDetail(row.dataset.openClient).catch((ex) => alert(ex.message || ex));
+    const open = () =>
+      openClientDetail(row.dataset.openClient, {
+        product: row.dataset.product || "kafene",
+      }).catch((ex) => alert(ex.message || ex));
     row.addEventListener("click", open);
     row.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -326,7 +329,12 @@ function renderClientsSectors(filterText = "") {
     });
   });
   root.querySelectorAll("[data-client-id]").forEach((row) => {
-    row.addEventListener("click", () => openClientDetail(row.dataset.clientId));
+    row.addEventListener("click", () => {
+      const hit = clientsFlat.find((c) => String(c.id) === String(row.dataset.clientId));
+      openClientDetail(row.dataset.clientId, {
+        product: hit?.product_line || productQuery(true) || "kafene",
+      }).catch((ex) => alert(ex.message || ex));
+    });
   });
 
   const sel = document.getElementById("inv-client");
@@ -497,12 +505,41 @@ function renderPasswordBlock(owners) {
     </div>`;
 }
 
-async function openClientDetail(id) {
-  const isSecurity = currentProduct === "security" || productQuery(true) === "security";
-  const product = isSecurity ? "security" : "kafene";
-  const d = await api(
-    `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
-  );
+async function fetchClientDetailSmart(id, preferredProduct) {
+  const prefer = String(preferredProduct || "").toLowerCase();
+  const order =
+    prefer === "security"
+      ? ["security", "kafene"]
+      : prefer === "kafene"
+        ? ["kafene", "security"]
+        : currentProduct === "security"
+          ? ["security", "kafene"]
+          : ["kafene", "security"];
+
+  let lastErr = null;
+  for (const product of order) {
+    try {
+      const d = await api(
+        `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
+      );
+      if (d?.client?.id || d?.client?.emri) {
+        return { d, product };
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("Klienti nuk u gjet");
+}
+
+async function openClientDetail(id, opts = {}) {
+  const preferred =
+    opts.product
+    || opts.product_line
+    || (typeof opts === "string" ? opts : null)
+    || null;
+  const { d, product } = await fetchClientDetailSmart(id, preferred);
+  const isSecurity = product === "security";
   const c = d.client || {};
   const licenses = d.licenses || [];
   const owners = d.owners || [];
@@ -1494,9 +1531,10 @@ async function loadBilling() {
 
 function problemActionsHtml(p) {
   const bits = [];
+  const productLine = p.product_line || p.product || "kafene";
   if (p.id) {
     bits.push(
-      `<button type="button" class="btn btn-ghost btn-sm" data-prob-open="${esc(p.id)}">Hap klientin</button>`,
+      `<button type="button" class="btn btn-primary btn-sm" data-prob-open="${esc(p.id)}" data-product="${esc(productLine)}">Hap &amp; rregullo</button>`,
     );
   }
   if (p.license_id) {
@@ -1548,7 +1586,9 @@ function bindProblemActions(root) {
     if (openBtn) {
       e.preventDefault();
       try {
-        await openClientDetail(openBtn.dataset.probOpen);
+        await openClientDetail(openBtn.dataset.probOpen, {
+          product: openBtn.dataset.product || "kafene",
+        });
       } catch (ex) {
         alert(ex.message || "Nuk u hap klienti.");
       }

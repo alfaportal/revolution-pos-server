@@ -175,11 +175,25 @@ router.get(
 router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
-    const product = normalizeProductLine(req.query.product || req.query.industry || "kafene");
-    if (product === "security") {
-      return res.json({ ok: true, ...(await getSecurityClientDetail(req.params.id)) });
+    const raw = String(req.query.product || req.query.industry || "kafene").toLowerCase();
+    const preferSecurity = raw === "security" || raw === "sekurim";
+    const tryOrder = preferSecurity ? ["security", "kafene"] : ["kafene", "security"];
+    let lastErr = null;
+    for (const product of tryOrder) {
+      try {
+        if (product === "security") {
+          const detail = await getSecurityClientDetail(req.params.id);
+          return res.json({ ok: true, ...detail, product_line: "security" });
+        }
+        const detail = await getClientDetail(req.params.id);
+        return res.json({ ok: true, ...detail, product_line: "kafene" });
+      } catch (e) {
+        lastErr = e;
+      }
     }
-    res.json({ ok: true, ...(await getClientDetail(req.params.id)) });
+    const err = lastErr || new Error("Klienti nuk u gjet");
+    err.status = 404;
+    throw err;
   }),
 );
 

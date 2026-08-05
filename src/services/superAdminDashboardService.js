@@ -931,6 +931,7 @@ async function getProblemsReport() {
       emri: c.emri,
       tipi: normalizeClientTipi(c.tipi),
       tipi_label: labelForTipi(c.tipi),
+      product_line: clientProductLine(c),
     };
 
     if (lics.some((l) => ["skaduar"].includes(l.statusi))) {
