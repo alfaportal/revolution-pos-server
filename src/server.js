@@ -128,6 +128,48 @@ app.get("/api/public/config", async (_req, res) => {
 });
 
 /**
+ * SecureTrack → POS: dërgo kod rivendosjeje për pronarin Security (Resend).
+ * Auth: i njëjti secret bridge (x-admin-secret).
+ */
+app.post("/api/public/security-owner-reset-mail", async (req, res) => {
+  try {
+    const SHARED = "naser-security-2026";
+    const secrets = new Set(
+      [
+        process.env.SECURITY_ADMIN_SECRET,
+        process.env.MASTER_ADMIN_BRIDGE_SECRET,
+        process.env.SECURITY_SUPER_ADMIN_SECRET,
+        SHARED,
+      ]
+        .map((s) => String(s || "").trim())
+        .filter(Boolean),
+    );
+    const provided = String(req.get("x-admin-secret") || req.body?.secret || "").trim();
+    if (!provided || !secrets.has(provided)) {
+      return res.status(401).json({ ok: false, gabim: "Unauthorized", code: "ADMIN_AUTH" });
+    }
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const code = String(req.body?.code || "").trim();
+    if (!email || !code) {
+      return res.status(400).json({ ok: false, gabim: "email dhe code janë të detyrueshme." });
+    }
+    const { sendOwnerPasswordResetEmail, isEmailConfigured } = require("./services/emailService");
+    if (!isEmailConfigured()) {
+      return res.status(503).json({
+        ok: false,
+        gabim: "Emaili nuk është i konfiguruar (RESEND_API_KEY).",
+        code: "EMAIL_NOT_CONFIGURED",
+      });
+    }
+    await sendOwnerPasswordResetEmail({ to: email, code });
+    return res.json({ ok: true, email });
+  } catch (e) {
+    console.error("[security-owner-reset-mail]", e.message || e);
+    return res.status(500).json({ ok: false, gabim: e.message || "Dërgimi dështoi" });
+  }
+});
+
+/**
  * Kërkesë Setup link — email ose SMS (pa WhatsApp). Rate-limited.
  * Body: { channel: 'email'|'sms', email?, phone?, plan?, lang? }
  */

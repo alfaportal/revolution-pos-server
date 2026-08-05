@@ -52,24 +52,21 @@ async function deliverEmail({ to, subject, text, html, attachments }) {
 }
 
 async function sendOwnerPasswordResetEmail({ to, code }) {
-  const origin = getPublicAppOrigin();
-  const loginUrl = `${origin}/owner/login`;
-  const subject = "Rivendos fjalëkalimin — Revolution POS";
+  const subject = "Rivendos fjalëkalimin — Revolution Security";
   const text = [
-    "Keni provuar të hyni në panelin e pronarit me fjalëkalim të gabuar.",
+    "Kërkesë për rivendosje fjalëkalimi — Paneli i pronarit (Revolution Security).",
     "",
-    `Kodi për fjalëkalim të ri: ${code}`,
+    `Kodi juaj 6-shifror: ${code}`,
     "",
-    loginUrl,
-    "",
+    "Hapni panelin e pronarit → Harrove fjalëkalimin → vendosni KODIN (jo emailin) + fjalëkalimin e ri.",
     "Kodi skadon pas 15 minutash.",
     "Nëse nuk e keni kërkuar ju, injoroni këtë email.",
   ].join("\n");
 
   const html = `
-    <p>Kodi për fjalëkalim të ri në <strong>Revolution POS</strong>:</p>
-    <p style="font-size:22px;font-weight:bold;letter-spacing:4px;margin:16px 0">${code}</p>
-    <p><a href="${loginUrl}">Hap hyrjen e pronarit</a> dhe vendosni kodin + fjalëkalimin e ri.</p>
+    <p>Kodi për fjalëkalim të ri — <strong>Revolution Security</strong> (paneli i pronarit):</p>
+    <p style="font-size:28px;font-weight:bold;letter-spacing:6px;margin:16px 0">${code}</p>
+    <p>Te fusha <strong>«Kodi nga email»</strong> vendosni vetëm këto 6 shifra — jo adresën e emailit.</p>
     <p style="color:#666;font-size:13px">Skadon pas 15 minutash.</p>
   `;
 
