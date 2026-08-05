@@ -63,6 +63,12 @@ const {
   renderPublicStorefrontHtml,
   renderNotFoundHtml,
 } = require("./services/seoPublicPageHtml");
+const { createProxyMiddleware } = require("http-proxy-middleware");
+
+/** SecureTrack (Security) — proxy për revolution-pos.com/security/* */
+const SECURITY_UPSTREAM =
+  process.env.SECURITY_UPSTREAM_URL ||
+  "https://revolution-security-production.up.railway.app";
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
@@ -350,6 +356,16 @@ app.use("/api/menu", tableMenuRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/r", publicApiRouter);
 app.use("/api/s", shopApiRouter);
+
+// SecureTrack — /security → Railway (React Router: /pronari, /puntori, …)
+app.use(
+  "/security",
+  createProxyMiddleware({
+    target: SECURITY_UPSTREAM,
+    changeOrigin: true,
+    xfwd: true,
+  }),
+);
 
 app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
