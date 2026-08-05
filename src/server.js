@@ -63,7 +63,6 @@ const {
   renderPublicStorefrontHtml,
   renderNotFoundHtml,
 } = require("./services/seoPublicPageHtml");
-const { createProxyMiddleware } = require("http-proxy-middleware");
 
 /** SecureTrack (Security) — proxy për revolution-pos.com/security/* */
 const SECURITY_UPSTREAM =
@@ -357,16 +356,6 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/r", publicApiRouter);
 app.use("/api/s", shopApiRouter);
 
-// SecureTrack — /security → Railway (React Router: /pronari, /puntori, …)
-app.use(
-  "/security",
-  createProxyMiddleware({
-    target: SECURITY_UPSTREAM,
-    changeOrigin: true,
-    xfwd: true,
-  }),
-);
-
 app.get("/panel.html", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
 });
@@ -631,7 +620,7 @@ app.get(
 app.use(
   "/security",
   createProxyMiddleware({
-    target: "https://securetrack-production.up.railway.app",
+    target: SECURITY_UPSTREAM,
     changeOrigin: true,
     pathRewrite: {
       "^/security$": "/",
