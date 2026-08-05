@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=20">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=21">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -328,9 +328,13 @@
         <section class="section" id="sec-raportet">
           <div class="card">
             <div class="card-title">
-              <span>Probleme — jo shitje</span>
+              <span>Probleme</span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-rep-load">Rifresko</button>
             </div>
+            <p class="prob-help">
+              Këtu rregullon <strong>problemin</strong> (offline, print, fiskale, licencë e skaduar…).
+              ID, email dhe çelësi i licencës ndryshohen vetëm te <strong>Klientët</strong> — jo këtu.
+            </p>
             <div class="kpi-row" id="problems-kpi">
               <button type="button" class="kpi warn kpi-jump" data-prob-jump="program" id="kpi-btn-program">
                 <div class="lbl">Program</div>
@@ -444,6 +448,18 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=20"></script>
+  <div id="prob-resolve-root" class="hidden">
+    <div class="drawer-backdrop" id="prob-resolve-backdrop"></div>
+    <aside class="drawer prob-resolve-drawer" id="prob-resolve-drawer">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
+        <h3 id="prob-resolve-title">Rregullo problemin</h3>
+        <button type="button" class="btn btn-ghost btn-sm" id="prob-resolve-close">Mbyll</button>
+      </div>
+      <p class="sub" id="prob-resolve-sub"></p>
+      <div id="prob-resolve-body"></div>
+    </aside>
+  </div>
+
+  <script src="/admin/dashboard.js?v=21"></script>
 </body>
 </html>

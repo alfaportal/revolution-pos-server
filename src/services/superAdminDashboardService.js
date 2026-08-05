@@ -19,6 +19,7 @@ const {
 } = require("../utils/businessTipi");
 const { buildAiUsageInvoicePdf } = require("./aiBillingPdfService");
 const { listSystemFailures } = require("./systemFailureLog");
+const { isProblemAcked, ackProblem } = require("./problemAckStore");
 const { normalizeProductLine, PRODUCT_LINES } = require("../utils/productLine");
 const {
   getSecurityClientsGrouped,
@@ -901,6 +902,10 @@ function matchClientFromFailure(entry, clients) {
 /**
  * Raportet e Super Admin = VETËM probleme (jo shitje).
  */
+function filterOpenProblems(rows) {
+  return (rows || []).filter((r) => r?.problem_key && !isProblemAcked(r.problem_key));
+}
+
 async function getProblemsReport() {
   const [clients, licenses, stockAlerts] = await Promise.all([
     listClients(),
@@ -938,22 +943,28 @@ async function getProblemsReport() {
       const lic = lics.find((l) => l.statusi === "skaduar");
       license_expired.push({
         ...base,
-        detail: "Licencë e skaduar",
+        kind: "license",
+        issue: "expired",
+        detail: "Licencë e skaduar — zgjat këtu; ID/email/çelës vetëm te Klientët",
         at: lic?.updated_at || lic?.data_skadimit || null,
         license_id: lic?.id || null,
         data_skadimit: lic?.data_skadimit || null,
         statusi: lic?.statusi || "skaduar",
+        problem_key: `license:expired:${c.id}:${lic?.id || "x"}`,
       });
     }
     if (lics.some((l) => ["revokuar", "pezulluar"].includes(l.statusi))) {
       const lic = lics.find((l) => ["revokuar", "pezulluar"].includes(l.statusi));
       program.push({
         ...base,
+        kind: "program",
+        issue: "blocked",
         detail: "Licencë e bllokuar / pezulluar",
         at: lic?.updated_at || null,
         license_id: lic?.id || null,
         data_skadimit: lic?.data_skadimit || null,
         statusi: lic?.statusi || null,
+        problem_key: `program:blocked:${c.id}:${lic?.id || "x"}`,
       });
     }
     if (lics.length && lics.every((l) => isOfflineOver48h(l))) {
@@ -961,23 +972,29 @@ async function getProblemsReport() {
       const lic = lics[0];
       offline_48h.push({
         ...base,
+        kind: "offline",
+        issue: "offline_48h",
         detail: "Offline më shumë se 48 orë",
         at: seen,
         last_seen_at: seen,
         license_id: lic?.id || null,
         data_skadimit: lic?.data_skadimit || null,
         statusi: lic?.statusi || null,
+        problem_key: `offline:${c.id}`,
       });
     }
     if (stockZeroClientIds.has(c.id)) {
       const lic = lics.find((l) => l.statusi === "aktive") || lics[0];
       program.push({
         ...base,
-        detail: "Probleme me programin (stok zero)",
+        kind: "program",
+        issue: "stock_zero",
+        detail: "Stok zero — kontrollo te klienti / shëno si të zgjidhur",
         at: null,
         license_id: lic?.id || null,
         data_skadimit: lic?.data_skadimit || null,
         statusi: lic?.statusi || null,
+        problem_key: `program:stock:${c.id}`,
       });
     }
   }
@@ -990,16 +1007,30 @@ async function getProblemsReport() {
   for (const f of failures) {
     const kind = classifyFailureEvent(f);
     const client = matchClientFromFailure(f, clients);
+    const failureId = f.id || `${f.at || ""}-${kind}`;
     const row = {
       id: client?.id || null,
       emri: client?.emri || (String(f.message || "").split("—")[0] || "").trim() || "I panjohur",
       tipi_label: client ? labelForTipi(client.tipi) : "—",
+      product_line: client ? clientProductLine(client) : "kafene",
       detail: f.message || f.event || "Gabim",
       at: f.at || null,
       event: f.event || kind,
       source: f.source || "system",
       kind,
+      issue: kind,
+      failure_id: failureId,
+      problem_key: `${kind}:failure:${failureId}`,
+      license_id: null,
+      statusi: null,
     };
+    if (client) {
+      const lics = licByClient.get(client.id) || [];
+      const lic = lics.find((l) => l.statusi === "aktive") || lics[0];
+      row.license_id = lic?.id || null;
+      row.data_skadimit = lic?.data_skadimit || null;
+      row.statusi = lic?.statusi || null;
+    }
     history.push({
       at: row.at,
       client_name: row.emri,
@@ -1008,39 +1039,38 @@ async function getProblemsReport() {
       message: row.detail,
       event: row.event,
       source: row.source,
+      problem_key: row.problem_key,
     });
+    if (isProblemAcked(row.problem_key)) continue;
     if (kind === "print") print_errors.push(row);
     else if (kind === "fiscal") fiscal_errors.push(row);
     else if (kind === "program" && client) {
-      const lics = licByClient.get(client.id) || [];
-      const lic = lics.find((l) => l.statusi === "aktive") || lics[0];
       program.push({
-        id: client.id,
-        emri: client.emri,
+        ...row,
         tipi: normalizeClientTipi(client.tipi),
-        tipi_label: labelForTipi(client.tipi),
-        detail: row.detail,
-        at: row.at,
-        license_id: lic?.id || null,
-        data_skadimit: lic?.data_skadimit || null,
-        statusi: lic?.statusi || null,
+        issue: "runtime",
+        problem_key: `program:failure:${failureId}`,
       });
     }
   }
 
   history.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
 
+  const openProgram = filterOpenProblems(program);
+  const openOffline = filterOpenProblems(offline_48h);
+  const openLicense = filterOpenProblems(license_expired);
+
   return {
-    program,
-    offline_48h,
-    license_expired,
+    program: openProgram,
+    offline_48h: openOffline,
+    license_expired: openLicense,
     print_errors,
     fiscal_errors,
     history,
     counts: {
-      program: program.length,
-      offline_48h: offline_48h.length,
-      license_expired: license_expired.length,
+      program: openProgram.length,
+      offline_48h: openOffline.length,
+      license_expired: openLicense.length,
       print_errors: print_errors.length,
       fiscal_errors: fiscal_errors.length,
       history: history.length,
@@ -1159,6 +1189,7 @@ module.exports = {
   getAiUsageDashboard,
   getSalesReport,
   getProblemsReport,
+  ackProblem,
   reportToCsv,
   getSettings,
   getSettingsAsync,

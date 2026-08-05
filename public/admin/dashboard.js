@@ -226,25 +226,24 @@ async function loadOverview() {
   list.innerHTML = problems.length
     ? problems
         .map(
-          (p) => `<li class="prob-overview-row" data-open-client="${esc(p.id)}" data-product="${esc(p.product_line || "kafene")}" role="button" tabindex="0" style="cursor:pointer">
+          (p) => `<li class="prob-overview-row" data-goto-problems role="button" tabindex="0" style="cursor:pointer">
             <div><strong>${esc(p.emri)}</strong><div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.product_line ? ` · ${esc(p.product_line)}` : ""}</div></div>
             <div>${(p.reasons || []).map((r) => `<span class="badge badge-warn">${esc(r)}</span>`).join(" ")}
-              <span class="badge badge-ok" style="margin-left:0.25rem">Edito</span>
+              <span class="badge badge-ok" style="margin-left:0.25rem">Te Probleme</span>
             </div>
           </li>`,
         )
         .join("")
     : `<li style="color:var(--muted)">Nuk ka klientë me probleme.</li>`;
-  list.querySelectorAll("[data-open-client]").forEach((row) => {
-    const open = () =>
-      openClientDetail(row.dataset.openClient, {
-        product: row.dataset.product || "kafene",
-      }).catch((ex) => alert(ex.message || ex));
-    row.addEventListener("click", open);
+  list.querySelectorAll("[data-goto-problems]").forEach((row) => {
+    const go = () => {
+      document.querySelector('.nav-item[data-section="raportet"]')?.click();
+    };
+    row.addEventListener("click", go);
     row.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        open();
+        go();
       }
     });
   });
@@ -1529,35 +1528,37 @@ async function loadBilling() {
   });
 }
 
-function problemActionsHtml(p) {
-  const bits = [];
-  const productLine = p.product_line || p.product || "kafene";
-  if (p.id) {
-    bits.push(
-      `<button type="button" class="btn btn-primary btn-sm" data-prob-open="${esc(p.id)}" data-product="${esc(productLine)}">Hap &amp; rregullo</button>`,
-    );
-  }
-  if (p.license_id) {
-    bits.push(
-      `<button type="button" class="btn btn-ghost btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="1">+1 muaj</button>`,
-    );
-    bits.push(
-      `<button type="button" class="btn btn-ghost btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="3">+3 muaj</button>`,
-    );
-    bits.push(
-      `<button type="button" class="btn btn-primary btn-sm" data-prob-extend="${esc(p.license_id)}" data-months="12">+12 muaj</button>`,
-    );
-    if (["pezulluar", "revokuar"].includes(String(p.statusi || ""))) {
-      bits.push(
-        `<button type="button" class="btn btn-ghost btn-sm" data-prob-unblock="${esc(p.license_id)}">Zhblloko</button>`,
-      );
-    }
-  }
-  if (!bits.length) return "";
-  return `<div class="prob-actions">${bits.join("")}</div>`;
+const PROBLEM_KIND_LABEL = {
+  program: "Program",
+  offline: "Offline",
+  print: "Print",
+  fiscal: "Fiskale",
+  license: "Licencë",
+};
+
+let activeProblem = null;
+const problemRowStore = new Map();
+let problemRowSeq = 0;
+
+function storeProblemRow(p) {
+  const id = `pr${++problemRowSeq}`;
+  problemRowStore.set(id, p);
+  return id;
 }
 
-function renderProblemList(elId, rows, emptyText) {
+function problemKindOf(p, listHint) {
+  return p.kind || listHint || "program";
+}
+
+function problemActionsHtml(p, listHint) {
+  const rid = storeProblemRow(p || {});
+  const kind = problemKindOf(p, listHint);
+  return `<div class="prob-actions">
+    <button type="button" class="btn btn-primary btn-sm" data-prob-fix="${esc(rid)}" data-kind="${esc(kind)}">Rregullo</button>
+  </div>`;
+}
+
+function renderProblemList(elId, rows, emptyText, listHint) {
   const el = document.getElementById(elId);
   if (!el) return;
   const list = rows || [];
@@ -1569,7 +1570,7 @@ function renderProblemList(elId, rows, emptyText) {
               <strong>${esc(p.emri)}</strong>
               <div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.at ? ` · ${esc(fmtDate(p.at))}` : ""}${p.data_skadimit ? ` · skadon ${esc(p.data_skadimit)}` : ""}</div>
               <div style="margin-top:0.25rem;font-size:0.9rem">${esc(p.detail || "")}</div>
-              ${problemActionsHtml(p)}
+              ${problemActionsHtml(p, listHint)}
             </div>
           </li>`,
         )
@@ -1578,56 +1579,260 @@ function renderProblemList(elId, rows, emptyText) {
   bindProblemActions(el);
 }
 
+function closeProblemResolve() {
+  activeProblem = null;
+  document.getElementById("prob-resolve-root")?.classList.add("hidden");
+}
+
+function resolvePanelHtml(p, kind) {
+  const issue = p.issue || kind;
+  const blocked = ["pezulluar", "revokuar"].includes(String(p.statusi || "")) || issue === "blocked";
+  const expired = kind === "license" || issue === "expired";
+  const offline = kind === "offline";
+  const print = kind === "print";
+  const fiscal = kind === "fiscal";
+  const stock = issue === "stock_zero";
+
+  let actions = "";
+  if (expired && p.license_id) {
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Zgjidhja</h4>
+        <p>Zgjato afatin e licencës. Ndryshimi i ID / email / çelësit bëhet te Klientët.</p>
+        <div class="prob-resolve-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-pr-extend="1">+1 muaj</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-pr-extend="3">+3 muaj</button>
+          <button type="button" class="btn btn-primary btn-sm" data-pr-extend="12">+12 muaj</button>
+        </div>
+      </div>`;
+  } else if (blocked && p.license_id) {
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Zgjidhja</h4>
+        <p>Zhblloko licencën që klienti të hyjë përsëri.</p>
+        <div class="prob-resolve-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-pr-unblock>Zhblloko licencën</button>
+        </div>
+      </div>`;
+  } else if (offline) {
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Çfarë po bën?</h4>
+        <div class="prob-resolve-choice">
+          <label><input type="radio" name="pr-res" value="contacted" checked> E kontaktova / e di — hiqe nga lista</label>
+          <label><input type="radio" name="pr-res" value="waiting_online"> Pret që të kthehet online</label>
+          <label><input type="radio" name="pr-res" value="device_issue"> Problem me pajisjen / internetin te klienti</label>
+        </div>
+        <label for="pr-note">Shënim (opsional)</label>
+        <textarea id="pr-note" class="prob-resolve-note" placeholder="p.sh. e thirra, do lidhet nesër…"></textarea>
+        <div class="prob-resolve-actions" style="margin-top:0.65rem">
+          <button type="button" class="btn btn-primary btn-sm" data-pr-ack>Shëno si të zgjidhur</button>
+        </div>
+      </div>`;
+  } else if (print || fiscal) {
+    const label = print ? "printimit" : "fiskales";
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Zgjidhja për ${esc(label)}</h4>
+        <div class="prob-resolve-choice">
+          <label><input type="radio" name="pr-res" value="fixed_on_site" checked> U rregullua te klienti (kabllo / driver / konfigurim)</label>
+          <label><input type="radio" name="pr-res" value="reprint_ok"> Print / fiskale funksionon tani</label>
+          <label><input type="radio" name="pr-res" value="temp_glitch"> Gabim i përkohshëm — hiqe nga lista</label>
+          <label><input type="radio" name="pr-res" value="needs_visit"> Duhet vizitë / ndihmë e mëtejshme</label>
+        </div>
+        <label for="pr-note">Çfarë bëre / shënim</label>
+        <textarea id="pr-note" class="prob-resolve-note" placeholder="p.sh. u ndërrua IP e printerit…"></textarea>
+        <div class="prob-resolve-actions" style="margin-top:0.65rem">
+          <button type="button" class="btn btn-primary btn-sm" data-pr-ack>Ruaj zgjidhjen</button>
+        </div>
+      </div>`;
+  } else if (stock) {
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Stok zero</h4>
+        <p>Kjo nuk rregullohet me licencë. Pronari duhet të mbushë stokun; ti mund ta shënosh si të njohur.</p>
+        <label for="pr-note">Shënim</label>
+        <textarea id="pr-note" class="prob-resolve-note" placeholder="p.sh. i thashë të rifutë stokun…"></textarea>
+        <div class="prob-resolve-actions" style="margin-top:0.65rem">
+          <button type="button" class="btn btn-primary btn-sm" data-pr-ack>Shëno si të zgjidhur</button>
+        </div>
+      </div>`;
+  } else {
+    actions = `
+      <div class="prob-resolve-block">
+        <h4>1. Zgjidhja</h4>
+        <div class="prob-resolve-choice">
+          <label><input type="radio" name="pr-res" value="fixed" checked> U rregullua</label>
+          <label><input type="radio" name="pr-res" value="monitoring"> Në monitorim</label>
+          <label><input type="radio" name="pr-res" value="false_alarm"> Alarm i gabuar</label>
+        </div>
+        <label for="pr-note">Shënim</label>
+        <textarea id="pr-note" class="prob-resolve-note"></textarea>
+        <div class="prob-resolve-actions" style="margin-top:0.65rem">
+          <button type="button" class="btn btn-primary btn-sm" data-pr-ack>Shëno si të zgjidhur</button>
+        </div>
+      </div>`;
+  }
+
+  const clientLink = p.id
+    ? `<div class="prob-resolve-foot">
+        ID, email, fjalëkalim, hardware ID dhe çelësi i licencës →
+        <button type="button" class="btn btn-ghost btn-sm" data-pr-goto-client>Te Klientët</button>
+        <span style="opacity:0.75">(vetëm nëse të duhen kredencialet)</span>
+      </div>`
+    : `<div class="prob-resolve-foot">Nuk u gjet klienti i lidhur — shëno zgjidhjen ose kontrollo historinë.</div>`;
+
+  return `
+    <div class="prob-resolve-block">
+      <h4>Problemi</h4>
+      <p><strong>${esc(PROBLEM_KIND_LABEL[kind] || kind)}</strong>${p.issue ? ` · ${esc(p.issue)}` : ""}</p>
+      <p>${esc(p.detail || "—")}</p>
+      ${p.last_seen_at || p.at ? `<p>Kohë: ${esc(fmtDate(p.last_seen_at || p.at))}</p>` : ""}
+      ${p.data_skadimit ? `<p>Skadon: ${esc(p.data_skadimit)}</p>` : ""}
+    </div>
+    ${actions}
+    ${clientLink}`;
+}
+
+function openProblemResolve(p, kindHint) {
+  const kind = problemKindOf(p, kindHint);
+  activeProblem = { ...p, kind };
+  const root = document.getElementById("prob-resolve-root");
+  const title = document.getElementById("prob-resolve-title");
+  const sub = document.getElementById("prob-resolve-sub");
+  const body = document.getElementById("prob-resolve-body");
+  if (!root || !body) return;
+  title.textContent = "Rregullo problemin";
+  sub.textContent = `${p.emri || "Klienti"} · ${p.tipi_label || ""}`.trim();
+  body.innerHTML = resolvePanelHtml(p, kind);
+  root.classList.remove("hidden");
+}
+
+async function ackActiveProblem(btn) {
+  if (!activeProblem?.problem_key) {
+    alert("Ky problem nuk ka çelës për mbyllje. Rifresko listën.");
+    return;
+  }
+  const resolution =
+    document.querySelector('#prob-resolve-body input[name="pr-res"]:checked')?.value || "resolved";
+  const note = document.getElementById("pr-note")?.value || "";
+  if (btn) btn.disabled = true;
+  try {
+    await api("/api/super/dashboard/problems/ack", {
+      method: "POST",
+      body: JSON.stringify({
+        problem_key: activeProblem.problem_key,
+        kind: activeProblem.kind,
+        client_id: activeProblem.id || null,
+        resolution,
+        note,
+      }),
+    });
+    closeProblemResolve();
+    await refreshClientsAndProblems();
+  } catch (ex) {
+    alert(ex.message || "Nuk u shënua.");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function bindProblemActions(root) {
   if (!root || root.dataset.bound === "1") return;
   root.dataset.bound = "1";
+  root.addEventListener("click", (e) => {
+    const fixBtn = e.target.closest("[data-prob-fix]");
+    if (!fixBtn) return;
+    e.preventDefault();
+    const payload = problemRowStore.get(fixBtn.dataset.probFix) || {};
+    openProblemResolve(payload, fixBtn.dataset.kind || "program");
+  });
+}
+
+function bindProblemResolveUi() {
+  const root = document.getElementById("prob-resolve-root");
+  if (!root || root.dataset.bound === "1") return;
+  root.dataset.bound = "1";
+  document.getElementById("prob-resolve-close")?.addEventListener("click", closeProblemResolve);
+  document.getElementById("prob-resolve-backdrop")?.addEventListener("click", closeProblemResolve);
   root.addEventListener("click", async (e) => {
-    const openBtn = e.target.closest("[data-prob-open]");
-    if (openBtn) {
+    const goto = e.target.closest("[data-pr-goto-client]");
+    if (goto && activeProblem?.id) {
       e.preventDefault();
+      closeProblemResolve();
       try {
-        await openClientDetail(openBtn.dataset.probOpen, {
-          product: openBtn.dataset.product || "kafene",
+        await openClientDetail(activeProblem.id, {
+          product: activeProblem.product_line || "kafene",
         });
       } catch (ex) {
         alert(ex.message || "Nuk u hap klienti.");
       }
       return;
     }
-    const unblockBtn = e.target.closest("[data-prob-unblock]");
-    if (unblockBtn) {
+    if (e.target.closest("[data-pr-ack]")) {
+      e.preventDefault();
+      await ackActiveProblem(e.target.closest("[data-pr-ack]"));
+      return;
+    }
+    const unblock = e.target.closest("[data-pr-unblock]");
+    if (unblock && activeProblem?.license_id) {
       e.preventDefault();
       if (!confirm("Zhblloko licencën?")) return;
-      unblockBtn.disabled = true;
+      unblock.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${unblockBtn.dataset.probUnblock}/unblock`, {
+        await api(`/api/super/dashboard/licenses/${activeProblem.license_id}/unblock`, {
           method: "POST",
         });
+        if (activeProblem.problem_key) {
+          await api("/api/super/dashboard/problems/ack", {
+            method: "POST",
+            body: JSON.stringify({
+              problem_key: activeProblem.problem_key,
+              kind: activeProblem.kind,
+              client_id: activeProblem.id,
+              resolution: "unblocked",
+            }),
+          }).catch(() => null);
+        }
+        closeProblemResolve();
         await refreshClientsAndProblems();
       } catch (ex) {
         alert(ex.message || "Zhbllokimi dështoi.");
       } finally {
-        unblockBtn.disabled = false;
+        unblock.disabled = false;
       }
       return;
     }
-    const extBtn = e.target.closest("[data-prob-extend]");
-    if (extBtn) {
+    const ext = e.target.closest("[data-pr-extend]");
+    if (ext && activeProblem?.license_id) {
       e.preventDefault();
-      const months = Number(extBtn.dataset.months) || 12;
+      const months = Number(ext.dataset.prExtend) || 12;
       if (!confirm(`Zgjato licencën me ${months} muaj?`)) return;
-      extBtn.disabled = true;
+      ext.disabled = true;
       try {
-        const r = await api(`/api/super/dashboard/licenses/${extBtn.dataset.probExtend}/extend`, {
+        const r = await api(`/api/super/dashboard/licenses/${activeProblem.license_id}/extend`, {
           method: "POST",
           body: JSON.stringify({ months }),
         });
+        if (activeProblem.problem_key) {
+          await api("/api/super/dashboard/problems/ack", {
+            method: "POST",
+            body: JSON.stringify({
+              problem_key: activeProblem.problem_key,
+              kind: activeProblem.kind,
+              client_id: activeProblem.id,
+              resolution: `extended_${months}m`,
+              note: `deri ${r.data_skadimit || ""}`,
+            }),
+          }).catch(() => null);
+        }
         alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
+        closeProblemResolve();
         await refreshClientsAndProblems();
       } catch (ex) {
         alert(ex.message || "Zgjatja dështoi.");
       } finally {
-        extBtn.disabled = false;
+        ext.disabled = false;
       }
     }
   });
@@ -1669,15 +1874,9 @@ async function refreshClientsAndProblems(btn) {
   }
 }
 
-const PROBLEM_KIND_LABEL = {
-  program: "Program",
-  offline: "Offline",
-  print: "Print",
-  fiscal: "Fiskale",
-  license: "Licencë",
-};
-
 async function loadReports() {
+  problemRowStore.clear();
+  problemRowSeq = 0;
   const d = await api("/api/super/dashboard/problems").catch(() =>
     api("/api/super/dashboard/reports"),
   );
@@ -1692,11 +1891,11 @@ async function loadReports() {
   set("prob-kpi-print", c.print_errors);
   set("prob-kpi-fiscal", c.fiscal_errors);
 
-  renderProblemList("prob-program", d.program, "Nuk ka probleme me programin.");
-  renderProblemList("prob-offline", d.offline_48h, "Nuk ka klientë offline >48h.");
-  renderProblemList("prob-license", d.license_expired, "Nuk ka licenca të skaduara.");
-  renderProblemList("prob-print", d.print_errors, "Nuk ka gabime printimi.");
-  renderProblemList("prob-fiscal", d.fiscal_errors, "Nuk ka gabime fiskale.");
+  renderProblemList("prob-program", d.program, "Nuk ka probleme me programin.", "program");
+  renderProblemList("prob-offline", d.offline_48h, "Nuk ka klientë offline >48h.", "offline");
+  renderProblemList("prob-license", d.license_expired, "Nuk ka licenca të skaduara.", "license");
+  renderProblemList("prob-print", d.print_errors, "Nuk ka gabime printimi.", "print");
+  renderProblemList("prob-fiscal", d.fiscal_errors, "Nuk ka gabime fiskale.", "fiscal");
 
   const body = document.getElementById("prob-history-body");
   if (body) {
@@ -1731,6 +1930,7 @@ async function loadSettings() {
 }
 
 async function boot() {
+  bindProblemResolveUi();
   document.querySelectorAll(".product-tab").forEach((btn) => {
     btn.addEventListener("click", () => setProductTab(btn.dataset.product));
   });

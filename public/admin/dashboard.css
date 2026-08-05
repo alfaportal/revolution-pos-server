@@ -256,6 +256,69 @@ button.kpi.kpi-jump:focus-visible {
   margin-top: 0.65rem;
 }
 .prob-actions .btn { flex: 1 1 auto; min-width: 5.5rem; }
+.prob-help {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0 0 0.85rem;
+}
+.prob-help strong { color: var(--text); font-weight: 600; }
+.prob-resolve-drawer { max-width: 28rem; }
+.prob-resolve-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+.prob-resolve-block h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+.prob-resolve-block p {
+  margin: 0 0 0.65rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.prob-resolve-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.prob-resolve-note {
+  width: 100%;
+  min-height: 4rem;
+  margin-top: 0.35rem;
+  resize: vertical;
+}
+.prob-resolve-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+.prob-resolve-choice label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.prob-resolve-choice label:has(input:checked) {
+  border-color: var(--accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+}
+.prob-resolve-foot {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
 #btn-rep-load,
 #btn-refresh-clients {
   position: relative;

@@ -17,6 +17,7 @@ const {
   getLicensesView,
   getAiUsageDashboard,
   getProblemsReport,
+  ackProblem,
   getSettings,
   getSettingsAsync,
   updateSettingsAsync,
@@ -668,6 +669,22 @@ router.get(
   "/dashboard/problems",
   asyncHandler(async (_req, res) => {
     res.json({ ok: true, ...(await getProblemsReport()) });
+  }),
+);
+
+/** Shëno problem si të zgjidhur (pa prekur ID/email/çelës — ato te Klientët). */
+router.post(
+  "/dashboard/problems/ack",
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const row = ackProblem({
+      problem_key: body.problem_key,
+      kind: body.kind,
+      client_id: body.client_id || body.id || null,
+      note: body.note,
+      resolution: body.resolution,
+    });
+    res.json({ ok: true, ack: row });
   }),
 );
 
