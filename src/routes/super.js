@@ -31,6 +31,7 @@ const {
 const {
   createSecurityClient,
   updateSecurityClient,
+  deleteSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
   deleteSecurityLicense,
@@ -47,6 +48,7 @@ const {
   updateLicenseStatus,
   updateClient,
   deleteLicense,
+  deleteClient,
   revokeLicenseRemote,
   reactivateLicenseRemote,
   requestWipeDataForLicense,
@@ -386,6 +388,36 @@ router.patch(
       license_errors,
       product_line: "kafene",
     });
+  }),
+);
+
+/** Fshi krejt klientin (+ licencat) — Super Admin, POS ose Security */
+router.delete(
+  "/dashboard/clients/:id",
+  asyncHandler(async (req, res) => {
+    const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(
+      req.query.product || req.body?.product_line || "kafene",
+    );
+    if (product === "security") {
+      const data = await deleteSecurityClient(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_client_delete",
+        targetType: "client",
+        targetId: id,
+        targetLabel: data?.emri,
+      }).catch(() => {});
+      return res.json({ ok: true, ...(data && typeof data === "object" ? data : {}), product_line: "security" });
+    }
+    await deleteClient(id);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_delete",
+      targetType: "client",
+      targetId: id,
+    }).catch(() => {});
+    res.json({ ok: true, product_line: "kafene" });
   }),
 );
 

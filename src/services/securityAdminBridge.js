@@ -219,6 +219,12 @@ async function updateSecurityClient(id, body) {
   });
 }
 
+async function deleteSecurityClient(id) {
+  return securityAdminFetch(`/api/admin/clients/${id}`, {
+    method: "DELETE",
+  });
+}
+
 async function issueSecurityLicense(body) {
   return securityAdminFetch("/api/admin/licenses", {
     method: "POST",
@@ -352,6 +358,7 @@ module.exports = {
   getSecurityClientDetail,
   createSecurityClient,
   updateSecurityClient,
+  deleteSecurityClient,
   issueSecurityLicense,
   setSecurityLicenseStatus,
   deleteSecurityLicense,

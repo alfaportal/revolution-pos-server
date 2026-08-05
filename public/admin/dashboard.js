@@ -318,12 +318,15 @@ function renderClientsSectors(filterText = "") {
       const isOpen = openSectorIds.has(s.id) || Boolean(q && (sectorMatch || clients.length));
       const rows = clients
         .map(
-          (c) => `<div class="client-row" data-client-id="${esc(c.id)}">
+          (c) => `<div class="client-row" data-client-id="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}">
             <div class="client-meta">
               <strong>${esc(c.emri)}</strong>
               <span>${esc(c.tipi_label)} · ${esc(c.package_label)}${c.package_contents ? ` — ${esc(c.package_contents)}` : ""}</span>
             </div>
-            <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
+            <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
+              <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
+              <button type="button" class="btn btn-danger btn-sm" data-delete-client="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}" data-name="${esc(c.emri)}">Fshi</button>
+            </div>
           </div>`,
         )
         .join("");
@@ -354,8 +357,18 @@ function renderClientsSectors(filterText = "") {
       else openSectorIds.delete(id);
     });
   });
+  root.querySelectorAll("[data-delete-client]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await deleteClientById(btn.dataset.deleteClient, {
+        product: btn.dataset.product,
+        name: btn.dataset.name,
+      });
+    });
+  });
   root.querySelectorAll("[data-client-id]").forEach((row) => {
-    row.addEventListener("click", () => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("[data-delete-client]")) return;
       const hit = clientsFlat.find((c) => String(c.id) === String(row.dataset.clientId));
       openClientDetail(row.dataset.clientId, {
         product: hit?.product_line || productQuery(true) || "kafene",
@@ -589,6 +602,7 @@ async function openClientDetail(id, opts = {}) {
         ${sectorFields}
       </div>
       <button type="button" class="btn btn-primary" id="btn-drawer-save" style="margin-top:0.75rem;width:100%">Ruaj ndryshimet</button>
+      <button type="button" class="btn btn-danger" id="btn-drawer-delete-client" style="margin-top:0.5rem;width:100%">Fshi klientin krejt</button>
       <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
     </div>
     ${renderPasswordBlock(owners)}
@@ -603,6 +617,43 @@ async function openClientDetail(id, opts = {}) {
   bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
+  document.getElementById("btn-drawer-delete-client")?.addEventListener("click", async () => {
+    await deleteClientById(id, { product, name: c.emri, close: true });
+  });
+}
+
+async function deleteClientById(id, { product, name, close } = {}) {
+  const label = name || id;
+  const prod = product || currentProduct || "kafene";
+  if (
+    !confirm(
+      `Fshi krejt klientin «${label}»?\n\nFshihen edhe licencat e tij.\nNuk kthehet mbrapa.`,
+    )
+  ) {
+    return;
+  }
+  const typed = prompt('Shkruani FSHI për të konfirmuar:', "");
+  if (typed === null) return;
+  if (String(typed).trim().toUpperCase() !== "FSHI") {
+    alert("Konfirmimi nuk përputhet. Asgjë nuk u fshi.");
+    return;
+  }
+  try {
+    const qs = prod === "security" ? "?product=security" : "?product=kafene";
+    await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE" });
+    alert("Klienti u fshi.");
+    if (close) closeDrawer();
+    await loadClients();
+    if (typeof loadLicenses === "function") {
+      try {
+        await loadLicenses();
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch (ex) {
+    alert(ex.message || "Fshirja e klientit dështoi.");
+  }
 }
 
 function bindDrawerPassword(clientId, productLine) {

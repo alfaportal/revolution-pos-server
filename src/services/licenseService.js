@@ -824,6 +824,13 @@ async function deleteClientDependentRows(db, clientId) {
 async function deleteClient(id) {
   const db = getSupabase();
   await deleteClientDependentRows(db, id);
+  // Licencat e klientit — fshi para rreshtit të klientit (FK)
+  const { error: licErr } = await db.from("licenses").delete().eq("client_id", id);
+  if (licErr) {
+    const msg = String(licErr.message || "");
+    const missingTable = licErr.code === "42P01" || /does not exist/i.test(msg);
+    if (!missingTable) throw licErr;
+  }
   await db.from("users").delete().eq("client_id", id).eq("roli", "client_admin");
   const { error } = await db.from("clients").delete().eq("id", id);
   if (error) throw error;
