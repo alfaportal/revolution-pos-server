@@ -15,8 +15,34 @@ function signToken(payload) {
   });
 }
 
+/** Leeway për clock drift midis kontejnerëve Railway (iat / nbf / exp). */
+const JWT_CLOCK_TOLERANCE_SEC = Math.max(
+  0,
+  Number(process.env.JWT_CLOCK_TOLERANCE_SEC || 60) || 60,
+);
+
+function jwtVerifyOptions() {
+  return {
+    clockTolerance: JWT_CLOCK_TOLERANCE_SEC,
+    ignoreNotBefore: true,
+  };
+}
+
 function verifyToken(token) {
-  return jwt.verify(token, jwtSecret());
+  try {
+    return jwt.verify(token, jwtSecret(), jwtVerifyOptions());
+  } catch (err) {
+    // "jwt issued at future" / Token used before issued — ora e kontejnerit prapa
+    const msg = String(err?.message || err || "");
+    if (/future|before issued|not active|nbf/i.test(msg)) {
+      return jwt.verify(token, jwtSecret(), {
+        ...jwtVerifyOptions(),
+        // Trajto "tani" si +leeway që iat pak në të ardhmen të pranohet
+        clockTimestamp: Math.floor(Date.now() / 1000) + JWT_CLOCK_TOLERANCE_SEC,
+      });
+    }
+    throw err;
+  }
 }
 
 function authRequired(req, res, next) {
