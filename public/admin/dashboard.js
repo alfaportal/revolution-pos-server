@@ -1,9 +1,11 @@
-/* Super Admin desktop dashboard — /admin/dashboard */
+/* Master Admin desktop dashboard — /admin/dashboard */
 let token = localStorage.getItem("rip_token") || "";
 let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
+/** Produkti aktiv: all | kafene | security */
+let currentProduct = localStorage.getItem("rip_admin_product") || "all";
 
 /** 9 kategoritë — GJITHMONË të dukshme, edhe me (0). */
 const FALLBACK_SECTORS = [
@@ -37,6 +39,62 @@ function ensureNineSectors(apiSectors) {
       clients: Array.isArray(hit?.clients) ? hit.clients : [],
     };
   });
+}
+
+function productQuery(forClients = false) {
+  // Lista klientë/licenca: "all" → kafene (sektoret POS); overview mban "all"
+  if (forClients && currentProduct === "all") return "kafene";
+  return currentProduct || "all";
+}
+
+function setProductTab(product, { reload = true } = {}) {
+  currentProduct = product || "all";
+  localStorage.setItem("rip_admin_product", currentProduct);
+  document.querySelectorAll(".product-tab").forEach((btn) => {
+    const on = btn.dataset.product === currentProduct;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const nc = document.getElementById("nc-product");
+  if (nc && (currentProduct === "kafene" || currentProduct === "security")) {
+    nc.value = currentProduct;
+    syncNewClientForm();
+  }
+  const title = document.getElementById("clients-list-title");
+  if (title) {
+    title.textContent =
+      currentProduct === "security"
+        ? "Klientët Security"
+        : currentProduct === "kafene"
+          ? "Klientët Kafene & Restorante"
+          : "Klientët (Kafene — zgjidh Security për tab-in tjetër)";
+  }
+  if (!reload) return;
+  const activeSec = document.querySelector(".section.active");
+  const name = activeSec?.id?.replace(/^sec-/, "") || "pasqyra";
+  openSection(name);
+}
+
+function syncNewClientForm() {
+  const product = document.getElementById("nc-product")?.value || "kafene";
+  document.querySelectorAll(".nc-kafene-only").forEach((el) => {
+    el.classList.toggle("hidden", product === "security");
+  });
+  document.querySelectorAll(".nc-security-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "security");
+  });
+}
+
+function showBridgeMsg(text) {
+  const el = document.getElementById("product-bridge-msg");
+  if (!el) return;
+  if (!text) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.textContent = text;
+  el.classList.remove("hidden");
 }
 
 const TITLES = {
@@ -153,10 +211,15 @@ function renderChart(el, points, valueKey = "total") {
 }
 
 async function loadOverview() {
-  const d = await api("/api/super/dashboard/overview");
+  const d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
   document.getElementById("kpi-active").textContent = String(d.active_clients ?? 0);
+  const kpiLic = document.getElementById("kpi-licenses");
+  if (kpiLic) kpiLic.textContent = String(d.licenses_active ?? d.licenses_total ?? 0);
+  const kpiTrial = document.getElementById("kpi-trial");
+  if (kpiTrial) kpiTrial.textContent = String(d.trial_accounts ?? 0);
   document.getElementById("kpi-sales").textContent = euro(d.sales_today_total);
   document.getElementById("kpi-problems").textContent = String((d.problem_clients || []).length);
+  showBridgeMsg(d.bridge_error || d.by_product?.security?.bridge_error || "");
   renderChart(document.getElementById("chart-weekly"), d.weekly_sales || [], "total");
   const list = document.getElementById("problem-list");
   const problems = d.problem_clients || [];
@@ -164,7 +227,7 @@ async function loadOverview() {
     ? problems
         .map(
           (p) => `<li>
-            <div><strong>${esc(p.emri)}</strong><div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label)}</div></div>
+            <div><strong>${esc(p.emri)}</strong><div style="color:var(--muted);font-size:0.8rem">${esc(p.tipi_label || "")}${p.product_line ? ` · ${esc(p.product_line)}` : ""}</div></div>
             <div>${(p.reasons || []).map((r) => `<span class="badge badge-warn">${esc(r)}</span>`).join(" ")}</div>
           </li>`,
         )
@@ -186,8 +249,13 @@ function renderClientsSectors(filterText = "") {
   if (!root) return;
   const q = normalizeSearch(filterText);
   clientsFlat = [];
-  // GJITHMONË 9 — mos fshih kategoritë bosh
-  const sectors = ensureNineSectors(sectorsCache);
+  // Security: sektori nga API; Kafene: GJITHMONË 9
+  const sectors =
+    currentProduct === "security"
+      ? sectorsCache.length
+        ? sectorsCache
+        : [{ num: 1, id: "security", label: "Klientë Security", keywords: ["security"], clients: [] }]
+      : ensureNineSectors(sectorsCache);
 
   const html = sectors
     .map((s) => {
@@ -251,7 +319,10 @@ function renderClientsSectors(filterText = "") {
 
   const sel = document.getElementById("inv-client");
   if (sel) {
-    const all = ensureNineSectors(sectorsCache).flatMap((s) => s.clients || []);
+    const all =
+      currentProduct === "security"
+        ? (sectorsCache || []).flatMap((s) => s.clients || [])
+        : ensureNineSectors(sectorsCache).flatMap((s) => s.clients || []);
     sel.innerHTML = all
       .map((c) => `<option value="${esc(c.id)}">${esc(c.emri)} (${esc(c.tipi_label)})</option>`)
       .join("");
@@ -260,10 +331,17 @@ function renderClientsSectors(filterText = "") {
 
 async function loadClients() {
   try {
-    const d = await api("/api/super/dashboard/clients");
-    sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
-  } catch {
-    sectorsCache = ensureNineSectors([]);
+    const product = productQuery(true);
+    const d = await api(`/api/super/dashboard/clients?product=${encodeURIComponent(product)}`);
+    showBridgeMsg(d.bridge_error || "");
+    if (product === "security") {
+      sectorsCache = d.sectors || d.groups || [];
+    } else {
+      sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
+    }
+  } catch (e) {
+    showBridgeMsg(e.message || "Gabim gjatë ngarkimit të klientëve");
+    sectorsCache = currentProduct === "security" ? [] : ensureNineSectors([]);
   }
   const q = document.getElementById("clients-search")?.value || "";
   renderClientsSectors(q);
@@ -287,6 +365,23 @@ async function copyText(text, btn) {
 }
 
 async function openClientDetail(id) {
+  if (currentProduct === "security" || productQuery(true) === "security") {
+    const hit = (sectorsCache || []).flatMap((s) => s.clients || []).find((c) => String(c.id) === String(id));
+    document.getElementById("drawer-root").classList.remove("hidden");
+    document.getElementById("drawer-title").textContent = `🛡️ ${hit?.emri || "Klient Security"}`;
+    document.getElementById("drawer-sub").textContent = `${hit?.tipi_label || hit?.veprimtari || "Security"} · ${hit?.email || ""}`;
+    document.getElementById("drawer-body").innerHTML = `
+      <div class="detail-block">
+        <h4>Revolution Security</h4>
+        <div>Email: <strong>${esc(hit?.email || "—")}</strong></div>
+        <div>Telefon: <strong>${esc(hit?.telefoni || "—")}</strong></div>
+        <div>Veprimtari: <strong>${esc(hit?.veprimtari || hit?.tipi_label || "—")}</strong></div>
+        <p style="color:var(--muted);font-size:0.9rem;margin:0.75rem 0 0">
+          Licencat menaxhohen te skeda <strong>Licencat</strong> me filtrin Security.
+        </p>
+      </div>`;
+    return;
+  }
   const d = await api(`/api/super/dashboard/clients/${id}`);
   const c = d.client || {};
   document.getElementById("drawer-root").classList.remove("hidden");
@@ -471,6 +566,32 @@ function bindLicenseActions(root) {
       const sel = btn.dataset.copyFrom;
       const val = sel ? String(root.querySelector(sel)?.value || "").trim() : btn.dataset.copy;
       copyText(val || "", btn);
+    });
+  });
+  root.querySelectorAll("[data-copy-text]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyText(btn.dataset.copyText || "", btn);
+    });
+  });
+  root.querySelectorAll("[data-sec-status]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const status = btn.dataset.status;
+      const label = status === "active" ? "riaktivizosh" : status === "suspended" ? "pezullosh" : "revokosh";
+      if (!confirm(`A doni të ${label} këtë licencë Security?`)) return;
+      btn.disabled = true;
+      try {
+        await api(`/api/super/dashboard/security/licenses/${btn.dataset.secStatus}/status`, {
+          method: "POST",
+          body: JSON.stringify({ status }),
+        });
+        await loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Ndryshimi i statusit dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
     });
   });
   root.querySelectorAll("[data-block]").forEach((btn) => {
@@ -778,24 +899,43 @@ function formatLicenseHwId(raw) {
 }
 
 async function loadLicenses() {
-  /* I njëjti API si telefoni — ID + çelësi të njëjtë pas Ruaj / Rifresko */
-  const d = await api("/api/admin/licenses");
-  const list = (d.licenses || []).map((l) => {
-    const hw =
-      formatLicenseHwId(l.hardware_id) ||
-      formatLicenseHwId(l.display_device_id) ||
-      formatLicenseHwId(l.device_id) ||
-      "";
-    return {
+  const product = productQuery(true);
+  let list = [];
+  if (product === "security") {
+    const d = await api(`/api/super/dashboard/licenses?product=security`);
+    showBridgeMsg(d.bridge_error || "");
+    list = (d.licenses || []).map((l) => ({
       id: l.id,
-      client_name: l.clients?.emri || "—",
-      hardware_id: hw,
-      license_key: l.celesi || "",
+      client_name: l.client_name || "—",
+      hardware_id: formatLicenseHwId(l.hardware_id) || l.hardware_id || "",
+      license_key: l.license_key || "",
       statusi: l.statusi,
-      activation_email: l.activation_email || "",
-    };
-  });
+      activation_email: "",
+      source: "securetrack",
+    }));
+  } else {
+    /* I njëjti API si telefoni — ID + çelësi të njëjtë pas Ruaj / Rifresko */
+    const d = await api("/api/admin/licenses");
+    showBridgeMsg("");
+    list = (d.licenses || []).map((l) => {
+      const hw =
+        formatLicenseHwId(l.hardware_id) ||
+        formatLicenseHwId(l.display_device_id) ||
+        formatLicenseHwId(l.device_id) ||
+        "";
+      return {
+        id: l.id,
+        client_name: l.clients?.emri || "—",
+        hardware_id: hw,
+        license_key: l.celesi || "",
+        statusi: l.statusi,
+        activation_email: l.activation_email || "",
+        source: "pos",
+      };
+    });
+  }
 
+  const isSecurity = product === "security";
   const cards = document.getElementById("licenses-cards");
   if (cards) {
     cards.innerHTML = list.length
@@ -804,6 +944,26 @@ async function loadLicenses() {
             const active = l.statusi === "aktive";
             const hw = l.hardware_id || "";
             const key = l.license_key || "";
+            if (isSecurity) {
+              return `<div class="license-card" data-license-card="${esc(l.id)}">
+                <h4>${esc(l.client_name)}
+                  <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
+                </h4>
+                <div class="lic-field-block">
+                  <label class="lic-field-label">Licenca</label>
+                  <div class="mono" style="word-break:break-all">${esc(key || "—")}</div>
+                </div>
+                <div class="lic-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                  <button type="button" class="btn btn-ghost" data-copy-text="${esc(key)}">Kopjo</button>
+                  ${
+                    active
+                      ? `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
+                         <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
+                      : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
+                  }
+                </div>
+              </div>`;
+            }
             return `<div class="license-card" data-license-card="${esc(l.id)}">
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
@@ -850,6 +1010,23 @@ async function loadLicenses() {
         const active = l.statusi === "aktive";
         const hw = l.hardware_id || "";
         const key = l.license_key || "";
+        if (isSecurity) {
+          return `<tr>
+            <td>${esc(l.client_name)}</td>
+            <td class="mono">${esc(hw || "—")}</td>
+            <td class="mono">${esc(key || "—")}</td>
+            <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
+            <td style="white-space:nowrap">
+              <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(key)}">Kopjo</button>
+              ${
+                active
+                  ? `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
+                     <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
+                  : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
+              }
+            </td>
+          </tr>`;
+        }
         return `<tr>
           <td>${esc(l.client_name)}</td>
           <td>
@@ -1257,6 +1434,66 @@ async function loadSettings() {
 }
 
 async function boot() {
+  document.querySelectorAll(".product-tab").forEach((btn) => {
+    btn.addEventListener("click", () => setProductTab(btn.dataset.product));
+  });
+  document.querySelectorAll(".product-tab").forEach((btn) => {
+    const on = btn.dataset.product === currentProduct;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  document.getElementById("nc-product")?.addEventListener("change", syncNewClientForm);
+  syncNewClientForm();
+  document.getElementById("form-new-client")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById("nc-msg");
+    const btn = document.getElementById("btn-nc-submit");
+    const product = document.getElementById("nc-product")?.value || "kafene";
+    const body = {
+      product_line: product,
+      emri: document.getElementById("nc-emri")?.value?.trim(),
+      email: document.getElementById("nc-email")?.value?.trim(),
+      telefoni: document.getElementById("nc-tel")?.value?.trim(),
+      telefon: document.getElementById("nc-tel")?.value?.trim(),
+      tipi: document.getElementById("nc-tipi")?.value,
+      package_tier: document.getElementById("nc-pako")?.value,
+      veprimtari: document.getElementById("nc-veprimtari")?.value,
+      issue_license: Boolean(document.getElementById("nc-license")?.checked),
+    };
+    if (!body.emri) {
+      if (msg) msg.textContent = "Emri është i detyrueshëm.";
+      return;
+    }
+    if (btn) btn.disabled = true;
+    if (msg) msg.textContent = "Duke regjistruar…";
+    try {
+      const data = await api("/api/super/dashboard/clients", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      const licKey = data.license?.celesi || data.license?.license_key || "";
+      if (msg) {
+        msg.textContent = licKey
+          ? `U krijua. Licenca: ${licKey}`
+          : "Klienti u krijua.";
+      }
+      document.getElementById("nc-emri").value = "";
+      if (product === "security" || currentProduct === "security") {
+        setProductTab("security");
+      } else {
+        await loadClients();
+      }
+      if (document.querySelector(".section.active")?.id === "sec-licencat") {
+        await loadLicenses().catch(() => null);
+      }
+    } catch (ex) {
+      if (msg) msg.textContent = ex.message || "Gabim";
+      else alert(ex.message || "Gabim");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
   document.getElementById("form-login").addEventListener("submit", async (e) => {
     e.preventDefault();
     const err = document.getElementById("login-error");

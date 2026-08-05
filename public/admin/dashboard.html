@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Super Admin — Revolution Invest POS</title>
+  <title>Master Admin — Revolution Invest</title>
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=13">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=14">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
     <div class="login-card">
-      <h1>Super Admin</h1>
-      <p>Paneli Super Admin — telefon &amp; kompjuter. Pronarët: <code>/owner/login</code>.</p>
+      <h1>Master Admin</h1>
+      <p>Paneli i unifikuar — Kafene, Security &amp; më shumë. Pronarët: <code>/owner/login</code>.</p>
       <div id="login-error" class="alert alert-error hidden"></div>
       <form id="form-login">
         <label for="email">Email</label>
@@ -37,7 +37,7 @@
           <div class="brand-mark">RI</div>
           <div>
             <h1>Revolution Invest</h1>
-            <span>Super Admin</span>
+            <span>Master Admin</span>
           </div>
         </div>
         <nav class="nav-list" id="nav-list">
@@ -66,10 +66,19 @@
           </div>
         </div>
 
+        <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
+          <button type="button" class="product-tab active" data-product="all" role="tab" aria-selected="true">Të gjitha</button>
+          <button type="button" class="product-tab" data-product="kafene" role="tab" aria-selected="false">Kafene &amp; Restorante</button>
+          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false">Security</button>
+        </div>
+        <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
+
         <!-- PASQYRA -->
         <section class="section active" id="sec-pasqyra">
           <div class="kpi-row">
             <div class="kpi"><div class="lbl">Klientë aktiv</div><div class="val" id="kpi-active">—</div></div>
+            <div class="kpi"><div class="lbl">Licenca aktive</div><div class="val" id="kpi-licenses">—</div></div>
+            <div class="kpi"><div class="lbl">Trial</div><div class="val" id="kpi-trial">—</div></div>
             <div class="kpi"><div class="lbl">Shitjet sot</div><div class="val" id="kpi-sales">—</div></div>
             <div class="kpi warn"><div class="lbl">Me probleme</div><div class="val" id="kpi-problems">—</div></div>
           </div>
@@ -87,7 +96,70 @@
         <section class="section" id="sec-klientet">
           <div class="card">
             <div class="card-title">
-              <span>Klientët sipas sektorit</span>
+              <span>Shto klient të ri</span>
+            </div>
+            <form id="form-new-client" class="form-grid">
+              <div class="field">
+                <label for="nc-product">Produkti / Industria</label>
+                <select id="nc-product" required>
+                  <option value="kafene">Kafene &amp; Restorante</option>
+                  <option value="security">Security</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="nc-emri">Emri i biznesit</label>
+                <input id="nc-emri" required placeholder="p.sh. Café Roma" autocomplete="organization">
+              </div>
+              <div class="field nc-kafene-only">
+                <label for="nc-tipi">Sektori (POS)</label>
+                <select id="nc-tipi">
+                  <option value="kafene">Kafene</option>
+                  <option value="restorant">Restorant</option>
+                  <option value="bar">Bar</option>
+                  <option value="piceri">Piceri</option>
+                  <option value="fast_food">Fast Food</option>
+                  <option value="market">Market</option>
+                  <option value="tjeter">Tjetër</option>
+                </select>
+              </div>
+              <div class="field nc-kafene-only">
+                <label for="nc-pako">Pako</label>
+                <select id="nc-pako">
+                  <option value="pako_3">Pako 1</option>
+                  <option value="pako_4">Pako 2</option>
+                  <option value="pako_2">Pako 3</option>
+                  <option value="pako_5">Pako 4 (AI)</option>
+                </select>
+              </div>
+              <div class="field nc-security-only hidden">
+                <label for="nc-veprimtari">Veprimtaria (Security)</label>
+                <select id="nc-veprimtari">
+                  <option value="kompani_sigurie">Kompani sigurie</option>
+                  <option value="objekt">Objekt / Ndërtesë</option>
+                  <option value="hotel">Hotel</option>
+                  <option value="tjeter">Tjetër</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="nc-email">Email</label>
+                <input id="nc-email" type="email" placeholder="opsionale">
+              </div>
+              <div class="field">
+                <label for="nc-tel">Telefon</label>
+                <input id="nc-tel" type="tel" placeholder="opsionale">
+              </div>
+              <div class="field full">
+                <label class="chk-row"><input type="checkbox" id="nc-license" checked> Gjenero licencë menjëherë</label>
+              </div>
+              <div class="field full">
+                <button type="submit" class="btn btn-primary" id="btn-nc-submit">Regjistro klientin</button>
+                <span id="nc-msg" style="margin-left:0.75rem;color:var(--muted);font-size:0.9rem"></span>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span id="clients-list-title">Klientët sipas sektorit</span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-clients">Rifresko</button>
             </div>
             <input type="search" class="search-bar" id="clients-search" placeholder="Kërko: berber, piceri, market…" enterkeyhint="search" autocomplete="off">
@@ -339,6 +411,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=13"></script>
+  <script src="/admin/dashboard.js?v=14"></script>
 </body>
 </html>

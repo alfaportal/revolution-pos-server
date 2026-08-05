@@ -2,7 +2,7 @@
   "name": "Revolution Invest — Super Admin",
   "short_name": "RI Admin",
   "description": "Panel Super Admin — menaxho restorantet, kafenet, liçensat nga çdo pajisje",
-  "start_url": "/ri-super",
+  "start_url": "/admin/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

@@ -594,6 +594,55 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   margin: 0.5rem 0;
 }
 
+/* Master Admin — tabs produkti (kafene / security / …) */
+.product-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0.35rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.product-tab {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.product-tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+.product-tab.active {
+  background: rgba(255, 107, 53, 0.18);
+  border-color: rgba(255, 107, 53, 0.45);
+  color: #ffd4c2;
+}
+.product-bridge-msg {
+  margin: -0.35rem 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+.chk-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+.chk-row input { width: 1.1rem; height: 1.1rem; }
+
 /* Desktop / large tablet */
 @media (min-width: 960px) {
   html, body { font-size: 16px; }
@@ -601,7 +650,7 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   .sidebar { transform: translateX(0); }
   .backdrop, body.nav-open .backdrop { display: none !important; }
   .main { margin-left: var(--sidebar-w); padding: 1.35rem 1.6rem 2.5rem; }
-  .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .form-grid { grid-template-columns: 1fr 1fr; }
   .btn-primary { width: auto; }
   .desktop-only { display: block; }
@@ -610,4 +659,5 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   .mobile-only { display: none !important; }
   .topbar { position: static; background: transparent; backdrop-filter: none; }
   .bank-confirm-btn { width: auto; min-height: 40px; }
+  .product-tab { flex: 0 1 auto; }
 }

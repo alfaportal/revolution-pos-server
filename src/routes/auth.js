@@ -131,7 +131,7 @@ router.post("/owner/login", async (req, res) => {
 
     if (user.roli === "super_admin") {
       return res.status(403).json({
-        gabim: "Ky email është i Super Admin-it. Pronarët hyjnë këtu; Super Admin hyn te /ri-super (ose rruga juaj ADMIN_PANEL_PATH).",
+        gabim: "Ky email është i Super Admin-it. Pronarët hyjnë këtu; Master Admin hyn te /admin.",
         code: "WRONG_PORTAL",
       });
     }

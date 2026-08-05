@@ -25,7 +25,14 @@ const {
   createBillingInvoice,
   updateBillingInvoiceStatus,
   buildBillingInvoicePdf,
+  PRODUCT_LINES,
 } = require("../services/superAdminDashboardService");
+const {
+  createSecurityClient,
+  issueSecurityLicense,
+  setSecurityLicenseStatus,
+} = require("../services/securityAdminBridge");
+const { normalizeProductLine } = require("../utils/productLine");
 const {
   blockLicense,
   unblockLicense,
@@ -131,16 +138,25 @@ router.get(
 // ---- Desktop Super Admin dashboard (/admin/dashboard) — endpoint-e të reja ----
 
 router.get(
-  "/dashboard/overview",
+  "/dashboard/products",
   asyncHandler(async (_req, res) => {
-    res.json({ ok: true, ...(await getOverview()) });
+    res.json({ ok: true, products: PRODUCT_LINES });
+  }),
+);
+
+router.get(
+  "/dashboard/overview",
+  asyncHandler(async (req, res) => {
+    const product = req.query.product || req.query.industry || "all";
+    res.json({ ok: true, ...(await getOverview({ product })) });
   }),
 );
 
 router.get(
   "/dashboard/clients",
-  asyncHandler(async (_req, res) => {
-    res.json({ ok: true, ...(await getClientsGrouped()) });
+  asyncHandler(async (req, res) => {
+    const product = req.query.product || req.query.industry || "kafene";
+    res.json({ ok: true, ...(await getClientsGrouped({ product })) });
   }),
 );
 
@@ -153,8 +169,83 @@ router.get(
 
 router.get(
   "/dashboard/licenses",
-  asyncHandler(async (_req, res) => {
-    res.json({ ok: true, ...(await getLicensesView()) });
+  asyncHandler(async (req, res) => {
+    const product = req.query.product || req.query.industry || "kafene";
+    res.json({ ok: true, ...(await getLicensesView({ product })) });
+  }),
+);
+
+/** Krijo klient (+ opsionalisht licencë) sipas produktit — kafene lokal / security upstream */
+router.post(
+  "/dashboard/clients",
+  asyncHandler(async (req, res) => {
+    const product = normalizeProductLine(
+      req.body?.product_line || req.body?.industry_type || req.query.product,
+    );
+    if (product === "security") {
+      const data = await createSecurityClient(req.body || {});
+      let license = null;
+      if (req.body?.issue_license !== false) {
+        try {
+          const issued = await issueSecurityLicense({
+            client_id: data.client?.id,
+            max_terminals: req.body?.max_terminals || 1,
+            expires_at: req.body?.expires_at || null,
+          });
+          license = issued.license || issued;
+        } catch (e) {
+          console.warn("[super] security license issue:", e.message);
+        }
+      }
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_client_create",
+        targetType: "client",
+        targetId: data.client?.id,
+        targetLabel: data.client?.emri,
+      }).catch(() => {});
+      return res.status(201).json({ ok: true, client: data.client, license, product_line: "security" });
+    }
+
+    const { createClient, createLicense } = require("../services/licenseService");
+    const client = await createClient({ ...(req.body || {}), product_line: "kafene" });
+    let license = null;
+    if (req.body?.issue_license !== false) {
+      try {
+        license = await createLicense({
+          client_id: client.id,
+          app_type: req.body?.app_type,
+          product_line: "kafene",
+          muaj: req.body?.muaj || 12,
+          max_terminals: req.body?.max_terminals || 1,
+        });
+      } catch (e) {
+        console.warn("[super] kafene license issue:", e.message);
+      }
+    }
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "client_create",
+      targetType: "client",
+      targetId: client.id,
+      targetLabel: client.emri,
+    }).catch(() => {});
+    res.status(201).json({ ok: true, client, license, product_line: "kafene" });
+  }),
+);
+
+router.post(
+  "/dashboard/security/licenses/:id/status",
+  asyncHandler(async (req, res) => {
+    const license = await setSecurityLicenseStatus(req.params.id, req.body?.statusi || req.body?.status);
+    await logAdminActivity({
+      ...activityFromReq(req),
+      action: "security_license_status",
+      targetType: "license",
+      targetId: req.params.id,
+      details: { status: req.body?.statusi || req.body?.status },
+    }).catch(() => {});
+    res.json({ ok: true, license: license.license || license });
   }),
 );
 

@@ -175,13 +175,30 @@ router.get("/clients", asyncHandler(async (_req, res) => {
 
 router.post("/clients", asyncHandler(async (req, res) => {
   const body = withNormalizedPackageTier(req.body);
+  const { normalizeProductLine } = require("../utils/productLine");
+  const productLine = normalizeProductLine(
+    body?.product_line || body?.industry_type || body?.product_category,
+  );
   console.log("[admin] POST /clients", {
     emri: body?.emri,
     tipi: body?.tipi,
     package_tier: body?.package_tier,
+    product_line: productLine,
   });
   try {
-    const client = await createClient(body);
+    if (productLine === "security") {
+      const { createSecurityClient } = require("../services/securityAdminBridge");
+      const data = await createSecurityClient(body);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "security_client_create",
+        targetType: "client",
+        targetId: data.client?.id,
+        targetLabel: data.client?.emri,
+      });
+      return res.status(201).json({ ok: true, client: data.client, product_line: "security" });
+    }
+    const client = await createClient({ ...body, product_line: productLine });
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_create",
@@ -190,7 +207,7 @@ router.post("/clients", asyncHandler(async (req, res) => {
       targetLabel: client.emri,
     });
     console.log("[admin] Klienti u krijua:", client.id);
-    res.status(201).json({ ok: true, client });
+    res.status(201).json({ ok: true, client, product_line: productLine });
   } catch (e) {
     const msg = logRouteError("admin:POST /clients", e, { body: req.body });
     res.status(400).json({ gabim: msg, code: e?.code || null });

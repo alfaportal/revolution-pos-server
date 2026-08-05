@@ -413,20 +413,33 @@ app.get("/waiter-manifest.json", (_req, res) => {
 
 app.use(express.static(PUBLIC_DIR));
 
-app.get(ADMIN_PATH, (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/panel.html"));
-});
-
-/** Super Admin desktop dashboard (Naser) — vetëm /admin/dashboard */
-app.get(["/admin/dashboard", "/admin/dashboard/"], (_req, res) => {
+/**
+ * Master Admin i unifikuar: /admin (+ /admin/dashboard).
+ * Rruga e vjetër sekrete (ADMIN_PANEL_PATH, p.sh. /ri-super) ridrejtohet këtu —
+ * panel.html mbetet i arritshëm vetëm si /admin/legacy për raste emergjente.
+ */
+app.get(["/admin/dashboard", "/admin/dashboard/", "/admin", "/admin/"], (_req, res) => {
+  if (_req.path === "/admin" || _req.path === "/admin/") {
+    return res.redirect(302, "/admin/dashboard");
+  }
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/admin/dashboard.html"));
 });
 
-app.get("/admin", (_req, res) => {
+app.get("/admin/legacy", (_req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/panel.html"));
+});
+
+/** Deprecuar: /ri-super (dhe ADMIN_PANEL_PATH) → Master Admin */
+app.get(ADMIN_PATH, (_req, res) => {
   res.redirect(302, "/admin/dashboard");
 });
+if (ADMIN_PATH !== "/ri-super" && ADMIN_PATH !== "ri-super") {
+  app.get(["/ri-super", "/ri-super/"], (_req, res) => {
+    res.redirect(302, "/admin/dashboard");
+  });
+}
 
 app.get("/panel", (_req, res) => {
   res.status(404).type("text/plain").send("Not found");
@@ -735,7 +748,7 @@ async function start() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n  🚀 Revolution POS Server — http://localhost:${PORT}`);
-    console.log(`  📋 Super Admin: ${ADMIN_PATH}`);
+    console.log(`  📋 Master Admin: /admin/dashboard  (legacy ${ADMIN_PATH} → redirect)`);
     console.log(`  🏠 Website:     /  (revolution-pos.com)`);
     console.log(`  🔎 SEO:         /robots.txt  /sitemap.xml  /restorante`);
     console.log(`  🏪 Pronarët:    /owner/login`);

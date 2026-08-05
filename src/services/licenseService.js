@@ -606,9 +606,40 @@ async function listLicenses() {
   const db = getSupabase();
   const { data, error } = await db
     .from("licenses")
-    .select("*, clients(id, emri, tipi, email)")
+    .select("*, clients(id, emri, tipi, email, product_line)")
     .order("created_at", { ascending: false });
-  if (error) throw error;
+  if (error) {
+    const fallback = await db
+      .from("licenses")
+      .select("*, clients(id, emri, tipi, email)")
+      .order("created_at", { ascending: false });
+    if (fallback.error) throw error;
+    const rowsFb = fallback.data || [];
+    return Promise.all(
+      rowsFb.map(async (lic) => {
+        try {
+          const summary = await getTerminalSummaryForLicense(lic);
+          await syncLicenseDeviceFromTerminals(lic.id, lic, summary);
+          const merged = {
+            ...lic,
+            device_id: normalizeDeviceId(lic.device_id) || pickLatestTerminal(summary.terminals)?.device_id || lic.device_id,
+          };
+          return enrichLicenseRowWithTerminals(merged, summary);
+        } catch {
+          return {
+            ...lic,
+            hardware_id: resolveLicenseHardwareId(lic),
+            active_terminal_count: lic.device_id ? 1 : 0,
+            max_terminals: Number(lic.max_terminals) || 1,
+            terminal_limit_reached: false,
+            terminals: [],
+            display_device_id: normalizeDeviceId(lic.device_id) || "",
+            display_device_ids: lic.device_id ? [normalizeDeviceId(lic.device_id)] : [],
+          };
+        }
+      }),
+    );
+  }
 
   const rows = data || [];
   const enriched = await Promise.all(
@@ -640,7 +671,11 @@ async function listLicenses() {
 
 async function createClient(body) {
   const { assertClientTipi } = require("../utils/businessTipi");
+  const { normalizeProductLine } = require("../utils/productLine");
   const db = getSupabase();
+  const productLine = normalizeProductLine(
+    body.product_line || body.industry_type || body.product_category,
+  );
   const row = {
     emri: String(body.emri || "").trim(),
     adresa: String(body.adresa || "").trim(),
@@ -650,10 +685,15 @@ async function createClient(body) {
     package_tier: normalizePackageTier(body.package_tier),
     kitchen_slug: generateKitchenSlug(body.emri || "lokal"),
     kitchen_key: generateKitchenKey(),
+    product_line: productLine,
   };
   if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
 
-  const { data, error } = await db.from("clients").insert(row).select().single();
+  let { data, error } = await db.from("clients").insert(row).select().single();
+  if (error && /product_line/i.test(error.message || "")) {
+    delete row.product_line;
+    ({ data, error } = await db.from("clients").insert(row).select().single());
+  }
   if (error) {
     logRouteError("createClient", error, { row });
     if (String(error.message || "").includes("clients_package_tier_check")) {
@@ -681,6 +721,16 @@ async function updateClient(id, body) {
   if (body.tipi != null) {
     const { assertClientTipi } = require("../utils/businessTipi");
     patch.tipi = assertClientTipi(body.tipi);
+  }
+  if (
+    body.product_line != null
+    || body.industry_type != null
+    || body.product_category != null
+  ) {
+    const { normalizeProductLine } = require("../utils/productLine");
+    patch.product_line = normalizeProductLine(
+      body.product_line || body.industry_type || body.product_category,
+    );
   }
   if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
   if (body.email != null) patch.email = String(body.email).trim();
@@ -847,11 +897,20 @@ async function createLicense(body) {
   if (!body.client_id) throw new Error("client_id mungon.");
 
   const { appTypeFromClientTipi } = require("../utils/businessTipi");
+  const { normalizeProductLine, appTypeForProductLine } = require("../utils/productLine");
   let appType = body.app_type ? String(body.app_type).trim().toLowerCase() : "";
-  const allowedApp = ["restorant", "kafene"];
+  const allowedApp = ["restorant", "kafene", "sekurim"];
+  const { data: client } = await db
+    .from("clients")
+    .select("tipi, product_line")
+    .eq("id", body.client_id)
+    .maybeSingle();
+  const productLine = normalizeProductLine(
+    body.product_line || client?.product_line || (appType === "sekurim" ? "security" : "kafene"),
+  );
   if (!allowedApp.includes(appType)) {
-    const { data: client } = await db.from("clients").select("tipi").eq("id", body.client_id).maybeSingle();
-    appType = client?.tipi ? appTypeFromClientTipi(client.tipi) : "restorant";
+    appType = appTypeForProductLine(productLine, client?.tipi)
+      || (client?.tipi ? appTypeFromClientTipi(client.tipi) : "restorant");
   }
 
   const rawKey = String(body.celesi || "").trim();
@@ -862,6 +921,7 @@ async function createLicense(body) {
   const row = {
     client_id: body.client_id,
     app_type: appType,
+    product_line: productLine,
     celesi,
     device_id: String(body.device_id || "").trim().toUpperCase().replace(/\s+/g, ""),
     statusi: body.statusi || "aktive",
@@ -873,7 +933,11 @@ async function createLicense(body) {
     base_price: Math.max(0, Number(body.base_price) || 0),
   };
 
-  const { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
+  let { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
+  if (error && /product_line/i.test(error.message || "")) {
+    delete row.product_line;
+    ({ data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single());
+  }
   if (error) throw error;
   return data;
 }
@@ -924,10 +988,14 @@ async function updateLicense(id, body) {
     patch.celesi = celesi;
   }
   if (body.app_type != null) {
-    const allowedApp = ["restorant", "kafene"];
+    const allowedApp = ["restorant", "kafene", "sekurim"];
     const appType = String(body.app_type).trim().toLowerCase();
     if (!allowedApp.includes(appType)) throw new Error(`Tipi i aplikacionit i pavlefshëm: ${body.app_type}`);
     patch.app_type = appType;
+  }
+  if (body.product_line != null) {
+    const { normalizeProductLine } = require("../utils/productLine");
+    patch.product_line = normalizeProductLine(body.product_line);
   }
   if (body.max_terminals != null) {
     patch.max_terminals = Math.max(1, Math.min(99, Number(body.max_terminals) || 1));

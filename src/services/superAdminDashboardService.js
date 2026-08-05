@@ -19,6 +19,30 @@ const {
 } = require("../utils/businessTipi");
 const { buildAiUsageInvoicePdf } = require("./aiBillingPdfService");
 const { listSystemFailures } = require("./systemFailureLog");
+const { normalizeProductLine, PRODUCT_LINES } = require("../utils/productLine");
+const {
+  getSecurityClientsGrouped,
+  getSecurityLicensesView,
+  getSecurityOverview,
+} = require("./securityAdminBridge");
+
+function clientProductLine(c) {
+  return normalizeProductLine(c?.product_line || "kafene");
+}
+
+function licenseProductLine(l) {
+  if (l?.product_line) return normalizeProductLine(l.product_line);
+  if (l?.app_type === "sekurim") return "security";
+  if (l?.clients?.product_line) return normalizeProductLine(l.clients.product_line);
+  return "kafene";
+}
+
+function filterByProduct(rows, product, getLine) {
+  const p = String(product || "all").trim().toLowerCase();
+  if (!p || p === "all" || p === "të gjitha" || p === "te_gjitha") return rows;
+  const want = normalizeProductLine(p);
+  return (rows || []).filter((r) => getLine(r) === want);
+}
 
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
 const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json");
@@ -354,8 +378,8 @@ function isOfflineOver48h(lic) {
   return Date.now() - new Date(seen).getTime() > 48 * 60 * 60 * 1000;
 }
 
-async function getOverview() {
-  const [clients, licenses, stockAlerts, salesToday, weekly] = await Promise.all([
+async function getOverviewKafene() {
+  const [clientsAll, licensesAll, stockAlerts, salesToday, weekly] = await Promise.all([
     listClients(),
     listLicenses(),
     listStockAlertsForAdmin().catch(() => []),
@@ -363,6 +387,8 @@ async function getOverview() {
     weeklySalesSeries(),
   ]);
 
+  const clients = filterByProduct(clientsAll, "kafene", clientProductLine);
+  const licenses = filterByProduct(licensesAll, "kafene", licenseProductLine);
   const activeClients = clients.filter((c) => c.aktiv !== false);
   const licByClient = new Map();
   for (const lic of licenses) {
@@ -395,26 +421,96 @@ async function getOverview() {
         emri: c.emri,
         tipi: normalizeClientTipi(c.tipi),
         tipi_label: labelForTipi(c.tipi),
+        product_line: "kafene",
         reasons,
       });
     }
   }
 
+  const trial = licenses.filter((l) => {
+    if (!l.trial_ends_at) return false;
+    return new Date(l.trial_ends_at) > new Date() && l.statusi === "aktive";
+  }).length;
+
   return {
     active_clients: activeClients.length,
     clients_total: clients.length,
+    licenses_total: licenses.length,
+    licenses_active: licenses.filter((l) => l.statusi === "aktive").length,
+    trial_accounts: trial,
     sales_today_total: salesToday.total,
     problem_clients: problems,
     weekly_sales: weekly,
+    product_line: "kafene",
   };
 }
 
-async function getClientsGrouped() {
-  const [clients, licenses, salesToday] = await Promise.all([
+async function getOverview({ product } = {}) {
+  const p = String(product || "all").trim().toLowerCase();
+  if (p === "security" || p === "sekurim" || p === "securetrack") {
+    return getSecurityOverview();
+  }
+  if (p === "kafene" || p === "cafe" || p === "pos" || p === "hospitality") {
+    return getOverviewKafene();
+  }
+
+  // Të gjitha — agregim kafene + security
+  const [kafene, security] = await Promise.all([
+    getOverviewKafene(),
+    getSecurityOverview().catch(() => ({
+      active_clients: 0,
+      clients_total: 0,
+      licenses_total: 0,
+      licenses_active: 0,
+      trial_accounts: 0,
+      problem_clients: [],
+      weekly_sales: [],
+      sales_today_total: 0,
+    })),
+  ]);
+
+  return {
+    active_clients: (kafene.active_clients || 0) + (security.active_clients || 0),
+    clients_total: (kafene.clients_total || 0) + (security.clients_total || 0),
+    licenses_total: (kafene.licenses_total || 0) + (security.licenses_total || 0),
+    licenses_active: (kafene.licenses_active || 0) + (security.licenses_active || 0),
+    trial_accounts: (kafene.trial_accounts || 0) + (security.trial_accounts || 0),
+    sales_today_total: kafene.sales_today_total || 0,
+    problem_clients: [
+      ...(kafene.problem_clients || []).map((x) => ({ ...x, product_line: "kafene" })),
+      ...(security.problem_clients || []).map((x) => ({ ...x, product_line: "security" })),
+    ],
+    weekly_sales: kafene.weekly_sales || [],
+    product_line: "all",
+    by_product: {
+      kafene: {
+        active_clients: kafene.active_clients,
+        clients_total: kafene.clients_total,
+        licenses_total: kafene.licenses_total,
+      },
+      security: {
+        active_clients: security.active_clients,
+        clients_total: security.clients_total,
+        licenses_total: security.licenses_total,
+        bridge_error: security.bridge_error || null,
+      },
+    },
+    products: PRODUCT_LINES,
+  };
+}
+
+async function getClientsGrouped({ product } = {}) {
+  const p = String(product || "kafene").trim().toLowerCase();
+  if (normalizeProductLine(p) === "security") {
+    return getSecurityClientsGrouped();
+  }
+
+  const [clientsAll, licenses, salesToday] = await Promise.all([
     listClients(),
     listLicenses(),
     salesTodayByClient(),
   ]);
+  const clients = filterByProduct(clientsAll, p === "all" ? "kafene" : p, clientProductLine);
 
   const licByClient = new Map();
   for (const lic of licenses) {
@@ -454,6 +550,7 @@ async function getClientsGrouped() {
       icon: iconForTipi(tipi),
       sector_num: sector.num,
       sector_id: sector.id,
+      product_line: clientProductLine(c),
     };
     const bucket = bySectorId.get(sector.id) || bySectorId.get("other");
     bucket.clients.push(row);
@@ -477,6 +574,8 @@ async function getClientsGrouped() {
     sectors: padded,
     groups: padded, // alias për UI të vjetër
     total: clients.length,
+    product_line: normalizeProductLine(p === "all" ? "kafene" : p),
+    products: PRODUCT_LINES,
   };
 }
 
@@ -600,10 +699,15 @@ async function getClientDetail(clientId) {
   };
 }
 
-async function getLicensesView() {
+async function getLicensesView({ product } = {}) {
+  const p = String(product || "kafene").trim().toLowerCase();
+  if (normalizeProductLine(p) === "security") {
+    return getSecurityLicensesView();
+  }
+
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
   await ensureLicenseHardwareSchema().catch(() => false);
-  const licenses = await listLicenses();
+  const licenses = filterByProduct(await listLicenses(), p === "all" ? "kafene" : p, licenseProductLine);
   return {
     licenses: licenses.map((l) => {
       const device = String(l.display_device_id || l.device_id || "").trim();
@@ -618,8 +722,11 @@ async function getLicensesView() {
         statusi: l.statusi,
         activated_at: l.last_activated_at || l.created_at,
         last_seen_at: licenseLastSeen(l),
+        product_line: licenseProductLine(l),
       };
     }),
+    product_line: normalizeProductLine(p === "all" ? "kafene" : p),
+    products: PRODUCT_LINES,
   };
 }
 
@@ -1058,4 +1165,5 @@ module.exports = {
   iconForTipi,
   ADMIN_CLIENT_TIPI,
   TIPI_LABELS,
+  PRODUCT_LINES,
 };
