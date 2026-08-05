@@ -6,6 +6,8 @@ let sectorsCache = [];
 let openSectorIds = new Set();
 /** Produkti aktiv: all | kafene | security */
 let currentProduct = localStorage.getItem("rip_admin_product") || "all";
+/** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
+let drawerProduct = null;
 
 /** 9 kategoritë — GJITHMONË të dukshme, edhe me (0). */
 const FALLBACK_SECTORS = [
@@ -535,9 +537,11 @@ async function openClientDetail(id, opts = {}) {
   const preferred =
     opts.product
     || opts.product_line
+    || drawerProduct
     || (typeof opts === "string" ? opts : null)
     || null;
   const { d, product } = await fetchClientDetailSmart(id, preferred);
+  drawerProduct = product;
   const isSecurity = product === "security";
   const c = d.client || {};
   const licenses = d.licenses || [];
@@ -588,7 +592,7 @@ async function openClientDetail(id, opts = {}) {
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
   bindDrawerSave(id, product);
   bindDrawerPassword(id, product);
-  bindDrawerLicenseFix(body, id);
+  bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
 }
 
@@ -696,18 +700,23 @@ function bindDrawerSave(clientId, productLine) {
       if (msg) msg.textContent = "Emri është i detyrueshëm.";
       return;
     }
+    const product = productLine || drawerProduct || "kafene";
     const body = {
-      product_line: productLine,
+      product_line: product,
       emri,
       email: document.getElementById("dr-email")?.value?.trim() || "",
       telefoni: document.getElementById("dr-tel")?.value?.trim() || "",
       telefon: document.getElementById("dr-tel")?.value?.trim() || "",
       adresa: document.getElementById("dr-adresa")?.value?.trim() || "",
-      tipi: document.getElementById("dr-tipi")?.value,
-      package_tier: document.getElementById("dr-pako")?.value,
-      veprimtari: document.getElementById("dr-veprimtari")?.value,
       licenses: [],
     };
+    const tipiEl = document.getElementById("dr-tipi");
+    const pakoEl = document.getElementById("dr-pako");
+    const veprimtariEl = document.getElementById("dr-veprimtari");
+    if (tipiEl?.value) body.tipi = tipiEl.value;
+    if (pakoEl?.value) body.package_tier = pakoEl.value;
+    if (veprimtariEl?.value) body.veprimtari = veprimtariEl.value;
+
     document.querySelectorAll("[data-lic-edit]").forEach((row) => {
       const id = row.dataset.licEdit;
       body.licenses.push({
@@ -722,13 +731,18 @@ function bindDrawerSave(clientId, productLine) {
     btn.disabled = true;
     if (msg) msg.textContent = "Duke ruajtur…";
     try {
-      await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
+      const saved = await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      if (msg) msg.textContent = "U ruajt.";
+      const licErrs = saved?.license_errors || [];
+      if (msg) {
+        msg.textContent = licErrs.length
+          ? `Klienti u ruajt. Licenca: ${licErrs.map((e) => e.gabim).join("; ")}`
+          : "U ruajt.";
+      }
       await refreshClientsAndProblems().catch(() => null);
-      await openClientDetail(clientId);
+      await openClientDetail(clientId, { product: saved?.product_line || product });
     } catch (ex) {
       if (msg) msg.textContent = ex.message || "Ruajtja dështoi";
       else alert(ex.message || "Ruajtja dështoi");
@@ -738,8 +752,12 @@ function bindDrawerSave(clientId, productLine) {
   });
 }
 
-function bindDrawerLicenseFix(root, clientId) {
+function bindDrawerLicenseFix(root, clientId, productLine) {
   if (!root) return;
+  const reopen = async () => {
+    if (!clientId) return;
+    await openClientDetail(clientId, { product: productLine || drawerProduct });
+  };
   root.querySelectorAll("[data-drawer-extend]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const months = Number(btn.dataset.months) || 12;
@@ -752,7 +770,7 @@ function bindDrawerLicenseFix(root, clientId) {
         });
         alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
         await refreshClientsAndProblems();
-        if (clientId) await openClientDetail(clientId);
+        await reopen();
       } catch (ex) {
         alert(ex.message || "Zgjatja dështoi.");
       } finally {
@@ -769,7 +787,7 @@ function bindDrawerLicenseFix(root, clientId) {
           method: "POST",
         });
         await refreshClientsAndProblems();
-        if (clientId) await openClientDetail(clientId);
+        await reopen();
       } catch (ex) {
         alert(ex.message || "Zhbllokimi dështoi.");
       } finally {
@@ -791,7 +809,7 @@ function bindDrawerLicenseFix(root, clientId) {
           }),
         });
         await refreshClientsAndProblems();
-        if (clientId) await openClientDetail(clientId);
+        await reopen();
       } catch (ex) {
         alert(ex.message || "Çaktivizimi dështoi.");
       } finally {
@@ -809,7 +827,7 @@ function bindDrawerLicenseFix(root, clientId) {
           body: JSON.stringify({ hardware_id: btn.dataset.hw || undefined }),
         });
         await refreshClientsAndProblems();
-        if (clientId) await openClientDetail(clientId);
+        await reopen();
       } catch (ex) {
         alert(ex.message || "Riaktivizimi dështoi.");
       } finally {
@@ -837,7 +855,7 @@ function bindDrawerLicenseFix(root, clientId) {
         });
         alert("Urdhri i fshirjes u dërgua te POS.");
         await refreshClientsAndProblems();
-        if (clientId) await openClientDetail(clientId);
+        await reopen();
       } catch (ex) {
         alert(ex.message || "Fshirja dështoi.");
       } finally {
@@ -848,6 +866,7 @@ function bindDrawerLicenseFix(root, clientId) {
 }
 
 function closeDrawer() {
+  drawerProduct = null;
   document.getElementById("drawer-root").classList.add("hidden");
 }
 

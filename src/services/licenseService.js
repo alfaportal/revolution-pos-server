@@ -718,7 +718,7 @@ async function updateClient(id, body) {
     patch.emri = String(body.emri).trim();
     if (!patch.emri) throw new Error("Emri i klientit është i detyrueshëm.");
   }
-  if (body.tipi != null) {
+  if (body.tipi != null && String(body.tipi).trim() !== "") {
     const { assertClientTipi } = require("../utils/businessTipi");
     patch.tipi = assertClientTipi(body.tipi);
   }
@@ -728,14 +728,18 @@ async function updateClient(id, body) {
     || body.product_category != null
   ) {
     const { normalizeProductLine } = require("../utils/productLine");
-    patch.product_line = normalizeProductLine(
+    const pl = normalizeProductLine(
       body.product_line || body.industry_type || body.product_category,
     );
+    // Mos e rishkruaj product_line kur është "all" / bosh nga UI
+    if (pl === "kafene" || pl === "security") patch.product_line = pl;
   }
-  if (body.telefoni != null) patch.telefoni = String(body.telefoni).trim();
-  if (body.email != null) patch.email = String(body.email).trim();
+  const tel = body.telefoni != null ? body.telefoni : body.telefon;
+  if (tel != null) patch.telefoni = String(tel).trim();
+  if (body.email != null) patch.email = String(body.email).trim().toLowerCase();
   if (body.adresa != null) patch.adresa = String(body.adresa).trim();
-  if (Object.prototype.hasOwnProperty.call(body, "package_tier")) {
+  if (typeof body.aktiv === "boolean") patch.aktiv = body.aktiv;
+  if (Object.prototype.hasOwnProperty.call(body, "package_tier") && body.package_tier != null && body.package_tier !== "") {
     patch.package_tier = normalizePackageTier(body.package_tier);
   }
   if (Object.prototype.hasOwnProperty.call(body, "owner_group_id")) {
@@ -760,7 +764,25 @@ async function updateClient(id, body) {
     throw new Error("Nuk ka fusha për përditësim.");
   }
 
-  const { data, error } = await db.from("clients").update(patch).eq("id", id).select().single();
+  async function doUpdate(p) {
+    return db.from("clients").update(p).eq("id", id).select("*").single();
+  }
+
+  let { data, error } = await doUpdate(patch);
+
+  // Kolona opsionale mund të mungojë para migrimit — hiqi dhe riprovo
+  const optionalCols = ["product_line", "aktiv", "owner_group_id", "ai_monthly_token_limit", "package_tier"];
+  let guard = 0;
+  while (error && guard < 5) {
+    guard += 1;
+    const msg = String(error.message || error.details || "");
+    const missing = optionalCols.find((col) => msg.includes(col));
+    if (!missing || patch[missing] === undefined) break;
+    delete patch[missing];
+    if (!Object.keys(patch).length) break;
+    ({ data, error } = await doUpdate(patch));
+  }
+
   if (error) {
     if (String(error.message || "").includes("clients_package_tier_check")) {
       throw new Error(

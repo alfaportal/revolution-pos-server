@@ -302,46 +302,67 @@ router.patch(
 
     if (product === "security") {
       const data = await updateSecurityClient(id, body);
+      const client = data.client || data;
       const licenses = [];
+      const license_errors = [];
       for (const lp of licPatches) {
         if (!lp?.id) continue;
-        const updated = await updateSecurityLicense(lp.id, {
-          statusi: lp.statusi || lp.status,
-          license_key: lp.celesi || lp.license_key,
-          hardware_id: lp.hardware_id,
-          expires_at: lp.data_skadimit || lp.expires_at,
-        });
-        licenses.push(updated.license || updated);
+        try {
+          const updated = await updateSecurityLicense(lp.id, {
+            statusi: lp.statusi || lp.status,
+            license_key: lp.celesi || lp.license_key,
+            hardware_id: lp.hardware_id,
+            expires_at: lp.data_skadimit || lp.expires_at,
+          });
+          licenses.push(updated.license || updated);
+        } catch (licErr) {
+          license_errors.push({ id: lp.id, gabim: licErr.message || "Gabim licence" });
+        }
       }
       await logAdminActivity({
         ...activityFromReq(req),
         action: "security_client_update",
         targetType: "client",
         targetId: id,
-        targetLabel: data.client?.emri || body.emri,
+        targetLabel: client?.emri || body.emri,
       }).catch(() => {});
-      return res.json({ ok: true, client: data.client || data, licenses, product_line: "security" });
+      return res.json({
+        ok: true,
+        client,
+        licenses,
+        license_errors,
+        product_line: "security",
+      });
     }
 
+    // Kafene / POS — ruaj klientin GJITHMONË; licencat veç e veç (një gabim licence mos e prish klientin)
     const client = await updateClient(id, body);
     const licenses = [];
+    const license_errors = [];
     for (const lp of licPatches) {
       if (!lp?.id) continue;
-      const patch = {};
-      const key = String(lp.celesi || lp.license_key || "").trim();
-      if (key) patch.celesi = key;
-      if (lp.hardware_id != null || lp.hardwareId != null) {
-        patch.hardware_id = lp.hardware_id || lp.hardwareId || "";
+      try {
+        const patch = {};
+        const key = String(lp.celesi || lp.license_key || "").trim();
+        if (key) patch.celesi = key;
+        if (lp.hardware_id != null || lp.hardwareId != null) {
+          const hw = String(lp.hardware_id || lp.hardwareId || "").trim();
+          if (hw) patch.hardware_id = hw;
+        }
+        if (lp.device_id != null && String(lp.device_id).trim()) {
+          patch.device_id = lp.device_id;
+        }
+        if (lp.statusi != null && String(lp.statusi).trim()) patch.statusi = lp.statusi;
+        if (lp.data_skadimit != null && String(lp.data_skadimit).trim()) {
+          patch.data_skadimit = lp.data_skadimit;
+        }
+        if (lp.max_terminals != null) patch.max_terminals = lp.max_terminals;
+        if (!Object.keys(patch).length) continue;
+        const license = await updateLicense(lp.id, patch);
+        licenses.push(license);
+      } catch (licErr) {
+        license_errors.push({ id: lp.id, gabim: licErr.message || "Gabim licence" });
       }
-      if (lp.device_id != null) patch.device_id = lp.device_id;
-      if (lp.statusi != null && String(lp.statusi).trim()) patch.statusi = lp.statusi;
-      if (lp.data_skadimit != null && String(lp.data_skadimit).trim()) {
-        patch.data_skadimit = lp.data_skadimit;
-      }
-      if (lp.max_terminals != null) patch.max_terminals = lp.max_terminals;
-      if (!Object.keys(patch).length) continue;
-      const license = await updateLicense(lp.id, patch);
-      licenses.push(license);
     }
 
     await logAdminActivity({
@@ -350,10 +371,19 @@ router.patch(
       targetType: "client",
       targetId: client.id,
       targetLabel: client.emri,
-      details: { licenses_updated: licenses.map((l) => l.id) },
+      details: {
+        licenses_updated: licenses.map((l) => l.id),
+        license_errors,
+      },
     }).catch(() => {});
 
-    res.json({ ok: true, client, licenses, product_line: "kafene" });
+    res.json({
+      ok: true,
+      client,
+      licenses,
+      license_errors,
+      product_line: "kafene",
+    });
   }),
 );
 

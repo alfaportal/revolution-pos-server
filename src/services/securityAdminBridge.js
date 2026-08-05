@@ -77,6 +77,7 @@ function mapSecurityClient(c) {
     sales_today: 0,
     email: c.email || "",
     telefoni: c.telefon || c.telefoni || "",
+    adresa: c.adresa || "",
     icon: "🛡️",
     sector_num: 1,
     sector_id: "security",
@@ -138,6 +139,7 @@ async function getSecurityLicensesView() {
       device_id: l.hardware_id || "",
       hardware_id: l.hardware_id || "",
       license_key: l.license_key || l.celesi || "",
+      expires_at: l.expires_at || null,
       statusi: l.status === "active" ? "aktive"
         : l.status === "revoked" ? "revokuar"
           : l.status === "suspended" ? "pezulluar"
