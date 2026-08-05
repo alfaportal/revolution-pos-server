@@ -642,6 +642,27 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   cursor: pointer;
 }
 .chk-row input { width: 1.1rem; height: 1.1rem; }
+.nc-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.nc-input-row input {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+.nc-input-row .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: var(--tap);
+}
 
 /* Desktop / large tablet */
 @media (min-width: 960px) {

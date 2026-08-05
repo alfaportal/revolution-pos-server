@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=15">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=16">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -164,18 +164,22 @@
                   <option value="annual" selected>Vjetor (1 vit)</option>
                 </select>
               </div>
-              <div class="field">
+              <div class="field full">
                 <label for="nc-hw-id">ID pajisjes (16 shenja)</label>
-                <input id="nc-hw-id" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-              </div>
-              <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-                <button type="button" class="btn btn-ok btn-sm" id="btn-nc-gen-id">Gjenero ID</button>
-                <button type="button" class="btn btn-primary btn-sm" id="btn-nc-gen-key">Gjenero Licencë nga ID</button>
-                <button type="button" class="btn btn-ghost btn-sm" id="btn-nc-copy-pair">Kopjo ID + Licencë</button>
+                <div class="nc-input-row">
+                  <input id="nc-hw-id" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+                  <button type="button" class="btn btn-ok" id="btn-nc-gen-id">Gjenero ID</button>
+                </div>
               </div>
               <div class="field full">
                 <label for="nc-license-key">Çelësi i licencës (16 shenja)</label>
-                <input id="nc-license-key" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+                <div class="nc-input-row">
+                  <input id="nc-license-key" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+                  <button type="button" class="btn btn-primary" id="btn-nc-gen-key">Gjenero Licencë</button>
+                </div>
+              </div>
+              <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+                <button type="button" class="btn btn-ghost btn-sm" id="btn-nc-copy-pair">Kopjo ID + Licencë</button>
               </div>
               <div class="field full">
                 <label class="chk-row"><input type="checkbox" id="nc-license" checked> Ruaj klientin me këtë licencë</label>
@@ -440,6 +444,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=15"></script>
+  <script src="/admin/dashboard.js?v=16"></script>
 </body>
 </html>

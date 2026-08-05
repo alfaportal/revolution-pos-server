@@ -1463,30 +1463,33 @@ async function boot() {
   bindNcHex16(document.getElementById("nc-hw-id"));
   bindNcHex16(document.getElementById("nc-license-key"));
 
-  document.getElementById("btn-nc-gen-id")?.addEventListener("click", () => {
-    const hwEl = document.getElementById("nc-hw-id");
-    const msg = document.getElementById("nc-msg");
+  function randomHw16() {
     const bytes = new Uint8Array(8);
     crypto.getRandomValues(bytes);
     const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
-    const hw = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+    return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+  }
+
+  document.getElementById("btn-nc-gen-id")?.addEventListener("click", () => {
+    const hwEl = document.getElementById("nc-hw-id");
+    const msg = document.getElementById("nc-msg");
+    const hw = randomHw16();
     if (hwEl) hwEl.value = hw;
     if (msg) msg.textContent = `ID: ${hw}`;
   });
 
+  /** Gjenero Licencë — mbush menjëherë fushën 16-shenja (krijon ID nëse mungon). */
   document.getElementById("btn-nc-gen-key")?.addEventListener("click", async () => {
     const hwEl = document.getElementById("nc-hw-id");
     const keyEl = document.getElementById("nc-license-key");
     const msg = document.getElementById("nc-msg");
     const btn = document.getElementById("btn-nc-gen-key");
-    const hardwareId = String(hwEl?.value || "").trim();
-    const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+    let hardwareId = String(hwEl?.value || "").trim();
+    let hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
     if (!hardwareId || hwHex.length !== 16) {
-      const t = "ID duhet 16 shenja (XXXX-XXXX-XXXX-XXXX). Gjenero ID ose ngjit nga POS.";
-      if (msg) msg.textContent = t;
-      else alert(t);
-      hwEl?.focus();
-      return;
+      hardwareId = randomHw16();
+      hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+      if (hwEl) hwEl.value = hardwareId;
     }
     const licenseType =
       String(document.getElementById("nc-license-type")?.value || "annual").toLowerCase() === "trial"
@@ -1508,10 +1511,16 @@ async function boot() {
         });
       }
       const key = data.licenseKey || data.celesi || "";
+      if (!key) throw new Error("Serveri nuk ktheu çelës licence.");
       if (hwEl) hwEl.value = data.hardwareId || formatLicenseHwId(hardwareId) || hardwareId;
-      if (keyEl) keyEl.value = key;
-      document.getElementById("nc-license").checked = true;
-      if (msg) msg.textContent = key ? `Licenca u gjenerua: ${key}` : "Licenca u gjenerua.";
+      if (keyEl) {
+        keyEl.value = key;
+        keyEl.focus();
+        keyEl.select();
+      }
+      const chk = document.getElementById("nc-license");
+      if (chk) chk.checked = true;
+      if (msg) msg.textContent = `Licenca: ${key}`;
     } catch (ex) {
       if (msg) msg.textContent = ex.message || "Gjenerimi dështoi";
       else alert(ex.message || "Gjenerimi dështoi");
