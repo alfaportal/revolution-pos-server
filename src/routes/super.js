@@ -175,26 +175,67 @@ router.get(
   }),
 );
 
-/** Krijo klient (+ opsionalisht licencë) sipas produktit — kafene lokal / security upstream */
+/** Krijo klient (+ licencë 16-shenja) në një kërkesë — kafene lokal / security upstream */
 router.post(
   "/dashboard/clients",
   asyncHandler(async (req, res) => {
     const product = normalizeProductLine(
       req.body?.product_line || req.body?.industry_type || req.query.product,
     );
+    const {
+      generateHardwareLicenseKey,
+      normalizeHardwareId,
+      formatGrouped16,
+    } = require("../lib/hardwareLicense");
+
+    const wantLicense = req.body?.issue_license !== false && req.body?.issue_license !== "false";
+    let celesi = String(req.body?.celesi || req.body?.license_key || "").trim();
+    let hardwareId = String(req.body?.hardware_id || req.body?.hardwareId || "").trim();
+    const licenseType =
+      String(req.body?.license_type || req.body?.licenseType || "annual").toLowerCase() === "trial"
+        ? "trial"
+        : "annual";
+    let dataSkadimit = req.body?.data_skadimit || null;
+    let trialEndsAt = req.body?.trial_ends_at || null;
+    let expiresAt = req.body?.expires_at || null;
+
+    const hwHex = normalizeHardwareId(hardwareId);
+    if (wantLicense && hwHex.length === 16) {
+      hardwareId = formatGrouped16(hwHex);
+      if (!celesi) {
+        const gen = generateHardwareLicenseKey(hwHex, { licenseType });
+        celesi = gen.licenseKey;
+        if (gen.expiresAt) {
+          expiresAt = gen.expiresAt;
+          dataSkadimit = String(gen.expiresAt).slice(0, 10);
+        }
+        if (gen.licenseType === "trial") {
+          const d = new Date();
+          d.setUTCDate(d.getUTCDate() + (gen.trialDays || 7));
+          trialEndsAt = d.toISOString();
+          dataSkadimit = trialEndsAt.slice(0, 10);
+        }
+      }
+    }
+
     if (product === "security") {
       const data = await createSecurityClient(req.body || {});
       let license = null;
-      if (req.body?.issue_license !== false) {
+      if (wantLicense) {
         try {
           const issued = await issueSecurityLicense({
             client_id: data.client?.id,
             max_terminals: req.body?.max_terminals || 1,
-            expires_at: req.body?.expires_at || null,
+            expires_at: expiresAt || dataSkadimit || null,
+            license_key: celesi || undefined,
+            celesi: celesi || undefined,
           });
           license = issued.license || issued;
         } catch (e) {
           console.warn("[super] security license issue:", e.message);
+          const err = new Error(e.message || "Licenca Security dështoi");
+          err.status = e.status || 400;
+          throw err;
         }
       }
       await logAdminActivity({
@@ -203,24 +244,38 @@ router.post(
         targetType: "client",
         targetId: data.client?.id,
         targetLabel: data.client?.emri,
+        details: { license_key: license?.license_key || celesi || null },
       }).catch(() => {});
-      return res.status(201).json({ ok: true, client: data.client, license, product_line: "security" });
+      return res.status(201).json({
+        ok: true,
+        client: data.client,
+        license,
+        hardware_id: hardwareId || null,
+        product_line: "security",
+      });
     }
 
     const { createClient, createLicense } = require("../services/licenseService");
     const client = await createClient({ ...(req.body || {}), product_line: "kafene" });
     let license = null;
-    if (req.body?.issue_license !== false) {
+    if (wantLicense) {
       try {
         license = await createLicense({
           client_id: client.id,
           app_type: req.body?.app_type,
           product_line: "kafene",
-          muaj: req.body?.muaj || 12,
+          muaj: licenseType === "trial" ? 1 : req.body?.muaj || 12,
           max_terminals: req.body?.max_terminals || 1,
+          celesi: celesi || undefined,
+          hardware_id: hwHex.length === 16 ? hardwareId : undefined,
+          data_skadimit: dataSkadimit || undefined,
+          trial_ends_at: trialEndsAt || undefined,
         });
       } catch (e) {
         console.warn("[super] kafene license issue:", e.message);
+        const err = new Error(e.message || "Licenca dështoi");
+        err.status = 400;
+        throw err;
       }
     }
     await logAdminActivity({
@@ -229,8 +284,19 @@ router.post(
       targetType: "client",
       targetId: client.id,
       targetLabel: client.emri,
+      details: {
+        license_id: license?.id,
+        license_celesi: license?.celesi || celesi || null,
+        hardware_id: hardwareId || null,
+      },
     }).catch(() => {});
-    res.status(201).json({ ok: true, client, license, product_line: "kafene" });
+    res.status(201).json({
+      ok: true,
+      client,
+      license,
+      hardware_id: hardwareId || null,
+      product_line: "kafene",
+    });
   }),
 );
 

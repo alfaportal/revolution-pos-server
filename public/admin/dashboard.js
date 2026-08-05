@@ -1444,11 +1444,117 @@ async function boot() {
   });
   document.getElementById("nc-product")?.addEventListener("change", syncNewClientForm);
   syncNewClientForm();
+
+  function bindNcHex16(el) {
+    if (!el || el.dataset.fmtBound === "1") return;
+    el.dataset.fmtBound = "1";
+    el.addEventListener("input", () => {
+      const hex = String(el.value || "")
+        .replace(/[^a-fA-F0-9]/g, "")
+        .toUpperCase()
+        .slice(0, 16);
+      let next = hex;
+      if (hex.length > 12) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12)}`;
+      else if (hex.length > 8) next = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8)}`;
+      else if (hex.length > 4) next = `${hex.slice(0, 4)}-${hex.slice(4)}`;
+      if (next !== el.value) el.value = next;
+    });
+  }
+  bindNcHex16(document.getElementById("nc-hw-id"));
+  bindNcHex16(document.getElementById("nc-license-key"));
+
+  document.getElementById("btn-nc-gen-id")?.addEventListener("click", () => {
+    const hwEl = document.getElementById("nc-hw-id");
+    const msg = document.getElementById("nc-msg");
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+    const hw = `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
+    if (hwEl) hwEl.value = hw;
+    if (msg) msg.textContent = `ID: ${hw}`;
+  });
+
+  document.getElementById("btn-nc-gen-key")?.addEventListener("click", async () => {
+    const hwEl = document.getElementById("nc-hw-id");
+    const keyEl = document.getElementById("nc-license-key");
+    const msg = document.getElementById("nc-msg");
+    const btn = document.getElementById("btn-nc-gen-key");
+    const hardwareId = String(hwEl?.value || "").trim();
+    const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+    if (!hardwareId || hwHex.length !== 16) {
+      const t = "ID duhet 16 shenja (XXXX-XXXX-XXXX-XXXX). Gjenero ID ose ngjit nga POS.";
+      if (msg) msg.textContent = t;
+      else alert(t);
+      hwEl?.focus();
+      return;
+    }
+    const licenseType =
+      String(document.getElementById("nc-license-type")?.value || "annual").toLowerCase() === "trial"
+        ? "trial"
+        : "annual";
+    if (btn) btn.disabled = true;
+    if (msg) msg.textContent = "Duke gjeneruar licencën…";
+    try {
+      let data;
+      try {
+        data = await api("/api/super/generate-license-key", {
+          method: "POST",
+          body: JSON.stringify({ hardwareId, licenseType }),
+        });
+      } catch {
+        data = await api("/api/admin/licenses/generate-hardware-key", {
+          method: "POST",
+          body: JSON.stringify({ hardwareId, licenseType }),
+        });
+      }
+      const key = data.licenseKey || data.celesi || "";
+      if (hwEl) hwEl.value = data.hardwareId || formatLicenseHwId(hardwareId) || hardwareId;
+      if (keyEl) keyEl.value = key;
+      document.getElementById("nc-license").checked = true;
+      if (msg) msg.textContent = key ? `Licenca u gjenerua: ${key}` : "Licenca u gjenerua.";
+    } catch (ex) {
+      if (msg) msg.textContent = ex.message || "Gjenerimi dështoi";
+      else alert(ex.message || "Gjenerimi dështoi");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  document.getElementById("btn-nc-copy-pair")?.addEventListener("click", (e) => {
+    const hw = String(document.getElementById("nc-hw-id")?.value || "").trim();
+    const key = String(document.getElementById("nc-license-key")?.value || "").trim();
+    const text = key && hw ? `ID: ${hw}\nLicenca: ${key}` : key || hw;
+    if (!text) {
+      alert("Nuk ka ID as licencë.");
+      return;
+    }
+    copyText(text, e.currentTarget);
+  });
+
   document.getElementById("form-new-client")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const msg = document.getElementById("nc-msg");
     const btn = document.getElementById("btn-nc-submit");
     const product = document.getElementById("nc-product")?.value || "kafene";
+    const hardwareId = String(document.getElementById("nc-hw-id")?.value || "").trim();
+    const licenseKey = String(document.getElementById("nc-license-key")?.value || "").trim();
+    const issueLicense = Boolean(document.getElementById("nc-license")?.checked);
+    const licenseType =
+      String(document.getElementById("nc-license-type")?.value || "annual").toLowerCase() === "trial"
+        ? "trial"
+        : "annual";
+    const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+    const keyHex = licenseKey.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+
+    if (issueLicense && hardwareId && hwHex.length !== 16) {
+      if (msg) msg.textContent = "ID e pajisjes duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).";
+      return;
+    }
+    if (issueLicense && licenseKey && keyHex.length !== 16) {
+      if (msg) msg.textContent = "Çelësi i licencës duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).";
+      return;
+    }
+
     const body = {
       product_line: product,
       emri: document.getElementById("nc-emri")?.value?.trim(),
@@ -1458,24 +1564,35 @@ async function boot() {
       tipi: document.getElementById("nc-tipi")?.value,
       package_tier: document.getElementById("nc-pako")?.value,
       veprimtari: document.getElementById("nc-veprimtari")?.value,
-      issue_license: Boolean(document.getElementById("nc-license")?.checked),
+      issue_license: issueLicense,
+      license_type: licenseType,
+      hardware_id: hardwareId || undefined,
+      celesi: licenseKey || undefined,
+      license_key: licenseKey || undefined,
     };
     if (!body.emri) {
       if (msg) msg.textContent = "Emri është i detyrueshëm.";
       return;
     }
     if (btn) btn.disabled = true;
-    if (msg) msg.textContent = "Duke regjistruar…";
+    if (msg) msg.textContent = "Duke regjistruar klientin + licencën…";
     try {
       const data = await api("/api/super/dashboard/clients", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      const licKey = data.license?.celesi || data.license?.license_key || "";
+      const licKey = data.license?.celesi || data.license?.license_key || licenseKey || "";
+      const hwOut = data.hardware_id || hardwareId || "";
       if (msg) {
         msg.textContent = licKey
-          ? `U krijua. Licenca: ${licKey}`
+          ? `U krijua. ID: ${hwOut || "—"} · Licenca: ${licKey}`
           : "Klienti u krijua.";
+      }
+      if (licKey && document.getElementById("nc-license-key")) {
+        document.getElementById("nc-license-key").value = licKey;
+      }
+      if (hwOut && document.getElementById("nc-hw-id")) {
+        document.getElementById("nc-hw-id").value = hwOut;
       }
       document.getElementById("nc-emri").value = "";
       if (product === "security" || currentProduct === "security") {
@@ -1483,9 +1600,7 @@ async function boot() {
       } else {
         await loadClients();
       }
-      if (document.querySelector(".section.active")?.id === "sec-licencat") {
-        await loadLicenses().catch(() => null);
-      }
+      await loadLicenses().catch(() => null);
     } catch (ex) {
       if (msg) msg.textContent = ex.message || "Gabim";
       else alert(ex.message || "Gabim");

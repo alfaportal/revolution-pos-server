@@ -918,12 +918,21 @@ async function createLicense(body) {
     ? normalizeKey(rawKey) || rawKey.toUpperCase().replace(/\s+/g, "")
     : generateLicenseKey();
 
+  const hwRaw = body.hardware_id || body.hardwareId || "";
+  const hwNorm = normalizeHardwareIdStored(hwRaw);
+  // Nëse dërgohet HW 16 si device_id, ruaje si hardware_id (jo device_id 12)
+  let deviceId = String(body.device_id || "").trim().toUpperCase().replace(/\s+/g, "");
+  const deviceHex = deviceId.replace(/[^A-F0-9]/g, "");
+  if (!hwNorm && deviceHex.length === 16) {
+    deviceId = "";
+  }
+
   const row = {
     client_id: body.client_id,
     app_type: appType,
     product_line: productLine,
     celesi,
-    device_id: String(body.device_id || "").trim().toUpperCase().replace(/\s+/g, ""),
+    device_id: deviceHex.length === 16 ? "" : deviceId,
     statusi: body.statusi || "aktive",
     data_fillimit: start,
     data_skadimit: body.data_skadimit || addMonthsISO(start, months),
@@ -932,10 +941,17 @@ async function createLicense(body) {
     terminal_price: Math.max(0, Number(body.terminal_price) || 0),
     base_price: Math.max(0, Number(body.base_price) || 0),
   };
+  const hwToStore = hwNorm || (deviceHex.length === 16 ? normalizeHardwareIdStored(deviceHex) : "");
+  if (hwToStore) row.hardware_id = hwToStore;
 
   let { data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single();
   if (error && /product_line/i.test(error.message || "")) {
     delete row.product_line;
+    ({ data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single());
+  }
+  if (error && /hardware_id/i.test(error.message || "") && row.hardware_id) {
+    row.last_validation_error = encodeHwMeta(row.hardware_id);
+    delete row.hardware_id;
     ({ data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single());
   }
   if (error) throw error;
