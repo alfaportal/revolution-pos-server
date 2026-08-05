@@ -9,7 +9,7 @@ let currentProduct = localStorage.getItem("rip_admin_product") || "all";
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 
-/** 9 kategoritë — GJITHMONË të dukshme, edhe me (0). */
+/** 9 kategoritë Kafene/POS — GJITHMONË të dukshme, edhe me (0). */
 const FALLBACK_SECTORS = [
   {
     num: 1,
@@ -20,7 +20,7 @@ const FALLBACK_SECTORS = [
   },
   { num: 2, id: "bakery", label: "Furrë Buke", keywords: ["furre", "buke"], clients: [] },
   { num: 3, id: "hotel", label: "Hotel Restorant", keywords: ["hotel"], clients: [] },
-  { num: 4, id: "nightlife", label: "Bar Nate / Klub", keywords: ["nate", "klub"], clients: [] },
+  { num: 4, id: "nightlife", label: "Bar Nate / Klub / Diskotekë", keywords: ["nate", "klub", "diskotek", "disco", "nightbar"], clients: [] },
   { num: 5, id: "grocery", label: "Market / Minimarket", keywords: ["market", "minimarket"], clients: [] },
   { num: 6, id: "fashion", label: "Dyqan Rrobash / Këpucësh", keywords: ["rroba", "kepuce", "dyqan"], clients: [] },
   { num: 7, id: "health", label: "Farmaci / Optikë", keywords: ["farmaci", "optike"], clients: [] },
@@ -28,10 +28,43 @@ const FALLBACK_SECTORS = [
   { num: 9, id: "other", label: "Shërbime të tjera", keywords: ["tjeter", "sherbime"], clients: [] },
 ];
 
-function ensureNineSectors(apiSectors) {
+/** Sektoret Security — të ndara nga Kafene; gjithmonë të dukshme. */
+const FALLBACK_SECURITY_SECTORS = [
+  { num: 1, id: "sec_kompani", label: "Kompani sigurie", keywords: ["kompani", "sigurie"], clients: [] },
+  { num: 2, id: "sec_objekt", label: "Objekt / Ndërtesë", keywords: ["objekt"], clients: [] },
+  { num: 3, id: "sec_hotel", label: "Hotel / Akomodim", keywords: ["hotel"], clients: [] },
+  { num: 4, id: "sec_event", label: "Evente / Siguri eventesh", keywords: ["event"], clients: [] },
+  { num: 5, id: "sec_parking", label: "Parking", keywords: ["parking"], clients: [] },
+  { num: 6, id: "sec_industri", label: "Fabrikë / Industri", keywords: ["fabrika"], clients: [] },
+  { num: 7, id: "sec_institucione", label: "Shkollë / Spital / Bankë", keywords: ["shkolla", "spital", "banka"], clients: [] },
+  { num: 8, id: "sec_retail", label: "Retail / Dyqan (siguri)", keywords: ["retail"], clients: [] },
+  { num: 9, id: "sec_sherbime", label: "Transport / Ndërtim / Pastrim / Teknikë", keywords: ["transport", "ndertim", "pastrim"], clients: [] },
+  { num: 10, id: "sec_tjeter", label: "Tjetër (Security)", keywords: ["tjeter"], clients: [] },
+];
+
+const SECURITY_VEPRIMTARI_OPTS = [
+  ["kompani_sigurie", "Kompani sigurie"],
+  ["objekt", "Objekt / Ndërtesë"],
+  ["hotel", "Hotel / Akomodim"],
+  ["event_sigurie", "Evente / Siguri eventesh"],
+  ["parking", "Parking"],
+  ["fabrika", "Fabrikë / Industri"],
+  ["shkolla", "Shkollë / Institucion"],
+  ["spitale", "Spital / Klinikë"],
+  ["banka", "Bankë / Finance"],
+  ["retail_sigurie", "Retail / Dyqan (siguri)"],
+  ["transport_sigurie", "Transport / Logjistikë"],
+  ["ndertimtari", "Ndërtimtari"],
+  ["pastrim", "Pastrim"],
+  ["sherbime_teknike", "Shërbime teknike"],
+  ["tjeter", "Tjetër (Security)"],
+];
+
+function ensureSectors(apiSectors, fallback) {
+  const list = fallback || FALLBACK_SECTORS;
   const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
   const byNum = new Map((apiSectors || []).map((s) => [Number(s.num), s]));
-  return FALLBACK_SECTORS.map((fb) => {
+  return list.map((fb) => {
     const hit = byId.get(fb.id) || byNum.get(fb.num) || null;
     return {
       num: fb.num,
@@ -41,6 +74,14 @@ function ensureNineSectors(apiSectors) {
       clients: Array.isArray(hit?.clients) ? hit.clients : [],
     };
   });
+}
+
+function ensureNineSectors(apiSectors) {
+  return ensureSectors(apiSectors, FALLBACK_SECTORS);
+}
+
+function ensureSecuritySectors(apiSectors) {
+  return ensureSectors(apiSectors, FALLBACK_SECURITY_SECTORS);
 }
 
 function productQuery(forClients = false) {
@@ -265,12 +306,10 @@ function renderClientsSectors(filterText = "") {
   if (!root) return;
   const q = normalizeSearch(filterText);
   clientsFlat = [];
-  // Security: sektori nga API; Kafene: GJITHMONË 9
+  // Security dhe Kafene: sektore të ndara, gjithmonë të dukshme (edhe me 0)
   const sectors =
     currentProduct === "security"
-      ? sectorsCache.length
-        ? sectorsCache
-        : [{ num: 1, id: "security", label: "Klientë Security", keywords: ["security"], clients: [] }]
+      ? ensureSecuritySectors(sectorsCache)
       : ensureNineSectors(sectorsCache);
 
   const html = sectors
@@ -392,14 +431,24 @@ const DRAWER_TIPI_OPTS = [
   ["piceri", "Piceri"],
   ["fast_food", "Fast Food"],
   ["kebab", "Kebab"],
-  ["pasticeri", "Pastiçeri"],
+  ["pasticeri", "Pastiçeri / Ëmbëltore"],
+  ["akullore", "Akullore"],
+  ["gjeltore", "Gjeltore"],
+  ["bar_nate", "Bar Nate / Night Bar"],
+  ["klub", "Klub"],
+  ["diskoteke", "Diskotekë"],
+  ["pub_lounge", "Pub / Lounge"],
   ["furre_buke", "Furrë Buke"],
   ["hotel_restorant", "Hotel Restorant"],
   ["market", "Market"],
   ["minimarket", "Minimarket"],
+  ["dyqan_rroba", "Dyqan Rrobash"],
+  ["dyqan_kepuce", "Dyqan Këpucësh"],
+  ["dyqan", "Dyqan"],
+  ["farmaci", "Farmaci"],
+  ["optike", "Optikë"],
   ["berber", "Berber"],
   ["sallon_bukurie", "Sallon Bukurie"],
-  ["farmaci", "Farmaci"],
   ["tjeter", "Tjetër"],
 ];
 
@@ -552,22 +601,14 @@ async function openClientDetail(id, opts = {}) {
   document.getElementById("drawer-sub").textContent = "Edito klientin, licencat & fjalëkalimin — Ruaj";
 
   const sectorFields = isSecurity
-    ? `<label>Veprimtari
+    ? `<label>Veprimtari (Security)
         <select id="dr-veprimtari">
-          ${selectOpts(
-            [
-              ["kompani_sigurie", "Kompani sigurie"],
-              ["objekt", "Objekt / Ndërtesë"],
-              ["hotel", "Hotel"],
-              ["tjeter", "Tjetër"],
-            ],
-            c.veprimtari || "kompani_sigurie",
-          )}
+          ${selectOpts(SECURITY_VEPRIMTARI_OPTS, c.veprimtari || c.tipi || "kompani_sigurie")}
         </select>
       </label>
       <label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>`
     : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
-      <label>Sektori<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
+      <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
       <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
 
   document.getElementById("drawer-body").innerHTML = `

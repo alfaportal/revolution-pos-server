@@ -256,6 +256,12 @@ button.kpi.kpi-jump:focus-visible {
   margin-top: 0.65rem;
 }
 .prob-actions .btn { flex: 1 1 auto; min-width: 5.5rem; }
+.product-tabs-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 0.35rem 0 0.75rem;
+  line-height: 1.4;
+}
 .prob-help {
   color: var(--muted);
   font-size: 0.9rem;

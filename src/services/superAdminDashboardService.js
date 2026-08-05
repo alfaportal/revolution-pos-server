@@ -596,6 +596,7 @@ function iconForTipi(tipi) {
     hotel_restorant: "🏨",
     bar_nate: "🌙",
     klub: "🎶",
+    diskoteke: "🪩",
     market: "🛒",
     minimarket: "🧺",
     dyqan_rroba: "👕",

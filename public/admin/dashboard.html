@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=22">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=23">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -71,6 +71,9 @@
           <button type="button" class="product-tab" data-product="kafene" role="tab" aria-selected="false">Kafene &amp; Restorante</button>
           <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false">Security</button>
         </div>
+        <p class="product-tabs-hint" id="product-tabs-hint">
+          Një Master Admin — çdo produkt / veprimtari regjistrohet këtu. Kafene dhe Security mbeten të ndara.
+        </p>
         <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
 
         <!-- PASQYRA -->
@@ -111,14 +114,42 @@
                 <input id="nc-emri" required placeholder="p.sh. Café Roma" autocomplete="organization">
               </div>
               <div class="field nc-kafene-only">
-                <label for="nc-tipi">Sektori (POS)</label>
+                <label for="nc-tipi">Veprimtaria (POS)</label>
                 <select id="nc-tipi">
-                  <option value="kafene">Kafene</option>
-                  <option value="restorant">Restorant</option>
-                  <option value="bar">Bar</option>
-                  <option value="piceri">Piceri</option>
-                  <option value="fast_food">Fast Food</option>
-                  <option value="market">Market</option>
+                  <optgroup label="Hospitality">
+                    <option value="kafene">Kafene</option>
+                    <option value="restorant">Restorant</option>
+                    <option value="bar">Bar</option>
+                    <option value="piceri">Piceri</option>
+                    <option value="fast_food">Fast Food</option>
+                    <option value="kebab">Kebab</option>
+                    <option value="pasticeri">Pastiçeri / Ëmbëltore</option>
+                    <option value="akullore">Akullore</option>
+                    <option value="gjeltore">Gjeltore</option>
+                  </optgroup>
+                  <optgroup label="Night / Bar Nate">
+                    <option value="bar_nate">Bar Nate / Night Bar</option>
+                    <option value="klub">Klub</option>
+                    <option value="diskoteke">Diskotekë</option>
+                    <option value="pub_lounge">Pub / Lounge</option>
+                  </optgroup>
+                  <optgroup label="Hotel &amp; Furrë">
+                    <option value="hotel_restorant">Hotel Restorant</option>
+                    <option value="furre_buke">Furrë Buke</option>
+                  </optgroup>
+                  <optgroup label="Market &amp; Dyqan">
+                    <option value="market">Market</option>
+                    <option value="minimarket">Minimarket</option>
+                    <option value="dyqan_rroba">Dyqan Rrobash</option>
+                    <option value="dyqan_kepuce">Dyqan Këpucësh</option>
+                    <option value="dyqan">Dyqan</option>
+                  </optgroup>
+                  <optgroup label="Shëndet &amp; Bukuri">
+                    <option value="farmaci">Farmaci</option>
+                    <option value="optike">Optikë</option>
+                    <option value="berber">Berber</option>
+                    <option value="sallon_bukurie">Sallon Bukurie</option>
+                  </optgroup>
                   <option value="tjeter">Tjetër</option>
                 </select>
               </div>
@@ -134,10 +165,27 @@
               <div class="field nc-security-only hidden">
                 <label for="nc-veprimtari">Veprimtaria (Security)</label>
                 <select id="nc-veprimtari">
-                  <option value="kompani_sigurie">Kompani sigurie</option>
-                  <option value="objekt">Objekt / Ndërtesë</option>
-                  <option value="hotel">Hotel</option>
-                  <option value="tjeter">Tjetër</option>
+                  <optgroup label="Siguri">
+                    <option value="kompani_sigurie">Kompani sigurie</option>
+                    <option value="objekt">Objekt / Ndërtesë</option>
+                    <option value="hotel">Hotel / Akomodim</option>
+                    <option value="event_sigurie">Evente / Siguri eventesh</option>
+                    <option value="parking">Parking</option>
+                  </optgroup>
+                  <optgroup label="Institucione &amp; Industri">
+                    <option value="fabrika">Fabrikë / Industri</option>
+                    <option value="shkolla">Shkollë / Institucion</option>
+                    <option value="spitale">Spital / Klinikë</option>
+                    <option value="banka">Bankë / Finance</option>
+                    <option value="retail_sigurie">Retail / Dyqan (siguri)</option>
+                  </optgroup>
+                  <optgroup label="Shërbime të lidhura">
+                    <option value="transport_sigurie">Transport / Logjistikë</option>
+                    <option value="ndertimtari">Ndërtimtari</option>
+                    <option value="pastrim">Pastrim</option>
+                    <option value="sherbime_teknike">Shërbime teknike</option>
+                  </optgroup>
+                  <option value="tjeter">Tjetër (Security)</option>
                 </select>
               </div>
               <div class="field">
@@ -460,6 +508,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=22"></script>
+  <script src="/admin/dashboard.js?v=23"></script>
 </body>
 </html>

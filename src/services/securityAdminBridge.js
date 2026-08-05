@@ -9,6 +9,13 @@
 const {
   normalizeProductLine,
 } = require("../utils/productLine");
+const {
+  SECURITY_SECTORS,
+  SECURITY_VEPRIMTARI,
+  normalizeVeprimtari,
+  labelForVeprimtari,
+  sectorForVeprimtari,
+} = require("../utils/securityVeprimtari");
 
 /** I njëjti default si SecureTrack server/routes/admin.js */
 const SHARED_MASTER_ADMIN_SECRET = "naser-security-2026";
@@ -65,11 +72,13 @@ async function securityAdminFetch(path, { method = "GET", body } = {}) {
 }
 
 function mapSecurityClient(c) {
+  const veprimtari = normalizeVeprimtari(c.veprimtari);
+  const sector = sectorForVeprimtari(veprimtari);
   return {
     id: c.id,
     emri: c.emri,
-    tipi: "tjeter",
-    tipi_label: c.veprimtari || "Security",
+    tipi: veprimtari,
+    tipi_label: labelForVeprimtari(veprimtari),
     package_tier: null,
     package_label: "Security",
     package_contents: "",
@@ -79,52 +88,54 @@ function mapSecurityClient(c) {
     telefoni: c.telefon || c.telefoni || "",
     adresa: c.adresa || "",
     icon: "🛡️",
-    sector_num: 1,
-    sector_id: "security",
+    sector_num: sector.num,
+    sector_id: sector.id,
     product_line: "security",
-    veprimtari: c.veprimtari || "",
+    veprimtari,
     source: "securetrack",
   };
+}
+
+function emptySecuritySectors() {
+  return SECURITY_SECTORS.map((s) => ({
+    num: s.num,
+    id: s.id,
+    label: s.label,
+    tipet: s.tipet,
+    keywords: s.keywords || [],
+    clients: [],
+    count: 0,
+  }));
 }
 
 async function getSecurityClientsGrouped() {
   try {
     const data = await securityAdminFetch("/api/admin/clients");
     const clients = (data.clients || []).map(mapSecurityClient);
+    const sectors = emptySecuritySectors();
+    const byId = new Map(sectors.map((s) => [s.id, s]));
+    for (const c of clients) {
+      const bucket = byId.get(c.sector_id) || byId.get("sec_tjeter");
+      bucket.clients.push(c);
+      bucket.count = bucket.clients.length;
+    }
     return {
-      sectors: [
-        {
-          num: 1,
-          id: "security",
-          label: "Klientë Security",
-          tipet: ["security"],
-          keywords: ["security", "sekurim", "siguri"],
-          clients,
-          count: clients.length,
-        },
-      ],
-      groups: undefined,
+      sectors,
+      groups: sectors,
       total: clients.length,
       product_line: "security",
       source: "securetrack",
+      veprimtari_options: SECURITY_VEPRIMTARI,
     };
   } catch (e) {
     return {
-      sectors: [
-        {
-          num: 1,
-          id: "security",
-          label: "Klientë Security",
-          tipet: ["security"],
-          keywords: ["security"],
-          clients: [],
-          count: 0,
-        },
-      ],
+      sectors: emptySecuritySectors(),
+      groups: emptySecuritySectors(),
       total: 0,
       product_line: "security",
       source: "securetrack",
       bridge_error: e.message,
+      veprimtari_options: SECURITY_VEPRIMTARI,
     };
   }
 }
@@ -187,21 +198,24 @@ async function createSecurityClient(body) {
       email: body.email,
       telefon: body.telefon || body.telefoni,
       adresa: body.adresa,
-      veprimtari: body.veprimtari || body.tipi || "kompani_sigurie",
+      veprimtari: normalizeVeprimtari(body.veprimtari || body.tipi || "kompani_sigurie"),
     },
   });
 }
 
 async function updateSecurityClient(id, body) {
+  const patch = {
+    emri: body.emri || body.name,
+    email: body.email,
+    telefon: body.telefon || body.telefoni,
+    adresa: body.adresa,
+  };
+  if (body.veprimtari != null || body.tipi != null) {
+    patch.veprimtari = normalizeVeprimtari(body.veprimtari || body.tipi);
+  }
   return securityAdminFetch(`/api/admin/clients/${id}`, {
     method: "PATCH",
-    body: {
-      emri: body.emri || body.name,
-      email: body.email,
-      telefon: body.telefon || body.telefoni,
-      adresa: body.adresa,
-      veprimtari: body.veprimtari || body.tipi,
-    },
+    body: patch,
   });
 }
 
@@ -337,4 +351,6 @@ module.exports = {
   updateSecurityLicense,
   setSecurityClientPassword,
   requestSecurityPasswordReset,
+  SECURITY_VEPRIMTARI,
+  SECURITY_SECTORS,
 };
