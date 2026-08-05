@@ -500,12 +500,14 @@ router.post(
           client_id: client.id,
           app_type: req.body?.app_type,
           product_line: "kafene",
+          license_type: licenseType,
           muaj: licenseType === "trial" ? 1 : req.body?.muaj || 12,
           max_terminals: req.body?.max_terminals || 1,
           celesi: celesi || undefined,
           hardware_id: hwHex.length === 16 ? hardwareId : undefined,
           data_skadimit: dataSkadimit || undefined,
-          trial_ends_at: trialEndsAt || undefined,
+          // annual → null (jo 3 muaj “trial” të rremë)
+          trial_ends_at: licenseType === "trial" ? (trialEndsAt || undefined) : null,
         });
       } catch (e) {
         console.warn("[super] kafene license issue:", e.message);

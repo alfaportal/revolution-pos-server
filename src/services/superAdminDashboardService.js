@@ -379,6 +379,23 @@ function isOfflineOver48h(lic) {
   return Date.now() - new Date(seen).getTime() > 48 * 60 * 60 * 1000;
 }
 
+/** Trial i vërtetë: afat i shkurtër (≤16 ditë). Licenca vjetore me trial_ends_at të mbushur gabimisht → JO trial. */
+function isShortTrialLicense(l) {
+  if (!l || String(l.statusi || "") !== "aktive") return false;
+  const fill = l.data_fillimit ? new Date(l.data_fillimit) : null;
+  const skad = l.data_skadimit ? new Date(l.data_skadimit) : null;
+  if (fill && skad && !Number.isNaN(fill.getTime()) && !Number.isNaN(skad.getTime())) {
+    const days = (skad.getTime() - fill.getTime()) / 86400000;
+    if (days < 0 || days > 16) return false;
+    return skad.getTime() >= Date.now() - 86400000;
+  }
+  if (!l.trial_ends_at) return false;
+  const te = new Date(l.trial_ends_at);
+  if (Number.isNaN(te.getTime()) || te.getTime() <= Date.now()) return false;
+  const from = fill && !Number.isNaN(fill.getTime()) ? fill : new Date();
+  return (te.getTime() - from.getTime()) / 86400000 <= 16;
+}
+
 async function getOverviewKafene() {
   const [clientsAll, licensesAll, stockAlerts, salesToday, weekly] = await Promise.all([
     listClients(),
@@ -428,10 +445,9 @@ async function getOverviewKafene() {
     }
   }
 
-  const trial = licenses.filter((l) => {
-    if (!l.trial_ends_at) return false;
-    return new Date(l.trial_ends_at) > new Date() && l.statusi === "aktive";
-  }).length;
+  // Trial = licencë aktive me afat të shkurtër (≤16 ditë).
+  // Mos numëro licenca vjetore që gabimisht kanë trial_ends_at të mbushur.
+  const trial = licenses.filter((l) => isShortTrialLicense(l)).length;
 
   return {
     active_clients: activeClients.length,

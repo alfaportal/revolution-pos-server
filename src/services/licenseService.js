@@ -949,6 +949,19 @@ async function createLicense(body) {
     deviceId = "";
   }
 
+  const licenseType = String(body.license_type || body.licenseType || "").toLowerCase();
+  const isTrial = licenseType === "trial";
+  let trialEndsAt = null;
+  if (body.trial_ends_at != null && String(body.trial_ends_at).trim() !== "") {
+    trialEndsAt = body.trial_ends_at;
+  } else if (isTrial) {
+    // Trial i vërtetë: 7 ditë (jo 3 muaj default i vjetër)
+    const d = new Date(`${start}T12:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + 7);
+    trialEndsAt = d.toISOString();
+  }
+  // Licencë vjetore/e paguar: trial_ends_at = null (mos i numëro si trial)
+
   const row = {
     client_id: body.client_id,
     app_type: appType,
@@ -957,8 +970,10 @@ async function createLicense(body) {
     device_id: deviceHex.length === 16 ? "" : deviceId,
     statusi: body.statusi || "aktive",
     data_fillimit: start,
-    data_skadimit: body.data_skadimit || addMonthsISO(start, months),
-    trial_ends_at: body.trial_ends_at || addMonthsTimestamp(start, 3),
+    data_skadimit:
+      body.data_skadimit
+      || (isTrial && trialEndsAt ? String(trialEndsAt).slice(0, 10) : addMonthsISO(start, months)),
+    trial_ends_at: trialEndsAt,
     max_terminals: Math.max(1, Number(body.max_terminals) || 1),
     terminal_price: Math.max(0, Number(body.terminal_price) || 0),
     base_price: Math.max(0, Number(body.base_price) || 0),
