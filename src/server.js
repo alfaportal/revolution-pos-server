@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const { createProxyMiddleware } = require("http-proxy-middleware");
+const { createProxyMiddleware, fixRequestBody } = require("http-proxy-middleware");
 
 const { logEnvStatus } = require("./lib/env");
 const { formatError } = require("./lib/errors");
@@ -86,6 +86,38 @@ app.post(
   (req, res) => {
     void stripeWebhookHandler(req, res);
   },
+);
+
+/**
+ * SecureTrack — reverse proxy (URL mbetet revolution-pos.com/security).
+ * DUHET para express.json(): përndryshe body-parser e konsumon trupin e POST-it
+ * dhe kërkesa e përcjellë mbetet varur pa përgjigje (hyrje/regjistrim/kod emaili).
+ */
+app.use(
+  "/security",
+  createProxyMiddleware({
+    target: SECURITY_UPSTREAM,
+    changeOrigin: true,
+    pathRewrite: {
+      "^/security$": "/",
+      "^/security/": "/",
+    },
+    xfwd: true,
+    proxyTimeout: 30_000,
+    timeout: 30_000,
+    on: {
+      proxyReq: fixRequestBody,
+      error: (err, _req, res) => {
+        console.error("[security-proxy]", err?.message || err);
+        if (res && !res.headersSent && typeof res.status === "function") {
+          res.status(502).json({
+            ok: false,
+            gabim: "SecureTrack nuk u përgjigj. Provoni përsëri.",
+          });
+        }
+      },
+    },
+  }),
 );
 
 app.use(express.json({ limit: "12mb" }));
@@ -668,20 +700,6 @@ app.get(
       }
       throw err;
     }
-  }),
-);
-
-// SecureTrack — reverse proxy (URL mbetet revolution-pos.com/security)
-app.use(
-  "/security",
-  createProxyMiddleware({
-    target: SECURITY_UPSTREAM,
-    changeOrigin: true,
-    pathRewrite: {
-      "^/security$": "/",
-      "^/security/": "/",
-    },
-    xfwd: true,
   }),
 );
 
