@@ -853,22 +853,77 @@ function zReportDate() {
   return el?.value || new Date().toISOString().slice(0, 10);
 }
 
+function periodicFromDate() {
+  const el = document.getElementById("periodic-from");
+  return el?.value || new Date().toISOString().slice(0, 10);
+}
+
+function periodicToDate() {
+  const el = document.getElementById("periodic-to");
+  return el?.value || new Date().toISOString().slice(0, 10);
+}
+
+function initPeriodicDateInputs() {
+  const today = new Date().toISOString().slice(0, 10);
+  const fromEl = document.getElementById("periodic-from");
+  const toEl = document.getElementById("periodic-to");
+  if (fromEl && !fromEl.value) fromEl.value = today;
+  if (toEl && !toEl.value) toEl.value = today;
+}
+
 function reportApiPath() {
-  return currentReportMode === "X" ? "x-report" : "z-report";
+  if (currentReportMode === "X") return "x-report";
+  if (currentReportMode === "PERIODIC") return "periodic-report";
+  return "z-report";
+}
+
+function reportExportFilenamePrefix() {
+  if (currentReportMode === "PERIODIC") {
+    return `periodic-report-${periodicFromDate()}_${periodicToDate()}`;
+  }
+  return `${reportApiPath()}-${zReportDate()}`;
+}
+
+function reportFetchQuery() {
+  if (currentReportMode === "PERIODIC") {
+    const from = periodicFromDate();
+    const to = periodicToDate();
+    return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  }
+  return `date=${encodeURIComponent(zReportDate())}`;
 }
 
 function applyReportModeUi() {
   const isX = currentReportMode === "X";
+  const isPeriodic = currentReportMode === "PERIODIC";
   const title = document.getElementById("zreport-title");
-  if (title) title.textContent = isX ? "Raporti X (i përkohshëm)" : "Raporti Ditor (Z-Report)";
+  if (title) {
+    title.textContent = isPeriodic
+      ? "Raport Periodik Fiskal"
+      : isX
+        ? "Raporti X (i përkohshëm)"
+        : "Raporti Ditor (Z-Report)";
+  }
   const cashSection = document.getElementById("zreport-cash-section");
-  if (cashSection) cashSection.classList.toggle("hidden", isX);
+  if (cashSection) cashSection.classList.toggle("hidden", isX || isPeriodic);
   const closeBtn = document.getElementById("btn-zreport-close");
-  if (closeBtn) closeBtn.classList.toggle("hidden", isX);
+  if (closeBtn) closeBtn.classList.toggle("hidden", isX || isPeriodic);
+  const dailyDates = document.getElementById("zreport-daily-dates");
+  const periodicDates = document.getElementById("zreport-periodic-dates");
+  if (dailyDates) dailyDates.classList.toggle("hidden", isPeriodic);
+  if (periodicDates) {
+    periodicDates.classList.toggle("hidden", !isPeriodic);
+    periodicDates.style.display = isPeriodic ? "inline-flex" : "none";
+  }
+  const historyWrap = document.getElementById("zreport-history-wrap");
+  if (historyWrap) historyWrap.classList.toggle("hidden", isPeriodic);
   const btnX = document.getElementById("btn-report-view-x");
   const btnZ = document.getElementById("btn-report-view-z");
+  const btnP = document.getElementById("btn-report-view-periodic");
   if (btnX) btnX.classList.toggle("btn-primary", isX);
-  if (btnZ) btnZ.classList.toggle("btn-primary", !isX);
+  if (btnZ) btnZ.classList.toggle("btn-primary", !isX && !isPeriodic);
+  if (btnP) btnP.classList.toggle("btn-primary", isPeriodic);
+  if (isPeriodic) initPeriodicDateInputs();
 }
 
 function renderZReport(report) {
@@ -886,7 +941,9 @@ function renderZReport(report) {
       <div class="zreport-stat"><div class="lbl">Gjendja e arkës</div><div class="val">${euro(report.cash_register_balance)}</div></div>
       <div class="zreport-stat"><div class="lbl">Pagesa Cash</div><div class="val">${euro(report.payment_totals?.cash)}</div></div>
       <div class="zreport-stat"><div class="lbl">Pagesa Kartë</div><div class="val">${euro(report.payment_totals?.karte)}</div></div>
-      <div class="zreport-stat"><div class="lbl">Qarkullimi kumulativ</div><div class="val">${euro(report.cumulative_turnover)}</div></div>`;
+      ${report.report_type === "PERIODIC"
+        ? `<div class="zreport-stat"><div class="lbl">Offline</div><div class="val">${report.offline_count ?? 0}</div></div>`
+        : `<div class="zreport-stat"><div class="lbl">Qarkullimi kumulativ</div><div class="val">${euro(report.cumulative_turnover)}</div></div>`}`;
   }
 
   const vatEl = document.getElementById("zreport-vat");
@@ -974,8 +1031,7 @@ async function loadZReportHistory() {
 
 async function loadZReport() {
   applyReportModeUi();
-  const date = zReportDate();
-  const { report } = await api(`/api/owner/${reportApiPath()}?date=${encodeURIComponent(date)}`);
+  const { report } = await api(`/api/owner/${reportApiPath()}?${reportFetchQuery()}`);
   renderZReport(report);
   if (currentReportMode === "Z") await loadZReportHistory();
 }
@@ -1163,11 +1219,10 @@ async function runFiscalAutoFind() {
 }
 
 async function exportZReport(format) {
-  const date = zReportDate();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(
-    `/api/owner/${reportApiPath()}/export?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`,
+    `/api/owner/${reportApiPath()}/export?${reportFetchQuery()}&format=${encodeURIComponent(format)}`,
     { headers, credentials: "include" },
   );
   if (!res.ok) {
@@ -1183,17 +1238,16 @@ async function exportZReport(format) {
   }
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${reportApiPath()}-${date}.csv`;
+  a.download = `${reportExportFilenamePrefix()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 async function printZReport() {
-  const date = zReportDate();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(
-    `/api/owner/${reportApiPath()}/export?date=${encodeURIComponent(date)}&format=html`,
+    `/api/owner/${reportApiPath()}/export?${reportFetchQuery()}&format=html`,
     { headers, credentials: "include" },
   );
   if (!res.ok) throw new Error("Nuk u gjenerua raporti për printim.");
@@ -2546,6 +2600,12 @@ document.getElementById("btn-report-view-z")?.addEventListener("click", () => {
   currentReportMode = "Z";
   loadZReport().catch(err => alert(err.message));
 });
+document.getElementById("btn-report-view-periodic")?.addEventListener("click", () => {
+  currentReportMode = "PERIODIC";
+  loadZReport().catch(err => alert(err.message));
+});
+document.getElementById("periodic-from")?.addEventListener("change", loadZReport);
+document.getElementById("periodic-to")?.addEventListener("change", loadZReport);
 document.getElementById("btn-zreport-opening-save")?.addEventListener("click", async () => {
   const date = zReportDate();
   const opening_float = Number(document.getElementById("zreport-opening-float")?.value);

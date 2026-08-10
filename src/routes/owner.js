@@ -24,6 +24,7 @@ const {
 const {
   buildDailyZReport,
   buildDailyXReport,
+  buildPeriodicReport,
   saveDailyZReport,
   setOpeningFloat,
   listZReportHistory,
@@ -553,6 +554,41 @@ router.get("/z-report/export", async (req, res) => {
     res.send("\uFEFF" + csv);
   } catch (e) {
     res.status(500).json({ gabim: e.message });
+  }
+});
+
+router.get("/periodic-report", async (req, res) => {
+  try {
+    const from = req.query.from || req.query.from_date;
+    const to = req.query.to || req.query.to_date;
+    const report = await buildPeriodicReport(req.user.client_id, from, to);
+    res.json({ ok: true, report });
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
+  }
+});
+
+router.get("/periodic-report/export", async (req, res) => {
+  try {
+    const from = req.query.from || req.query.from_date;
+    const to = req.query.to || req.query.to_date;
+    const format = String(req.query.format || "csv").toLowerCase();
+    const report = await buildPeriodicReport(req.user.client_id, from, to);
+    const slug = `${report.from_date}_${report.to_date}`;
+
+    if (format === "html" || format === "pdf") {
+      const html = zReportToHtml(report);
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Content-Disposition", `inline; filename="periodic-report-${slug}.html"`);
+      return res.send(html);
+    }
+
+    const csv = zReportToCsv(report);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="periodic-report-${slug}.csv"`);
+    res.send("\uFEFF" + csv);
+  } catch (e) {
+    res.status(400).json({ gabim: e.message });
   }
 });
 

@@ -2,6 +2,7 @@ const { getSupabase } = require("../db");
 const { VAT_CATEGORIES, VAT_KEYS, emptyVatBreakdown, sumVatBreakdowns } = require("../lib/vatCategories");
 const { getFiscalSettings } = require("./fiscalService");
 const { normalizeItems } = require("./salesService");
+const { getFiscalLogoHtmlFooter, FISCAL_LOGO_CSS } = require("../lib/fiscalLogoHtml");
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -16,15 +17,40 @@ function dayBounds(dateStr) {
   };
 }
 
+function rangeBounds(fromDate, toDate) {
+  const from = String(fromDate || "").slice(0, 10);
+  const to = String(toDate || "").slice(0, 10);
+  return {
+    from_date: from,
+    to_date: to,
+    from: `${from}T00:00:00.000Z`,
+    to: `${to}T23:59:59.999Z`,
+  };
+}
+
+function validateDateRange(fromDate, toDate) {
+  const from = String(fromDate || "").slice(0, 10);
+  const to = String(toDate || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    throw new Error("Datat duhet YYYY-MM-DD");
+  }
+  if (from > to) throw new Error("Data Nga duhet ≤ Deri");
+  return { from, to };
+}
+
 async function fetchDayFiscalReceipts(clientId, dateStr) {
   const { from, to } = dayBounds(dateStr);
+  return fetchFiscalReceiptsInRange(clientId, from, to);
+}
+
+async function fetchFiscalReceiptsInRange(clientId, fromIso, toIso) {
   const db = getSupabase();
   const { data, error } = await db
     .from("fiscal_receipts")
     .select("*")
     .eq("client_id", clientId)
-    .gte("printed_at", from)
-    .lte("printed_at", to)
+    .gte("printed_at", fromIso)
+    .lte("printed_at", toIso)
     .order("printed_at", { ascending: true });
   if (error) throw error;
   return data || [];
@@ -32,14 +58,18 @@ async function fetchDayFiscalReceipts(clientId, dateStr) {
 
 async function fetchDayClosedSales(clientId, dateStr) {
   const { from, to } = dayBounds(dateStr);
+  return fetchClosedSalesInRange(clientId, from, to);
+}
+
+async function fetchClosedSalesInRange(clientId, fromIso, toIso) {
   const db = getSupabase();
   const { data, error } = await db
     .from("sales_orders")
     .select("id, table_number, waiter_name, items_json, total, receipt_number, closed_at, payment_status, payment_method, fiscal_receipt_id")
     .eq("client_id", clientId)
     .eq("status", "closed")
-    .gte("closed_at", from)
-    .lte("closed_at", to)
+    .gte("closed_at", fromIso)
+    .lte("closed_at", toIso)
     .order("closed_at", { ascending: true });
   if (error) throw error;
   return (data || []).map(o => ({
@@ -192,6 +222,69 @@ async function buildDailyXReport(clientId, dateStr) {
   return { ...rest, report_type: "X", is_closed: Boolean(closed_at) };
 }
 
+/** Raport periodik — akumulim mes dy datave (lexim Supabase), pa mbyllje ditore. */
+async function buildPeriodicReport(clientId, fromDate, toDate) {
+  const { from, to } = validateDateRange(fromDate, toDate);
+  const bounds = rangeBounds(from, to);
+  const settings = await getFiscalSettings(clientId);
+  const receipts = await fetchFiscalReceiptsInRange(clientId, bounds.from, bounds.to);
+  const sales = await fetchClosedSalesInRange(clientId, bounds.from, bounds.to);
+
+  const totals = sumVatBreakdowns(receipts);
+  const couponCount = receipts.filter(r => r.status === "printed" || r.status === "manual").length;
+  const cashRegisterBalance = receipts.reduce((s, r) => s + Number(r.cash_given || r.total_gross), 0);
+  const offlineCount = receipts.filter(r => r.register_connected === false).length;
+
+  const salesDetail = sales.map(s => {
+    const receipt = receipts.find(r => r.sale_order_id === s.id);
+    const pm = s.payment_method === "karte" ? "karte" : "cash";
+    return {
+      id: s.id,
+      time: s.closed_at,
+      table_number: s.table_number,
+      waiter_name: s.waiter_name,
+      total: Number(s.total),
+      payment_status: s.payment_status,
+      payment_method: pm,
+      payment_label: pm === "karte" ? "Kartë" : "Cash",
+      receipt_number: s.receipt_number,
+      coupon_nr: receipt?.coupon_nr || "",
+      serial_nr: receipt?.serial_nr || "",
+      items: s.items_json,
+    };
+  });
+
+  const payment_totals = { cash: 0, karte: 0 };
+  for (const s of salesDetail) {
+    payment_totals[s.payment_method] = Math.round((payment_totals[s.payment_method] + s.total) * 100) / 100;
+  }
+
+  return {
+    report_type: "PERIODIC",
+    from_date: from,
+    to_date: to,
+    report_date: `${from} — ${to}`,
+    business_name: settings.business_name,
+    fiscal_nr: settings.fiscal_nr,
+    pef_serial_number: settings.pef_serial_number || "",
+    responsible_person: settings.fiscal_operator_name || settings.business_name,
+    coupon_count: couponCount,
+    turnover_total: totals.totalGross,
+    turnover_net: totals.totalNet,
+    turnover_vat: totals.totalVat,
+    vat_breakdown: totals.breakdown,
+    vat_categories: VAT_CATEGORIES,
+    cash_register_balance: Math.round(cashRegisterBalance * 100) / 100,
+    offline_count: offlineCount,
+    sales: salesDetail,
+    payment_totals,
+    by_category: await getCategoryBreakdown(clientId, salesDetail),
+    by_waiter: getWaiterBreakdown(salesDetail),
+    receipt_number_range: getReceiptNumberRange(salesDetail),
+    generated_at: new Date().toISOString(),
+  };
+}
+
 async function getStoredZReport(clientId, dateStr) {
   const db = getSupabase();
   const { data } = await db
@@ -306,14 +399,28 @@ async function listZReportHistory(clientId, limit = 60) {
   return data || [];
 }
 
+function reportTypeLabel(report) {
+  if (report.report_type === "X") return "Raporti X (i përkohshëm)";
+  if (report.report_type === "PERIODIC") return "Raport Periodik Fiskal";
+  return "Raporti Ditor (Z-Report)";
+}
+
 function zReportToCsv(report) {
   const lines = [];
-  lines.push(report.report_type === "X" ? "Raporti X (i përkohshëm)" : "Raporti Ditor (Z-Report)");
+  lines.push(reportTypeLabel(report));
   lines.push(`Biznesi,${csvEsc(report.business_name)}`);
   lines.push(`Nr.Fisk,${csvEsc(report.fiscal_nr)}`);
   lines.push(`Nr. Serial PEF,${csvEsc(report.pef_serial_number)}`);
-  lines.push(`Data,${report.report_date}`);
+  if (report.report_type === "PERIODIC") {
+    lines.push(`Nga data,${report.from_date}`);
+    lines.push(`Deri data,${report.to_date}`);
+  } else {
+    lines.push(`Data,${report.report_date}`);
+  }
   lines.push(`Kuponë fiskalë,${report.coupon_count}`);
+  if (report.report_type === "PERIODIC") {
+    lines.push(`Offline,${report.offline_count ?? 0}`);
+  }
   lines.push(`Rangu i kuponëve,${csvEsc(report.receipt_number_range?.from)} - ${csvEsc(report.receipt_number_range?.to)}`);
   lines.push(`Qarkullimi total (€),${report.turnover_total}`);
   lines.push(`Totali pa TVSH (€),${report.turnover_net}`);
@@ -322,7 +429,7 @@ function zReportToCsv(report) {
   lines.push(`Qarkullimi kumulativ (€),${report.cumulative_turnover}`);
   lines.push(`Pagesa Cash (€),${report.payment_totals?.cash ?? 0}`);
   lines.push(`Pagesa Kartë (€),${report.payment_totals?.karte ?? 0}`);
-  if (report.report_type !== "X") {
+  if (report.report_type === "Z") {
     lines.push(`Paraja e nisjes (€),${report.opening_float ?? ""}`);
     lines.push(`Paraja e pritshme (€),${report.expected_closing_cash ?? ""}`);
     lines.push(`Paraja e numëruar (€),${report.closing_cash_actual ?? ""}`);
@@ -395,7 +502,7 @@ function zReportToHtml(report) {
   const waiterRows = (report.by_waiter || []).map(w =>
     `<tr><td>${escHtml(w.waiter_name)}</td><td>${w.order_count}</td><td>${w.total_sales.toFixed(2)} €</td></tr>`).join("");
 
-  const cashBox = report.opening_float != null ? `
+  const cashBox = report.report_type === "Z" && report.opening_float != null ? `
 <div class="box"><strong>Barazimi i arkës</strong>
   <div class="grid">
     <div>Paraja e nisjes: ${report.opening_float.toFixed(2)} €</div>
@@ -407,31 +514,50 @@ function zReportToHtml(report) {
 </div>` : "";
 
   const isX = report.report_type === "X";
+  const isPeriodic = report.report_type === "PERIODIC";
+  const htmlTitle = isPeriodic
+    ? "RAPORT PERIODIK FISKAL"
+    : isX
+      ? "RAPORTI X (I PËRKOHSHËM)"
+      : "RAPORTI DITOR (Z-REPORT)";
+  const htmlSubtitle = isPeriodic
+    ? "Mes dy datave — JO mbyllje"
+    : isX
+      ? "Gjendja aktuale e ditës — PA mbyllje"
+      : "";
+  const dateMeta = isPeriodic
+    ? `${escHtml(report.from_date)} — ${escHtml(report.to_date)}`
+    : escHtml(report.report_date);
+
   return `<!DOCTYPE html><html lang="sq"><head><meta charset="UTF-8">
-<title>${isX ? "X-Report" : "Z-Report"} ${report.report_date}</title>
+<title>${htmlTitle} ${escHtml(report.report_date)}</title>
 <style>
 body{font-family:Arial,sans-serif;padding:24px;color:#111}
 h1{margin:0 0 4px} .meta{color:#444;margin-bottom:16px}
+.subtitle{color:#555;margin:-8px 0 12px;font-size:14px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin:16px 0}
 .box{border:1px solid #ccc;padding:12px;border-radius:8px;margin:12px 0}
 table{width:100%;border-collapse:collapse;margin-top:8px}
 th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:13px}
 th{background:#f5f5f5}
 .total{font-size:1.2em;font-weight:bold}
+${FISCAL_LOGO_CSS}
 @media print{body{padding:12px}}
 </style></head><body>
-<h1>${isX ? "RAPORTI X (I PËRKOHSHËM)" : "RAPORTI DITOR (Z-REPORT)"}</h1>
-<div class="meta">${escHtml(report.business_name)} · Nr.Fisk: ${escHtml(report.fiscal_nr)}${report.pef_serial_number ? ` · PEF: ${escHtml(report.pef_serial_number)}` : ""} · ${report.report_date}</div>
+<h1>${htmlTitle}</h1>
+${htmlSubtitle ? `<p class="subtitle">${htmlSubtitle}</p>` : ""}
+<div class="meta">${escHtml(report.business_name)} · Nr.Fisk: ${escHtml(report.fiscal_nr)}${report.pef_serial_number ? ` · PEF: ${escHtml(report.pef_serial_number)}` : ""} · ${dateMeta}</div>
 <div class="grid">
   <div><strong>Kuponë fiskalë:</strong> ${report.coupon_count}</div>
   <div><strong>Rangu i kuponëve:</strong> ${escHtml(report.receipt_number_range?.from || "—")} – ${escHtml(report.receipt_number_range?.to || "—")}</div>
-  <div><strong>Qarkullimi ditor:</strong> ${report.turnover_total.toFixed(2)} €</div>
+  <div><strong>Qarkullimi${isPeriodic ? " (interval)" : " ditor"}:</strong> ${report.turnover_total.toFixed(2)} €</div>
   <div><strong>Totali pa TVSH:</strong> ${report.turnover_net.toFixed(2)} €</div>
   <div><strong>TVSH total:</strong> ${report.turnover_vat.toFixed(2)} €</div>
   <div><strong>Gjendja e arkës:</strong> ${report.cash_register_balance.toFixed(2)} €</div>
   <div><strong>Pagesa Cash:</strong> ${(report.payment_totals?.cash ?? 0).toFixed(2)} €</div>
   <div><strong>Pagesa Kartë:</strong> ${(report.payment_totals?.karte ?? 0).toFixed(2)} €</div>
-  <div><strong>Qarkullimi kumulativ:</strong> ${report.cumulative_turnover.toFixed(2)} €</div>
+  ${!isPeriodic ? `<div><strong>Qarkullimi kumulativ:</strong> ${report.cumulative_turnover?.toFixed(2) ?? "—"} €</div>` : ""}
+  ${isPeriodic ? `<div><strong>Offline:</strong> ${report.offline_count ?? 0}</div>` : ""}
   <div><strong>Përgjegjësi:</strong> ${escHtml(report.responsible_person)}</div>
 </div>
 <div class="box"><strong>TVSH breakdown (A–E)</strong>
@@ -444,10 +570,11 @@ th{background:#f5f5f5}
 <table><thead><tr><th>Kamarieri</th><th>Porosi</th><th>Totali</th></tr></thead>
 <tbody>${waiterRows || "<tr><td colspan='3'>—</td></tr>"}</tbody></table></div>
 ${cashBox}
-<div class="box"><strong>Shitjet e ditës</strong>
+<div class="box"><strong>Shitjet${isPeriodic ? " (intervali)" : " e ditës"}</strong>
 <table><thead><tr><th>Koha</th><th>Tav.</th><th>Kamarieri</th><th>Totali</th><th>Pagesa</th><th>Kupon</th><th>Statusi</th></tr></thead>
 <tbody>${salesRows || "<tr><td colspan='7'>—</td></tr>"}</tbody></table></div>
-<p class="meta">Gjeneruar: ${new Date(report.generated_at).toLocaleString("sq-AL")} · RKS MF</p>
+${getFiscalLogoHtmlFooter()}
+<p class="meta">Gjeneruar: ${new Date(report.generated_at).toLocaleString("sq-AL")}</p>
 </body></html>`;
 }
 
@@ -458,6 +585,7 @@ function escHtml(s) {
 module.exports = {
   buildDailyZReport,
   buildDailyXReport,
+  buildPeriodicReport,
   saveDailyZReport,
   setOpeningFloat,
   getStoredZReport,
