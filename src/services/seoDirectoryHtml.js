@@ -4,6 +4,7 @@
  */
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { listPublicStorefronts } = require("./seoSitemapService");
+const { GOOGLE_SITE_VERIFICATION } = require("./seoPublicPageHtml");
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -72,6 +73,7 @@ ${items
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
+  ${GOOGLE_SITE_VERIFICATION}
   <meta name="description" content="${escapeAttr(description)}">
   <link rel="canonical" href="${escapeAttr(canonical)}">
   <meta property="og:site_name" content="Revolution POS">

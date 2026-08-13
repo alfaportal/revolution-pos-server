@@ -71,6 +71,9 @@ function buildJsonLd(page, { storefront, origin }) {
   return data;
 }
 
+const GOOGLE_SITE_VERIFICATION =
+  '<meta name="google-site-verification" content="2QVw_7A49TsO9VnCz49wUW3DzlcLDyP4fqPCmoVwjUY" />';
+
 const POWERED_FOOTER = `<footer style="text-align:center; padding:10px; font-size:12px; color:#888; margin-top:20px;">
   Powered by <a href="https://revolution-pos.com" style="color:#fff; font-weight:bold;">Revolution POS</a>
 </footer>`;
@@ -122,7 +125,10 @@ function injectIntoShell(html, { title, injection, addFooter = true }) {
   if (!/<\/head>/i.test(out)) {
     throw new Error("HTML shell mungon </head>");
   }
-  out = out.replace(/<\/head>/i, `${injection}\n</head>`);
+  const verifyTag = /google-site-verification/i.test(`${out}${injection}`)
+    ? ""
+    : `\n  ${GOOGLE_SITE_VERIFICATION}`;
+  out = out.replace(/<\/head>/i, `${verifyTag}${injection}\n</head>`);
 
   if (addFooter && !/<footer[\s>]/i.test(out) && /<\/body>/i.test(out)) {
     out = out.replace(/<\/body>/i, `${POWERED_FOOTER}\n</body>`);
@@ -174,4 +180,5 @@ module.exports = {
   buildHeadInjection,
   injectIntoShell,
   POWERED_FOOTER,
+  GOOGLE_SITE_VERIFICATION,
 };
