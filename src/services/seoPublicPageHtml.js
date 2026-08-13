@@ -71,16 +71,20 @@ function buildJsonLd(page, { storefront, origin }) {
   return data;
 }
 
+const POWERED_FOOTER = `<footer style="text-align:center; padding:10px; font-size:12px; color:#888; margin-top:20px;">
+  Powered by <a href="https://revolution-pos.com" style="color:#fff; font-weight:bold;">Revolution POS</a>
+</footer>`;
+
 function buildHeadInjection(page, { storefront, origin }) {
   const isShop = storefront === "s";
-  const title = `${page.name} | Revolution Invest POS`;
+  const title = `Meny Dixhitale — ${page.name} | Revolution POS`;
   const description = truncate(
     page.description ||
       (page.address
         ? `${page.name} — ${page.address}`
         : isShop
-          ? `Produktet dhe dyqani ${page.name}`
-          : `Menuja dhe restoranti ${page.name}`),
+          ? `Katalogu dixhital i ${page.name} — Revolution POS`
+          : `Meny dixhitale e ${page.name} — Revolution POS`),
   );
   const canonical = page.public_url || `${origin}/${storefront}/${encodeURIComponent(page.slug)}`;
   const ogImage = absoluteUrl(page.cover_url || page.logo_url || "/logo-source.png", origin);
@@ -92,7 +96,7 @@ function buildHeadInjection(page, { storefront, origin }) {
   <meta name="description" content="${escapeAttr(description)}">
   <link rel="canonical" href="${escapeAttr(canonical)}">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Revolution Invest POS">
+  <meta property="og:site_name" content="Revolution POS">
   <meta property="og:title" content="${escapeAttr(title)}">
   <meta property="og:description" content="${escapeAttr(description)}">
   <meta property="og:url" content="${escapeAttr(canonical)}">
@@ -105,7 +109,7 @@ function buildHeadInjection(page, { storefront, origin }) {
   };
 }
 
-function injectIntoShell(html, { title, injection }) {
+function injectIntoShell(html, { title, injection, addFooter = true }) {
   let out = String(html || "");
   if (/<title>[\s\S]*?<\/title>/i.test(out)) {
     out = out.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`);
@@ -113,10 +117,16 @@ function injectIntoShell(html, { title, injection }) {
     out = out.replace(/<head([^>]*)>/i, `<head$1>\n  <title>${escapeHtml(title)}</title>`);
   }
 
+  out = out.replace(/\s*<meta\s+name=["']description["'][^>]*>/gi, "");
+
   if (!/<\/head>/i.test(out)) {
     throw new Error("HTML shell mungon </head>");
   }
   out = out.replace(/<\/head>/i, `${injection}\n</head>`);
+
+  if (addFooter && !/<footer[\s>]/i.test(out) && /<\/body>/i.test(out)) {
+    out = out.replace(/<\/body>/i, `${POWERED_FOOTER}\n</body>`);
+  }
 
   return out;
 }
@@ -163,4 +173,5 @@ module.exports = {
   renderNotFoundHtml,
   buildHeadInjection,
   injectIntoShell,
+  POWERED_FOOTER,
 };

@@ -5,7 +5,9 @@
 
   function getSlug() {
     const parts = window.location.pathname.split("/").filter(Boolean);
-    return parts[0] === "r" ? decodeURIComponent(parts[1] || "") : "";
+    return parts[0] === "r" || parts[0] === "furra" || parts[0] === "hotel"
+      ? decodeURIComponent(parts[1] || "")
+      : "";
   }
 
   function showScreen(id) {

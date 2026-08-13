@@ -18,7 +18,7 @@
   <script>
     (function () {
       const parts = location.pathname.split("/").filter(Boolean);
-      const slug = parts[0] === "r" ? parts[1] : "";
+      const slug = parts[0] === "r" || parts[0] === "furra" || parts[0] === "hotel" ? parts[1] : "";
       if (!slug) return;
       const link = document.createElement("link");
       link.rel = "manifest";
@@ -118,8 +118,8 @@
       <div class="reviews-list" id="reviews-list"></div>
     </section>
 
-    <footer class="site-footer">
-      <p>Powered by Revolution Invest POS</p>
+    <footer style="text-align:center; padding:10px; font-size:12px; color:#888; margin-top:20px;">
+      Powered by <a href="https://revolution-pos.com" style="color:#fff; font-weight:bold;">Revolution POS</a>
     </footer>
 
     <div class="order-bar" id="order-bar" hidden>
@@ -135,6 +135,6 @@
 
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=17"></script>
-  <script src="/js/r.js?v=16"></script>
+  <script src="/js/r.js?v=17"></script>
 </body>
 </html>

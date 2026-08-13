@@ -2,10 +2,17 @@
  * Read-only listë e faqeve publike për sitemap + /restorante.
  * Nuk shkruan në DB. Nuk prek porosi / sync / licencë.
  */
+const fs = require("fs");
+const path = require("path");
 const { getSupabase } = require("../db");
 const { clientHasFeature } = require("../lib/packages");
 const { isShopStorefront, storefrontPrefix } = require("../lib/storefront");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
+
+const ARTICLES_FILE = path.join(
+  __dirname,
+  "../../marketing-blog/src/data/articles.js",
+);
 
 function normalizeSlug(raw) {
   return String(raw || "").trim();
@@ -58,7 +65,8 @@ async function listPublicStorefronts() {
 
     const slug = normalizeSlug(client.kitchen_slug);
     const prefix = storefrontPrefix(client);
-    const path = `/${prefix}/${encodeURIComponent(slug)}`;
+    const tipi = String(client.tipi || "").toLowerCase();
+    const storePath = `/${prefix}/${encodeURIComponent(slug)}`;
     const name = String(settings?.restaurant_name || client.emri || slug).trim();
     const address = String(settings?.address || client.adresa || "").trim();
     const description = String(settings?.public_description || "").trim();
@@ -68,9 +76,10 @@ async function listPublicStorefronts() {
       name,
       address,
       description,
+      tipi,
       storefront: prefix,
-      path,
-      url: `${origin}${path}`,
+      path: storePath,
+      url: `${origin}${storePath}`,
       is_shop: isShopStorefront(client),
     });
   }
@@ -79,14 +88,73 @@ async function listPublicStorefronts() {
   return out;
 }
 
+function listBlogArticles() {
+  try {
+    const raw = fs.readFileSync(ARTICLES_FILE, "utf8");
+    const slugs = [...raw.matchAll(/slug:\s*"([^"]+)"/g)].map((m) => m[1]);
+    const titles = [...raw.matchAll(/title:\s*"([^"]+)"/g)].map((m) => m[1]);
+    const unique = [];
+    const seen = new Set();
+    slugs.forEach((slug, i) => {
+      if (seen.has(slug)) return;
+      seen.add(slug);
+      unique.push({ slug, title: titles[i * 2] || slug });
+    });
+    return unique;
+  } catch (err) {
+    console.warn("[seo] listBlogArticles failed:", err.message || err);
+    return [];
+  }
+}
+
 function marketingSitemapUrls() {
   const origin = getPublicAppOrigin();
-  return [
+  const pages = [
     { loc: `${origin}/`, changefreq: "weekly", priority: "1.0" },
-    { loc: `${origin}/restorante`, changefreq: "daily", priority: "0.9" },
+    { loc: `${origin}/pse-ne`, changefreq: "monthly", priority: "0.8" },
+    { loc: `${origin}/si-ta-ngarkoni`, changefreq: "monthly", priority: "0.8" },
+    { loc: `${origin}/si-funksionon`, changefreq: "monthly", priority: "0.8" },
+    { loc: `${origin}/pakot`, changefreq: "weekly", priority: "0.8" },
+    { loc: `${origin}/blog`, changefreq: "weekly", priority: "0.7" },
+    { loc: `${origin}/kontakt`, changefreq: "monthly", priority: "0.7" },
+    { loc: `${origin}/website/manual.html`, changefreq: "monthly", priority: "0.7" },
+    { loc: `${origin}/pajisjet`, changefreq: "monthly", priority: "0.6" },
+    { loc: `${origin}/restorante`, changefreq: "daily", priority: "0.6" },
     { loc: `${origin}/privacy`, changefreq: "yearly", priority: "0.3" },
     { loc: `${origin}/terms`, changefreq: "yearly", priority: "0.3" },
   ];
+  for (const article of listBlogArticles()) {
+    pages.push({
+      loc: `${origin}/blog/${encodeURIComponent(article.slug)}`,
+      changefreq: "monthly",
+      priority: "0.6",
+    });
+  }
+  return pages;
+}
+
+function clientSitemapUrls(storefronts) {
+  const origin = getPublicAppOrigin();
+  const urls = [];
+  const seen = new Set();
+  function add(loc, priority = "0.8") {
+    if (!loc || seen.has(loc)) return;
+    seen.add(loc);
+    urls.push({ loc, changefreq: "daily", priority });
+  }
+  for (const s of storefronts) {
+    add(s.url);
+    if (s.storefront === "r") {
+      add(`${origin}/r/${encodeURIComponent(s.slug)}/menu`);
+    }
+    if (s.tipi === "furre_buke" || s.tipi === "pasticeri") {
+      add(`${origin}/furra/${encodeURIComponent(s.slug)}`);
+    }
+    if (s.tipi === "hotel_restorant") {
+      add(`${origin}/hotel/${encodeURIComponent(s.slug)}`);
+    }
+  }
+  return urls;
 }
 
 function escapeXml(value) {
@@ -107,14 +175,7 @@ async function buildSitemapXml() {
     console.warn("[seo] listPublicStorefronts failed:", err.message || err);
   }
 
-  const urls = [
-    ...staticUrls,
-    ...storefronts.map((s) => ({
-      loc: s.url,
-      changefreq: "daily",
-      priority: "0.8",
-    })),
-  ];
+  const urls = [...staticUrls, ...clientSitemapUrls(storefronts)];
 
   const body = urls
     .map(
@@ -137,20 +198,12 @@ function buildRobotsTxt() {
   const origin = getPublicAppOrigin();
   return `User-agent: *
 Allow: /
-Allow: /r/
-Allow: /s/
-Allow: /restorante
-Allow: /privacy
-Allow: /terms
-
 Disallow: /api/
 Disallow: /owner/
 Disallow: /admin
 Disallow: /waiter/
 Disallow: /kitchen/
 Disallow: /bar/
-Disallow: /kiosk/
-Disallow: /menu/
 
 Sitemap: ${origin}/sitemap.xml
 `;
@@ -158,6 +211,7 @@ Sitemap: ${origin}/sitemap.xml
 
 module.exports = {
   listPublicStorefronts,
+  listBlogArticles,
   marketingSitemapUrls,
   buildSitemapXml,
   buildRobotsTxt,

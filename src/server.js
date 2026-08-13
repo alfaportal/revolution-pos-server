@@ -63,6 +63,7 @@ const {
   renderPublicStorefrontHtml,
   renderNotFoundHtml,
 } = require("./services/seoPublicPageHtml");
+const { renderMarketingHtml } = require("./services/seoMarketingHtml");
 
 /** SecureTrack (Security) — proxy për revolution-pos.com/security/* */
 const SECURITY_UPSTREAM =
@@ -442,27 +443,50 @@ app.use((req, res, next) => {
 });
 
 const PUBLIC_DIR = path.join(__dirname, "../public");
-const SITE_INDEX = path.join(PUBLIC_DIR, "site/index.html");
 const SITE_DIR = path.join(PUBLIC_DIR, "site");
 
-function sendMarketingPage(res, filePath) {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(filePath);
+function sendMarketingPage(res, pathname) {
+  res.set("Cache-Control", "public, max-age=120");
+  res.type("html").send(renderMarketingHtml(pathname));
 }
 
-app.get("/", (_req, res) => sendMarketingPage(res, SITE_INDEX));
+app.get("/", (_req, res) => sendMarketingPage(res, "/"));
 
-app.get(["/blog", "/blog/"], (_req, res) => {
-  res.redirect(301, "/");
-});
+app.get(
+  [
+    "/pse-ne",
+    "/pse-ne/",
+    "/si-ta-ngarkoni",
+    "/si-ta-ngarkoni/",
+    "/si-funksionon",
+    "/si-funksionon/",
+    "/pakot",
+    "/pakot/",
+    "/kontakt",
+    "/kontakt/",
+    "/pajisjet",
+    "/pajisjet/",
+    "/manuali",
+    "/manuali/",
+  ],
+  (req, res) => {
+    const clean = String(req.path || "").replace(/\/+$/, "") || "/";
+    if (clean === "/manuali") {
+      return res.redirect(301, "/website/manual.html");
+    }
+    sendMarketingPage(res, clean);
+  },
+);
+
+app.get(["/blog", "/blog/"], (_req, res) => sendMarketingPage(res, "/blog"));
 
 app.get("/blog/:slug", (req, res, next) => {
   if (req.params.slug.includes(".")) return next();
-  sendMarketingPage(res, SITE_INDEX);
+  sendMarketingPage(res, `/blog/${req.params.slug}`);
 });
 
-app.get("/privacy", (_req, res) => sendMarketingPage(res, SITE_INDEX));
-app.get("/terms", (_req, res) => sendMarketingPage(res, SITE_INDEX));
+app.get("/privacy", (_req, res) => sendMarketingPage(res, "/privacy"));
+app.get("/terms", (_req, res) => sendMarketingPage(res, "/terms"));
 
 /** SEO — robots, sitemap, /restorante (para static) */
 app.use(seoRoutes);
@@ -641,6 +665,29 @@ app.get("/waiter/:slug", (req, res) => {
   res.type("html").send(html);
 });
 
+async function sendPublicStorefront(req, res, storefront, notFoundKind) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  try {
+    const result = await renderPublicStorefrontHtml({
+      slug: req.params.slug,
+      storefront,
+    });
+    if (!result.html) {
+      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
+    }
+    return res.type("html").send(result.html);
+  } catch (err) {
+    if (err.code === "WRONG_STOREFRONT") {
+      const other = storefront === "r" ? "s" : "r";
+      return res.redirect(302, `/${other}/${encodeURIComponent(req.params.slug)}`);
+    }
+    if (err.code === "PACKAGE") {
+      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
+    }
+    throw err;
+  }
+}
+
 app.get("/r/:slug/manifest.json", manifestHandler);
 app.get("/r/:slug/sw.js", resolvePublicClient, serviceWorkerHandler);
 app.get("/r/:slug/order", (_req, res) => {
@@ -648,28 +695,16 @@ app.get("/r/:slug/order", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/r-order.html"));
 });
 app.get(
+  ["/r/:slug/menu", "/r/:slug/menu/"],
+  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
+);
+app.get(
   "/r/:slug",
-  asyncHandler(async (req, res) => {
-    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-    try {
-      const result = await renderPublicStorefrontHtml({
-        slug: req.params.slug,
-        storefront: "r",
-      });
-      if (!result.html) {
-        return res.status(404).type("html").send(renderNotFoundHtml("restorant"));
-      }
-      return res.type("html").send(result.html);
-    } catch (err) {
-      if (err.code === "WRONG_STOREFRONT") {
-        return res.redirect(302, `/s/${encodeURIComponent(req.params.slug)}`);
-      }
-      if (err.code === "PACKAGE") {
-        return res.status(404).type("html").send(renderNotFoundHtml("restorant"));
-      }
-      throw err;
-    }
-  }),
+  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
+);
+app.get(
+  ["/furra/:slug", "/furra/:slug/", "/hotel/:slug", "/hotel/:slug/"],
+  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
 );
 
 app.get("/s/:slug/manifest.json", shopManifestHandler);

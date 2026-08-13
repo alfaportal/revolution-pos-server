@@ -31,14 +31,14 @@ async function renderDirectoryHtml({ mode = "all" } = {}) {
 
   const title =
     mode === "shops"
-      ? "Dyqanet — Revolution Invest POS"
-      : "Restorantet — Revolution Invest POS";
+      ? "Dyqanet — Revolution POS"
+      : "Restorantet — Revolution POS";
   const heading =
     mode === "shops" ? "Dyqanet publike" : "Restorantet dhe lokalet publike";
   const description =
     mode === "shops"
-      ? "Lista e dyqaneve me faqe publike në Revolution Invest POS."
-      : "Lista e restoranteve dhe lokaleve me faqe publike në Revolution Invest POS.";
+      ? "Lista e dyqaneve me faqe publike në Revolution POS."
+      : "Lista e restoranteve dhe lokaleve me faqe publike në Revolution POS.";
   const canonicalPath = mode === "shops" ? "/dyqane" : "/restorante";
   const canonical = `${origin}${canonicalPath}`;
 
@@ -74,6 +74,7 @@ ${items
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeAttr(description)}">
   <link rel="canonical" href="${escapeAttr(canonical)}">
+  <meta property="og:site_name" content="Revolution POS">
   <meta property="og:title" content="${escapeAttr(title)}">
   <meta property="og:description" content="${escapeAttr(description)}">
   <meta property="og:url" content="${escapeAttr(canonical)}">
@@ -101,7 +102,7 @@ ${items
 <body>
   <div class="wrap">
     <header>
-      <a class="brand" href="/">Revolution Invest POS</a>
+      <a class="brand" href="/">Revolution POS</a>
       <h1>${escapeHtml(heading)}</h1>
       <p class="lead">${escapeHtml(description)}</p>
     </header>
