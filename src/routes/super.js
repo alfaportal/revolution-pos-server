@@ -526,7 +526,16 @@ router.post(
     }
 
     const { createClient, createLicense } = require("../services/licenseService");
-    const client = await createClient({ ...(req.body || {}), product_line: "kafene" });
+    const { normalizeClientTipi } = require("../utils/businessTipi");
+    let tipi = normalizeClientTipi(req.body?.tipi || "restorant");
+    if (product === "hotel") tipi = "hotel_restorant";
+    else if (product === "furra") tipi = tipi === "pasticeri" ? "pasticeri" : "furre_buke";
+    else if (["hotel_restorant", "furre_buke", "pasticeri"].includes(tipi)) tipi = "restorant";
+    const client = await createClient({
+      ...(req.body || {}),
+      tipi,
+      product_line: "kafene",
+    });
     let license = null;
     if (wantLicense) {
       try {

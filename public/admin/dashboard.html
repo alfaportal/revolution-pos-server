@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=27">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=28">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -67,12 +67,13 @@
         </div>
 
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
-          <button type="button" class="product-tab active" data-product="all" role="tab" aria-selected="true">Të gjitha</button>
-          <button type="button" class="product-tab" data-product="kafene" role="tab" aria-selected="false">REVOLUTION POS</button>
-          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false">REVOLUTION SECURITY</button>
+          <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
+          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false">SECURITY</button>
+          <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false">HOTEL</button>
+          <button type="button" class="product-tab" data-product="furra" role="tab" aria-selected="false">FURRA</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
-          Dy grupe të ndara: POS = shitje ushqim/pije · SECURITY = menaxhim punëtorësh në terren. Nuk përzihen.
+          Çdo produkt ka listën e vet. Security lexohet vetëm nga Supabase e Security. Nuk përzihen.
         </p>
         <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
 
@@ -107,6 +108,8 @@
                 <select id="nc-product" required>
                   <option value="kafene">REVOLUTION POS (shitje)</option>
                   <option value="security">REVOLUTION SECURITY (punëtorë)</option>
+                  <option value="hotel">REVOLUTION HOTEL</option>
+                  <option value="furra">REVOLUTION FURRA</option>
                 </select>
               </div>
               <div class="field">
@@ -132,6 +135,19 @@
                   <option value="pako_4">Pako 2</option>
                   <option value="pako_2">Pako 3</option>
                   <option value="pako_5">Pako 4 (AI)</option>
+                </select>
+              </div>
+              <div class="field nc-hotel-only hidden">
+                <label for="nc-hotel-tipi">Veprimtaria — REVOLUTION HOTEL</label>
+                <select id="nc-hotel-tipi">
+                  <option value="hotel_restorant">Hotel Restorant</option>
+                </select>
+              </div>
+              <div class="field nc-furra-only hidden">
+                <label for="nc-furra-tipi">Veprimtaria — REVOLUTION FURRA</label>
+                <select id="nc-furra-tipi">
+                  <option value="furre_buke">Furrë Buke</option>
+                  <option value="pasticeri">Pastiçeri / Ëmbëltore</option>
                 </select>
               </div>
               <div class="field nc-security-only hidden">
@@ -203,7 +219,7 @@
               <span id="clients-list-title">Klientët sipas sektorit</span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-clients">Rifresko</button>
             </div>
-            <input type="search" class="search-bar" id="clients-search" placeholder="Kërko: berber, piceri, market…" enterkeyhint="search" autocomplete="off">
+            <input type="search" class="search-bar" id="clients-search" placeholder="Kërko klientin e këtij produkti…" enterkeyhint="search" autocomplete="off">
             <div id="clients-sectors"></div>
           </div>
         </section>
@@ -213,8 +229,9 @@
           <div class="card">
             <div class="card-title">Licencat</div>
             <p style="color:var(--muted);margin:0 0 0.75rem;font-size:0.9rem">
-              1) Gjenero ID · 2) Gjenero Licencë · 3) <strong>Ruaj</strong> · 4) Kopjo
+              1) Gjenero ID · 2) Gjenero Licencë · 3) <strong>Ruaj</strong> · 4) Kopjo — vetëm produkti aktiv
             </p>
+            <input type="search" class="search-bar" id="licenses-search" placeholder="Kërko licencë / klient (vetëm ky produkt)…" enterkeyhint="search" autocomplete="off">
             <div class="field" style="margin-bottom:0.75rem">
               <label for="gen-license-type">Lloji</label>
               <select id="gen-license-type">
@@ -468,6 +485,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=27"></script>
+  <script src="/admin/dashboard.js?v=28"></script>
 </body>
 </html>

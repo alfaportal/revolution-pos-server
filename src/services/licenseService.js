@@ -671,11 +671,17 @@ async function listLicenses() {
 
 async function createClient(body) {
   const { assertClientTipi } = require("../utils/businessTipi");
-  const { normalizeProductLine } = require("../utils/productLine");
+  const { normalizeProductLine, toDbProductLine } = require("../utils/productLine");
   const db = getSupabase();
-  const productLine = normalizeProductLine(
+  const requestedLine = normalizeProductLine(
     body.product_line || body.industry_type || body.product_category,
   );
+  if (requestedLine === "security") {
+    const err = new Error("Klientët Security regjistrohen vetëm në Supabase e Security, jo në POS.");
+    err.code = "WRONG_SUPABASE";
+    throw err;
+  }
+  const productLine = toDbProductLine(requestedLine);
   const row = {
     emri: String(body.emri || "").trim(),
     adresa: String(body.adresa || "").trim(),

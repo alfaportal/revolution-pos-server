@@ -198,7 +198,8 @@ router.post("/clients", asyncHandler(async (req, res) => {
       });
       return res.status(201).json({ ok: true, client: data.client, product_line: "security" });
     }
-    const client = await createClient({ ...body, product_line: productLine });
+    const { toDbProductLine } = require("../utils/productLine");
+    const client = await createClient({ ...body, product_line: toDbProductLine(productLine) });
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_create",

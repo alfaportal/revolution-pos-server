@@ -692,14 +692,17 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
 
 /* Master Admin — tabs produkti (kafene / security / …) */
 .product-tabs {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
   margin: 0 0 1rem;
   padding: 0.35rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(26, 26, 46, 0.96);
   border: 1px solid var(--border);
   border-radius: 14px;
+  position: sticky;
+  top: 4.4rem;
+  z-index: 18;
 }
 .product-tab {
   flex: 1 1 auto;
@@ -776,5 +779,6 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   .mobile-only { display: none !important; }
   .topbar { position: static; background: transparent; backdrop-filter: none; }
   .bank-confirm-btn { width: auto; min-height: 40px; }
+  .product-tabs { display: flex; flex-wrap: wrap; position: static; }
   .product-tab { flex: 0 1 auto; }
 }
