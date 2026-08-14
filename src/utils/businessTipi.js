@@ -29,6 +29,18 @@ const MARKET_REGISTER_TIPI = [
 /** Tipet MARKET (të reja + legacy). */
 const MARKET_TIPI = [...MARKET_REGISTER_TIPI, "market", "mini_market", "peshkore"];
 
+/** REVOLUTION HOTEL — kategoritë brenda hotelit. */
+const HOTEL_REGISTER_TIPI = [
+  "hotel",
+  "motel",
+  "hostel",
+  "resort",
+  "ville_me_qira",
+];
+
+/** Tipet HOTEL (të reja + legacy hotel_restorant / ville / bujtinë). */
+const HOTEL_TIPI = [...HOTEL_REGISTER_TIPI, "hotel_restorant", "ville", "bujtine"];
+
 /**
  * Tipet e lejuara në DB — përfshin edhe tipet e vjetra (klientë ekzistues).
  * Regjistrimi i ri POS përdor POS_REGISTER_TIPI; MARKET përdor MARKET_REGISTER_TIPI.
@@ -46,6 +58,9 @@ const ADMIN_CLIENT_TIPI = [
   "gjeltore",
   "furre_buke",
   "hotel_restorant",
+  ...HOTEL_REGISTER_TIPI,
+  "ville",
+  "bujtine",
   "market",
   "dyqan_rroba",
   "dyqan_kepuce",
@@ -72,7 +87,7 @@ const CLIENT_SECTORS = [
     num: 2,
     id: "restorant",
     label: "Restorant",
-    tipet: ["restorant", "hotel_restorant"],
+    tipet: ["restorant"],
     keywords: ["restorant", "restaurant"],
   },
   {
@@ -184,6 +199,44 @@ const MARKET_SECTORS = [
   },
 ];
 
+const HOTEL_SECTORS = [
+  {
+    num: 1,
+    id: "hotel",
+    label: "Hotel",
+    tipet: ["hotel", "hotel_restorant"],
+    keywords: ["hotel"],
+  },
+  {
+    num: 2,
+    id: "motel",
+    label: "Motel",
+    tipet: ["motel"],
+    keywords: ["motel"],
+  },
+  {
+    num: 3,
+    id: "hostel",
+    label: "Hostel",
+    tipet: ["hostel", "bujtine"],
+    keywords: ["hostel", "bujtine", "bujtina"],
+  },
+  {
+    num: 4,
+    id: "resort",
+    label: "Resort",
+    tipet: ["resort"],
+    keywords: ["resort"],
+  },
+  {
+    num: 5,
+    id: "ville_me_qira",
+    label: "Villë me qira",
+    tipet: ["ville_me_qira", "ville"],
+    keywords: ["ville", "villa", "qira"],
+  },
+];
+
 const TIPI_ALIASES = {
   restaurante: "restorant",
   restaurant: "restorant",
@@ -245,6 +298,19 @@ const TIPI_ALIASES = {
   "dyqan peshku": "dyqan_peshku",
   peshkore: "dyqan_peshku",
   fish: "dyqan_peshku",
+  hotel_restorant: "hotel",
+  motel: "motel",
+  hostel: "hostel",
+  bujtine: "hostel",
+  bujtina: "hostel",
+  guesthouse: "hostel",
+  resort: "resort",
+  ville: "ville_me_qira",
+  villa: "ville_me_qira",
+  vill: "ville_me_qira",
+  ville_me_qira: "ville_me_qira",
+  "ville me qira": "ville_me_qira",
+  "villa me qira": "ville_me_qira",
   other: "tjeter",
   tjetër: "tjeter",
   tjeter: "tjeter",
@@ -267,7 +333,14 @@ const TIPI_LABELS = {
   akullore: "Akullore",
   gjeltore: "Gjeltore",
   furre_buke: "Furrë Buke",
-  hotel_restorant: "Hotel Restorant",
+  hotel_restorant: "Hotel",
+  hotel: "Hotel",
+  motel: "Motel",
+  hostel: "Hostel",
+  bujtine: "Hostel",
+  resort: "Resort",
+  ville: "Villë me qira",
+  ville_me_qira: "Villë me qira",
   market: "Mini-market / Market",
   minimarket: "Mini-market / Market",
   pilar: "Pilar (dyqan i vogël lagje)",
@@ -331,6 +404,9 @@ function labelForTipi(tipi) {
 
 function sectorForTipi(tipi) {
   const t = normalizeClientTipi(tipi);
+  for (const s of HOTEL_SECTORS) {
+    if (s.tipet.includes(t)) return s;
+  }
   for (const s of MARKET_SECTORS) {
     if (s.tipet.includes(t)) return s;
   }
@@ -344,11 +420,14 @@ module.exports = {
   POS_REGISTER_TIPI,
   MARKET_REGISTER_TIPI,
   MARKET_TIPI,
+  HOTEL_REGISTER_TIPI,
+  HOTEL_TIPI,
   ADMIN_CLIENT_TIPI,
   ALLOWED_CLIENT_TIPI,
   HOSPITALITY_TIPET,
   CLIENT_SECTORS,
   MARKET_SECTORS,
+  HOTEL_SECTORS,
   TIPI_LABELS,
   TIPI_ALIASES,
   normalizeClientTipi,

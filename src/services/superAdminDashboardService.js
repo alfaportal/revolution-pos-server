@@ -12,6 +12,7 @@ const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, f
 const {
   CLIENT_SECTORS,
   MARKET_SECTORS,
+  HOTEL_SECTORS,
   ADMIN_CLIENT_TIPI,
   TIPI_LABELS,
   normalizeClientTipi,
@@ -45,10 +46,6 @@ function filterByProduct(rows, product, getLine) {
   const p = normalizeProductLine(product || "kafene");
   return (rows || []).filter((r) => getLine(r) === p);
 }
-
-const HOTEL_SECTORS = [
-  { num: 1, id: "hotel", label: "Hotel Restorant", tipet: ["hotel_restorant"], keywords: ["hotel"] },
-];
 
 const FURRA_SECTORS = [
   { num: 1, id: "furre_buke", label: "Furrë Buke", tipet: ["furre_buke"], keywords: ["furra", "buke"] },
@@ -523,8 +520,9 @@ async function getClientsGrouped({ product } = {}) {
   for (const c of clients) {
     const tipi = normalizeClientTipi(c.tipi);
     let sector;
-    if (p === "hotel") sector = HOTEL_SECTORS[0];
-    else if (p === "furra") {
+    if (p === "hotel") {
+      sector = HOTEL_SECTORS.find((s) => s.tipet.includes(tipi)) || HOTEL_SECTORS[0];
+    } else if (p === "furra") {
       sector = FURRA_SECTORS.find((s) => s.tipet.includes(tipi)) || FURRA_SECTORS[0];
     } else if (p === "market") {
       sector = MARKET_SECTORS.find((s) => s.tipet.includes(tipi)) || MARKET_SECTORS[0];
@@ -590,6 +588,13 @@ function iconForTipi(tipi) {
     gjeltore: "🍗",
     furre_buke: "🥖",
     hotel_restorant: "🏨",
+    hotel: "🏨",
+    motel: "🛏️",
+    hostel: "🧳",
+    bujtine: "🧳",
+    resort: "🌴",
+    ville: "🏡",
+    ville_me_qira: "🏡",
     bar_nate: "🌙",
     klub: "🎶",
     klub_nate: "🪩",

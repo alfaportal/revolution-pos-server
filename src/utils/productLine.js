@@ -20,7 +20,7 @@ const PRODUCT_LINES = [
     id: "hotel",
     label: "REVOLUTION HOTEL",
     short: "Hotel",
-    description: "Hotele / hotel-restorant — lista e ndarë nga POS",
+    description: "Hotel, motel, hostel, resort, villë me qira — lista e ndarë nga POS",
   },
   {
     id: "furra",
@@ -36,9 +36,8 @@ const PRODUCT_LINES = [
   },
 ];
 
-const { MARKET_TIPI } = require("./businessTipi");
+const { MARKET_TIPI, HOTEL_TIPI } = require("./businessTipi");
 
-const HOTEL_TIPI = ["hotel_restorant"];
 const FURRA_TIPI = ["furre_buke", "pasticeri"];
 const ALLOWED_APP_TYPES = ["restorant", "kafene", "sekurim", "market"];
 
@@ -47,7 +46,7 @@ function normalizeProductLine(v) {
     .trim()
     .toLowerCase();
   if (s === "security" || s === "sekurim" || s === "securetrack") return "security";
-  if (s === "hotel" || s === "hotel_restorant") return "hotel";
+  if (s === "hotel" || s === "hotel_restorant" || s === "motel" || s === "hostel" || s === "resort" || s === "ville" || s === "ville_me_qira" || s === "bujtine") return "hotel";
   if (s === "furra" || s === "furre" || s === "furre_buke" || s === "bakery") return "furra";
   if (s === "market" || s === "minimarket" || s === "mini_market") return "market";
   if (s === "kafene" || s === "cafe" || s === "pos" || s === "hospitality") return "kafene";

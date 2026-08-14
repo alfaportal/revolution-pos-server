@@ -526,13 +526,14 @@ router.post(
     }
 
     const { createClient, createLicense } = require("../services/licenseService");
-    const { normalizeClientTipi, MARKET_TIPI } = require("../utils/businessTipi");
+    const { normalizeClientTipi, MARKET_TIPI, HOTEL_TIPI } = require("../utils/businessTipi");
     let tipi = normalizeClientTipi(req.body?.tipi || "restorant");
-    if (product === "hotel") tipi = "hotel_restorant";
-    else if (product === "furra") tipi = tipi === "pasticeri" ? "pasticeri" : "furre_buke";
+    if (product === "hotel") {
+      tipi = HOTEL_TIPI.includes(tipi) ? tipi : "hotel";
+    } else if (product === "furra") tipi = tipi === "pasticeri" ? "pasticeri" : "furre_buke";
     else if (product === "market") {
       tipi = MARKET_TIPI.includes(tipi) ? tipi : "minimarket";
-    } else if (["hotel_restorant", "furre_buke", "pasticeri", ...MARKET_TIPI].includes(tipi)) {
+    } else if (["furre_buke", "pasticeri", ...HOTEL_TIPI, ...MARKET_TIPI].includes(tipi)) {
       tipi = "restorant";
     }
     const client = await createClient({

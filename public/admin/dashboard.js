@@ -26,7 +26,11 @@ const FALLBACK_SECTORS = [
 
 /** REVOLUTION SECURITY — vetëm menaxhim punëtorësh; i ndarë nga POS. */
 const FALLBACK_HOTEL_SECTORS = [
-  { num: 1, id: "hotel", label: "Hotel Restorant", keywords: ["hotel"], clients: [] },
+  { num: 1, id: "hotel", label: "Hotel", keywords: ["hotel"], clients: [] },
+  { num: 2, id: "motel", label: "Motel", keywords: ["motel"], clients: [] },
+  { num: 3, id: "hostel", label: "Hostel", keywords: ["hostel", "bujtine"], clients: [] },
+  { num: 4, id: "resort", label: "Resort", keywords: ["resort"], clients: [] },
+  { num: 5, id: "ville_me_qira", label: "Villë me qira", keywords: ["ville", "villa", "qira"], clients: [] },
 ];
 const FALLBACK_FURRA_SECTORS = [
   { num: 1, id: "furre_buke", label: "Furrë Buke", keywords: ["furra", "buke"], clients: [] },
@@ -2234,7 +2238,7 @@ async function boot() {
       telefon: document.getElementById("nc-tel")?.value?.trim(),
       tipi:
         product === "hotel"
-          ? document.getElementById("nc-hotel-tipi")?.value || "hotel_restorant"
+          ? document.getElementById("nc-hotel-tipi")?.value || "hotel"
           : product === "furra"
             ? document.getElementById("nc-furra-tipi")?.value || "furre_buke"
             : product === "market"
