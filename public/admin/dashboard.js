@@ -480,11 +480,16 @@ function renderClientsSectors(filterText = "") {
           currentProduct === "market" || currentProduct === "hotel"
             ? currentProduct
             : "kafene";
-        await api(
+        const data = await api(
           `/api/super/dashboard/clients/${encodeURIComponent(btn.dataset.resetClient)}/reset-device?product=${encodeURIComponent(line)}`,
           { method: "POST", product: line },
         );
-        alert("PC u lëshua. Hape sërish MARKET/POS me të njëjtin çelës.");
+        const n = Number(data?.reset);
+        if (!n) {
+          alert("Nuk u gjet licencë për këtë klient. Hap klientin dhe shtyp Lësho PC te licenca.");
+          return;
+        }
+        alert("PC u lëshua. Mbyll MARKET krejt, pastaj hape sërish me të njëjtin çelës.");
       } catch (ex) {
         alert(ex.message || "Lëshimi i PC dështoi.");
       } finally {
@@ -676,13 +681,13 @@ function renderPasswordBlock(owners) {
 }
 
 async function fetchClientDetailSmart(id, preferredProduct) {
-  const prefer = String(preferredProduct || "").toLowerCase();
+  const prefer = String(preferredProduct || currentProduct || "").toLowerCase();
   const order =
-    prefer === "security"
-      ? ["security", "kafene"]
-      : prefer === "kafene"
-        ? ["kafene", "security"]
-        : currentProduct === "security"
+    prefer === "market" || currentProduct === "market"
+      ? ["market"]
+      : prefer === "hotel" || currentProduct === "hotel"
+        ? ["hotel"]
+        : prefer === "security" || currentProduct === "security"
           ? ["security", "kafene"]
           : ["kafene", "security"];
 
