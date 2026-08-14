@@ -428,8 +428,13 @@ function renderClientsSectors(filterText = "") {
               <strong>${esc(c.emri)}</strong>
               <span>${esc(c.tipi_label)} · ${esc(c.package_label)}${c.package_contents ? ` — ${esc(c.package_contents)}` : ""}</span>
             </div>
-            <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
+            <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;flex-wrap:wrap">
               <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
+              ${
+                currentProduct === "security"
+                  ? ""
+                  : `<button type="button" class="btn btn-ghost btn-sm" data-reset-client="${esc(c.id)}" data-name="${esc(c.emri)}">Lësho PC</button>`
+              }
               <button type="button" class="btn btn-danger btn-sm" data-delete-client="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}" data-name="${esc(c.emri)}">Fshi</button>
             </div>
           </div>`,
@@ -462,6 +467,31 @@ function renderClientsSectors(filterText = "") {
       else openSectorIds.delete(id);
     });
   });
+  root.querySelectorAll("[data-reset-client]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.name || "klientin";
+      if (!confirm(`Lësho PC për «${name}»?\n\nTerminalet e vjetra fshihen. Hape sërish programin me të njëjtin çelës.`)) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const line =
+          currentProduct === "market" || currentProduct === "hotel"
+            ? currentProduct
+            : "kafene";
+        await api(
+          `/api/super/dashboard/clients/${encodeURIComponent(btn.dataset.resetClient)}/reset-device?product=${encodeURIComponent(line)}`,
+          { method: "POST", product: line },
+        );
+        alert("PC u lëshua. Hape sërish MARKET/POS me të njëjtin çelës.");
+      } catch (ex) {
+        alert(ex.message || "Lëshimi i PC dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
   root.querySelectorAll("[data-delete-client]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -473,7 +503,7 @@ function renderClientsSectors(filterText = "") {
   });
   root.querySelectorAll("[data-client-id]").forEach((row) => {
     row.addEventListener("click", (e) => {
-      if (e.target.closest("[data-delete-client]")) return;
+      if (e.target.closest("[data-delete-client], [data-reset-client]")) return;
       const hit = clientsFlat.find((c) => String(c.id) === String(row.dataset.clientId));
       openClientDetail(row.dataset.clientId, {
         product: hit?.product_line || productQuery(true) || "kafene",
