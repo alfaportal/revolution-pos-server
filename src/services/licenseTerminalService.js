@@ -1,4 +1,4 @@
-const { getSupabase } = require("../db");
+const { dbForLicenseId, getSupabaseForProduct } = require("../lib/productSupabase");
 
 /** Pa shtim terminali të ri gjatë grace — vetëm mesazh. Overflow i ri = bllokim. */
 const TERMINAL_GRACE_MS = 2 * 60 * 60 * 1000;
@@ -49,8 +49,13 @@ function mapTerminalRow(row) {
   };
 }
 
+async function dbOf(licenseId) {
+  const { db } = await dbForLicenseId(licenseId);
+  return db;
+}
+
 async function listTerminalsOrdered(licenseId) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   const { data, error } = await db
     .from("license_terminals")
     .select("id, device_id, device_hostname, last_ip, first_activated_at, last_seen_at")
@@ -64,7 +69,7 @@ async function migrateLegacyTerminal(license) {
   const deviceId = normalizeDeviceId(license.device_id);
   if (!deviceId) return;
 
-  const db = getSupabase();
+  const db = await dbOf(license.id);
   const { count, error: countErr } = await db
     .from("license_terminals")
     .select("id", { count: "exact", head: true })
@@ -84,7 +89,7 @@ async function migrateLegacyTerminal(license) {
 }
 
 async function touchTerminal(licenseId, deviceId, { hostname = "", ip = "", now = null } = {}) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   const ts = now || new Date().toISOString();
   const id = normalizeDeviceId(deviceId);
   const { error } = await db
@@ -100,7 +105,7 @@ async function touchTerminal(licenseId, deviceId, { hostname = "", ip = "", now 
 }
 
 async function insertTerminal(licenseId, deviceId, { hostname = "", ip = "", now = null } = {}) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   const ts = now || new Date().toISOString();
   const id = normalizeDeviceId(deviceId);
   const { error } = await db.from("license_terminals").upsert(
@@ -118,12 +123,12 @@ async function insertTerminal(licenseId, deviceId, { hostname = "", ip = "", now
 }
 
 async function clearTerminalLimitGrace(licenseId) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   await db.from("licenses").update({ terminal_limit_grace_at: null }).eq("id", licenseId);
 }
 
 async function startTerminalLimitGrace(licenseId) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   const now = new Date().toISOString();
   const { data } = await db
     .from("licenses")
@@ -138,7 +143,7 @@ async function startTerminalLimitGrace(licenseId) {
 }
 
 async function clearAllTerminals(licenseId) {
-  const db = getSupabase();
+  const db = await dbOf(licenseId);
   await db.from("license_terminals").delete().eq("license_id", licenseId);
   await clearTerminalLimitGrace(licenseId);
 }
@@ -237,8 +242,7 @@ async function getTerminalSummaryForLicense(license) {
   };
 }
 
-async function countLicensesOverTerminalLimit() {
-  const db = getSupabase();
+async function countOverLimitOnDb(db) {
   const { data: licenses, error } = await db
     .from("licenses")
     .select("id, max_terminals, terminal_limit_grace_at, statusi");
@@ -256,6 +260,18 @@ async function countLicensesOverTerminalLimit() {
     if ((terminalCount || 0) >= max) count += 1;
   }
   return count;
+}
+
+async function countLicensesOverTerminalLimit() {
+  let total = 0;
+  for (const product of ["kafene", "market", "hotel"]) {
+    try {
+      total += await countOverLimitOnDb(getSupabaseForProduct(product));
+    } catch {
+      /* produkti mund të mos jetë i konfiguruar */
+    }
+  }
+  return total;
 }
 
 module.exports = {

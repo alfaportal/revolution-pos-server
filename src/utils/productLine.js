@@ -1,7 +1,8 @@
 /**
  * Produktet e Master Admin (Revolution Invest) — NJË admin për të gjitha.
  * Listat NUK përzihen. Security lexohet VETËM nga Supabase e Security.
- * Hotel / Furra janë në të njëjtin cloud POS, të ndara sipas `tipi`.
+ * Hotel / Market kanë Supabase të ndarë (product_line = hotel | market).
+ * Furra mbetet në POS, e ndarë sipas `tipi`.
  */
 const PRODUCT_LINES = [
   {
@@ -54,9 +55,12 @@ function normalizeProductLine(v) {
   return "kafene";
 }
 
-/** Vetëm vlera që lejon DB POS: kafene | security. Hotel/Furra ruhen si tipi. */
+/** POS DB: kafene | security. MARKET/HOTEL DB: market | hotel. */
 function toDbProductLine(v) {
-  return normalizeProductLine(v) === "security" ? "security" : "kafene";
+  const p = normalizeProductLine(v);
+  if (p === "security") return "security";
+  if (p === "market" || p === "hotel") return p;
+  return "kafene";
 }
 
 function productLineLabel(id) {
@@ -75,6 +79,7 @@ function appTypeForProductLine(productLine, tipi) {
 function adminProductOfClient(c) {
   const rawPl = String(c?.product_line || "").trim().toLowerCase();
   if (rawPl === "security" || rawPl === "sekurim" || rawPl === "securetrack") return "security";
+  if (rawPl === "market" || rawPl === "hotel") return rawPl;
   const tipi = String(c?.tipi || "").trim().toLowerCase();
   if (HOTEL_TIPI.includes(tipi)) return "hotel";
   if (FURRA_TIPI.includes(tipi)) return "furra";
@@ -88,6 +93,7 @@ function adminProductOfLicense(l) {
   if (appType === "market") return "market";
   const pl = String(l?.product_line || l?.clients?.product_line || "").toLowerCase();
   if (pl === "security" || pl === "sekurim" || pl === "securetrack") return "security";
+  if (pl === "market" || pl === "hotel") return pl;
   return adminProductOfClient(l?.clients || { tipi: l?.clients?.tipi, product_line: l?.product_line });
 }
 

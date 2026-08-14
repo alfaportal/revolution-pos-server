@@ -191,6 +191,11 @@ router.post("/heartbeat", licenseApiKeyOptional, async (req, res) => {
       result.celesi_updated = result.celesi;
     }
 
+    if (!result.valid && (result.code === "NOT_FOUND" || result.code === "REVOKED" || result.code === "EXPIRED")) {
+      result.force_factory_reset = true;
+      result.force_logout = true;
+    }
+
     res.status(result.valid ? 200 : 403).json({
       ok: result.valid,
       ...result,

@@ -1,5 +1,7 @@
 -- REVOLUTION MARKET — Ushqimore / Tregtare (Super Admin telefon)
 -- Tipet e vjetra market/minimarket mbeten të lejuara.
+-- Nëse projekti është BOSH (Supabase i ri), ekzekuto supabase/bootstrap_market.sql
+-- (përfshin këto CHECK + tabelat clients/licenses). Ky file vetëm ALTER.
 
 ALTER TABLE public.clients DROP CONSTRAINT IF EXISTS clients_tipi_check;
 

@@ -181,17 +181,22 @@ router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
     const raw = String(req.query.product || req.query.industry || "kafene").toLowerCase();
-    const preferSecurity = raw === "security" || raw === "sekurim";
-    const tryOrder = preferSecurity ? ["security", "kafene"] : ["kafene", "security"];
+    const product = normalizeProductLine(raw);
+    const preferSecurity = product === "security";
+    const tryOrder = preferSecurity
+      ? ["security", "kafene", "market", "hotel"]
+      : product === "market" || product === "hotel"
+        ? [product, "kafene", "security"]
+        : ["kafene", "market", "hotel", "security"];
     let lastErr = null;
-    for (const product of tryOrder) {
+    for (const line of tryOrder) {
       try {
-        if (product === "security") {
+        if (line === "security") {
           const detail = await getSecurityClientDetail(req.params.id);
           return res.json({ ok: true, ...detail, product_line: "security" });
         }
-        const detail = await getClientDetail(req.params.id);
-        return res.json({ ok: true, ...detail, product_line: "kafene" });
+        const detail = await getClientDetail(req.params.id, line);
+        return res.json({ ok: true, ...detail, product_line: line });
       } catch (e) {
         lastErr = e;
       }
@@ -340,7 +345,7 @@ router.patch(
     }
 
     // Kafene / POS — ruaj klientin GJITHMONË; licencat veç e veç (një gabim licence mos e prish klientin)
-    const client = await updateClient(id, body);
+    const client = await updateClient(id, { ...body, product_line: product });
     const licenses = [];
     const license_errors = [];
     for (const lp of licPatches) {
@@ -386,7 +391,7 @@ router.patch(
       client,
       licenses,
       license_errors,
-      product_line: "kafene",
+      product_line: product === "hotel" || product === "market" ? product : "kafene",
     });
   }),
 );
@@ -410,7 +415,7 @@ router.delete(
       }).catch(() => {});
       return res.json({ ok: true, ...(data && typeof data === "object" ? data : {}), product_line: "security" });
     }
-    await deleteClient(id);
+    await deleteClient(id, product);
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_delete",
@@ -539,7 +544,7 @@ router.post(
     const client = await createClient({
       ...(req.body || {}),
       tipi,
-      product_line: "kafene",
+      product_line: product === "hotel" || product === "market" ? product : "kafene",
     });
     let license = null;
     if (wantLicense) {
@@ -547,7 +552,7 @@ router.post(
         license = await createLicense({
           client_id: client.id,
           app_type: product === "market" ? "market" : req.body?.app_type,
-          product_line: "kafene",
+          product_line: product === "hotel" || product === "market" ? product : "kafene",
           license_type: licenseType,
           muaj: licenseType === "trial" ? 1 : req.body?.muaj || 12,
           max_terminals: req.body?.max_terminals || 1,
@@ -581,7 +586,7 @@ router.post(
       client,
       license,
       hardware_id: hardwareId || null,
-      product_line: "kafene",
+      product_line: product === "hotel" || product === "market" ? product : "kafene",
     });
   }),
 );

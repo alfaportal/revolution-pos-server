@@ -2,6 +2,14 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
 const { getSupabase } = require("../db");
+const {
+  getSupabaseForProduct,
+  findLicenseOnProductDbs,
+  dbForLicenseId,
+  dbForClientId,
+  rememberLicenseHome,
+  isDedicatedProduct,
+} = require("../lib/productSupabase");
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
 const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl, buildClientWebLinks } = require("../lib/kitchenAccess");
@@ -144,7 +152,7 @@ function generateDeviceId() {
 }
 
 async function provisionLicenseDevice(id, opts = {}) {
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(id);
   const force = opts.force === true;
   const { data: lic, error } = await db
     .from("licenses")
@@ -165,16 +173,13 @@ async function provisionLicenseDevice(id, opts = {}) {
   return { celesi: lic.celesi, device_id: deviceId, created: true };
 }
 
-async function findLicenseByDeviceId(deviceId) {
-  const id = normalizeDeviceId(deviceId);
-  if (!id) return null;
-  const db = getSupabase();
-  const select =
-    "*, clients(id, emri, adresa, telefoni, email, tipi, package_tier, kitchen_slug, kitchen_key)";
+const LICENSE_WITH_CLIENT_SELECT =
+  "*, clients(id, emri, adresa, telefoni, email, tipi, package_tier, kitchen_slug, kitchen_key)";
 
+async function findLicenseByDeviceIdOnDb(db, id) {
   const { data: byPrimary, error } = await db
     .from("licenses")
-    .select(select)
+    .select(LICENSE_WITH_CLIENT_SELECT)
     .eq("device_id", id)
     .order("last_activated_at", { ascending: false })
     .limit(1)
@@ -182,36 +187,33 @@ async function findLicenseByDeviceId(deviceId) {
   if (error) throw error;
   if (byPrimary) return byPrimary;
 
-  try {
-    const { data: term, error: termErr } = await db
-      .from("license_terminals")
-      .select("license_id")
-      .eq("device_id", id)
-      .order("last_seen_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (termErr || !term?.license_id) return null;
-    const { data: lic } = await db
-      .from("licenses")
-      .select(select)
-      .eq("id", term.license_id)
-      .maybeSingle();
-    return lic || null;
-  } catch {
-    return null;
-  }
+  const { data: term, error: termErr } = await db
+    .from("license_terminals")
+    .select("license_id")
+    .eq("device_id", id)
+    .order("last_seen_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (termErr || !term?.license_id) return null;
+  const { data: lic } = await db
+    .from("licenses")
+    .select(LICENSE_WITH_CLIENT_SELECT)
+    .eq("id", term.license_id)
+    .maybeSingle();
+  return lic || null;
 }
 
-async function findLicenseByKey(celesi) {
-  const db = getSupabase();
-  const normalized = normalizeKey(celesi);
-  if (!normalized) return null;
+async function findLicenseByDeviceId(deviceId) {
+  const id = normalizeDeviceId(deviceId);
+  if (!id) return null;
+  const found = await findLicenseOnProductDbs((db) => findLicenseByDeviceIdOnDb(db, id));
+  return found.row;
+}
 
-  const select = "*, clients(id, emri, adresa, telefoni, email, tipi, package_tier, kitchen_slug, kitchen_key)";
-
+async function findLicenseByKeyOnDb(db, normalized) {
   const { data, error } = await db
     .from("licenses")
-    .select(select)
+    .select(LICENSE_WITH_CLIENT_SELECT)
     .eq("celesi", normalized)
     .maybeSingle();
   if (error) throw error;
@@ -219,12 +221,12 @@ async function findLicenseByKey(celesi) {
 
   const { data: ilikeRows, error: ilikeErr } = await db
     .from("licenses")
-    .select(select)
+    .select(LICENSE_WITH_CLIENT_SELECT)
     .ilike("celesi", normalized);
   if (ilikeErr) throw ilikeErr;
   if (ilikeRows?.length === 1) return ilikeRows[0];
 
-  const { data: allRows, error: allErr } = await db.from("licenses").select(select);
+  const { data: allRows, error: allErr } = await db.from("licenses").select(LICENSE_WITH_CLIENT_SELECT);
   if (allErr) throw allErr;
   const rows = allRows || [];
 
@@ -236,8 +238,14 @@ async function findLicenseByKey(celesi) {
 
   const fuzzy = rows.filter((row) => licenseKeysEquivalent(normalized, row.celesi));
   if (fuzzy.length === 1) return fuzzy[0];
-
   return null;
+}
+
+async function findLicenseByKey(celesi) {
+  const normalized = normalizeKey(celesi);
+  if (!normalized) return null;
+  const found = await findLicenseOnProductDbs((db) => findLicenseByKeyOnDb(db, normalized));
+  return found.row;
 }
 
 function sanitizeClientIp(ip) {
@@ -274,7 +282,7 @@ async function saveActivationEmail(license, email) {
   }
   if (license.client_id) {
     try {
-      const db = getSupabase();
+      const { db } = await dbForClientId(license.client_id);
       const { data: client } = await db
         .from("clients")
         .select("id, email")
@@ -290,7 +298,7 @@ async function saveActivationEmail(license, email) {
 }
 
 async function patchLicenseMeta(licenseId, patch) {
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(licenseId);
   let { error } = await db.from("licenses").update(patch).eq("id", licenseId);
   if (!error) return;
 
@@ -417,7 +425,13 @@ async function validateLicense({
 }) {
   const license = await findLicenseByKey(celesi);
   if (!license) {
-    return { valid: false, code: "NOT_FOUND", message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë)." };
+    return {
+      valid: false,
+      code: "NOT_FOUND",
+      message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë).",
+      force_logout: true,
+      force_factory_reset: true,
+    };
   }
 
   const REVOKED_MSG = "Licenca është çaktivizuar. Kontaktoni Revolution Invest.";
@@ -425,6 +439,7 @@ async function validateLicense({
   const hwControl = await getHardwareControl(license.id, hwForCheck);
   const wipePending =
     Boolean(license.force_factory_reset_at) || Boolean(hwControl?.wipe_requested_at);
+  const FACTORY_RESET_CODES = new Set(["NOT_FOUND", "REVOKED", "EXPIRED"]);
 
   const fail = async (code, message) => {
     await recordValidationFailure(license, code, message, client_ip);
@@ -434,7 +449,7 @@ async function validateLicense({
       code,
       message,
       force_logout: forceLogout,
-      force_factory_reset: wipePending,
+      force_factory_reset: wipePending || FACTORY_RESET_CODES.has(code),
       force_factory_reset_at: license.force_factory_reset_at || hwControl?.wipe_requested_at || null,
     };
   };
@@ -588,8 +603,10 @@ function normalizeClientRow(row) {
   return { ...row, package_tier: normalizePackageTier(row.package_tier) };
 }
 
-async function listClients() {
-  const db = getSupabase();
+async function listClients(opts = {}) {
+  const { normalizeProductLine } = require("../utils/productLine");
+  const product = normalizeProductLine(opts.product || "kafene");
+  const db = getSupabaseForProduct(product);
   let { data, error } = await db
     .from("clients")
     .select("*, licenses(count)")
@@ -602,8 +619,10 @@ async function listClients() {
   return (data || []).map(normalizeClientRow);
 }
 
-async function listLicenses() {
-  const db = getSupabase();
+async function listLicenses(opts = {}) {
+  const { normalizeProductLine } = require("../utils/productLine");
+  const product = normalizeProductLine(opts.product || "kafene");
+  const db = getSupabaseForProduct(product);
   const { data, error } = await db
     .from("licenses")
     .select("*, clients(id, emri, tipi, email, product_line)")
@@ -672,7 +691,6 @@ async function listLicenses() {
 async function createClient(body) {
   const { assertClientTipi } = require("../utils/businessTipi");
   const { normalizeProductLine, toDbProductLine } = require("../utils/productLine");
-  const db = getSupabase();
   const requestedLine = normalizeProductLine(
     body.product_line || body.industry_type || body.product_category,
   );
@@ -681,7 +699,10 @@ async function createClient(body) {
     err.code = "WRONG_SUPABASE";
     throw err;
   }
-  const productLine = toDbProductLine(requestedLine);
+  const db = getSupabaseForProduct(requestedLine);
+  const productLine = isDedicatedProduct(requestedLine)
+    ? requestedLine
+    : toDbProductLine(requestedLine);
   const row = {
     emri: String(body.emri || "").trim(),
     adresa: String(body.adresa || "").trim(),
@@ -710,7 +731,9 @@ async function createClient(body) {
     throw error;
   }
   try {
-    await seedPosSettingsForClient(data);
+    if (!isDedicatedProduct(requestedLine)) {
+      await seedPosSettingsForClient(data);
+    }
   } catch (seedErr) {
     console.warn("[createClient] pos_settings seed failed:", seedErr.message);
   }
@@ -718,7 +741,8 @@ async function createClient(body) {
 }
 
 async function updateClient(id, body) {
-  const db = getSupabase();
+  const hint = body.product_line || body.industry_type || body.product_category;
+  const { db, product } = await dbForClientId(id, hint);
   const patch = {};
   if (body.emri != null) {
     patch.emri = String(body.emri).trim();
@@ -737,8 +761,11 @@ async function updateClient(id, body) {
     const pl = normalizeProductLine(
       body.product_line || body.industry_type || body.product_category,
     );
-    // Mos e rishkruaj product_line kur është "all" / bosh nga UI
-    if (pl === "kafene" || pl === "security") patch.product_line = pl;
+    if (isDedicatedProduct(product) && (pl === "market" || pl === "hotel")) {
+      patch.product_line = product;
+    } else if (pl === "kafene" || pl === "security") {
+      patch.product_line = pl;
+    }
   }
   const tel = body.telefoni != null ? body.telefoni : body.telefon;
   if (tel != null) patch.telefoni = String(tel).trim();
@@ -804,7 +831,9 @@ async function updateClient(id, body) {
   }
   if (!data) throw new Error("Klienti nuk u gjet.");
   try {
-    await syncPosSettingsFromClient(id);
+    if (!isDedicatedProduct(product)) {
+      await syncPosSettingsFromClient(id);
+    }
   } catch (syncErr) {
     console.warn("[updateClient] pos_settings sync failed:", syncErr.message);
   }
@@ -827,9 +856,15 @@ async function deleteClientDependentRows(db, clientId) {
   }
 }
 
-async function deleteClient(id) {
-  const db = getSupabase();
+async function deleteClient(id, productHint) {
+  const { db } = await dbForClientId(id, productHint);
   await deleteClientDependentRows(db, id);
+  // Urdhër wipe PARA fshirjes — heartbeat i fundit e merr force_factory_reset.
+  try {
+    await requestFactoryResetForClient(id);
+  } catch (err) {
+    console.warn("[deleteClient] factory reset flag:", err?.message || err);
+  }
   // Licencat e klientit — fshi para rreshtit të klientit (FK)
   const { error: licErr } = await db.from("licenses").delete().eq("client_id", id);
   if (licErr) {
@@ -843,8 +878,8 @@ async function deleteClient(id) {
   return { ok: true };
 }
 
-async function regenerateKitchenAccess(id) {
-  const db = getSupabase();
+async function regenerateKitchenAccess(id, productHint) {
+  const { db } = await dbForClientId(id, productHint);
   const { data: client, error: findErr } = await db.from("clients").select("*").eq("id", id).maybeSingle();
   if (findErr) throw findErr;
   if (!client) throw new Error("Klienti nuk u gjet.");
@@ -925,11 +960,10 @@ async function createClientOnboard(body, baseUrl) {
 }
 
 async function createLicense(body) {
-  const db = getSupabase();
+  if (!body.client_id) throw new Error("client_id mungon.");
+  const { db, product } = await dbForClientId(body.client_id, body.product_line);
   const months = Number(body.muaj) || 12;
   const start = body.data_fillimit || todayISO();
-
-  if (!body.client_id) throw new Error("client_id mungon.");
 
   const { appTypeFromClientTipi } = require("../utils/businessTipi");
   const { normalizeProductLine, appTypeForProductLine } = require("../utils/productLine");
@@ -940,9 +974,11 @@ async function createLicense(body) {
     .select("tipi, product_line")
     .eq("id", body.client_id)
     .maybeSingle();
-  const productLine = normalizeProductLine(
-    body.product_line || client?.product_line || (appType === "sekurim" ? "security" : "kafene"),
-  );
+  const productLine = isDedicatedProduct(product)
+    ? product
+    : normalizeProductLine(
+      body.product_line || client?.product_line || (appType === "sekurim" ? "security" : "kafene"),
+    );
   if (!allowedApp.includes(appType)) {
     appType = appTypeForProductLine(productLine, client?.tipi)
       || (client?.tipi ? appTypeFromClientTipi(client.tipi) : "restorant");
@@ -1005,13 +1041,16 @@ async function createLicense(body) {
     ({ data, error } = await db.from("licenses").insert(row).select("*, clients(emri, tipi)").single());
   }
   if (error) throw error;
+  if (data?.id) rememberLicenseHome(data.id, product);
   return data;
 }
 
 async function updateLicense(id, body) {
-  const db = getSupabase();
-  const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
-  await ensureLicenseHardwareSchema().catch(() => false);
+  const { db, product } = await dbForLicenseId(id, body.product_line);
+  if (!isDedicatedProduct(product)) {
+    const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
+    await ensureLicenseHardwareSchema().catch(() => false);
+  }
 
   const patch = {};
   if (body.data_skadimit != null) patch.data_skadimit = String(body.data_skadimit).slice(0, 10);
@@ -1061,7 +1100,10 @@ async function updateLicense(id, body) {
   }
   if (body.product_line != null) {
     const { normalizeProductLine } = require("../utils/productLine");
-    patch.product_line = normalizeProductLine(body.product_line);
+    const pl = normalizeProductLine(body.product_line);
+    patch.product_line = isDedicatedProduct(product)
+      ? product
+      : (pl === "security" ? "security" : "kafene");
   }
   if (body.max_terminals != null) {
     patch.max_terminals = Math.max(1, Math.min(99, Number(body.max_terminals) || 1));
@@ -1113,14 +1155,14 @@ async function updateLicense(id, body) {
 }
 
 async function deleteLicense(id) {
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(id);
   const { error } = await db.from("licenses").delete().eq("id", id);
   if (error) throw error;
   return { ok: true };
 }
 
 async function updateLicenseStatus(id, statusi) {
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(id);
   const now = new Date().toISOString();
   const patch = { statusi, updated_at: now };
 
@@ -1155,7 +1197,7 @@ async function resetLicenseDevice(id) {
 
   await clearAllTerminals(licenseId);
 
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(licenseId);
   const patch = {
     device_id: "",
     device_hostname: "",
@@ -1186,10 +1228,10 @@ async function resetLicenseDevice(id) {
 }
 
 /** Super Admin: urdhëron POS që të bëjë Rivendos si të re (lokalisht). */
-async function requestFactoryResetForClient(clientId) {
+async function requestFactoryResetForClient(clientId, productHint) {
   const id = String(clientId || "").trim();
   if (!id) throw new Error("ID e klientit mungon.");
-  const db = getSupabase();
+  const { db } = await dbForClientId(id, productHint);
   const now = new Date().toISOString();
   const { data, error } = await db
     .from("licenses")
@@ -1203,7 +1245,7 @@ async function requestFactoryResetForClient(clientId) {
 async function getHardwareControl(licenseId, hardwareId) {
   const hw = normalizeHardwareIdStored(hardwareId);
   if (!licenseId || !hw) return null;
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(licenseId);
   const { data, error } = await db
     .from("license_hardware_controls")
     .select("id, license_id, hardware_id, revoked_at, wipe_requested_at, reason")
@@ -1222,7 +1264,7 @@ async function getHardwareControl(licenseId, hardwareId) {
 async function upsertHardwareControl(licenseId, hardwareId, patch) {
   const hw = normalizeHardwareIdStored(hardwareId);
   if (!licenseId || !hw) throw new Error("Hardware ID mungon.");
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(licenseId);
   const now = new Date().toISOString();
   const { data, error } = await db
     .from("license_hardware_controls")
@@ -1242,7 +1284,7 @@ async function upsertHardwareControl(licenseId, hardwareId, patch) {
 }
 
 async function writeRemoteAudit({ licenseId, hardwareId, action, reason, actor }) {
-  const db = getSupabase();
+  const { db } = licenseId ? await dbForLicenseId(licenseId) : { db: getSupabase() };
   const { error } = await db.from("license_remote_audit").insert({
     license_id: licenseId || null,
     hardware_id: normalizeHardwareIdStored(hardwareId) || null,
@@ -1265,7 +1307,7 @@ async function loadLicenseForRemoteControl(licenseId) {
   } catch {
     /* ignore — vazhdo edhe pa kolonën hardware_id */
   }
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(id);
   let { data: lic, error } = await db
     .from("licenses")
     .select("id, celesi, hardware_id, statusi, last_validation_error")
@@ -1324,7 +1366,7 @@ async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}
 async function reactivateLicenseRemote(licenseId, { hardwareId, reason, actor } = {}) {
   const lic = await loadLicenseForRemoteControl(licenseId);
   const id = lic.id;
-  const db = getSupabase();
+  const { db } = await dbForLicenseId(id);
   const hw = normalizeHardwareIdStored(hardwareId) || resolveLicenseHardwareId(lic);
   const why = String(reason || "").trim();
 
@@ -1451,8 +1493,8 @@ async function ensureSuperAdmin() {
   return data;
 }
 
-async function listLicensesForClient(clientId) {
-  const db = getSupabase();
+async function listLicensesForClient(clientId, productHint) {
+  const { db } = await dbForClientId(clientId, productHint);
   const { data, error } = await db
     .from("licenses")
     .select(

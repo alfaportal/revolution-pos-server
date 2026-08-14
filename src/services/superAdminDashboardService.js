@@ -28,11 +28,7 @@ const {
   adminProductOfClient,
   adminProductOfLicense,
 } = require("../utils/productLine");
-const {
-  getSecurityClientsGrouped,
-  getSecurityLicensesView,
-  getSecurityOverview,
-} = require("./securityAdminBridge");
+const { isDedicatedProduct } = require("../lib/productSupabase");
 
 function clientProductLine(c) {
   return adminProductOfClient(c);
@@ -405,12 +401,13 @@ function isShortTrialLicense(l) {
 
 async function getOverviewKafene(adminProduct = "kafene") {
   const slice = normalizeProductLine(adminProduct || "kafene");
+  const dedicated = isDedicatedProduct(slice);
   const [clientsAll, licensesAll, stockAlerts, salesToday, weekly] = await Promise.all([
-    listClients(),
-    listLicenses(),
-    listStockAlertsForAdmin().catch(() => []),
-    salesTodayByClient(),
-    weeklySalesSeries(),
+    listClients({ product: slice }),
+    listLicenses({ product: slice }),
+    dedicated ? Promise.resolve([]) : listStockAlertsForAdmin().catch(() => []),
+    dedicated ? Promise.resolve({ total: 0, byClient: new Map() }) : salesTodayByClient(),
+    dedicated ? Promise.resolve([]) : weeklySalesSeries(),
   ]);
 
   const clients = filterByProduct(clientsAll, slice, clientProductLine);
@@ -485,9 +482,9 @@ async function getClientsGrouped({ product } = {}) {
   }
 
   const [clientsAll, licenses, salesToday] = await Promise.all([
-    listClients(),
-    listLicenses(),
-    salesTodayByClient(),
+    listClients({ product: p }),
+    listLicenses({ product: p }),
+    isDedicatedProduct(p) ? Promise.resolve({ total: 0, byClient: new Map() }) : salesTodayByClient(),
   ]);
   const clients = filterByProduct(clientsAll, p, clientProductLine);
 
@@ -623,8 +620,9 @@ function iconForTipi(tipi) {
   return map[normalizeClientTipi(tipi)] || "🏪";
 }
 
-async function getClientDetail(clientId) {
-  const db = getSupabase();
+async function getClientDetail(clientId, productHint) {
+  const { getSupabaseForProduct } = require("../lib/productSupabase");
+  const db = getSupabaseForProduct(productHint || "kafene");
   const id = String(clientId || "").trim();
   if (!id) throw new Error("Mungon client_id");
 
@@ -632,23 +630,26 @@ async function getClientDetail(clientId) {
   if (error) throw error;
   if (!client) throw new Error("Klienti nuk u gjet");
 
+  const dedicated = isDedicatedProduct(productHint);
   const { listOwnersForClient } = require("./userService");
   const fromIso = dayStartIso(addDays(new Date(), -30));
   const [salesRows, licenses, stockAlerts, aiSummary, staff, owners] = await Promise.all([
-    fetchClosedSales({ fromIso }).then((rows) => rows.filter((r) => r.client_id === id)),
-    listLicenses().then((all) => all.filter((l) => (l.client_id || l.clients?.id) === id)),
-    listStockAlertsForAdmin()
+    dedicated ? Promise.resolve([]) : fetchClosedSales({ fromIso }).then((rows) => rows.filter((r) => r.client_id === id)),
+    listLicenses({ product: productHint || "kafene" }).then((all) => all.filter((l) => (l.client_id || l.clients?.id) === id)),
+    dedicated ? Promise.resolve([]) : listStockAlertsForAdmin()
       .then((a) => a.filter((x) => x.client_id === id))
       .catch(() => []),
-    listAiUsageSummary({}).catch(() => ({ rows: [], totals: {} })),
-    db
-      .from("pos_staff")
-      .select("id, name, role, active, pin_hash")
-      .eq("client_id", id)
-      .order("name", { ascending: true })
-      .then((r) => r.data || [])
-      .catch(() => []),
-    listOwnersForClient(id).catch(() => []),
+    dedicated ? Promise.resolve({ rows: [], totals: {} }) : listAiUsageSummary({}).catch(() => ({ rows: [], totals: {} })),
+    dedicated
+      ? Promise.resolve([])
+      : db
+        .from("pos_staff")
+        .select("id, name, role, active, pin_hash")
+        .eq("client_id", id)
+        .order("name", { ascending: true })
+        .then((r) => r.data || [])
+        .catch(() => []),
+    dedicated ? Promise.resolve([]) : listOwnersForClient(id).catch(() => []),
   ]);
 
   const salesToday = salesRows
@@ -657,13 +658,15 @@ async function getClientDetail(clientId) {
   const sales30 = salesRows.reduce((s, r) => s + (Number(r.total) || 0), 0);
   const aiRow = (aiSummary.rows || []).find((r) => String(r.restaurant_id) === id);
 
-  const { data: menuStock } = await db
-    .from("pos_menu_items")
-    .select("id, name, stock_quantity, track_stock, active")
-    .eq("client_id", id)
-    .limit(500)
-    .then((r) => r)
-    .catch(() => ({ data: [] }));
+  const { data: menuStock } = dedicated
+    ? { data: [] }
+    : await db
+      .from("pos_menu_items")
+      .select("id, name, stock_quantity, track_stock, active")
+      .eq("client_id", id)
+      .limit(500)
+      .then((r) => r)
+      .catch(() => ({ data: [] }));
 
   const zeroStock = (menuStock || []).filter(
     (m) => m.track_stock && m.active !== false && Number(m.stock_quantity || 0) <= 0,
@@ -726,8 +729,10 @@ async function getLicensesView({ product } = {}) {
   }
 
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
-  await ensureLicenseHardwareSchema().catch(() => false);
-  const licenses = filterByProduct(await listLicenses(), p, licenseProductLine);
+  if (!isDedicatedProduct(p)) {
+    await ensureLicenseHardwareSchema().catch(() => false);
+  }
+  const licenses = filterByProduct(await listLicenses({ product: p }), p, licenseProductLine);
   return {
     licenses: licenses.map((l) => {
       const device = String(l.display_device_id || l.device_id || "").trim();

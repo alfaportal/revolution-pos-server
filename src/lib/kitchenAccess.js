@@ -77,7 +77,7 @@ async function ensureKitchenCredentials(client) {
   if (!client?.id) return client;
   if (client.kitchen_slug && client.kitchen_key) return client;
 
-  const db = getSupabase();
+  const { db } = await require("./productSupabase").dbForClientId(client.id);
   const patch = {};
   if (!client.kitchen_key) patch.kitchen_key = generateKitchenKey();
   if (!client.kitchen_slug) patch.kitchen_slug = generateKitchenSlug(client.emri);

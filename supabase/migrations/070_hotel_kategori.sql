@@ -1,5 +1,7 @@
 -- REVOLUTION HOTEL — kategoritë brenda hotelit (Super Admin telefon)
 -- Hotel, Motel, Hostel, Resort, Villë me qira.
+-- Nëse projekti është BOSH (Supabase i ri), ekzekuto supabase/bootstrap_hotel.sql
+-- (përfshin këto CHECK + tabelat clients/licenses). Ky file vetëm ALTER.
 
 ALTER TABLE public.clients DROP CONSTRAINT IF EXISTS clients_tipi_check;
 
