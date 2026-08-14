@@ -612,6 +612,7 @@ function renderLicenseEditBlocks(licenses, { security = false } = {}) {
                      <button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
                   : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo</button>`
               }
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-reset-device="${esc(l.id)}">Lësho PC</button>
               <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>`
           }
         </div>
@@ -728,6 +729,14 @@ async function openClientDetail(id, opts = {}) {
   document.getElementById("btn-drawer-delete-client")?.addEventListener("click", async () => {
     await deleteClientById(id, { product, name: c.emri, close: true });
   });
+}
+
+async function resetLicenseTerminals(licenseId) {
+  if (!confirm("Lësho PC / terminalet e kësaj licence?\n\nMARKET/POS hapet sërish në këtë kompjuter me të njëjtin çelës.")) {
+    return false;
+  }
+  await api(`/api/admin/licenses/${encodeURIComponent(licenseId)}/reset-device`, { method: "POST" });
+  return true;
 }
 
 async function deleteClientById(id, { product, name, close } = {}) {
@@ -1011,6 +1020,22 @@ function bindDrawerLicenseFix(root, clientId, productLine) {
       }
     });
   });
+  root.querySelectorAll("[data-drawer-reset-device]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const ok = await resetLicenseTerminals(btn.dataset.drawerResetDevice);
+        if (!ok) return;
+        alert("PC u lëshua. Hape sërish MARKET me të njëjtin çelës.");
+        await refreshClientsAndProblems();
+        await reopen();
+      } catch (ex) {
+        alert(ex.message || "Lëshimi i PC dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
   root.querySelectorAll("[data-drawer-wipe]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("Fshi të dhënat lokale te POS? (Cloud nuk fshihet)")) return;
@@ -1157,6 +1182,22 @@ function bindLicenseActions(root) {
         loadLicenses();
       } catch (ex) {
         alert(ex.message || "Riaktivizimi dështoi.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+  root.querySelectorAll("[data-reset-device]").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        const ok = await resetLicenseTerminals(btn.dataset.resetDevice);
+        if (!ok) return;
+        alert("PC u lëshua. Hape sërish MARKET/POS me të njëjtin çelës.");
+        await loadLicenses();
+      } catch (ex) {
+        alert(ex.message || "Lëshimi i PC dështoi.");
       } finally {
         btn.disabled = false;
       }
@@ -1505,6 +1546,7 @@ function renderLicensesList(filterText = "") {
                     ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
                     : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
                 }
+                <button type="button" class="btn btn-ghost btn-sm" data-reset-device="${esc(l.id)}">Lësho PC</button>
                 <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
                 <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi licencën</button>
               </div>
@@ -1559,6 +1601,7 @@ function renderLicensesList(filterText = "") {
                 ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
                 : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
             }
+            <button type="button" class="btn btn-ghost btn-sm" data-reset-device="${esc(l.id)}">Lësho PC</button>
             <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
             <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
