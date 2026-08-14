@@ -751,8 +751,12 @@ async function deleteClientById(id, { product, name, close } = {}) {
     return;
   }
   try {
-    const qs = prod === "security" ? "?product=security" : "?product=kafene";
-    await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE" });
+    const line =
+      currentProduct === "market" || currentProduct === "hotel" || currentProduct === "security"
+        ? currentProduct
+        : prod || "kafene";
+    const qs = `?product=${encodeURIComponent(line)}`;
+    await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE", product: line });
     alert("Klienti u fshi.");
     if (close) closeDrawer();
     await loadClients();
