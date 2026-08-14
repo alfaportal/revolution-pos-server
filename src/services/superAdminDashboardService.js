@@ -11,6 +11,7 @@ const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, featuresForTier } = require("../lib/packages");
 const {
   CLIENT_SECTORS,
+  MARKET_SECTORS,
   ADMIN_CLIENT_TIPI,
   TIPI_LABELS,
   normalizeClientTipi,
@@ -501,7 +502,14 @@ async function getClientsGrouped({ product } = {}) {
     licByClient.get(cid).push(lic);
   }
 
-  const sectorDefs = p === "hotel" ? HOTEL_SECTORS : p === "furra" ? FURRA_SECTORS : CLIENT_SECTORS;
+  const sectorDefs =
+    p === "hotel"
+      ? HOTEL_SECTORS
+      : p === "furra"
+        ? FURRA_SECTORS
+        : p === "market"
+          ? MARKET_SECTORS
+          : CLIENT_SECTORS;
   const sectors = sectorDefs.map((s) => ({
     num: s.num,
     id: s.id,
@@ -518,6 +526,8 @@ async function getClientsGrouped({ product } = {}) {
     if (p === "hotel") sector = HOTEL_SECTORS[0];
     else if (p === "furra") {
       sector = FURRA_SECTORS.find((s) => s.tipet.includes(tipi)) || FURRA_SECTORS[0];
+    } else if (p === "market") {
+      sector = MARKET_SECTORS.find((s) => s.tipet.includes(tipi)) || MARKET_SECTORS[0];
     } else {
       sector = sectorForTipi(tipi);
     }
@@ -586,7 +596,16 @@ function iconForTipi(tipi) {
     diskoteke: "🪩",
     dyqan_pijesh: "🥤",
     market: "🛒",
-    minimarket: "🧺",
+    minimarket: "🛒",
+    mini_market: "🛒",
+    pilar: "🏪",
+    supermarket: "🏬",
+    dyqan_ushqimor: "🥫",
+    manav: "🥬",
+    bulmetore: "🧀",
+    kasap: "🥩",
+    peshkore: "🐟",
+    dyqan_peshku: "🐟",
     dyqan_rroba: "👕",
     dyqan_kepuce: "👟",
     dyqan: "🏬",

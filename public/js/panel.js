@@ -59,7 +59,15 @@ const ADMIN_CLIENT_TIPI_OPTIONS = [
 
 const CLIENT_TIPI_LABELS = Object.fromEntries([
   ...ADMIN_CLIENT_TIPI_OPTIONS,
-  ["market", "Market"],
+  ["market", "Mini-market / Market"],
+  ["minimarket", "Mini-market / Market"],
+  ["pilar", "Pilar (dyqan i vogël lagje)"],
+  ["supermarket", "Supermarket"],
+  ["dyqan_ushqimor", "Dyqan ushqimor"],
+  ["manav", "Dyqan pemë-perimesh (manav)"],
+  ["bulmetore", "Dyqan bulmetore"],
+  ["kasap", "Dyqan mishit (kasap)"],
+  ["dyqan_peshku", "Dyqan peshku"],
   ["dyqan", "Dyqan"],
   ["tjeter", "Tjetër"],
 ]);

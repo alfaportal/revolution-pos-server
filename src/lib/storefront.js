@@ -1,6 +1,10 @@
 function isShopStorefront(client) {
   const tipi = String(client?.tipi || "").toLowerCase();
-  return tipi === "dyqan" || tipi === "tjeter";
+  return tipi === "dyqan" || tipi === "tjeter" || tipi === "market"
+    || tipi === "minimarket" || tipi === "mini_market" || tipi === "pilar"
+    || tipi === "supermarket" || tipi === "dyqan_ushqimor" || tipi === "manav"
+    || tipi === "bulmetore" || tipi === "kasap" || tipi === "peshkore"
+    || tipi === "dyqan_peshku";
 }
 
 function storefrontPrefix(client) {

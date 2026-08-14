@@ -14,12 +14,28 @@ const POS_REGISTER_TIPI = [
   "dyqan_pijesh",
 ];
 
+/** Ushqimore / Tregtare — REVOLUTION MARKET (licencë nga telefoni i adminit). */
+const MARKET_REGISTER_TIPI = [
+  "minimarket",
+  "pilar",
+  "supermarket",
+  "dyqan_ushqimor",
+  "manav",
+  "bulmetore",
+  "kasap",
+  "dyqan_peshku",
+];
+
+/** Tipet MARKET (të reja + legacy). */
+const MARKET_TIPI = [...MARKET_REGISTER_TIPI, "market", "mini_market", "peshkore"];
+
 /**
  * Tipet e lejuara në DB — përfshin edhe tipet e vjetra (klientë ekzistues).
- * Regjistrimi i ri përdor vetëm POS_REGISTER_TIPI.
+ * Regjistrimi i ri POS përdor POS_REGISTER_TIPI; MARKET përdor MARKET_REGISTER_TIPI.
  */
 const ADMIN_CLIENT_TIPI = [
   ...POS_REGISTER_TIPI,
+  ...MARKET_REGISTER_TIPI,
   "pub_lounge",
   "bar_nate",
   "klub",
@@ -31,7 +47,6 @@ const ADMIN_CLIENT_TIPI = [
   "furre_buke",
   "hotel_restorant",
   "market",
-  "minimarket",
   "dyqan_rroba",
   "dyqan_kepuce",
   "dyqan",
@@ -100,7 +115,7 @@ const CLIENT_SECTORS = [
     id: "other",
     label: "Të tjera (klientë të vjetër)",
     tipet: [
-      "pasticeri", "akullore", "gjeltore", "furre_buke", "market", "minimarket",
+      "pasticeri", "akullore", "gjeltore", "furre_buke",
       "dyqan_rroba", "dyqan_kepuce", "dyqan", "farmaci", "optike", "berber",
       "sallon_bukurie", "tjeter",
     ],
@@ -109,6 +124,65 @@ const CLIENT_SECTORS = [
 ];
 
 const HOSPITALITY_TIPET = POS_REGISTER_TIPI;
+
+const MARKET_SECTORS = [
+  {
+    num: 1,
+    id: "minimarket",
+    label: "Mini-market / Market",
+    tipet: ["minimarket", "market"],
+    keywords: ["mini", "market", "minimarket"],
+  },
+  {
+    num: 2,
+    id: "pilar",
+    label: "Pilar (dyqan i vogël lagje)",
+    tipet: ["pilar"],
+    keywords: ["pilar", "lagje", "i vogel"],
+  },
+  {
+    num: 3,
+    id: "supermarket",
+    label: "Supermarket",
+    tipet: ["supermarket"],
+    keywords: ["supermarket", "super"],
+  },
+  {
+    num: 4,
+    id: "dyqan_ushqimor",
+    label: "Dyqan ushqimor",
+    tipet: ["dyqan_ushqimor"],
+    keywords: ["ushqimor", "grocery"],
+  },
+  {
+    num: 5,
+    id: "manav",
+    label: "Dyqan pemë-perimesh (manav)",
+    tipet: ["manav"],
+    keywords: ["manav", "peme", "perime", "fruta"],
+  },
+  {
+    num: 6,
+    id: "bulmetore",
+    label: "Dyqan bulmetore",
+    tipet: ["bulmetore"],
+    keywords: ["bulmetore", "qumesht", "dairy"],
+  },
+  {
+    num: 7,
+    id: "kasap",
+    label: "Dyqan mishit (kasap)",
+    tipet: ["kasap"],
+    keywords: ["kasap", "mish", "butcher", "mishtore"],
+  },
+  {
+    num: 8,
+    id: "dyqan_peshku",
+    label: "Dyqan peshku",
+    tipet: ["dyqan_peshku"],
+    keywords: ["peshk", "fish", "peshkore"],
+  },
+];
 
 const TIPI_ALIASES = {
   restaurante: "restorant",
@@ -147,6 +221,30 @@ const TIPI_ALIASES = {
   "dyqan pijesh": "dyqan_pijesh",
   pije: "dyqan_pijesh",
   drinks: "dyqan_pijesh",
+  market: "minimarket",
+  mini_market: "minimarket",
+  "mini-market": "minimarket",
+  minimarket: "minimarket",
+  "mini market": "minimarket",
+  pilar: "pilar",
+  "dyqan i vogel": "pilar",
+  supermarket: "supermarket",
+  dyqan_ushqimor: "dyqan_ushqimor",
+  "dyqan ushqimor": "dyqan_ushqimor",
+  grocery: "dyqan_ushqimor",
+  manav: "manav",
+  "peme perime": "manav",
+  "dyqan peme-perimesh": "manav",
+  bulmetore: "bulmetore",
+  dairy: "bulmetore",
+  kasap: "kasap",
+  butcher: "kasap",
+  "dyqan mishit": "kasap",
+  mishtore: "kasap",
+  dyqan_peshku: "dyqan_peshku",
+  "dyqan peshku": "dyqan_peshku",
+  peshkore: "dyqan_peshku",
+  fish: "dyqan_peshku",
   other: "tjeter",
   tjetër: "tjeter",
   tjeter: "tjeter",
@@ -160,7 +258,6 @@ const TIPI_LABELS = {
   piceri: "Piceri",
   fast_food: "Fast Food Kiosk",
   dyqan_pijesh: "Dyqan pijesh",
-  // legacy labels (lexim)
   pub_lounge: "Bar / Pub",
   bar_nate: "Klub nate / Diskotekë",
   klub: "Klub nate / Diskotekë",
@@ -171,8 +268,15 @@ const TIPI_LABELS = {
   gjeltore: "Gjeltore",
   furre_buke: "Furrë Buke",
   hotel_restorant: "Hotel Restorant",
-  market: "Market",
-  minimarket: "Minimarket",
+  market: "Mini-market / Market",
+  minimarket: "Mini-market / Market",
+  pilar: "Pilar (dyqan i vogël lagje)",
+  supermarket: "Supermarket",
+  dyqan_ushqimor: "Dyqan ushqimor",
+  manav: "Dyqan pemë-perimesh (manav)",
+  bulmetore: "Dyqan bulmetore",
+  kasap: "Dyqan mishit (kasap)",
+  dyqan_peshku: "Dyqan peshku",
   dyqan_rroba: "Dyqan Rrobash",
   dyqan_kepuce: "Dyqan Këpucësh",
   dyqan: "Dyqan",
@@ -207,14 +311,17 @@ function assertClientTipi(raw) {
   const tipi = normalizeClientTipi(raw);
   if (!ALLOWED_CLIENT_TIPI.includes(tipi)) {
     throw new Error(
-      "Tipi i biznesit nuk njihet. Zgjidhni një veprimtari REVOLUTION POS (Kafene, Restorant, Bar/Pub, …).",
+      "Tipi i biznesit nuk njihet. Zgjidhni një veprimtari REVOLUTION POS / MARKET.",
     );
   }
   return tipi;
 }
 
 function appTypeFromClientTipi(tipi) {
-  return normalizeClientTipi(tipi) === "kafene" ? "kafene" : "restorant";
+  const t = normalizeClientTipi(tipi);
+  if (t === "kafene") return "kafene";
+  if (MARKET_TIPI.includes(t)) return "market";
+  return "restorant";
 }
 
 function labelForTipi(tipi) {
@@ -224,6 +331,9 @@ function labelForTipi(tipi) {
 
 function sectorForTipi(tipi) {
   const t = normalizeClientTipi(tipi);
+  for (const s of MARKET_SECTORS) {
+    if (s.tipet.includes(t)) return s;
+  }
   for (const s of CLIENT_SECTORS) {
     if (s.tipet.includes(t)) return s;
   }
@@ -232,10 +342,13 @@ function sectorForTipi(tipi) {
 
 module.exports = {
   POS_REGISTER_TIPI,
+  MARKET_REGISTER_TIPI,
+  MARKET_TIPI,
   ADMIN_CLIENT_TIPI,
   ALLOWED_CLIENT_TIPI,
   HOSPITALITY_TIPET,
   CLIENT_SECTORS,
+  MARKET_SECTORS,
   TIPI_LABELS,
   TIPI_ALIASES,
   normalizeClientTipi,

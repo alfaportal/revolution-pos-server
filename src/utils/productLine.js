@@ -28,10 +28,19 @@ const PRODUCT_LINES = [
     short: "Furra",
     description: "Furrë buke dhe pastiçeri — lista e ndarë nga POS",
   },
+  {
+    id: "market",
+    label: "REVOLUTION MARKET",
+    short: "Market",
+    description: "Ushqimore / Tregtare — mini-market, pilar, supermarket, manav, kasap, peshkore",
+  },
 ];
+
+const { MARKET_TIPI } = require("./businessTipi");
 
 const HOTEL_TIPI = ["hotel_restorant"];
 const FURRA_TIPI = ["furre_buke", "pasticeri"];
+const ALLOWED_APP_TYPES = ["restorant", "kafene", "sekurim", "market"];
 
 function normalizeProductLine(v) {
   const s = String(v || "")
@@ -40,6 +49,7 @@ function normalizeProductLine(v) {
   if (s === "security" || s === "sekurim" || s === "securetrack") return "security";
   if (s === "hotel" || s === "hotel_restorant") return "hotel";
   if (s === "furra" || s === "furre" || s === "furre_buke" || s === "bakery") return "furra";
+  if (s === "market" || s === "minimarket" || s === "mini_market") return "market";
   if (s === "kafene" || s === "cafe" || s === "pos" || s === "hospitality") return "kafene";
   if (PRODUCT_LINES.some((p) => p.id === s && p.enabled !== false)) return s;
   return "kafene";
@@ -55,8 +65,11 @@ function productLineLabel(id) {
 }
 
 function appTypeForProductLine(productLine, tipi) {
-  if (normalizeProductLine(productLine) === "security") return "sekurim";
+  const line = normalizeProductLine(productLine);
+  if (line === "security") return "sekurim";
+  if (line === "market") return "market";
   const t = String(tipi || "").toLowerCase();
+  if (MARKET_TIPI.includes(t)) return "market";
   return t === "kafene" ? "kafene" : "restorant";
 }
 
@@ -66,11 +79,14 @@ function adminProductOfClient(c) {
   const tipi = String(c?.tipi || "").trim().toLowerCase();
   if (HOTEL_TIPI.includes(tipi)) return "hotel";
   if (FURRA_TIPI.includes(tipi)) return "furra";
+  if (MARKET_TIPI.includes(tipi)) return "market";
   return "kafene";
 }
 
 function adminProductOfLicense(l) {
-  if (String(l?.app_type || "").toLowerCase() === "sekurim") return "security";
+  const appType = String(l?.app_type || "").toLowerCase();
+  if (appType === "sekurim") return "security";
+  if (appType === "market") return "market";
   const pl = String(l?.product_line || l?.clients?.product_line || "").toLowerCase();
   if (pl === "security" || pl === "sekurim" || pl === "securetrack") return "security";
   return adminProductOfClient(l?.clients || { tipi: l?.clients?.tipi, product_line: l?.product_line });
@@ -80,6 +96,8 @@ module.exports = {
   PRODUCT_LINES,
   HOTEL_TIPI,
   FURRA_TIPI,
+  MARKET_TIPI,
+  ALLOWED_APP_TYPES,
   normalizeProductLine,
   toDbProductLine,
   productLineLabel,

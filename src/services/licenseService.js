@@ -934,7 +934,7 @@ async function createLicense(body) {
   const { appTypeFromClientTipi } = require("../utils/businessTipi");
   const { normalizeProductLine, appTypeForProductLine } = require("../utils/productLine");
   let appType = body.app_type ? String(body.app_type).trim().toLowerCase() : "";
-  const allowedApp = ["restorant", "kafene", "sekurim"];
+  const allowedApp = ["restorant", "kafene", "sekurim", "market"];
   const { data: client } = await db
     .from("clients")
     .select("tipi, product_line")
@@ -1054,7 +1054,7 @@ async function updateLicense(id, body) {
     patch.celesi = celesi;
   }
   if (body.app_type != null) {
-    const allowedApp = ["restorant", "kafene", "sekurim"];
+    const allowedApp = ["restorant", "kafene", "sekurim", "market"];
     const appType = String(body.app_type).trim().toLowerCase();
     if (!allowedApp.includes(appType)) throw new Error(`Tipi i aplikacionit i pavlefshëm: ${body.app_type}`);
     patch.app_type = appType;

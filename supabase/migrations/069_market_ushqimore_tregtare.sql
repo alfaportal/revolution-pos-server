@@ -1,0 +1,48 @@
+-- REVOLUTION MARKET — Ushqimore / Tregtare (Super Admin telefon)
+-- Tipet e vjetra market/minimarket mbeten të lejuara.
+
+ALTER TABLE public.clients DROP CONSTRAINT IF EXISTS clients_tipi_check;
+
+ALTER TABLE public.clients ADD CONSTRAINT clients_tipi_check
+  CHECK (tipi IN (
+    'kafene',
+    'restorant',
+    'bar',
+    'klub_nate',
+    'piceri',
+    'fast_food',
+    'dyqan_pijesh',
+    'pub_lounge',
+    'bar_nate',
+    'klub',
+    'diskoteke',
+    'kebab',
+    'pasticeri',
+    'akullore',
+    'gjeltore',
+    'furre_buke',
+    'hotel_restorant',
+    'market',
+    'minimarket',
+    'mini_market',
+    'pilar',
+    'supermarket',
+    'dyqan_ushqimor',
+    'manav',
+    'bulmetore',
+    'kasap',
+    'peshkore',
+    'dyqan_peshku',
+    'dyqan_rroba',
+    'dyqan_kepuce',
+    'dyqan',
+    'farmaci',
+    'optike',
+    'berber',
+    'sallon_bukurie',
+    'tjeter'
+  ));
+
+ALTER TABLE public.licenses DROP CONSTRAINT IF EXISTS licenses_app_type_check;
+ALTER TABLE public.licenses ADD CONSTRAINT licenses_app_type_check
+  CHECK (app_type IN ('restorant', 'kafene', 'sekurim', 'market'));

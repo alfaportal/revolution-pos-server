@@ -4,7 +4,7 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene | security | hotel | furra — kurrë «all» */
+/** Produkti aktiv: kafene | security | hotel | furra | market — kurrë «all» */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
 if (currentProduct === "all" || currentProduct === "te_gjitha") currentProduct = "kafene";
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
@@ -31,6 +31,16 @@ const FALLBACK_HOTEL_SECTORS = [
 const FALLBACK_FURRA_SECTORS = [
   { num: 1, id: "furre_buke", label: "Furrë Buke", keywords: ["furra", "buke"], clients: [] },
   { num: 2, id: "pasticeri", label: "Pastiçeri / Ëmbëltore", keywords: ["pasticeri"], clients: [] },
+];
+const FALLBACK_MARKET_SECTORS = [
+  { num: 1, id: "minimarket", label: "Mini-market / Market", keywords: ["mini", "market"], clients: [] },
+  { num: 2, id: "pilar", label: "Pilar (dyqan i vogël lagje)", keywords: ["pilar", "lagje"], clients: [] },
+  { num: 3, id: "supermarket", label: "Supermarket", keywords: ["supermarket"], clients: [] },
+  { num: 4, id: "dyqan_ushqimor", label: "Dyqan ushqimor", keywords: ["ushqimor"], clients: [] },
+  { num: 5, id: "manav", label: "Dyqan pemë-perimesh (manav)", keywords: ["manav", "peme", "perime"], clients: [] },
+  { num: 6, id: "bulmetore", label: "Dyqan bulmetore", keywords: ["bulmetore"], clients: [] },
+  { num: 7, id: "kasap", label: "Dyqan mishit (kasap)", keywords: ["kasap", "mish"], clients: [] },
+  { num: 8, id: "dyqan_peshku", label: "Dyqan peshku", keywords: ["peshk"], clients: [] },
 ];
 
 const FALLBACK_SECURITY_SECTORS = [
@@ -88,7 +98,7 @@ function productQuery(_forClients = false) {
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1, security: 1, hotel: 1, furra: 1 };
+  const allowed = { kafene: 1, security: 1, hotel: 1, furra: 1, market: 1 };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -110,7 +120,9 @@ function setProductTab(product, { reload = true } = {}) {
           ? "Klientët REVOLUTION HOTEL"
           : currentProduct === "furra"
             ? "Klientët REVOLUTION FURRA"
-            : "Klientët REVOLUTION POS";
+            : currentProduct === "market"
+              ? "Klientët REVOLUTION MARKET"
+              : "Klientët REVOLUTION POS";
   }
   if (!reload) return;
   const activeSec = document.querySelector(".section.active");
@@ -132,6 +144,14 @@ function syncNewClientForm() {
   document.querySelectorAll(".nc-furra-only").forEach((el) => {
     el.classList.toggle("hidden", product !== "furra");
   });
+  document.querySelectorAll(".nc-market-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "market");
+  });
+  document.querySelectorAll(".nc-tier-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "kafene" && product !== "market");
+  });
+  const pako = document.getElementById("nc-pako")?.closest(".field");
+  if (pako) pako.classList.toggle("hidden", product === "security");
 }
 
 function showBridgeMsg(text) {
@@ -331,7 +351,9 @@ function renderClientsSectors(filterText = "") {
         ? ensureSectors(sectorsCache, FALLBACK_HOTEL_SECTORS)
         : currentProduct === "furra"
           ? ensureSectors(sectorsCache, FALLBACK_FURRA_SECTORS)
-          : ensureNineSectors(sectorsCache);
+          : currentProduct === "market"
+            ? ensureSectors(sectorsCache, FALLBACK_MARKET_SECTORS)
+            : ensureNineSectors(sectorsCache);
 
   const html = sectors
     .map((s) => {
@@ -431,6 +453,8 @@ async function loadClients() {
       sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_HOTEL_SECTORS);
     } else if (product === "furra") {
       sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_FURRA_SECTORS);
+    } else if (product === "market") {
+      sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_MARKET_SECTORS);
     } else {
       sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
     }
@@ -2213,7 +2237,9 @@ async function boot() {
           ? document.getElementById("nc-hotel-tipi")?.value || "hotel_restorant"
           : product === "furra"
             ? document.getElementById("nc-furra-tipi")?.value || "furre_buke"
-            : document.getElementById("nc-tipi")?.value,
+            : product === "market"
+              ? document.getElementById("nc-market-tipi")?.value || "minimarket"
+              : document.getElementById("nc-tipi")?.value,
       package_tier: document.getElementById("nc-pako")?.value,
       veprimtari: document.getElementById("nc-veprimtari")?.value,
       issue_license: issueLicense,
