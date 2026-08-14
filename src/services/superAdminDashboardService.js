@@ -29,6 +29,11 @@ const {
   adminProductOfLicense,
 } = require("../utils/productLine");
 const { isDedicatedProduct } = require("../lib/productSupabase");
+const {
+  getSecurityOverview,
+  getSecurityClientsGrouped,
+  getSecurityLicensesView,
+} = require("./securityAdminBridge");
 
 function clientProductLine(c) {
   return adminProductOfClient(c);
@@ -467,12 +472,38 @@ async function getOverviewKafene(adminProduct = "kafene") {
   };
 }
 
+function dedicatedDbErrorPayload(p, err) {
+  return {
+    active_clients: 0,
+    clients_total: 0,
+    licenses_total: 0,
+    licenses_active: 0,
+    trial_accounts: 0,
+    sales_today_total: 0,
+    problem_clients: [],
+    weekly_sales: [],
+    sectors: [],
+    groups: [],
+    total: 0,
+    licenses: [],
+    product_line: p,
+    bridge_error: err.message || String(err),
+  };
+}
+
 async function getOverview({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
   if (p === "security") {
     return getSecurityOverview();
   }
-  return getOverviewKafene(p);
+  try {
+    return await getOverviewKafene(p);
+  } catch (e) {
+    if (e.code === "PRODUCT_SUPABASE_MISSING" || /Mungon .*_SUPABASE/i.test(e.message || "")) {
+      return dedicatedDbErrorPayload(p, e);
+    }
+    throw e;
+  }
 }
 
 async function getClientsGrouped({ product } = {}) {
@@ -481,11 +512,35 @@ async function getClientsGrouped({ product } = {}) {
     return getSecurityClientsGrouped();
   }
 
-  const [clientsAll, licenses, salesToday] = await Promise.all([
+  let clientsAll;
+  let licenses;
+  let salesToday;
+  try {
+    [clientsAll, licenses, salesToday] = await Promise.all([
     listClients({ product: p }),
     listLicenses({ product: p }),
     isDedicatedProduct(p) ? Promise.resolve({ total: 0, byClient: new Map() }) : salesTodayByClient(),
   ]);
+  } catch (e) {
+    if (
+      e.code === "PRODUCT_SUPABASE_MISSING"
+      || /Mungon .*_SUPABASE|PGRST205|schema cache|does not exist/i.test(e.message || "")
+    ) {
+      return {
+        ...dedicatedDbErrorPayload(p, e),
+        sectors: (p === "hotel" ? HOTEL_SECTORS : p === "market" ? MARKET_SECTORS : p === "furra" ? FURRA_SECTORS : CLIENT_SECTORS).map((s) => ({
+          num: s.num,
+          id: s.id,
+          label: s.label,
+          tipet: s.tipet,
+          keywords: s.keywords || [],
+          clients: [],
+          count: 0,
+        })),
+      };
+    }
+    throw e;
+  }
   const clients = filterByProduct(clientsAll, p, clientProductLine);
 
   const licByClient = new Map();
@@ -732,27 +787,37 @@ async function getLicensesView({ product } = {}) {
   if (!isDedicatedProduct(p)) {
     await ensureLicenseHardwareSchema().catch(() => false);
   }
-  const licenses = filterByProduct(await listLicenses({ product: p }), p, licenseProductLine);
-  return {
-    licenses: licenses.map((l) => {
-      const device = String(l.display_device_id || l.device_id || "").trim();
-      const hardware_id = resolveLicenseHardwareId(l);
-      return {
-        id: l.id,
-        client_id: l.client_id || l.clients?.id,
-        client_name: l.clients?.emri || "—",
-        device_id: device,
-        hardware_id,
-        license_key: l.celesi || "",
-        statusi: l.statusi,
-        activated_at: l.last_activated_at || l.created_at,
-        last_seen_at: licenseLastSeen(l),
-        product_line: licenseProductLine(l),
-      };
-    }),
-    product_line: p,
-    products: PRODUCT_LINES,
-  };
+  try {
+    const licenses = filterByProduct(await listLicenses({ product: p }), p, licenseProductLine);
+    return {
+      licenses: licenses.map((l) => {
+        const device = String(l.display_device_id || l.device_id || "").trim();
+        const hardware_id = resolveLicenseHardwareId(l);
+        return {
+          id: l.id,
+          client_id: l.client_id || l.clients?.id,
+          client_name: l.clients?.emri || "—",
+          device_id: device,
+          hardware_id,
+          license_key: l.celesi || "",
+          statusi: l.statusi,
+          activated_at: l.last_activated_at || l.created_at,
+          last_seen_at: licenseLastSeen(l),
+          product_line: licenseProductLine(l),
+        };
+      }),
+      product_line: p,
+      products: PRODUCT_LINES,
+    };
+  } catch (e) {
+    if (
+      e.code === "PRODUCT_SUPABASE_MISSING"
+      || /Mungon .*_SUPABASE|PGRST205|schema cache|does not exist/i.test(e.message || "")
+    ) {
+      return { licenses: [], product_line: p, products: PRODUCT_LINES, bridge_error: e.message };
+    }
+    throw e;
+  }
 }
 
 async function getAiUsageDashboard({ month } = {}) {

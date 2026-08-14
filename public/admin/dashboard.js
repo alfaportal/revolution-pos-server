@@ -295,7 +295,20 @@ function renderChart(el, points, valueKey = "total") {
 }
 
 async function loadOverview() {
-  const d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
+  let d = {};
+  try {
+    d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
+  } catch (e) {
+    d = {
+      active_clients: "—",
+      licenses_active: "—",
+      trial_accounts: "—",
+      sales_today_total: 0,
+      problem_clients: [],
+      weekly_sales: [],
+      bridge_error: e.message || "Gabim gjatë pasqyrës",
+    };
+  }
   document.getElementById("kpi-active").textContent = String(d.active_clients ?? 0);
   const kpiLic = document.getElementById("kpi-licenses");
   if (kpiLic) kpiLic.textContent = String(d.licenses_active ?? d.licenses_total ?? 0);

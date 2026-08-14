@@ -10,26 +10,33 @@ const { normalizeProductLine } = require("../utils/productLine");
 const cache = new Map();
 const licenseHome = new Map();
 
+/** URL të publike të projekteve të ndara (të njëjtat si bootstrap_*.sql). Railway i mbishkruan. */
+const DEFAULT_PRODUCT_DB = {
+  market: {
+    url: "https://lbcjmpwvfqonsfjlutfp.supabase.co",
+    // Anon i dhënë nga pronari për Super Admin → MARKET. Railway: MARKET_SUPABASE_SERVICE_ROLE_KEY.
+    anon:
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiY2ptcHd2ZnFvbnNmamx1dGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MDA1ODksImV4cCI6MjEwMjI3NjU4OX0.yf2MdWyi3oGimDJVyEO3hWHSrKpHWZmB18FKG9krBH4",
+  },
+  hotel: {
+    url: "https://mnzmbgaqtdxrtutfjesr.supabase.co",
+    anon:
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uem1iZ2FxdGR4cnR1dGZqZXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2OTk0NzQsImV4cCI6MjEwMjI3NTQ3NH0.8A9tvxH7Bm7hB-PdJrSa9EkVHsBRfJ0vaWaLPKPSMEg",
+  },
+};
+
 function productEnv(product) {
   const p = normalizeProductLine(product);
-  if (p === "market") {
+  const defaults = DEFAULT_PRODUCT_DB[p];
+  if (p === "market" || p === "hotel") {
     return {
-      product: "market",
-      url: trimEnv("MARKET_SUPABASE_URL"),
+      product: p,
+      url: trimEnv(`${p.toUpperCase()}_SUPABASE_URL`) || defaults.url,
       key:
-        trimEnv("MARKET_SUPABASE_SERVICE_ROLE_KEY")
-        || trimEnv("MARKET_SUPABASE_KEY")
-        || trimEnv("MARKET_SUPABASE_ANON_KEY"),
-    };
-  }
-  if (p === "hotel") {
-    return {
-      product: "hotel",
-      url: trimEnv("HOTEL_SUPABASE_URL"),
-      key:
-        trimEnv("HOTEL_SUPABASE_SERVICE_ROLE_KEY")
-        || trimEnv("HOTEL_SUPABASE_KEY")
-        || trimEnv("HOTEL_SUPABASE_ANON_KEY"),
+        trimEnv(`${p.toUpperCase()}_SUPABASE_SERVICE_ROLE_KEY`)
+        || trimEnv(`${p.toUpperCase()}_SUPABASE_KEY`)
+        || trimEnv(`${p.toUpperCase()}_SUPABASE_ANON_KEY`)
+        || defaults.anon,
     };
   }
   return { product: "kafene", url: "", key: "" };
