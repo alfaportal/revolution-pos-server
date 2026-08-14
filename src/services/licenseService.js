@@ -736,6 +736,10 @@ async function createClient(body) {
     err.code = "WRONG_SUPABASE";
     throw err;
   }
+  if (requestedLine === "market" || requestedLine === "hotel") {
+    const { dedicatedServerError } = require("../lib/productSupabase");
+    throw dedicatedServerError(requestedLine);
+  }
   const db = getSupabaseForProduct(requestedLine);
   const productLine = isDedicatedProduct(requestedLine)
     ? requestedLine

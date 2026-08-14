@@ -16,7 +16,7 @@ async function expireLicensesDaily() {
   const today = todayISO();
   const nowIso = new Date().toISOString();
   const expiredIds = [];
-  for (const product of ["kafene", "market", "hotel"]) {
+  for (const product of ["kafene"]) {
     try {
       const ids = await expireOnDb(getSupabaseForProduct(product), today, nowIso);
       expiredIds.push(...ids);

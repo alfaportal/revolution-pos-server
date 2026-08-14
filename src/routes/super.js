@@ -41,6 +41,7 @@ const {
   updateSecurityLicense,
 } = require("../services/securityAdminBridge");
 const { normalizeProductLine } = require("../utils/productLine");
+const { dedicatedServerError } = require("../lib/productSupabase");
 const {
   blockLicense,
   unblockLicense,
@@ -165,6 +166,9 @@ router.get(
   "/dashboard/overview",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "all";
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     res.json({ ok: true, ...(await getOverview({ product })) });
   }),
 );
@@ -173,6 +177,9 @@ router.get(
   "/dashboard/clients",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "kafene";
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     res.json({ ok: true, ...(await getClientsGrouped({ product })) });
   }),
 );
@@ -182,12 +189,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const raw = String(req.query.product || req.query.industry || "kafene").toLowerCase();
     const product = normalizeProductLine(raw);
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     const preferSecurity = product === "security";
     const tryOrder = preferSecurity
-      ? ["security", "kafene", "market", "hotel"]
-      : product === "market" || product === "hotel"
-        ? [product, "kafene", "security"]
-        : ["kafene", "market", "hotel", "security"];
+      ? ["security", "kafene"]
+      : ["kafene", "security"];
     let lastErr = null;
     for (const line of tryOrder) {
       try {
@@ -306,6 +314,9 @@ router.patch(
     const product = normalizeProductLine(
       req.body?.product_line || req.query.product || "kafene",
     );
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     const body = req.body || {};
     const licPatches = Array.isArray(body.licenses) ? body.licenses : [];
 
@@ -446,6 +457,9 @@ router.get(
   "/dashboard/licenses",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "kafene";
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     res.json({ ok: true, ...(await getLicensesView({ product })) });
   }),
 );
@@ -457,6 +471,9 @@ router.post(
     const product = normalizeProductLine(
       req.body?.product_line || req.body?.industry_type || req.query.product,
     );
+    if (product === "market" || product === "hotel") {
+      throw dedicatedServerError(product);
+    }
     const {
       generateHardwareLicenseKey,
       normalizeHardwareId,

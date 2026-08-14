@@ -264,7 +264,7 @@ async function countOverLimitOnDb(db) {
 
 async function countLicensesOverTerminalLimit() {
   let total = 0;
-  for (const product of ["kafene", "market", "hotel"]) {
+  for (const product of ["kafene"]) {
     try {
       total += await countOverLimitOnDb(getSupabaseForProduct(product));
     } catch {

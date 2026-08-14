@@ -201,11 +201,42 @@ function fmtDate(iso) {
   }
 }
 
+const PRODUCT_API_ORIGIN = {
+  market: "https://revolution-market-server-production.up.railway.app",
+  hotel: "https://revolution-hotel-server-production.up.railway.app",
+};
+
+function staysOnPosServer(path) {
+  const p = String(path || "");
+  if (p.startsWith("/api/auth")) return true;
+  if (p.includes("/dashboard/security")) return true;
+  if (p.includes("/dashboard/settings")) return true;
+  if (p.includes("/dashboard/billing")) return true;
+  if (p.includes("/dashboard/problems")) return true;
+  if (p.startsWith("/api/admin/bank-payments")) return true;
+  if (p.startsWith("/api/admin/setup-download")) return true;
+  return false;
+}
+
+function apiOriginFor(path, productOpt) {
+  if (staysOnPosServer(path)) return "";
+  const p = productOpt || currentProduct || "kafene";
+  if (p === "market" || p === "hotel") return PRODUCT_API_ORIGIN[p];
+  return "";
+}
+
 async function api(path, opts = {}) {
-  const headers = { ...(opts.headers || {}) };
+  const { product: productOpt, ...rest } = opts;
+  const headers = { ...(rest.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (opts.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
-  const res = await fetch(path, { ...opts, headers, credentials: "include" });
+  if (rest.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const origin = apiOriginFor(path, productOpt);
+  const url = origin ? `${origin}${path}` : path;
+  const res = await fetch(url, {
+    ...rest,
+    headers,
+    credentials: origin ? "omit" : "include",
+  });
   const ct = res.headers.get("content-type") || "";
   if (ct.includes("application/pdf") || ct.includes("text/csv")) {
     if (!res.ok) throw new Error("Kërkesa dështoi");

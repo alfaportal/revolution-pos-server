@@ -741,7 +741,8 @@ app.get(
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
   if (!res.headersSent) {
-    res.status(500).json({ gabim: formatError(err) || "Gabim i brendshëm serveri." });
+    const status = Number(err.status) >= 400 && Number(err.status) < 600 ? Number(err.status) : 500;
+    res.status(status).json({ gabim: formatError(err) || "Gabim i brendshëm serveri." });
   }
 });
 

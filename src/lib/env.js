@@ -2,7 +2,7 @@ const path = require("path");
 
 // Lexo .env nga rrënja e projektit (edhe kur cwd ndryshon)
 require("dotenv").config({ path: path.join(__dirname, "../../.env") });
-require("dotenv").config({ path: path.join(__dirname, "../../.env.products"), override: false });
+// MARKET/HOTEL kanë Railway + Supabase të vet — POS nuk i ngarkon.
 
 function trimEnv(name) {
   const v = process.env[name];
@@ -31,8 +31,6 @@ function logEnvStatus() {
   console.log("\n  ── Variablat e mjedisit ──");
   console.log(`  SUPABASE_URL:              ${url || "❌ MUNGON"}`);
   console.log(`  SUPABASE_SERVICE_ROLE_KEY: ${maskKey(key)}`);
-  console.log(`  MARKET_SUPABASE_URL:       ${trimEnv("MARKET_SUPABASE_URL") || "(nuk është vendosur)"}`);
-  console.log(`  HOTEL_SUPABASE_URL:        ${trimEnv("HOTEL_SUPABASE_URL") || "(nuk është vendosur)"}`);
   console.log(`  JWT_SECRET:                ${jwt ? `set (${jwt.length} chars)` : "❌ MUNGON"}`);
   console.log(`  NODE_ENV:                  ${process.env.NODE_ENV || "development"}`);
   console.log(`  PORT:                      ${process.env.PORT || "8080"}\n`);
