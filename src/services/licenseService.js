@@ -106,6 +106,31 @@ function compactKey(key) {
   return normalizeKey(key).replace(/-/g, "");
 }
 
+function formatCompact16(compact) {
+  const c = String(compact || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (c.length !== 16) return compact;
+  return `${c.slice(0, 4)}-${c.slice(4, 8)}-${c.slice(8, 12)}-${c.slice(12, 16)}`;
+}
+
+/** Variante 0/O dhe 1/I — klienti shpesh i ngatërron, çelësi hex e ka 0. */
+function keyLookupVariants(normalized) {
+  const compact = compactKey(normalized);
+  const set = new Set();
+  const add = (v) => {
+    const n = normalizeKey(v);
+    if (n) set.add(n);
+    const c = compactKey(n || v);
+    if (c) set.add(c);
+    if (c.length === 16) set.add(formatCompact16(c));
+  };
+  add(normalized);
+  add(compact.replace(/0/g, "O"));
+  add(compact.replace(/O/g, "0"));
+  add(compact.replace(/1/g, "I"));
+  add(compact.replace(/I/g, "1"));
+  return [...set].filter(Boolean);
+}
+
 /** Shkronja të ngatërruara shpesh në çelësin e licencës (0/O, 1/I, …). */
 function charsEquivalent(a, b) {
   if (a === b) return true;
@@ -211,34 +236,46 @@ async function findLicenseByDeviceId(deviceId) {
 }
 
 async function findLicenseByKeyOnDb(db, normalized) {
+  const variants = keyLookupVariants(normalized);
   const { data, error } = await db
     .from("licenses")
-    .select(LICENSE_WITH_CLIENT_SELECT)
-    .eq("celesi", normalized)
-    .maybeSingle();
+    .select("id, celesi")
+    .in("celesi", variants)
+    .limit(5);
   if (error) throw error;
-  if (data) return data;
-
-  const { data: ilikeRows, error: ilikeErr } = await db
+  let hit = (data || [])[0] || null;
+  if (!hit) {
+    const { data: ilikeRows, error: ilikeErr } = await db
+      .from("licenses")
+      .select("id, celesi")
+      .ilike("celesi", normalized);
+    if (ilikeErr) throw ilikeErr;
+    if (ilikeRows?.length === 1) hit = ilikeRows[0];
+  }
+  if (!hit) {
+    const compact = compactKey(normalized);
+    const { data: allRows, error: allErr } = await db.from("licenses").select("id, celesi");
+    if (allErr) throw allErr;
+    const rows = allRows || [];
+    if (compact.length >= 8) {
+      hit = rows.find((row) => compactKey(row.celesi) === compact) || null;
+    }
+    if (!hit) {
+      const fuzzy = rows.filter((row) => licenseKeysEquivalent(normalized, row.celesi));
+      if (fuzzy.length === 1) hit = fuzzy[0];
+    }
+  }
+  if (!hit) return null;
+  const { data: full, error: fullErr } = await db
     .from("licenses")
     .select(LICENSE_WITH_CLIENT_SELECT)
-    .ilike("celesi", normalized);
-  if (ilikeErr) throw ilikeErr;
-  if (ilikeRows?.length === 1) return ilikeRows[0];
-
-  const { data: allRows, error: allErr } = await db.from("licenses").select(LICENSE_WITH_CLIENT_SELECT);
-  if (allErr) throw allErr;
-  const rows = allRows || [];
-
-  const compact = compactKey(normalized);
-  if (compact.length >= 8) {
-    const exact = rows.find((row) => compactKey(row.celesi) === compact);
-    if (exact) return exact;
+    .eq("id", hit.id)
+    .maybeSingle();
+  if (fullErr) {
+    const { data: plain } = await db.from("licenses").select("*").eq("id", hit.id).maybeSingle();
+    return plain || hit;
   }
-
-  const fuzzy = rows.filter((row) => licenseKeysEquivalent(normalized, row.celesi));
-  if (fuzzy.length === 1) return fuzzy[0];
-  return null;
+  return full || hit;
 }
 
 async function findLicenseByKey(celesi) {
@@ -428,7 +465,7 @@ async function validateLicense({
     return {
       valid: false,
       code: "NOT_FOUND",
-      message: "Liçenca nuk u gjet. Kontrolloni çelësin (0 = numër, O = shkronjë).",
+      message: "Licenca nuk u gjet në server. Ruajeni klientin nga telefoni (Shto klient), pastaj përdorni të njëjtin çelës. 0 është numër — është në rregull.",
       force_logout: true,
       force_factory_reset: true,
     };
@@ -723,6 +760,12 @@ async function createClient(body) {
   }
   if (error) {
     logRouteError("createClient", error, { row });
+    const msg = String(error.message || error.code || "");
+    if (/42501|row-level security/i.test(msg)) {
+      throw new Error(
+        "Databaza bllokon ruajtjen (RLS). Te Supabase SQL Editor i MARKET/HOTEL ekzekuto: ALTER TABLE clients DISABLE ROW LEVEL SECURITY; ALTER TABLE licenses DISABLE ROW LEVEL SECURITY;",
+      );
+    }
     if (String(error.message || "").includes("clients_package_tier_check")) {
       throw new Error(
         "Pakoja e zgjedhur nuk lejohet në DB. Ekzekutoni supabase/migrations/036_fix_clients_package_tier_check.sql.",

@@ -106,3 +106,9 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.clients, public.licenses, public.license_terminals, public.users
   TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- Supabase i ri e ndez RLS pa policy → INSERT/SELECT anon dështon (licenca “nuk gjendet”).
+ALTER TABLE public.clients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.licenses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.license_terminals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
