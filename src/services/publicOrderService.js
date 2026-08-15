@@ -73,6 +73,21 @@ async function submitPublicOrder(client, body) {
     console.warn("[inventory] public order deduct failed:", err.message);
   }
 
+  if (sale?.id) {
+    try {
+      const { notifyKitchenUpdate } = require("./kdsEvents");
+      notifyKitchenUpdate(client.id, {
+        order_id: sale.id,
+        table_number: 0,
+        status: "ordered",
+        device_id: WEB_PUBLIC,
+        waiter_name: waiterName,
+      });
+    } catch (err) {
+      console.warn("[public/orders] SSE notify failed:", err.message);
+    }
+  }
+
   return {
     ok: true,
     order: sale,

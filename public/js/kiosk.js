@@ -15,8 +15,15 @@
   let cart = [];
   let menuGroupFilter = "";
   let orderSubmitting = false;
+  const ORDER_FETCH_TIMEOUT_MS = 15000;
 
   const $ = id => document.getElementById(id);
+
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(el => {
+      el.classList.toggle("active", el.id === id);
+    });
+  }
 
   function syncKioskLayout() {
     const screen = $("screen-order");
@@ -60,16 +67,7 @@
     return kitchenKey ? `?key=${encodeURIComponent(kitchenKey)}` : "";
   }
 
-  async function api(path, opts = {}) {
-    const res = await fetch(path, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(kitchenKey ? { "x-kitchen-key": kitchenKey } : {}),
-      },
-      ...opts,
-    });
-    let data = {};
-    try { data = await res.json(); } catch { /* */ }
+  function parseApiResponse(res, data) {
     if (!res.ok || data.ok === false) {
       const msg = data.gabim || `Gabim HTTP ${res.status}`;
       if (res.status === 404 && /lokali nuk u gjet/i.test(msg)) {
@@ -80,6 +78,45 @@
       throw new Error(msg);
     }
     return data;
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(kitchenKey ? { "x-kitchen-key": kitchenKey } : {}),
+      },
+      ...opts,
+    });
+    let data = {};
+    try { data = await res.json(); } catch { /* */ }
+    return parseApiResponse(res, data);
+  }
+
+  async function apiPostWithTimeout(path, body, timeoutMs = ORDER_FETCH_TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(kitchenKey ? { "x-kitchen-key": kitchenKey } : {}),
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      let data = {};
+      try { data = await res.json(); } catch { /* */ }
+      return parseApiResponse(res, data);
+    } catch (e) {
+      if (e.name === "AbortError") {
+        throw new Error("Serveri nuk përgjigjet brenda 15 sekondave. Provoni përsëri.");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   function updateSyncHint() {
@@ -274,6 +311,12 @@
     });
   }
 
+  function startNewOrder() {
+    showErr($("order-err"), "");
+    showScreen("screen-order");
+    scheduleKioskLayout();
+  }
+
   async function submitOrder() {
     if (orderSubmitting) return;
     const err = $("order-err");
@@ -287,31 +330,34 @@
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     try {
-      await api(apiPath("/order"), {
-        method: "POST",
-        body: JSON.stringify({
-          table_number: tableNumber,
-          items: cart.map(c => ({
-            name: c.name,
-            quantity: c.quantity,
-            price: c.price,
-          })),
-        }),
+      await apiPostWithTimeout(apiPath("/order"), {
+        table_number: tableNumber,
+        items: cart.map(c => ({
+          name: c.name,
+          quantity: c.quantity,
+          price: c.price,
+        })),
       });
       cart = [];
       renderCart();
-      showErr($("order-err"), `✅ Porosia u dërgua te banaku për T${tableNumber}!`);
-      setTimeout(() => showErr($("order-err"), ""), 4000);
+      const msgEl = $("success-msg");
+      if (msgEl) {
+        msgEl.textContent = `Porosia juaj për T${tableNumber} u dërgua te banaku.`;
+      }
+      showScreen("screen-success");
     } catch (e) {
       showErr(err, e.message);
     } finally {
       orderSubmitting = false;
-      btn.disabled = cart.length === 0;
-      btn.textContent = "Dërgo porosinë te banaku";
+      if ($("screen-order")?.classList.contains("active")) {
+        btn.disabled = cart.length === 0;
+        btn.textContent = "Dërgo porosinë te banaku";
+      }
     }
   }
 
   bindTap($("btn-send"), submitOrder);
+  bindTap($("btn-order-again"), startNewOrder);
 
   async function refreshMenu() {
     if (!bootstrap) return;

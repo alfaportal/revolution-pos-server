@@ -59,6 +59,21 @@ async function submitKioskOrder(client, body) {
     console.warn("[inventory] kiosk deduct failed:", err.message);
   }
 
+  if (sale?.id) {
+    try {
+      const { notifyKitchenUpdate } = require("./kdsEvents");
+      notifyKitchenUpdate(client.id, {
+        order_id: sale.id,
+        table_number: tableNumber,
+        status: "ordered",
+        device_id: WEB_KIOSK,
+        waiter_name: waiterName,
+      });
+    } catch (err) {
+      console.warn("[kiosk/orders] SSE notify failed:", err.message);
+    }
+  }
+
   return {
     ok: true,
     order: sale,

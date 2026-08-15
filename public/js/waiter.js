@@ -7,6 +7,7 @@
   const returnUrl = urlParams.get("return") || "";
   const kasaSession = urlParams.get("kasa_session") || "";
   const WAITER_IDLE_MS = 300000;
+  const ORDER_FETCH_TIMEOUT_MS = 15000;
   const WAITER_SESSION_KEY = slug ? `waiter_session_${slug}` : "waiter_session";
 
   function registerServiceWorker() {
@@ -248,13 +249,7 @@
     return Number(n).toFixed(2) + " €";
   }
 
-  async function api(path, opts = {}) {
-    const res = await fetch(path, {
-      headers: apiHeaders(opts.headers || {}),
-      ...opts,
-    });
-    let data = {};
-    try { data = await res.json(); } catch { /* */ }
+  function parseApiResponse(res, data) {
     if (!res.ok || data.ok === false) {
       if (res.status === 403 && data.code === "KITCHEN_KEY_INVALID") {
         throw new Error("Kodi i linkut (?key=...) nuk është i saktë. Kopjoni linkun e ri te paneli → Kamarierët → Kopjo.");
@@ -265,6 +260,39 @@
       throw new Error(data.gabim || `Gabim HTTP ${res.status}`);
     }
     return data;
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, {
+      headers: apiHeaders(opts.headers || {}),
+      ...opts,
+    });
+    let data = {};
+    try { data = await res.json(); } catch { /* */ }
+    return parseApiResponse(res, data);
+  }
+
+  async function apiPostWithTimeout(path, body, timeoutMs = ORDER_FETCH_TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: apiHeaders(),
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      let data = {};
+      try { data = await res.json(); } catch { /* */ }
+      return parseApiResponse(res, data);
+    } catch (e) {
+      if (e.name === "AbortError") {
+        throw new Error("Serveri nuk përgjigjet brenda 15 sekondave. Provoni përsëri.");
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   function isNetworkError(err) {
@@ -2122,10 +2150,7 @@
     }
 
     try {
-      const data = await api(orderUrl, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const data = await apiPostWithTimeout(orderUrl, payload);
       if (data.order?.id) handledAcceptIds.add(data.order.id);
       cart = [];
       renderCart();
