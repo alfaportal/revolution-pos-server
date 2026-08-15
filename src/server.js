@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const { createProxyMiddleware, fixRequestBody } = require("http-proxy-middleware");
 
 const { logEnvStatus } = require("./lib/env");
 const { formatError } = require("./lib/errors");
@@ -65,11 +64,6 @@ const {
 } = require("./services/seoPublicPageHtml");
 const { renderMarketingHtml } = require("./services/seoMarketingHtml");
 
-/** SecureTrack (Security) — proxy për revolution-pos.com/security/* */
-const SECURITY_UPSTREAM =
-  process.env.SECURITY_UPSTREAM_URL ||
-  "https://revolution-security-production.up.railway.app";
-
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
 
@@ -89,38 +83,6 @@ app.post(
   },
 );
 
-/**
- * SecureTrack — reverse proxy (URL mbetet revolution-pos.com/security).
- * DUHET para express.json(): përndryshe body-parser e konsumon trupin e POST-it
- * dhe kërkesa e përcjellë mbetet varur pa përgjigje (hyrje/regjistrim/kod emaili).
- */
-app.use(
-  "/security",
-  createProxyMiddleware({
-    target: SECURITY_UPSTREAM,
-    changeOrigin: true,
-    pathRewrite: {
-      "^/security$": "/",
-      "^/security/": "/",
-    },
-    xfwd: true,
-    proxyTimeout: 30_000,
-    timeout: 30_000,
-    on: {
-      proxyReq: fixRequestBody,
-      error: (err, _req, res) => {
-        console.error("[security-proxy]", err?.message || err);
-        if (res && !res.headersSent && typeof res.status === "function") {
-          res.status(502).json({
-            ok: false,
-            gabim: "SecureTrack nuk u përgjigj. Provoni përsëri.",
-          });
-        }
-      },
-    },
-  }),
-);
-
 app.use(express.json({ limit: "12mb" }));
 app.use(jsonErrorHandler);
 app.use(cookieParser());
@@ -136,9 +98,9 @@ app.use("/api", (_req, res, next) => {
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
-    service: "revolution-pos-server",
+    service: "revolution-restaurant-server",
     version: pkg.version || "1.0.0",
-    site_version: "2026-06-28-spotlight-v13",
+    site_version: "2026-08-15-restaurant-server-v1.0.500",
     git_commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || null,
     git_branch: process.env.RAILWAY_GIT_BRANCH || null,
     time: new Date().toISOString(),
@@ -158,48 +120,6 @@ app.get("/api/public/config", async (_req, res) => {
     ...getPublicAppConfig(),
     stripe_enabled: paymentsConfigured(),
   });
-});
-
-/**
- * SecureTrack → POS: dërgo kod rivendosjeje për pronarin Security (Resend).
- * Auth: i njëjti secret bridge (x-admin-secret).
- */
-app.post("/api/public/security-owner-reset-mail", async (req, res) => {
-  try {
-    const SHARED = "naser-security-2026";
-    const secrets = new Set(
-      [
-        process.env.SECURITY_ADMIN_SECRET,
-        process.env.MASTER_ADMIN_BRIDGE_SECRET,
-        process.env.SECURITY_SUPER_ADMIN_SECRET,
-        SHARED,
-      ]
-        .map((s) => String(s || "").trim())
-        .filter(Boolean),
-    );
-    const provided = String(req.get("x-admin-secret") || req.body?.secret || "").trim();
-    if (!provided || !secrets.has(provided)) {
-      return res.status(401).json({ ok: false, gabim: "Unauthorized", code: "ADMIN_AUTH" });
-    }
-    const email = String(req.body?.email || "").trim().toLowerCase();
-    const code = String(req.body?.code || "").trim();
-    if (!email || !code) {
-      return res.status(400).json({ ok: false, gabim: "email dhe code janë të detyrueshme." });
-    }
-    const { sendOwnerPasswordResetEmail, isEmailConfigured } = require("./services/emailService");
-    if (!isEmailConfigured()) {
-      return res.status(503).json({
-        ok: false,
-        gabim: "Emaili nuk është i konfiguruar (RESEND_API_KEY).",
-        code: "EMAIL_NOT_CONFIGURED",
-      });
-    }
-    await sendOwnerPasswordResetEmail({ to: email, code });
-    return res.json({ ok: true, email });
-  } catch (e) {
-    console.error("[security-owner-reset-mail]", e.message || e);
-    return res.status(500).json({ ok: false, gabim: e.message || "Dërgimi dështoi" });
-  }
 });
 
 /**
@@ -702,11 +622,6 @@ app.get(
   "/r/:slug",
   asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
 );
-app.get(
-  ["/furra/:slug", "/furra/:slug/", "/hotel/:slug", "/hotel/:slug/"],
-  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
-);
-
 app.get("/s/:slug/manifest.json", shopManifestHandler);
 app.get("/s/:slug/sw.js", resolvePublicClient, shopServiceWorkerHandler);
 app.get("/s/:slug/order", (_req, res) => {

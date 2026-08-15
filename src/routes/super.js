@@ -28,20 +28,7 @@ const {
   buildBillingInvoicePdf,
   PRODUCT_LINES,
 } = require("../services/superAdminDashboardService");
-const {
-  createSecurityClient,
-  updateSecurityClient,
-  deleteSecurityClient,
-  issueSecurityLicense,
-  setSecurityLicenseStatus,
-  deleteSecurityLicense,
-  getSecurityClientDetail,
-  setSecurityClientPassword,
-  requestSecurityPasswordReset,
-  updateSecurityLicense,
-} = require("../services/securityAdminBridge");
 const { normalizeProductLine } = require("../utils/productLine");
-const { dedicatedServerError } = require("../lib/productSupabase");
 const {
   blockLicense,
   unblockLicense,
@@ -50,8 +37,6 @@ const {
   updateClient,
   deleteLicense,
   deleteClient,
-  listLicensesForClient,
-  resetLicenseDevice,
   revokeLicenseRemote,
   reactivateLicenseRemote,
   requestWipeDataForLicense,
@@ -60,7 +45,6 @@ const {
   setOwnerPasswordForClient,
   sendPasswordResetForClient,
 } = require("../services/userService");
-const { sendOwnerPasswordResetEmail, isEmailConfigured } = require("../services/emailService");
 const { addMonthsISO, todayISO } = require("../lib/licenseDates");
 const { logAdminActivity, activityFromReq } = require("../services/activityLogService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
@@ -168,9 +152,6 @@ router.get(
   "/dashboard/overview",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "all";
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
     res.json({ ok: true, ...(await getOverview({ product })) });
   }),
 );
@@ -179,9 +160,6 @@ router.get(
   "/dashboard/clients",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "kafene";
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
     res.json({ ok: true, ...(await getClientsGrouped({ product })) });
   }),
 );
@@ -189,31 +167,8 @@ router.get(
 router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
-    const raw = String(req.query.product || req.query.industry || "kafene").toLowerCase();
-    const product = normalizeProductLine(raw);
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
-    const preferSecurity = product === "security";
-    const tryOrder = preferSecurity
-      ? ["security", "kafene"]
-      : ["kafene", "security"];
-    let lastErr = null;
-    for (const line of tryOrder) {
-      try {
-        if (line === "security") {
-          const detail = await getSecurityClientDetail(req.params.id);
-          return res.json({ ok: true, ...detail, product_line: "security" });
-        }
-        const detail = await getClientDetail(req.params.id, line);
-        return res.json({ ok: true, ...detail, product_line: line });
-      } catch (e) {
-        lastErr = e;
-      }
-    }
-    const err = lastErr || new Error("Klienti nuk u gjet");
-    err.status = 404;
-    throw err;
+    const detail = await getClientDetail(req.params.id);
+    res.json({ ok: true, ...detail, product_line: "kafene" });
   }),
 );
 
@@ -222,20 +177,7 @@ router.post(
   "/dashboard/clients/:id/set-password",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
-    const product = normalizeProductLine(
-      req.body?.product_line || req.query.product || "kafene",
-    );
     const password = req.body?.password || req.body?.new_password;
-    if (product === "security") {
-      const data = await setSecurityClientPassword(id, password);
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_password_set",
-        targetType: "client",
-        targetId: id,
-      }).catch(() => {});
-      return res.json({ ok: true, ...data, product_line: "security" });
-    }
     const result = await setOwnerPasswordForClient(id, password, {
       email: req.body?.email,
       emri: req.body?.emri,
@@ -257,37 +199,6 @@ router.post(
   "/dashboard/clients/:id/send-password-reset",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
-    const product = normalizeProductLine(
-      req.body?.product_line || req.query.product || "kafene",
-    );
-    if (product === "security") {
-      const data = await requestSecurityPasswordReset(id);
-      // Nëse SecureTrack nuk dërgoi email, dërgo nga POS (Resend)
-      if (data?.email && data?.code && !data.email_sent) {
-        if (!isEmailConfigured()) {
-          throw Object.assign(
-            new Error("Emaili nuk është i konfiguruar. Vendosni RESEND_API_KEY në Railway (POS)."),
-            { code: "EMAIL_NOT_CONFIGURED" },
-          );
-        }
-        await sendOwnerPasswordResetEmail({ to: data.email, code: data.code });
-        data.email_sent = true;
-        data.code = undefined; // mos e kthe kodin te klienti admin UI (opsionale — e fshehim)
-      }
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_password_reset_email",
-        targetType: "client",
-        targetId: id,
-        targetLabel: data?.email,
-      }).catch(() => {});
-      return res.json({
-        ok: true,
-        message: `Kodi i rivendosjes u dërgua te ${data.email}`,
-        email: data.email,
-        product_line: "security",
-      });
-    }
     const result = await sendPasswordResetForClient(id, getPublicAppOrigin());
     await logAdminActivity({
       ...activityFromReq(req),
@@ -313,52 +224,11 @@ router.patch(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
-    const product = normalizeProductLine(
-      req.body?.product_line || req.query.product || "kafene",
-    );
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
     const body = req.body || {};
     const licPatches = Array.isArray(body.licenses) ? body.licenses : [];
 
-    if (product === "security") {
-      const data = await updateSecurityClient(id, body);
-      const client = data.client || data;
-      const licenses = [];
-      const license_errors = [];
-      for (const lp of licPatches) {
-        if (!lp?.id) continue;
-        try {
-          const updated = await updateSecurityLicense(lp.id, {
-            statusi: lp.statusi || lp.status,
-            license_key: lp.celesi || lp.license_key,
-            hardware_id: lp.hardware_id,
-            expires_at: lp.data_skadimit || lp.expires_at,
-          });
-          licenses.push(updated.license || updated);
-        } catch (licErr) {
-          license_errors.push({ id: lp.id, gabim: licErr.message || "Gabim licence" });
-        }
-      }
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_client_update",
-        targetType: "client",
-        targetId: id,
-        targetLabel: client?.emri || body.emri,
-      }).catch(() => {});
-      return res.json({
-        ok: true,
-        client,
-        licenses,
-        license_errors,
-        product_line: "security",
-      });
-    }
-
     // Kafene / POS — ruaj klientin GJITHMONË; licencat veç e veç (një gabim licence mos e prish klientin)
-    const client = await updateClient(id, { ...body, product_line: product });
+    const client = await updateClient(id, body);
     const licenses = [];
     const license_errors = [];
     for (const lp of licPatches) {
@@ -404,31 +274,17 @@ router.patch(
       client,
       licenses,
       license_errors,
-      product_line: product === "hotel" || product === "market" ? product : "kafene",
+      product_line: "kafene",
     });
   }),
 );
 
-/** Fshi krejt klientin (+ licencat) — Super Admin, POS ose Security */
+/** Fshi krejt klientin (+ licencat) — Super Admin */
 router.delete(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
-    const product = normalizeProductLine(
-      req.query.product || req.body?.product_line || "kafene",
-    );
-    if (product === "security") {
-      const data = await deleteSecurityClient(id);
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_client_delete",
-        targetType: "client",
-        targetId: id,
-        targetLabel: data?.emri,
-      }).catch(() => {});
-      return res.json({ ok: true, ...(data && typeof data === "object" ? data : {}), product_line: "security" });
-    }
-    await deleteClient(id, product);
+    await deleteClient(id);
     await logAdminActivity({
       ...activityFromReq(req),
       action: "client_delete",
@@ -436,37 +292,6 @@ router.delete(
       targetId: id,
     }).catch(() => {});
     res.json({ ok: true, product_line: "kafene" });
-  }),
-);
-
-/** Lësho PC — fshi terminalet e zëna (1 PC = 1 çelës pas reinstalimit). */
-router.post(
-  "/dashboard/clients/:id/reset-device",
-  asyncHandler(async (req, res) => {
-    const id = String(req.params.id || "").trim();
-    const product = normalizeProductLine(
-      req.query.product || req.body?.product_line || "kafene",
-    );
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
-    if (product === "security") {
-      const err = new Error("Security nuk përdor terminalet e POS.");
-      err.status = 400;
-      throw err;
-    }
-    const licenses = await listLicensesForClient(id, product);
-    for (const lic of licenses) {
-      await resetLicenseDevice(lic.id);
-    }
-    await logAdminActivity({
-      ...activityFromReq(req),
-      action: "client_reset_device",
-      targetType: "client",
-      targetId: id,
-      details: { licenses: licenses.length },
-    }).catch(() => {});
-    res.json({ ok: true, reset: licenses.length, product_line: product });
   }),
 );
 
@@ -490,23 +315,17 @@ router.get(
   "/dashboard/licenses",
   asyncHandler(async (req, res) => {
     const product = req.query.product || req.query.industry || "kafene";
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
     res.json({ ok: true, ...(await getLicensesView({ product })) });
   }),
 );
 
-/** Krijo klient (+ licencë 16-shenja) në një kërkesë — kafene lokal / security upstream */
+/** Krijo klient (+ licencë 16-shenja) në një kërkesë */
 router.post(
   "/dashboard/clients",
   asyncHandler(async (req, res) => {
     const product = normalizeProductLine(
       req.body?.product_line || req.body?.industry_type || req.query.product,
     );
-    if (product === "market" || product === "hotel") {
-      throw dedicatedServerError(product);
-    }
     const {
       generateHardwareLicenseKey,
       normalizeHardwareId,
@@ -543,66 +362,34 @@ router.post(
       }
     }
 
-    if (product === "security") {
-      const data = await createSecurityClient(req.body || {});
-      let license = null;
-      if (wantLicense) {
-        try {
-          const issued = await issueSecurityLicense({
-            client_id: data.client?.id,
-            max_terminals: req.body?.max_terminals || 1,
-            expires_at: expiresAt || dataSkadimit || null,
-            license_key: celesi || undefined,
-            celesi: celesi || undefined,
-          });
-          license = issued.license || issued;
-        } catch (e) {
-          console.warn("[super] security license issue:", e.message);
-          const err = new Error(e.message || "Licenca Security dështoi");
-          err.status = e.status || 400;
-          throw err;
-        }
-      }
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_client_create",
-        targetType: "client",
-        targetId: data.client?.id,
-        targetLabel: data.client?.emri,
-        details: { license_key: license?.license_key || celesi || null },
-      }).catch(() => {});
-      return res.status(201).json({
-        ok: true,
-        client: data.client,
-        license,
-        hardware_id: hardwareId || null,
-        product_line: "security",
-      });
+    if (product === "security" || product === "hotel" || product === "furra") {
+      const err = new Error(
+        product === "hotel"
+          ? "HOTEL nuk menaxhohet nga ky server."
+          : product === "furra"
+            ? "FURRA nuk menaxhohet nga ky server."
+            : "SECURITY nuk menaxhohet nga ky server.",
+      );
+      err.status = 400;
+      throw err;
     }
 
     const { createClient, createLicense } = require("../services/licenseService");
-    const { normalizeClientTipi, MARKET_TIPI, HOTEL_TIPI } = require("../utils/businessTipi");
+    const { normalizeClientTipi } = require("../utils/businessTipi");
     let tipi = normalizeClientTipi(req.body?.tipi || "restorant");
-    if (product === "hotel") {
-      tipi = HOTEL_TIPI.includes(tipi) ? tipi : "hotel";
-    } else if (product === "furra") tipi = tipi === "pasticeri" ? "pasticeri" : "furre_buke";
-    else if (product === "market") {
-      tipi = MARKET_TIPI.includes(tipi) ? tipi : "minimarket";
-    } else if (["furre_buke", "pasticeri", ...HOTEL_TIPI, ...MARKET_TIPI].includes(tipi)) {
-      tipi = "restorant";
-    }
+    if (["hotel_restorant", "furre_buke", "pasticeri"].includes(tipi)) tipi = "restorant";
     const client = await createClient({
       ...(req.body || {}),
       tipi,
-      product_line: product === "hotel" || product === "market" ? product : "kafene",
+      product_line: "kafene",
     });
     let license = null;
     if (wantLicense) {
       try {
         license = await createLicense({
           client_id: client.id,
-          app_type: product === "market" ? "market" : req.body?.app_type,
-          product_line: product === "hotel" || product === "market" ? product : "kafene",
+          app_type: req.body?.app_type,
+          product_line: "kafene",
           license_type: licenseType,
           muaj: licenseType === "trial" ? 1 : req.body?.muaj || 12,
           max_terminals: req.body?.max_terminals || 1,
@@ -636,23 +423,8 @@ router.post(
       client,
       license,
       hardware_id: hardwareId || null,
-      product_line: product === "hotel" || product === "market" ? product : "kafene",
+      product_line: "kafene",
     });
-  }),
-);
-
-router.post(
-  "/dashboard/security/licenses/:id/status",
-  asyncHandler(async (req, res) => {
-    const license = await setSecurityLicenseStatus(req.params.id, req.body?.statusi || req.body?.status);
-    await logAdminActivity({
-      ...activityFromReq(req),
-      action: "security_license_status",
-      targetType: "license",
-      targetId: req.params.id,
-      details: { status: req.body?.statusi || req.body?.status },
-    }).catch(() => {});
-    res.json({ ok: true, license: license.license || license });
   }),
 );
 
@@ -668,21 +440,6 @@ router.delete(
       targetId: req.params.id,
     }).catch(() => {});
     res.json({ ok: true });
-  }),
-);
-
-/** Fshi krejt licencën Security (bridge → SecureTrack) */
-router.delete(
-  "/dashboard/security/licenses/:id",
-  asyncHandler(async (req, res) => {
-    const data = await deleteSecurityLicense(req.params.id);
-    await logAdminActivity({
-      ...activityFromReq(req),
-      action: "security_license_delete",
-      targetType: "license",
-      targetId: req.params.id,
-    }).catch(() => {});
-    res.json({ ok: true, ...(data && typeof data === "object" ? data : {}) });
   }),
 );
 

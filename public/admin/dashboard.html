@@ -11,13 +11,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=30">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=28">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
     <div class="login-card">
       <h1>Master Admin</h1>
-      <p>Paneli i unifikuar — Kafene, Security &amp; më shumë. Pronarët: <code>/owner/login</code>.</p>
+<p>Paneli — Revolution POS. Pronarët: <code>/owner/login</code>.</p>
       <div id="login-error" class="alert alert-error hidden"></div>
       <form id="form-login">
         <label for="email">Email</label>
@@ -68,13 +68,9 @@
 
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
           <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
-          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false">SECURITY</button>
-          <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false">HOTEL</button>
-          <button type="button" class="product-tab" data-product="furra" role="tab" aria-selected="false">FURRA</button>
-          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false">MARKET</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
-          Çdo produkt ka listën e vet. Security lexohet vetëm nga Supabase e Security. Nuk përzihen.
+          Çdo listë i takon POS.
         </p>
         <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
 
@@ -108,10 +104,6 @@
                 <label for="nc-product">Produkti / Industria</label>
                 <select id="nc-product" required>
                   <option value="kafene">REVOLUTION POS (shitje)</option>
-                  <option value="security">REVOLUTION SECURITY (punëtorë)</option>
-                  <option value="hotel">REVOLUTION HOTEL</option>
-                  <option value="furra">REVOLUTION FURRA</option>
-                  <option value="market">REVOLUTION MARKET</option>
                 </select>
               </div>
               <div class="field">
@@ -130,57 +122,13 @@
                   <option value="dyqan_pijesh">Dyqan pijesh</option>
                 </select>
               </div>
-              <div class="field nc-tier-only">
+              <div class="field nc-kafene-only">
                 <label for="nc-pako">Pako</label>
                 <select id="nc-pako">
                   <option value="pako_3">Pako 1</option>
                   <option value="pako_4">Pako 2</option>
                   <option value="pako_2">Pako 3</option>
                   <option value="pako_5">Pako 4 (AI)</option>
-                </select>
-              </div>
-              <div class="field nc-hotel-only hidden">
-                <label for="nc-hotel-tipi">Veprimtaria — REVOLUTION HOTEL</label>
-                <select id="nc-hotel-tipi">
-                  <option value="hotel">Hotel</option>
-                  <option value="motel">Motel</option>
-                  <option value="hostel">Hostel</option>
-                  <option value="resort">Resort</option>
-                  <option value="ville_me_qira">Villë me qira</option>
-                </select>
-              </div>
-              <div class="field nc-furra-only hidden">
-                <label for="nc-furra-tipi">Veprimtaria — REVOLUTION FURRA</label>
-                <select id="nc-furra-tipi">
-                  <option value="furre_buke">Furrë Buke</option>
-                  <option value="pasticeri">Pastiçeri / Ëmbëltore</option>
-                </select>
-              </div>
-              <div class="field nc-market-only hidden">
-                <label for="nc-market-tipi">Veprimtaria — Ushqimore / Tregtare</label>
-                <select id="nc-market-tipi">
-                  <option value="minimarket">Mini-market / Market</option>
-                  <option value="pilar">Pilar (dyqan i vogël lagje)</option>
-                  <option value="supermarket">Supermarket</option>
-                  <option value="dyqan_ushqimor">Dyqan ushqimor</option>
-                  <option value="manav">Dyqan pemë-perimesh (manav)</option>
-                  <option value="bulmetore">Dyqan bulmetore</option>
-                  <option value="kasap">Dyqan mishit (kasap)</option>
-                  <option value="dyqan_peshku">Dyqan peshku</option>
-                </select>
-              </div>
-              <div class="field nc-security-only hidden">
-                <label for="nc-veprimtari">Veprimtaria — REVOLUTION SECURITY</label>
-                <select id="nc-veprimtari">
-                  <option value="kompani_sigurie">Kompani sigurie (roje, patrullime)</option>
-                  <option value="pastrim">Kompani pastrimi (pastrues nëpër objekte)</option>
-                  <option value="ndertimtari">Ndërtimtari (punëtorë kantiere)</option>
-                  <option value="transport_logjistike">Transport / Logjistikë (shoferë, dërgesa)</option>
-                  <option value="sherbime_teknike">Shërbime teknike (elektricistë, hidraulikë, servis)</option>
-                  <option value="mirembajtje_nderte">Mirëmbajtje ndërtesash (maintenance)</option>
-                  <option value="agjenci_punesimi">Agjenci punësimi (punëtorë të dërguar te klientët)</option>
-                  <option value="bujqesi">Bujqësi (punëtorë sezone)</option>
-                  <option value="kuriere_dergesa">Kurierë / Dërgesa</option>
                 </select>
               </div>
               <div class="field">
@@ -504,6 +452,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=36"></script>
+  <script src="/admin/dashboard.js?v=28"></script>
 </body>
 </html>

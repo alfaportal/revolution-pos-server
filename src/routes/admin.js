@@ -186,17 +186,17 @@ router.post("/clients", asyncHandler(async (req, res) => {
     product_line: productLine,
   });
   try {
-    if (productLine === "security") {
-      const { createSecurityClient } = require("../services/securityAdminBridge");
-      const data = await createSecurityClient(body);
-      await logAdminActivity({
-        ...activityFromReq(req),
-        action: "security_client_create",
-        targetType: "client",
-        targetId: data.client?.id,
-        targetLabel: data.client?.emri,
+    if (productLine === "security" || productLine === "hotel" || productLine === "furra") {
+      const msg =
+        productLine === "hotel"
+          ? "HOTEL nuk menaxhohet nga ky server."
+          : productLine === "furra"
+            ? "FURRA nuk menaxhohet nga ky server."
+            : "SECURITY nuk menaxhohet nga ky server.";
+      return res.status(400).json({
+        gabim: msg,
+        code: "WRONG_PRODUCT",
       });
-      return res.status(201).json({ ok: true, client: data.client, product_line: "security" });
     }
     const { toDbProductLine } = require("../utils/productLine");
     const client = await createClient({ ...body, product_line: toDbProductLine(productLine) });

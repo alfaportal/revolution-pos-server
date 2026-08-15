@@ -5,7 +5,7 @@
 
   function getSlug() {
     const parts = window.location.pathname.split("/").filter(Boolean);
-    return parts[0] === "r" || parts[0] === "furra" || parts[0] === "hotel"
+    return parts[0] === "r"
       ? decodeURIComponent(parts[1] || "")
       : "";
   }

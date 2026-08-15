@@ -147,12 +147,6 @@ function clientSitemapUrls(storefronts) {
     if (s.storefront === "r") {
       add(`${origin}/r/${encodeURIComponent(s.slug)}/menu`);
     }
-    if (s.tipi === "furre_buke" || s.tipi === "pasticeri") {
-      add(`${origin}/furra/${encodeURIComponent(s.slug)}`);
-    }
-    if (s.tipi === "hotel_restorant") {
-      add(`${origin}/hotel/${encodeURIComponent(s.slug)}`);
-    }
   }
   return urls;
 }

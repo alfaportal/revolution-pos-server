@@ -11,8 +11,6 @@ const { listStockAlertsForAdmin } = require("./stockService");
 const { packageLabel, packageLabelFull, packageContents, normalizePackageTier, featuresForTier } = require("../lib/packages");
 const {
   CLIENT_SECTORS,
-  MARKET_SECTORS,
-  HOTEL_SECTORS,
   ADMIN_CLIENT_TIPI,
   TIPI_LABELS,
   normalizeClientTipi,
@@ -28,13 +26,6 @@ const {
   adminProductOfClient,
   adminProductOfLicense,
 } = require("../utils/productLine");
-const { isDedicatedProduct } = require("../lib/productSupabase");
-const {
-  getSecurityOverview,
-  getSecurityClientsGrouped,
-  getSecurityLicensesView,
-} = require("./securityAdminBridge");
-
 function clientProductLine(c) {
   return adminProductOfClient(c);
 }
@@ -47,11 +38,6 @@ function filterByProduct(rows, product, getLine) {
   const p = normalizeProductLine(product || "kafene");
   return (rows || []).filter((r) => getLine(r) === p);
 }
-
-const FURRA_SECTORS = [
-  { num: 1, id: "furre_buke", label: "Furrë Buke", tipet: ["furre_buke"], keywords: ["furra", "buke"] },
-  { num: 2, id: "pasticeri", label: "Pastiçeri / Ëmbëltore", tipet: ["pasticeri"], keywords: ["pasticeri"] },
-];
 
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
 const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json");
@@ -406,13 +392,12 @@ function isShortTrialLicense(l) {
 
 async function getOverviewKafene(adminProduct = "kafene") {
   const slice = normalizeProductLine(adminProduct || "kafene");
-  const dedicated = isDedicatedProduct(slice);
   const [clientsAll, licensesAll, stockAlerts, salesToday, weekly] = await Promise.all([
-    listClients({ product: slice }),
-    listLicenses({ product: slice }),
-    dedicated ? Promise.resolve([]) : listStockAlertsForAdmin().catch(() => []),
-    dedicated ? Promise.resolve({ total: 0, byClient: new Map() }) : salesTodayByClient(),
-    dedicated ? Promise.resolve([]) : weeklySalesSeries(),
+    listClients(),
+    listLicenses(),
+    listStockAlertsForAdmin().catch(() => []),
+    salesTodayByClient(),
+    weeklySalesSeries(),
   ]);
 
   const clients = filterByProduct(clientsAll, slice, clientProductLine);
@@ -472,75 +457,34 @@ async function getOverviewKafene(adminProduct = "kafene") {
   };
 }
 
-function dedicatedDbErrorPayload(p, err) {
-  return {
-    active_clients: 0,
-    clients_total: 0,
-    licenses_total: 0,
-    licenses_active: 0,
-    trial_accounts: 0,
-    sales_today_total: 0,
-    problem_clients: [],
-    weekly_sales: [],
-    sectors: [],
-    groups: [],
-    total: 0,
-    licenses: [],
-    product_line: p,
-    bridge_error: err.message || String(err),
-  };
-}
-
 async function getOverview({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security") {
-    return getSecurityOverview();
+  if (p === "security" || p === "hotel" || p === "furra") {
+    return {
+      active_clients: 0,
+      licenses_total: 0,
+      licenses_active: 0,
+      trial_accounts: 0,
+      sales_today_total: 0,
+      problem_clients: [],
+      weekly_sales: [],
+      product_line: p,
+    };
   }
-  try {
-    return await getOverviewKafene(p);
-  } catch (e) {
-    if (e.code === "PRODUCT_SUPABASE_MISSING" || /Mungon .*_SUPABASE/i.test(e.message || "")) {
-      return dedicatedDbErrorPayload(p, e);
-    }
-    throw e;
-  }
+  return getOverviewKafene(p);
 }
 
 async function getClientsGrouped({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security") {
-    return getSecurityClientsGrouped();
+  if (p === "security" || p === "hotel" || p === "furra") {
+    return { sectors: [], groups: [], product_line: p };
   }
 
-  let clientsAll;
-  let licenses;
-  let salesToday;
-  try {
-    [clientsAll, licenses, salesToday] = await Promise.all([
-    listClients({ product: p }),
-    listLicenses({ product: p }),
-    isDedicatedProduct(p) ? Promise.resolve({ total: 0, byClient: new Map() }) : salesTodayByClient(),
+  const [clientsAll, licenses, salesToday] = await Promise.all([
+    listClients(),
+    listLicenses(),
+    salesTodayByClient(),
   ]);
-  } catch (e) {
-    if (
-      e.code === "PRODUCT_SUPABASE_MISSING"
-      || /Mungon .*_SUPABASE|PGRST205|schema cache|does not exist/i.test(e.message || "")
-    ) {
-      return {
-        ...dedicatedDbErrorPayload(p, e),
-        sectors: (p === "hotel" ? HOTEL_SECTORS : p === "market" ? MARKET_SECTORS : p === "furra" ? FURRA_SECTORS : CLIENT_SECTORS).map((s) => ({
-          num: s.num,
-          id: s.id,
-          label: s.label,
-          tipet: s.tipet,
-          keywords: s.keywords || [],
-          clients: [],
-          count: 0,
-        })),
-      };
-    }
-    throw e;
-  }
   const clients = filterByProduct(clientsAll, p, clientProductLine);
 
   const licByClient = new Map();
@@ -551,14 +495,7 @@ async function getClientsGrouped({ product } = {}) {
     licByClient.get(cid).push(lic);
   }
 
-  const sectorDefs =
-    p === "hotel"
-      ? HOTEL_SECTORS
-      : p === "furra"
-        ? FURRA_SECTORS
-        : p === "market"
-          ? MARKET_SECTORS
-          : CLIENT_SECTORS;
+  const sectorDefs = CLIENT_SECTORS;
   const sectors = sectorDefs.map((s) => ({
     num: s.num,
     id: s.id,
@@ -571,16 +508,7 @@ async function getClientsGrouped({ product } = {}) {
 
   for (const c of clients) {
     const tipi = normalizeClientTipi(c.tipi);
-    let sector;
-    if (p === "hotel") {
-      sector = HOTEL_SECTORS.find((s) => s.tipet.includes(tipi)) || HOTEL_SECTORS[0];
-    } else if (p === "furra") {
-      sector = FURRA_SECTORS.find((s) => s.tipet.includes(tipi)) || FURRA_SECTORS[0];
-    } else if (p === "market") {
-      sector = MARKET_SECTORS.find((s) => s.tipet.includes(tipi)) || MARKET_SECTORS[0];
-    } else {
-      sector = sectorForTipi(tipi);
-    }
+    let sector = sectorForTipi(tipi);
     const lics = licByClient.get(c.id) || [];
     const activeLic = lics.some((l) => l.statusi === "aktive");
     const row = {
@@ -640,29 +568,13 @@ function iconForTipi(tipi) {
     gjeltore: "🍗",
     furre_buke: "🥖",
     hotel_restorant: "🏨",
-    hotel: "🏨",
-    motel: "🛏️",
-    hostel: "🧳",
-    bujtine: "🧳",
-    resort: "🌴",
-    ville: "🏡",
-    ville_me_qira: "🏡",
     bar_nate: "🌙",
     klub: "🎶",
     klub_nate: "🪩",
     diskoteke: "🪩",
     dyqan_pijesh: "🥤",
     market: "🛒",
-    minimarket: "🛒",
-    mini_market: "🛒",
-    pilar: "🏪",
-    supermarket: "🏬",
-    dyqan_ushqimor: "🥫",
-    manav: "🥬",
-    bulmetore: "🧀",
-    kasap: "🥩",
-    peshkore: "🐟",
-    dyqan_peshku: "🐟",
+    minimarket: "🧺",
     dyqan_rroba: "👕",
     dyqan_kepuce: "👟",
     dyqan: "🏬",
@@ -675,9 +587,8 @@ function iconForTipi(tipi) {
   return map[normalizeClientTipi(tipi)] || "🏪";
 }
 
-async function getClientDetail(clientId, productHint) {
-  const { getSupabaseForProduct } = require("../lib/productSupabase");
-  const db = getSupabaseForProduct(productHint || "kafene");
+async function getClientDetail(clientId) {
+  const db = getSupabase();
   const id = String(clientId || "").trim();
   if (!id) throw new Error("Mungon client_id");
 
@@ -685,26 +596,23 @@ async function getClientDetail(clientId, productHint) {
   if (error) throw error;
   if (!client) throw new Error("Klienti nuk u gjet");
 
-  const dedicated = isDedicatedProduct(productHint);
   const { listOwnersForClient } = require("./userService");
   const fromIso = dayStartIso(addDays(new Date(), -30));
   const [salesRows, licenses, stockAlerts, aiSummary, staff, owners] = await Promise.all([
-    dedicated ? Promise.resolve([]) : fetchClosedSales({ fromIso }).then((rows) => rows.filter((r) => r.client_id === id)),
-    listLicenses({ product: productHint || "kafene" }).then((all) => all.filter((l) => (l.client_id || l.clients?.id) === id)),
-    dedicated ? Promise.resolve([]) : listStockAlertsForAdmin()
+    fetchClosedSales({ fromIso }).then((rows) => rows.filter((r) => r.client_id === id)),
+    listLicenses().then((all) => all.filter((l) => (l.client_id || l.clients?.id) === id)),
+    listStockAlertsForAdmin()
       .then((a) => a.filter((x) => x.client_id === id))
       .catch(() => []),
-    dedicated ? Promise.resolve({ rows: [], totals: {} }) : listAiUsageSummary({}).catch(() => ({ rows: [], totals: {} })),
-    dedicated
-      ? Promise.resolve([])
-      : db
-        .from("pos_staff")
-        .select("id, name, role, active, pin_hash")
-        .eq("client_id", id)
-        .order("name", { ascending: true })
-        .then((r) => r.data || [])
-        .catch(() => []),
-    dedicated ? Promise.resolve([]) : listOwnersForClient(id).catch(() => []),
+    listAiUsageSummary({}).catch(() => ({ rows: [], totals: {} })),
+    db
+      .from("pos_staff")
+      .select("id, name, role, active, pin_hash")
+      .eq("client_id", id)
+      .order("name", { ascending: true })
+      .then((r) => r.data || [])
+      .catch(() => []),
+    listOwnersForClient(id).catch(() => []),
   ]);
 
   const salesToday = salesRows
@@ -713,15 +621,13 @@ async function getClientDetail(clientId, productHint) {
   const sales30 = salesRows.reduce((s, r) => s + (Number(r.total) || 0), 0);
   const aiRow = (aiSummary.rows || []).find((r) => String(r.restaurant_id) === id);
 
-  const { data: menuStock } = dedicated
-    ? { data: [] }
-    : await db
-      .from("pos_menu_items")
-      .select("id, name, stock_quantity, track_stock, active")
-      .eq("client_id", id)
-      .limit(500)
-      .then((r) => r)
-      .catch(() => ({ data: [] }));
+  const { data: menuStock } = await db
+    .from("pos_menu_items")
+    .select("id, name, stock_quantity, track_stock, active")
+    .eq("client_id", id)
+    .limit(500)
+    .then((r) => r)
+    .catch(() => ({ data: [] }));
 
   const zeroStock = (menuStock || []).filter(
     (m) => m.track_stock && m.active !== false && Number(m.stock_quantity || 0) <= 0,
@@ -779,45 +685,33 @@ async function getClientDetail(clientId, productHint) {
 
 async function getLicensesView({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security") {
-    return getSecurityLicensesView();
+  if (p === "security" || p === "hotel" || p === "furra") {
+    return { licenses: [], product_line: p };
   }
 
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");
-  if (!isDedicatedProduct(p)) {
-    await ensureLicenseHardwareSchema().catch(() => false);
-  }
-  try {
-    const licenses = filterByProduct(await listLicenses({ product: p }), p, licenseProductLine);
-    return {
-      licenses: licenses.map((l) => {
-        const device = String(l.display_device_id || l.device_id || "").trim();
-        const hardware_id = resolveLicenseHardwareId(l);
-        return {
-          id: l.id,
-          client_id: l.client_id || l.clients?.id,
-          client_name: l.clients?.emri || "—",
-          device_id: device,
-          hardware_id,
-          license_key: l.celesi || "",
-          statusi: l.statusi,
-          activated_at: l.last_activated_at || l.created_at,
-          last_seen_at: licenseLastSeen(l),
-          product_line: licenseProductLine(l),
-        };
-      }),
-      product_line: p,
-      products: PRODUCT_LINES,
-    };
-  } catch (e) {
-    if (
-      e.code === "PRODUCT_SUPABASE_MISSING"
-      || /Mungon .*_SUPABASE|PGRST205|schema cache|does not exist/i.test(e.message || "")
-    ) {
-      return { licenses: [], product_line: p, products: PRODUCT_LINES, bridge_error: e.message };
-    }
-    throw e;
-  }
+  await ensureLicenseHardwareSchema().catch(() => false);
+  const licenses = filterByProduct(await listLicenses(), p, licenseProductLine);
+  return {
+    licenses: licenses.map((l) => {
+      const device = String(l.display_device_id || l.device_id || "").trim();
+      const hardware_id = resolveLicenseHardwareId(l);
+      return {
+        id: l.id,
+        client_id: l.client_id || l.clients?.id,
+        client_name: l.clients?.emri || "—",
+        device_id: device,
+        hardware_id,
+        license_key: l.celesi || "",
+        statusi: l.statusi,
+        activated_at: l.last_activated_at || l.created_at,
+        last_seen_at: licenseLastSeen(l),
+        product_line: licenseProductLine(l),
+      };
+    }),
+    product_line: p,
+    products: PRODUCT_LINES,
+  };
 }
 
 async function getAiUsageDashboard({ month } = {}) {

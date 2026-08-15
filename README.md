@@ -1,4 +1,4 @@
-# Revolution POS Server
+# Revolution Restaurant Server
 
 Backend i **Revolution Invest POS** — validim licence online, menaxhim klientësh, panel Super Admin dhe panel pronarësh.
 
@@ -21,7 +21,7 @@ Vendosni `PUBLIC_APP_ORIGIN=https://revolution-pos.com` në Railway (Variables).
 ## Setup lokal
 
 ```bash
-cd revolution-pos-server
+cd revolution-restaurant-server
 cp .env.example .env
 # Plotëso SUPABASE_SERVICE_ROLE_KEY dhe JWT_SECRET
 npm install
@@ -183,14 +183,14 @@ Kur tavolina mbyllet ose printohet fatura, POS dërgon automatikisht shitjen te 
 
 ## Deploy Railway
 
-1. Krijo projekt të ri në Railway → lidh repo `revolution-pos-server`
+1. Krijo projekt të ri në Railway → lidh repo `revolution-restaurant-server`
 2. Shto variablat e mjedisit
 3. Deploy automatik nga `railway.toml`
 
 ## Struktura
 
 ```
-revolution-pos-server/
+revolution-restaurant-server/
 ├── src/
 │   ├── server.js
 │   ├── db.js

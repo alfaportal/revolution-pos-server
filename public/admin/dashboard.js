@@ -4,9 +4,9 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene | security | hotel | furra | market — kurrë «all» */
+/** Produkti aktiv: kafene */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
-if (currentProduct === "all" || currentProduct === "te_gjitha") currentProduct = "kafene";
+if (currentProduct !== "kafene") currentProduct = "kafene";
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 /** Rifreskim automatik kur tab Klientët/Licencat është hapur (sinkron telefon ↔ desktop) */
@@ -22,53 +22,6 @@ const FALLBACK_SECTORS = [
   { num: 6, id: "fast_food", label: "Fast Food Kiosk", keywords: ["fast", "food", "kiosk"], clients: [] },
   { num: 7, id: "dyqan_pijesh", label: "Dyqan pijesh", keywords: ["pijesh", "pije"], clients: [] },
   { num: 8, id: "other", label: "Të tjera (klientë të vjetër)", keywords: ["tjeter"], clients: [] },
-];
-
-/** REVOLUTION SECURITY — vetëm menaxhim punëtorësh; i ndarë nga POS. */
-const FALLBACK_HOTEL_SECTORS = [
-  { num: 1, id: "hotel", label: "Hotel", keywords: ["hotel"], clients: [] },
-  { num: 2, id: "motel", label: "Motel", keywords: ["motel"], clients: [] },
-  { num: 3, id: "hostel", label: "Hostel", keywords: ["hostel", "bujtine"], clients: [] },
-  { num: 4, id: "resort", label: "Resort", keywords: ["resort"], clients: [] },
-  { num: 5, id: "ville_me_qira", label: "Villë me qira", keywords: ["ville", "villa", "qira"], clients: [] },
-];
-const FALLBACK_FURRA_SECTORS = [
-  { num: 1, id: "furre_buke", label: "Furrë Buke", keywords: ["furra", "buke"], clients: [] },
-  { num: 2, id: "pasticeri", label: "Pastiçeri / Ëmbëltore", keywords: ["pasticeri"], clients: [] },
-];
-const FALLBACK_MARKET_SECTORS = [
-  { num: 1, id: "minimarket", label: "Mini-market / Market", keywords: ["mini", "market"], clients: [] },
-  { num: 2, id: "pilar", label: "Pilar (dyqan i vogël lagje)", keywords: ["pilar", "lagje"], clients: [] },
-  { num: 3, id: "supermarket", label: "Supermarket", keywords: ["supermarket"], clients: [] },
-  { num: 4, id: "dyqan_ushqimor", label: "Dyqan ushqimor", keywords: ["ushqimor"], clients: [] },
-  { num: 5, id: "manav", label: "Dyqan pemë-perimesh (manav)", keywords: ["manav", "peme", "perime"], clients: [] },
-  { num: 6, id: "bulmetore", label: "Dyqan bulmetore", keywords: ["bulmetore"], clients: [] },
-  { num: 7, id: "kasap", label: "Dyqan mishit (kasap)", keywords: ["kasap", "mish"], clients: [] },
-  { num: 8, id: "dyqan_peshku", label: "Dyqan peshku", keywords: ["peshk"], clients: [] },
-];
-
-const FALLBACK_SECURITY_SECTORS = [
-  { num: 1, id: "sec_kompani_sigurie", label: "Kompani sigurie (roje, patrullime)", keywords: ["sigurie", "roje"], clients: [] },
-  { num: 2, id: "sec_pastrim", label: "Kompani pastrimi", keywords: ["pastrim"], clients: [] },
-  { num: 3, id: "sec_ndertimtari", label: "Ndërtimtari", keywords: ["ndertim"], clients: [] },
-  { num: 4, id: "sec_transport_logjistike", label: "Transport / Logjistikë", keywords: ["transport"], clients: [] },
-  { num: 5, id: "sec_sherbime_teknike", label: "Shërbime teknike", keywords: ["teknike"], clients: [] },
-  { num: 6, id: "sec_mirembajtje_nderte", label: "Mirëmbajtje ndërtesash", keywords: ["mirembajtje"], clients: [] },
-  { num: 7, id: "sec_agjenci_punesimi", label: "Agjenci punësimi", keywords: ["punesim"], clients: [] },
-  { num: 8, id: "sec_bujqesi", label: "Bujqësi", keywords: ["bujqesi"], clients: [] },
-  { num: 9, id: "sec_kuriere_dergesa", label: "Kurierë / Dërgesa", keywords: ["kuriere", "dergesa"], clients: [] },
-];
-
-const SECURITY_VEPRIMTARI_OPTS = [
-  ["kompani_sigurie", "Kompani sigurie (roje, patrullime)"],
-  ["pastrim", "Kompani pastrimi (pastrues nëpër objekte)"],
-  ["ndertimtari", "Ndërtimtari (punëtorë kantiere)"],
-  ["transport_logjistike", "Transport / Logjistikë (shoferë, dërgesa)"],
-  ["sherbime_teknike", "Shërbime teknike (elektricistë, hidraulikë, servis)"],
-  ["mirembajtje_nderte", "Mirëmbajtje ndërtesash (maintenance)"],
-  ["agjenci_punesimi", "Agjenci punësimi (punëtorë të dërguar te klientët)"],
-  ["bujqesi", "Bujqësi (punëtorë sezone)"],
-  ["kuriere_dergesa", "Kurierë / Dërgesa"],
 ];
 
 function ensureSectors(apiSectors, fallback) {
@@ -91,10 +44,6 @@ function ensureNineSectors(apiSectors) {
   return ensureSectors(apiSectors, FALLBACK_SECTORS);
 }
 
-function ensureSecuritySectors(apiSectors) {
-  return ensureSectors(apiSectors, FALLBACK_SECURITY_SECTORS);
-}
-
 function productQuery(_forClients = false) {
   const p = currentProduct || "kafene";
   if (p === "all" || p === "te_gjitha") return "kafene";
@@ -102,7 +51,7 @@ function productQuery(_forClients = false) {
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1, security: 1, hotel: 1, furra: 1, market: 1 };
+  const allowed = { kafene: 1 };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -117,16 +66,7 @@ function setProductTab(product, { reload = true } = {}) {
   }
   const title = document.getElementById("clients-list-title");
   if (title) {
-    title.textContent =
-      currentProduct === "security"
-        ? "Klientët REVOLUTION SECURITY"
-        : currentProduct === "hotel"
-          ? "Klientët REVOLUTION HOTEL"
-          : currentProduct === "furra"
-            ? "Klientët REVOLUTION FURRA"
-            : currentProduct === "market"
-              ? "Klientët REVOLUTION MARKET"
-              : "Klientët REVOLUTION POS";
+    title.textContent = "Klientët REVOLUTION POS";
   }
   if (!reload) return;
   const activeSec = document.querySelector(".section.active");
@@ -139,23 +79,6 @@ function syncNewClientForm() {
   document.querySelectorAll(".nc-kafene-only").forEach((el) => {
     el.classList.toggle("hidden", product !== "kafene");
   });
-  document.querySelectorAll(".nc-security-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "security");
-  });
-  document.querySelectorAll(".nc-hotel-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "hotel");
-  });
-  document.querySelectorAll(".nc-furra-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "furra");
-  });
-  document.querySelectorAll(".nc-market-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "market");
-  });
-  document.querySelectorAll(".nc-tier-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "kafene" && product !== "market");
-  });
-  const pako = document.getElementById("nc-pako")?.closest(".field");
-  if (pako) pako.classList.toggle("hidden", product === "security");
 }
 
 function showBridgeMsg(text) {
@@ -201,42 +124,11 @@ function fmtDate(iso) {
   }
 }
 
-const PRODUCT_API_ORIGIN = {
-  market: "https://revolution-market-server-production.up.railway.app",
-  hotel: "https://revolution-hotel-server-production.up.railway.app",
-};
-
-function staysOnPosServer(path) {
-  const p = String(path || "");
-  if (p.startsWith("/api/auth")) return true;
-  if (p.includes("/dashboard/security")) return true;
-  if (p.includes("/dashboard/settings")) return true;
-  if (p.includes("/dashboard/billing")) return true;
-  if (p.includes("/dashboard/problems")) return true;
-  if (p.startsWith("/api/admin/bank-payments")) return true;
-  if (p.startsWith("/api/admin/setup-download")) return true;
-  return false;
-}
-
-function apiOriginFor(path, productOpt) {
-  if (staysOnPosServer(path)) return "";
-  const p = productOpt || currentProduct || "kafene";
-  if (p === "market" || p === "hotel") return PRODUCT_API_ORIGIN[p];
-  return "";
-}
-
 async function api(path, opts = {}) {
-  const { product: productOpt, ...rest } = opts;
-  const headers = { ...(rest.headers || {}) };
+  const headers = { ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (rest.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
-  const origin = apiOriginFor(path, productOpt);
-  const url = origin ? `${origin}${path}` : path;
-  const res = await fetch(url, {
-    ...rest,
-    headers,
-    credentials: origin ? "omit" : "include",
-  });
+  if (opts.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, { ...opts, headers, credentials: "include" });
   const ct = res.headers.get("content-type") || "";
   if (ct.includes("application/pdf") || ct.includes("text/csv")) {
     if (!res.ok) throw new Error("Kërkesa dështoi");
@@ -326,20 +218,7 @@ function renderChart(el, points, valueKey = "total") {
 }
 
 async function loadOverview() {
-  let d = {};
-  try {
-    d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
-  } catch (e) {
-    d = {
-      active_clients: "—",
-      licenses_active: "—",
-      trial_accounts: "—",
-      sales_today_total: 0,
-      problem_clients: [],
-      weekly_sales: [],
-      bridge_error: e.message || "Gabim gjatë pasqyrës",
-    };
-  }
+  const d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
   document.getElementById("kpi-active").textContent = String(d.active_clients ?? 0);
   const kpiLic = document.getElementById("kpi-licenses");
   if (kpiLic) kpiLic.textContent = String(d.licenses_active ?? d.licenses_total ?? 0);
@@ -347,7 +226,7 @@ async function loadOverview() {
   if (kpiTrial) kpiTrial.textContent = String(d.trial_accounts ?? 0);
   document.getElementById("kpi-sales").textContent = euro(d.sales_today_total);
   document.getElementById("kpi-problems").textContent = String((d.problem_clients || []).length);
-  showBridgeMsg(d.bridge_error || d.by_product?.security?.bridge_error || "");
+  showBridgeMsg(d.bridge_error || "");
   renderChart(document.getElementById("chart-weekly"), d.weekly_sales || [], "total");
   const list = document.getElementById("problem-list");
   const problems = d.problem_clients || [];
@@ -391,17 +270,7 @@ function renderClientsSectors(filterText = "") {
   if (!root) return;
   const q = normalizeSearch(filterText);
   clientsFlat = [];
-  // Security dhe Kafene: sektore të ndara, gjithmonë të dukshme (edhe me 0)
-  const sectors =
-    currentProduct === "security"
-      ? ensureSecuritySectors(sectorsCache)
-      : currentProduct === "hotel"
-        ? ensureSectors(sectorsCache, FALLBACK_HOTEL_SECTORS)
-        : currentProduct === "furra"
-          ? ensureSectors(sectorsCache, FALLBACK_FURRA_SECTORS)
-          : currentProduct === "market"
-            ? ensureSectors(sectorsCache, FALLBACK_MARKET_SECTORS)
-            : ensureNineSectors(sectorsCache);
+  const sectors = ensureNineSectors(sectorsCache);
 
   const html = sectors
     .map((s) => {
@@ -428,13 +297,8 @@ function renderClientsSectors(filterText = "") {
               <strong>${esc(c.emri)}</strong>
               <span>${esc(c.tipi_label)} · ${esc(c.package_label)}${c.package_contents ? ` — ${esc(c.package_contents)}` : ""}</span>
             </div>
-            <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;flex-wrap:wrap">
+            <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
               <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
-              ${
-                currentProduct === "security"
-                  ? ""
-                  : `<button type="button" class="btn btn-ghost btn-sm" data-reset-client="${esc(c.id)}" data-name="${esc(c.emri)}">Lësho PC</button>`
-              }
               <button type="button" class="btn btn-danger btn-sm" data-delete-client="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}" data-name="${esc(c.emri)}">Fshi</button>
             </div>
           </div>`,
@@ -467,36 +331,6 @@ function renderClientsSectors(filterText = "") {
       else openSectorIds.delete(id);
     });
   });
-  root.querySelectorAll("[data-reset-client]").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const name = btn.dataset.name || "klientin";
-      if (!confirm(`Lësho PC për «${name}»?\n\nTerminalet e vjetra fshihen. Hape sërish programin me të njëjtin çelës.`)) {
-        return;
-      }
-      btn.disabled = true;
-      try {
-        const line =
-          currentProduct === "market" || currentProduct === "hotel"
-            ? currentProduct
-            : "kafene";
-        const data = await api(
-          `/api/super/dashboard/clients/${encodeURIComponent(btn.dataset.resetClient)}/reset-device?product=${encodeURIComponent(line)}`,
-          { method: "POST", product: line },
-        );
-        const n = Number(data?.reset);
-        if (!n) {
-          alert("Nuk u gjet licencë për këtë klient. Hap klientin dhe shtyp Lësho PC te licenca.");
-          return;
-        }
-        alert("PC u lëshua. Mbyll MARKET krejt, pastaj hape sërish me të njëjtin çelës.");
-      } catch (ex) {
-        alert(ex.message || "Lëshimi i PC dështoi.");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
   root.querySelectorAll("[data-delete-client]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
@@ -508,7 +342,7 @@ function renderClientsSectors(filterText = "") {
   });
   root.querySelectorAll("[data-client-id]").forEach((row) => {
     row.addEventListener("click", (e) => {
-      if (e.target.closest("[data-delete-client], [data-reset-client]")) return;
+      if (e.target.closest("[data-delete-client]")) return;
       const hit = clientsFlat.find((c) => String(c.id) === String(row.dataset.clientId));
       openClientDetail(row.dataset.clientId, {
         product: hit?.product_line || productQuery(true) || "kafene",
@@ -530,20 +364,10 @@ async function loadClients() {
     const product = productQuery(true);
     const d = await api(`/api/super/dashboard/clients?product=${encodeURIComponent(product)}`);
     showBridgeMsg(d.bridge_error || "");
-    if (product === "security") {
-      sectorsCache = d.sectors || d.groups || [];
-    } else if (product === "hotel") {
-      sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_HOTEL_SECTORS);
-    } else if (product === "furra") {
-      sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_FURRA_SECTORS);
-    } else if (product === "market") {
-      sectorsCache = ensureSectors(d.sectors || d.groups || [], FALLBACK_MARKET_SECTORS);
-    } else {
-      sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
-    }
+    sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
   } catch (e) {
     showBridgeMsg(e.message || "Gabim gjatë ngarkimit të klientëve");
-    sectorsCache = currentProduct === "security" ? [] : [];
+    sectorsCache = [];
   }
   const q = document.getElementById("clients-search")?.value || "";
   renderClientsSectors(q);
@@ -592,7 +416,7 @@ function selectOpts(options, selected) {
     .join("");
 }
 
-function renderLicenseEditBlocks(licenses, { security = false } = {}) {
+function renderLicenseEditBlocks(licenses) {
   return (licenses || [])
     .map(
       (l) => `<div class="lic-detail-row" data-lic-edit="${esc(l.id)}" style="margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border)">
@@ -616,28 +440,14 @@ function renderLicenseEditBlocks(licenses, { security = false } = {}) {
           <label>Çelësi i licencës
             <input class="mono" data-lic-key="${esc(l.id)}" value="${esc(l.celesi || l.license_key || "")}" placeholder="XXXX-XXXX-XXXX-XXXX">
           </label>
-          ${
-            security
-              ? ""
-              : `<label>Device ID (terminal)
+          <label>Device ID (terminal)
             <input class="mono" data-lic-dev="${esc(l.id)}" value="${esc(l.device_id || "")}" placeholder="opsionale">
-          </label>`
-          }
+          </label>
           <label>Skadon
             <input type="date" data-lic-exp="${esc(l.id)}" value="${esc(String(l.data_skadimit || "").slice(0, 10))}">
           </label>
         </div>
         <div class="prob-actions" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem">
-          ${
-            security
-              ? `
-              ${
-                ["pezulluar", "revokuar", "skaduar"].includes(String(l.statusi || ""))
-                  ? `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
-                  : `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
-                     <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
-              }`
-              : `
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
               <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
@@ -647,9 +457,7 @@ function renderLicenseEditBlocks(licenses, { security = false } = {}) {
                      <button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
                   : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo</button>`
               }
-              <button type="button" class="btn btn-ghost btn-sm" data-drawer-reset-device="${esc(l.id)}">Lësho PC</button>
-              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>`
-          }
+              <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
         </div>
       </div>`,
     )
@@ -681,30 +489,15 @@ function renderPasswordBlock(owners) {
 }
 
 async function fetchClientDetailSmart(id, preferredProduct) {
-  const prefer = String(preferredProduct || currentProduct || "").toLowerCase();
-  const order =
-    prefer === "market" || currentProduct === "market"
-      ? ["market"]
-      : prefer === "hotel" || currentProduct === "hotel"
-        ? ["hotel"]
-        : prefer === "security" || currentProduct === "security"
-          ? ["security", "kafene"]
-          : ["kafene", "security"];
+  const product = "kafene";
 
-  let lastErr = null;
-  for (const product of order) {
-    try {
-      const d = await api(
-        `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
-      );
-      if (d?.client?.id || d?.client?.emri) {
-        return { d, product };
-      }
-    } catch (e) {
-      lastErr = e;
-    }
+  const d = await api(
+    `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
+  );
+  if (d?.client?.id || d?.client?.emri) {
+    return { d, product };
   }
-  throw lastErr || new Error("Klienti nuk u gjet");
+  throw new Error("Klienti nuk u gjet");
 }
 
 async function openClientDetail(id, opts = {}) {
@@ -716,23 +509,15 @@ async function openClientDetail(id, opts = {}) {
     || null;
   const { d, product } = await fetchClientDetailSmart(id, preferred);
   drawerProduct = product;
-  const isSecurity = product === "security";
   const c = d.client || {};
   const licenses = d.licenses || [];
   const owners = d.owners || [];
 
   document.getElementById("drawer-root").classList.remove("hidden");
-  document.getElementById("drawer-title").textContent = `${c.icon || (isSecurity ? "🛡️" : "🏪")} ${c.emri || "Klient"}`;
+  document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
   document.getElementById("drawer-sub").textContent = "Edito klientin, licencat & fjalëkalimin — Ruaj";
 
-  const sectorFields = isSecurity
-    ? `<label>Veprimtari (Security)
-        <select id="dr-veprimtari">
-          ${selectOpts(SECURITY_VEPRIMTARI_OPTS, c.veprimtari || c.tipi || "kompani_sigurie")}
-        </select>
-      </label>
-      <label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>`
-    : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+  const sectorFields = `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
       <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
 
@@ -752,7 +537,7 @@ async function openClientDetail(id, opts = {}) {
     ${renderPasswordBlock(owners)}
     <div class="detail-block">
       <h4>Licenca (edito ID / çelës / status)</h4>
-      ${renderLicenseEditBlocks(licenses, { security: isSecurity })}
+      ${renderLicenseEditBlocks(licenses)}
     </div>
   `;
   const body = document.getElementById("drawer-body");
@@ -764,14 +549,6 @@ async function openClientDetail(id, opts = {}) {
   document.getElementById("btn-drawer-delete-client")?.addEventListener("click", async () => {
     await deleteClientById(id, { product, name: c.emri, close: true });
   });
-}
-
-async function resetLicenseTerminals(licenseId) {
-  if (!confirm("Lësho PC / terminalet e kësaj licence?\n\nMARKET/POS hapet sërish në këtë kompjuter me të njëjtin çelës.")) {
-    return false;
-  }
-  await api(`/api/admin/licenses/${encodeURIComponent(licenseId)}/reset-device`, { method: "POST" });
-  return true;
 }
 
 async function deleteClientById(id, { product, name, close } = {}) {
@@ -795,12 +572,8 @@ async function deleteClientById(id, { product, name, close } = {}) {
     return;
   }
   try {
-    const line =
-      currentProduct === "market" || currentProduct === "hotel" || currentProduct === "security"
-        ? currentProduct
-        : prod || "kafene";
-    const qs = `?product=${encodeURIComponent(line)}`;
-    await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE", product: line });
+    const qs = prod === "security" ? "?product=security" : "?product=kafene";
+    await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE" });
     alert("Klienti u fshi.");
     if (close) closeDrawer();
     await loadClients();
@@ -932,10 +705,8 @@ function bindDrawerSave(clientId, productLine) {
     };
     const tipiEl = document.getElementById("dr-tipi");
     const pakoEl = document.getElementById("dr-pako");
-    const veprimtariEl = document.getElementById("dr-veprimtari");
     if (tipiEl?.value) body.tipi = tipiEl.value;
     if (pakoEl?.value) body.package_tier = pakoEl.value;
-    if (veprimtariEl?.value) body.veprimtari = veprimtariEl.value;
 
     document.querySelectorAll("[data-lic-edit]").forEach((row) => {
       const id = row.dataset.licEdit;
@@ -1055,22 +826,6 @@ function bindDrawerLicenseFix(root, clientId, productLine) {
       }
     });
   });
-  root.querySelectorAll("[data-drawer-reset-device]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      try {
-        const ok = await resetLicenseTerminals(btn.dataset.drawerResetDevice);
-        if (!ok) return;
-        alert("PC u lëshua. Hape sërish MARKET me të njëjtin çelës.");
-        await refreshClientsAndProblems();
-        await reopen();
-      } catch (ex) {
-        alert(ex.message || "Lëshimi i PC dështoi.");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
   root.querySelectorAll("[data-drawer-wipe]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("Fshi të dhënat lokale te POS? (Cloud nuk fshihet)")) return;
@@ -1122,39 +877,15 @@ function bindLicenseActions(root) {
       copyText(btn.dataset.copyText || "", btn);
     });
   });
-  root.querySelectorAll("[data-sec-status]").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const status = btn.dataset.status;
-      const label = status === "active" ? "riaktivizosh" : status === "suspended" ? "pezullosh" : "revokosh";
-      if (!confirm(`A doni të ${label} këtë licencë Security?`)) return;
-      btn.disabled = true;
-      try {
-        await api(`/api/super/dashboard/security/licenses/${btn.dataset.secStatus}/status`, {
-          method: "POST",
-          body: JSON.stringify({ status }),
-        });
-        await loadLicenses();
-      } catch (ex) {
-        alert(ex.message || "Ndryshimi i statusit dështoi.");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
   root.querySelectorAll("[data-delete-license]").forEach((btn) => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = btn.dataset.deleteLicense;
       const key = btn.dataset.key || id;
-      const isSec = btn.dataset.product === "security";
       if (!confirm(`Fshi krejt licencën ${key}?\nNuk kthehet mbrapa.`)) return;
       btn.disabled = true;
       try {
-        const path = isSec
-          ? `/api/super/dashboard/security/licenses/${id}`
-          : `/api/super/dashboard/licenses/${id}`;
-        await api(path, { method: "DELETE" });
+        await api(`/api/super/dashboard/licenses/${id}`, { method: "DELETE" });
         alert("Licenca u fshi.");
         await loadLicenses();
       } catch (ex) {
@@ -1217,22 +948,6 @@ function bindLicenseActions(root) {
         loadLicenses();
       } catch (ex) {
         alert(ex.message || "Riaktivizimi dështoi.");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
-  root.querySelectorAll("[data-reset-device]").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      btn.disabled = true;
-      try {
-        const ok = await resetLicenseTerminals(btn.dataset.resetDevice);
-        if (!ok) return;
-        alert("PC u lëshua. Hape sërish MARKET/POS me të njëjtin çelës.");
-        await loadLicenses();
-      } catch (ex) {
-        alert(ex.message || "Lëshimi i PC dështoi.");
       } finally {
         btn.disabled = false;
       }
@@ -1506,7 +1221,7 @@ async function loadLicenses() {
     license_key: l.license_key || l.celesi || "",
     statusi: l.statusi,
     activation_email: l.activation_email || "",
-    source: product === "security" ? "securetrack" : "pos",
+    source: "pos",
     product_line: product,
   }));
   licensesCache = list;
@@ -1521,7 +1236,6 @@ function renderLicensesList(filterText = "") {
     return normalizeSearch(`${l.client_name} ${l.license_key} ${l.hardware_id}`).includes(q);
   });
 
-  const isSecurity = product === "security";
   const cards = document.getElementById("licenses-cards");
   if (cards) {
     cards.innerHTML = list.length
@@ -1530,27 +1244,6 @@ function renderLicensesList(filterText = "") {
             const active = l.statusi === "aktive";
             const hw = l.hardware_id || "";
             const key = l.license_key || "";
-            if (isSecurity) {
-              return `<div class="license-card" data-license-card="${esc(l.id)}">
-                <h4>${esc(l.client_name)}
-                  <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
-                </h4>
-                <div class="lic-field-block">
-                  <label class="lic-field-label">Licenca</label>
-                  <div class="mono" style="word-break:break-all">${esc(key || "—")}</div>
-                </div>
-                <div class="lic-card-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
-                  <button type="button" class="btn btn-ghost" data-copy-text="${esc(key)}">Kopjo</button>
-                  ${
-                    active
-                      ? `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
-                         <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
-                      : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
-                  }
-                  <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="security" data-key="${esc(key)}">Fshi</button>
-                </div>
-              </div>`;
-            }
             return `<div class="license-card" data-license-card="${esc(l.id)}">
               <h4>${esc(l.client_name)}
                 <span class="badge ${active ? "badge-ok" : "badge-bad"}" style="margin-left:0.35rem">${esc(l.statusi)}</span>
@@ -1581,7 +1274,6 @@ function renderLicensesList(filterText = "") {
                     ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
                     : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
                 }
-                <button type="button" class="btn btn-ghost btn-sm" data-reset-device="${esc(l.id)}">Lësho PC</button>
                 <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
                 <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi licencën</button>
               </div>
@@ -1599,24 +1291,6 @@ function renderLicensesList(filterText = "") {
         const active = l.statusi === "aktive";
         const hw = l.hardware_id || "";
         const key = l.license_key || "";
-        if (isSecurity) {
-          return `<tr>
-            <td>${esc(l.client_name)}</td>
-            <td class="mono">${esc(hw || "—")}</td>
-            <td class="mono">${esc(key || "—")}</td>
-            <td><span class="badge ${active ? "badge-ok" : "badge-bad"}">${esc(l.statusi)}</span></td>
-            <td style="white-space:nowrap">
-              <button type="button" class="btn btn-ghost btn-sm" data-copy-text="${esc(key)}">Kopjo</button>
-              ${
-                active
-                  ? `<button type="button" class="btn btn-danger btn-sm" data-sec-status="${esc(l.id)}" data-status="revoked">Revoko</button>
-                     <button type="button" class="btn btn-ghost btn-sm" data-sec-status="${esc(l.id)}" data-status="suspended">Pezullo</button>`
-                  : `<button type="button" class="btn btn-ok btn-sm" data-sec-status="${esc(l.id)}" data-status="active">Riaktivizo</button>`
-              }
-              <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="security" data-key="${esc(key)}">Fshi</button>
-            </td>
-          </tr>`;
-        }
         return `<tr>
           <td>${esc(l.client_name)}</td>
           <td>
@@ -1636,7 +1310,6 @@ function renderLicensesList(filterText = "") {
                 ? `<button type="button" class="btn btn-ok btn-sm" data-reactivate="${esc(l.id)}" data-hw="${esc(hw)}">Riaktivizo</button>`
                 : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
             }
-            <button type="button" class="btn btn-ghost btn-sm" data-reset-device="${esc(l.id)}">Lësho PC</button>
             <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
             <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
@@ -2362,16 +2035,8 @@ async function boot() {
       email: document.getElementById("nc-email")?.value?.trim(),
       telefoni: document.getElementById("nc-tel")?.value?.trim(),
       telefon: document.getElementById("nc-tel")?.value?.trim(),
-      tipi:
-        product === "hotel"
-          ? document.getElementById("nc-hotel-tipi")?.value || "hotel"
-          : product === "furra"
-            ? document.getElementById("nc-furra-tipi")?.value || "furre_buke"
-            : product === "market"
-              ? document.getElementById("nc-market-tipi")?.value || "minimarket"
-              : document.getElementById("nc-tipi")?.value,
+      tipi: document.getElementById("nc-tipi")?.value,
       package_tier: document.getElementById("nc-pako")?.value,
-      veprimtari: document.getElementById("nc-veprimtari")?.value,
       issue_license: issueLicense,
       license_type: licenseType,
       hardware_id: hardwareId || undefined,

@@ -1,9 +1,9 @@
 /**
  * Lexon automatikisht release-in e fundit të Setup nga GitHub
- * (alfaportal/revolution-pos-server → tag setup-v* → KAFENE-Setup.exe).
+ * (alfaportal/revolution-restaurant-server → tag setup-v* → KAFENE-Setup.exe).
  * Cache në memorie — pa bump manual të versionit në kod.
  */
-const DEFAULT_SETUP_RELEASE_REPO = "alfaportal/revolution-pos-server";
+const DEFAULT_SETUP_RELEASE_REPO = "alfaportal/revolution-restaurant-server";
 const SETUP_TAG_PREFIX = "setup-v";
 const CACHE_TTL_MS = Math.max(
   60_000,

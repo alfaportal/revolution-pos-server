@@ -18,7 +18,7 @@
   <script>
     (function () {
       const parts = location.pathname.split("/").filter(Boolean);
-      const slug = parts[0] === "r" || parts[0] === "furra" || parts[0] === "hotel" ? parts[1] : "";
+      const slug = parts[0] === "r" ? parts[1] : "";
       if (!slug) return;
       const link = document.createElement("link");
       link.rel = "manifest";
