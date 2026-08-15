@@ -763,6 +763,50 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   min-height: var(--tap);
 }
 
+.emergency-code-card .card-title {
+  align-items: flex-start;
+}
+.emergency-code-hint {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.emergency-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.emergency-daily-code {
+  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 0.85rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  word-break: break-all;
+}
+.emergency-code-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.emergency-code-card #btn-refresh-emergency {
+  min-height: var(--tap);
+  flex-shrink: 0;
+}
+
 /* Desktop / large tablet */
 @media (min-width: 960px) {
   html, body { font-size: 16px; }
@@ -781,4 +825,9 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   .bank-confirm-btn { width: auto; min-height: 40px; }
   .product-tabs { display: flex; flex-wrap: wrap; position: static; }
   .product-tab { flex: 0 1 auto; }
+  .emergency-daily-code {
+    width: auto;
+    min-width: 12rem;
+    text-align: left;
+  }
 }

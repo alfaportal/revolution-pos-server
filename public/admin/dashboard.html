@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=28">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=29">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -388,6 +388,19 @@
 
         <!-- CILËSIMET -->
         <section class="section" id="sec-cilesimet">
+          <div class="card emergency-code-card">
+            <div class="card-title">
+              <span>Kod emergjence ditor</span>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-emergency">Rifresko</button>
+            </div>
+            <p id="emergency-code-hint" class="emergency-code-hint">Duke ngarkuar…</p>
+            <div class="emergency-code-row">
+              <code id="emergency-daily-code" class="emergency-daily-code">—</code>
+            </div>
+            <p class="emergency-code-help">
+              Te POS: Hyrje → Pronari → <strong>Kod emergjence</strong> → shkruaj këtë kod 6-shifror. Përdore kur POS nuk lidhet online ose fjalëkalimi i pronarit nuk dihet.
+            </p>
+          </div>
           <div class="card">
             <div class="card-title">Të dhënat e adminit &amp; çmimet</div>
             <div class="form-grid">
@@ -452,6 +465,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=28"></script>
+  <script src="/admin/dashboard.js?v=29"></script>
 </body>
 </html>

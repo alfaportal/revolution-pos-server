@@ -187,7 +187,10 @@ function openSection(name) {
     loadBilling();
   }
   if (name === "raportet") loadReports();
-  if (name === "cilesimet") loadSettings();
+  if (name === "cilesimet") {
+    loadSettings().catch((ex) => console.warn(ex));
+    loadEmergencyCode().catch((ex) => console.warn(ex));
+  }
   // Sinkron: kur hap Probleme ose Klientët, rifresko të dyja në background
   if (name === "klientet" || name === "raportet") {
     Promise.all([
@@ -1887,6 +1890,43 @@ async function loadReports() {
   }
 }
 
+let emergencyCodeDate = null;
+
+async function loadEmergencyCode() {
+  const hint = document.getElementById("emergency-code-hint");
+  const codeEl = document.getElementById("emergency-daily-code");
+  if (!hint || !codeEl) return;
+  try {
+    const data = await api(`/api/admin/emergency-code?_=${Date.now()}`);
+    if (!data.configured) {
+      hint.textContent = "Vendosni MASTER_EMERGENCY_PIN në Railway për kod emergjence.";
+      codeEl.textContent = "—";
+      emergencyCodeDate = null;
+      return;
+    }
+    const code = String(data.daily_code || "").trim();
+    const dateLabel = data.valid_for_date ? ` · data ${data.valid_for_date}` : "";
+    const timeLabel = ` · rifreskuar ${new Date().toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`;
+    hint.textContent =
+      (data.hint || "Kodi ditor 6 shifra — hap panelin Pronari në POS. Ndryshon çdo 24 orë.")
+      + dateLabel
+      + timeLabel;
+    codeEl.textContent = code || "—";
+    emergencyCodeDate = data.valid_for_date || new Date().toISOString().slice(0, 10);
+  } catch (e) {
+    hint.textContent = e.message || "Nuk u ngarkua kodi emergjence.";
+    codeEl.textContent = "—";
+    emergencyCodeDate = null;
+  }
+}
+
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  if (emergencyCodeDate && emergencyCodeDate !== today) {
+    loadEmergencyCode().catch(() => {});
+  }
+}, 60000);
+
 async function loadSettings() {
   const d = await api("/api/super/dashboard/settings");
   const s = d.settings || {};
@@ -2174,6 +2214,18 @@ async function boot() {
     e.preventDefault();
     refreshClientsAndProblems(e.currentTarget).catch((ex) => alert(ex.message || ex));
   });
+  document.getElementById("btn-refresh-emergency")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await loadEmergencyCode();
+    } catch (ex) {
+      alert(ex.message || String(ex));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   document.getElementById("btn-settings-save").addEventListener("click", async () => {
     try {
       await api("/api/super/dashboard/settings", {
