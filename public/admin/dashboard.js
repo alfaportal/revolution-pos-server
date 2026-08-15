@@ -227,10 +227,8 @@ async function loadOverview() {
   if (kpiLic) kpiLic.textContent = String(d.licenses_active ?? d.licenses_total ?? 0);
   const kpiTrial = document.getElementById("kpi-trial");
   if (kpiTrial) kpiTrial.textContent = String(d.trial_accounts ?? 0);
-  document.getElementById("kpi-sales").textContent = euro(d.sales_today_total);
   document.getElementById("kpi-problems").textContent = String((d.problem_clients || []).length);
   showBridgeMsg(d.bridge_error || "");
-  renderChart(document.getElementById("chart-weekly"), d.weekly_sales || [], "total");
   const list = document.getElementById("problem-list");
   const problems = d.problem_clients || [];
   list.innerHTML = problems.length

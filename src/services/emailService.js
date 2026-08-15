@@ -1,12 +1,12 @@
 /** Dërgim email transaksional (Resend). */
 
-const DEFAULT_EMAIL_FROM = "Revolution POS <noreply@ketujemi.com>";
+const DEFAULT_EMAIL_FROM = "Revolution POS <noreply@revolution-pos.com>";
 const { getPublicAppOrigin, getSupportPhone } = require("../lib/publicOrigin");
 
 function resolveEmailFrom() {
   const raw = process.env.EMAIL_FROM?.trim();
   if (!raw) return DEFAULT_EMAIL_FROM;
-  return raw.replace(/@revolutioninvest\.com/gi, "@ketujemi.com");
+  return raw.replace(/@revolutioninvest\.com/gi, "@revolution-pos.com");
 }
 
 function isEmailConfigured() {
@@ -414,7 +414,7 @@ async function sendSupplySuggestionEmail({
     "",
     "Ju lutemi konfirmoni porosinë dhe afatin e dorëzimit.",
     "",
-    "Revolution POS — ketujemi.com",
+    "Revolution POS — revolution-pos.com",
   ].join("\n");
 
   const htmlItems = (items || [])
