@@ -14,13 +14,14 @@ const EXTRACT_PROMPT =
   "2) quantity = kolonën Sasia (numri siç duket: 40.00 → 40). MOS e shumëzo, MOS e ndaj.\n" +
   "3) unit_price = kolonën Cmimi (çmimi për 1 njësi: 1 copë ose 1 pako). JO «Vlera Me TVSH».\n" +
   "4) line_total = kolonën «Vlera Me TVSH» e atij rreshti.\n" +
-  "5) pieces_per_pack: nëse unit=\"copë\" → GJITHMONË 1. Nëse unit=\"pako\" → sa copë ka 1 pako (nga emri «24 cop» ose 24 për pije).\n" +
-  "6) name = Pershkrimi SAKTËSISHT si në faturë (p.sh. Ujë Mineral 0.50l, Coca-Cola 0.25l).\n" +
-  "7) MOS invento rreshta. MOS përfshi TVSH/total/subtotal si artikull.\n" +
-  "8) supplier = emri i firmës së sipërme (DISKONT…), JO emri i kafenesë blerëse.\n" +
-  "9) supplier_nui = NUI / Nr. unik identifikues / Nr. biznesi i FURNIZUESIT (vetëm shifra, p.sh. 810xxxxxx). JO NUI i blerësit.\n" +
-  "10) supplier_vat = Nr. TVSH i furnizuesit nëse duket (p.sh. XK…). Nëse nuk ka → \"\".\n" +
-  "11) vat_rate = norma dominante e TVSH në faturë: 18, 8 ose 0. Nga kolona Tatimi / % TVSH / totalet. Nëse e paqartë → 18.\n" +
+  "5) pieces_per_pack: nëse unit=\"copë\" → GJITHMONË 1. Nëse unit=\"pako\" → sa copë ka 1 pako: nga emri «10 cop» ose AI; NËSE emri NUK thotë N cop → 1 (DISKONT: Pako×Cmimi=Sasia, jo karton 24).\n" +
+  "6) Lexo TË GJITHA rreshtat e tabelës — mos ndal te produkti i parë.\n" +
+  "7) name = Pershkrimi SAKTËSISHT si në faturë (p.sh. Ana Mineral 0.50l, Golden Eagle 0.25l).\n" +
+  "8) MOS invento rreshta. MOS përfshi TVSH/total/subtotal si artikull.\n" +
+  "9) supplier = emri i firmës së sipërme (DISKONT…), JO emri i kafenesë blerëse.\n" +
+  "10) supplier_nui = NUI / Nr. unik identifikues / Nr. biznesi i FURNIZUESIT (vetëm shifra, p.sh. 810xxxxxx). JO NUI i blerësit.\n" +
+  "11) supplier_vat = Nr. TVSH i furnizuesit nëse duket (p.sh. XK…). Nëse nuk ka → \"\".\n" +
+  "12) vat_rate = norma dominante e TVSH në faturë: 18, 8 ose 0. Nga kolona Tatimi / % TVSH / totalet. Nëse e paqartë → 18.\n" +
   "invoice_number (p.sh. 2024-400), invoice_date YYYY-MM-DD, total_with_vat = «Vlera për pagesë».\n" +
   "Përgjigju VETËM me JSON (pa markdown):\n" +
   '{"supplier":"DISKONT DESAR SH.P.K.","supplier_nui":"810123456","supplier_vat":"","vat_rate":18,"invoice_number":"2024-400","invoice_date":"2024-05-13","total_with_vat":277.72,"items":[{"name":"Ujë Mineral 0.50l","quantity":20,"unit":"copë","unit_price":0.25,"line_total":5.90,"pieces_per_pack":1},{"name":"Coca-Cola 0.25l","quantity":2,"unit":"copë","unit_price":0.60,"line_total":1.42,"pieces_per_pack":1}]}';
@@ -90,7 +91,7 @@ function inferPiecesPerPack(name, unit, explicit) {
   if (e != null && e > 0) return Math.max(1, Math.round(e));
   const fromName = piecesFromName(name);
   if (fromName) return fromName;
-  return 24;
+  return 1;
 }
 
 function normalizeInvoiceItems(rawItems) {
