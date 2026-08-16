@@ -14,14 +14,18 @@ let sectionRefreshTimer = null;
 
 /** REVOLUTION POS — vetëm shitje; gjithmonë të dukshme. */
 const FALLBACK_SECTORS = [
-  { num: 1, id: "kafene", label: "Kafene", keywords: ["kafene"], clients: [] },
-  { num: 2, id: "restorant", label: "Restorant", keywords: ["restorant"], clients: [] },
-  { num: 3, id: "bar_pub", label: "Bar / Pub", keywords: ["bar", "pub"], clients: [] },
-  { num: 4, id: "nightlife", label: "Klub nate / Diskotekë", keywords: ["klub", "diskotek", "nate"], clients: [] },
-  { num: 5, id: "piceri", label: "Piceri", keywords: ["piceri"], clients: [] },
-  { num: 6, id: "fast_food", label: "Fast Food Kiosk", keywords: ["fast", "food", "kiosk"], clients: [] },
-  { num: 7, id: "dyqan_pijesh", label: "Dyqan pijesh", keywords: ["pijesh", "pije"], clients: [] },
-  { num: 8, id: "other", label: "Të tjera (klientë të vjetër)", keywords: ["tjeter"], clients: [] },
+  { num: 1, id: "restorant", label: "Restorant", keywords: ["restorant"], clients: [] },
+  { num: 2, id: "kafene", label: "Kafene", keywords: ["kafene"], clients: [] },
+  { num: 3, id: "bar", label: "Bar", keywords: ["bar"], clients: [] },
+  { num: 4, id: "lounge_bar", label: "Lounge bar", keywords: ["lounge"], clients: [] },
+  { num: 5, id: "pub", label: "Pub", keywords: ["pub"], clients: [] },
+  { num: 6, id: "fast_food", label: "Fast food", keywords: ["fast", "food", "kiosk"], clients: [] },
+  { num: 7, id: "piceri", label: "Pizzeri", keywords: ["pizzeri", "piceri", "pizza"], clients: [] },
+  { num: 8, id: "doner_kebab", label: "Doner / Kebab", keywords: ["doner", "kebab"], clients: [] },
+  { num: 9, id: "gjelltore", label: "Gjelltore", keywords: ["gjelltore", "gjell"], clients: [] },
+  { num: 10, id: "fish_restaurant", label: "Fish restaurant", keywords: ["fish", "peshk"], clients: [] },
+  { num: 11, id: "sushi_bar", label: "Sushi bar", keywords: ["sushi"], clients: [] },
+  { num: 12, id: "other", label: "Të tjera (klientë të vjetër)", keywords: ["tjeter"], clients: [] },
 ];
 
 function ensureSectors(apiSectors, fallback) {
@@ -40,7 +44,7 @@ function ensureSectors(apiSectors, fallback) {
   });
 }
 
-function ensureNineSectors(apiSectors) {
+function ensureAllSectors(apiSectors) {
   return ensureSectors(apiSectors, FALLBACK_SECTORS);
 }
 
@@ -95,7 +99,7 @@ function showBridgeMsg(text) {
 
 const TITLES = {
   pasqyra: ["Pasqyra", "Përmbledhje e platformës"],
-  klientet: ["Klientët", "9 kategori — gjithmonë të dukshme"],
+  klientet: ["Klientët", `${FALLBACK_SECTORS.length} kategori — gjithmonë të dukshme`],
   licencat: ["Licencat", "ID · Licencë · Ruaj · Kopjo"],
   ai: ["AI Usage", "Tokena, kosto dhe harxhimi me kohë"],
   faturimi: ["Faturimi", "Pagesa bankare + fatura PDF"],
@@ -271,7 +275,7 @@ function renderClientsSectors(filterText = "") {
   if (!root) return;
   const q = normalizeSearch(filterText);
   clientsFlat = [];
-  const sectors = ensureNineSectors(sectorsCache);
+  const sectors = ensureAllSectors(sectorsCache);
 
   const html = sectors
     .map((s) => {
@@ -365,7 +369,7 @@ async function loadClients() {
     const product = productQuery(true);
     const d = await api(`/api/super/dashboard/clients?product=${encodeURIComponent(product)}`);
     showBridgeMsg(d.bridge_error || "");
-    sectorsCache = ensureNineSectors(d.sectors || d.groups || []);
+    sectorsCache = ensureAllSectors(d.sectors || d.groups || []);
   } catch (e) {
     showBridgeMsg(e.message || "Gabim gjatë ngarkimit të klientëve");
     sectorsCache = [];
@@ -392,13 +396,17 @@ async function copyText(text, btn) {
 }
 
 const DRAWER_TIPI_OPTS = [
-  ["kafene", "Kafene"],
   ["restorant", "Restorant"],
-  ["bar", "Bar / Pub"],
-  ["klub_nate", "Klub nate / Diskotekë"],
-  ["piceri", "Piceri"],
-  ["fast_food", "Fast Food Kiosk"],
-  ["dyqan_pijesh", "Dyqan pijesh"],
+  ["kafene", "Kafene"],
+  ["bar", "Bar"],
+  ["lounge_bar", "Lounge bar"],
+  ["pub", "Pub"],
+  ["fast_food", "Fast food"],
+  ["piceri", "Pizzeri"],
+  ["doner_kebab", "Doner / Kebab"],
+  ["gjelltore", "Gjelltore"],
+  ["fish_restaurant", "Fish restaurant"],
+  ["sushi_bar", "Sushi bar"],
 ];
 
 const DRAWER_PAKO_OPTS = [
