@@ -607,13 +607,17 @@ async function sendKafeneSecurityAlertEmail({
   message,
   at,
 }) {
-  const dest = String(to || "revolutioninvest05@gmail.com").trim().toLowerCase();
+  const dest = String(to || "naserbuzhala189@gmail.com").trim().toLowerCase();
   const urgentTag = urgent ? "URGJENT — " : "";
   const typeLabel =
     type === "license_activate_urgent"
       ? "Tentativë thyerjeje licence (>3 / 24h)"
       : type === "license_activate_failed"
         ? "Licenca dështoi (çelës gabim / HW)"
+        : type === "code_extraction_attempt"
+          ? "Tentativë nxjerrjeje kodi/të dhënave (>2 / 24h)"
+        : type === "integrity_tamper"
+          ? "Manipulim programi (asar/integritet)"
         : type === "devtools_attempt"
           ? "DevTools i bllokuar"
           : String(type || "Alert");

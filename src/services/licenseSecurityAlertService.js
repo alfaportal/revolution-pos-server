@@ -7,7 +7,7 @@ const {
   sendKafeneSecurityAlertEmail,
 } = require("./emailService");
 
-const DEFAULT_NOTIFY = "revolutioninvest05@gmail.com";
+const DEFAULT_NOTIFY = "naserbuzhala189@gmail.com";
 
 /** Duhet të përputhet me KAFENE/security-alert.js getAlertHmacSecret(). */
 function getAlertHmacSecret() {
@@ -106,6 +106,8 @@ async function handleSecurityAlert(body, { clientIp } = {}) {
     "license_activate_failed",
     "license_activate_urgent",
     "devtools_attempt",
+    "code_extraction_attempt",
+    "integrity_tamper",
   ]);
   if (!allowed.has(type)) {
     return { ok: false, gabim: "Lloji i alertit i panjohur.", code: "BAD_TYPE" };
@@ -114,7 +116,7 @@ async function handleSecurityAlert(body, { clientIp } = {}) {
   await ensureSecurityEventsTable();
 
   const count_24h = Number(body.count_24h) || 0;
-  const urgent = !!body.urgent || type === "license_activate_urgent";
+  const urgent = !!body.urgent || type === "license_activate_urgent" || type === "code_extraction_attempt";
   const row = {
     event_type: type,
     hardware_id,
