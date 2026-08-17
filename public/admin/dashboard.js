@@ -1950,7 +1950,16 @@ async function loadSettings() {
 async function boot() {
   bindProblemResolveUi();
   document.querySelectorAll(".product-tab").forEach((btn) => {
-    btn.addEventListener("click", () => setProductTab(btn.dataset.product));
+    btn.addEventListener("click", () => {
+      // Produktet e tjera (Security etj.) rrinë projekt më vete: butoni vetëm
+      // hap panelin e tyre, NUK sjell të dhëna këtu (zero përzierje).
+      const href = btn.dataset.openHref;
+      if (href) {
+        window.location.href = href;
+        return;
+      }
+      setProductTab(btn.dataset.product);
+    });
   });
   setProductTab(currentProduct, { reload: false });
   document.getElementById("nc-product")?.addEventListener("change", syncNewClientForm);
