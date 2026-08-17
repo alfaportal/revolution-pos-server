@@ -372,6 +372,17 @@ function sendMarketingPage(res, pathname) {
 
 app.get("/", (_req, res) => sendMarketingPage(res, "/"));
 
+// === PRODUKTET — redirect te serverët e tyre (pa proxy, pa përzierje) ===
+// Vetëm ridrejtim: kur dikush hap revolution-pos.com/security, shkon direkt
+// te serveri i pavarur i Security-t. Dy serverët nuk komunikojnë.
+// Në të ardhmen shtohen njëjtë: /market, /hotel, /furra → serveri i vet.
+app.get("/security", (req, res) => {
+  res.redirect("https://revolution-security-production.up.railway.app/security/");
+});
+app.get("/security/*", (req, res) => {
+  res.redirect("https://revolution-security-production.up.railway.app" + req.originalUrl);
+});
+
 app.get(
   [
     "/pse-ne",
