@@ -2,6 +2,7 @@ require("./lib/env");
 
 const fs = require("fs");
 const path = require("path");
+const https = require("https");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 
@@ -73,6 +74,38 @@ const PORT = Number(process.env.PORT) || 8080;
 app.set("trust proxy", 1);
 
 app.use(corsMiddleware);
+
+// === PRODUKTET — reverse proxy te serverët e tyre (pa përzierje të dhënash) ===
+// Vetëm portë kalimi: e përcjell trafikun /security te serveri i pavarur i
+// Security-t dhe kthen përgjigjen ashtu siç vjen. Adresa mbetet
+// revolution-pos.com/security (railway rri i fshehur prapa).
+// Serveri i restorantit NUK e lexon, s'e ruan, s'e prek bazën e Security-t.
+// Vendoset PARA express.json që body-i i POST-it (p.sh. login) të mos humbasë.
+// Në të ardhmen shtohen njëjtë: /market, /hotel, /furra → serveri i vet.
+const SECURITY_UPSTREAM = "revolution-security-production.up.railway.app";
+function proxyToSecurity(req, res) {
+  const headers = { ...req.headers, host: SECURITY_UPSTREAM };
+  const proxyReq = https.request(
+    {
+      hostname: SECURITY_UPSTREAM,
+      port: 443,
+      path: req.originalUrl,
+      method: req.method,
+      headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", () => {
+    if (!res.headersSent) {
+      res.status(502).send("Security upstream nuk përgjigjet");
+    }
+  });
+  req.pipe(proxyReq);
+}
+app.use("/security", proxyToSecurity);
 
 // Stripe webhook — RAW body (para express.json)
 app.post(
@@ -372,16 +405,7 @@ function sendMarketingPage(res, pathname) {
 
 app.get("/", (_req, res) => sendMarketingPage(res, "/"));
 
-// === PRODUKTET — redirect te serverët e tyre (pa proxy, pa përzierje) ===
-// Vetëm ridrejtim: kur dikush hap revolution-pos.com/security, shkon direkt
-// te serveri i pavarur i Security-t. Dy serverët nuk komunikojnë.
-// Në të ardhmen shtohen njëjtë: /market, /hotel, /furra → serveri i vet.
-app.get("/security", (req, res) => {
-  res.redirect("https://revolution-security-production.up.railway.app/security/");
-});
-app.get("/security/*", (req, res) => {
-  res.redirect("https://revolution-security-production.up.railway.app" + req.originalUrl);
-});
+// (Proxy-i i /security është përcaktuar lart, para express.json.)
 
 app.get(
   [
