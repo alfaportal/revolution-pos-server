@@ -459,7 +459,11 @@ async function getOverviewKafene(adminProduct = "kafene") {
 
 async function getOverview({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security" || p === "hotel" || p === "furra") {
+  if (p === "security") {
+    const { getSecurityOverview } = require("../lib/securityAdminBridge");
+    return getSecurityOverview();
+  }
+  if (p === "hotel" || p === "furra") {
     return {
       active_clients: 0,
       licenses_total: 0,
@@ -476,7 +480,11 @@ async function getOverview({ product } = {}) {
 
 async function getClientsGrouped({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security" || p === "hotel" || p === "furra") {
+  if (p === "security") {
+    const { getSecurityClientsGrouped } = require("../lib/securityAdminBridge");
+    return getSecurityClientsGrouped();
+  }
+  if (p === "hotel" || p === "furra") {
     return { sectors: [], groups: [], product_line: p };
   }
 
@@ -691,7 +699,11 @@ async function getClientDetail(clientId) {
 
 async function getLicensesView({ product } = {}) {
   const p = normalizeProductLine(product || "kafene");
-  if (p === "security" || p === "hotel" || p === "furra") {
+  if (p === "security") {
+    const { getSecurityLicensesView } = require("../lib/securityAdminBridge");
+    return getSecurityLicensesView();
+  }
+  if (p === "hotel" || p === "furra") {
     return { licenses: [], product_line: p };
   }
 

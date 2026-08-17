@@ -100,6 +100,7 @@
                 <label for="nc-product">Produkti / Industria</label>
                 <select id="nc-product" required>
                   <option value="kafene">REVOLUTION POS (shitje)</option>
+                  <option value="security">REVOLUTION SECURITY (terren)</option>
                 </select>
               </div>
               <div class="field">
@@ -129,6 +130,19 @@
                   <option value="pako_4">Pako 2</option>
                   <option value="pako_2">Pako 3</option>
                   <option value="pako_5">Pako 4 (AI)</option>
+                </select>
+              </div>
+              <div class="field nc-security-only hidden">
+                <label for="nc-vepr">Veprimtaria — REVOLUTION SECURITY</label>
+                <select id="nc-vepr">
+                  <option value="kompani_sigurie">Kompani sigurie (rojë, patrulla)</option>
+                  <option value="transport_logjistike">Kompani transporti (shoferë, autobusë, kamionë)</option>
+                  <option value="ndertimtari">Kompani ndërtimi (punëtorë kantieri)</option>
+                  <option value="pastrim">Kompani pastrimi (pastrues, sanitizim)</option>
+                  <option value="kuriere_dergesa">Posta / shërbime dërgese (postierë, korrierë)</option>
+                  <option value="mirembajtje_nderte">Kompani mirëmbajtje (teknikanë, instalues)</option>
+                  <option value="magazinim">Kompani magazinimi (depo, punëtorë magazine)</option>
+                  <option value="agjenci_marketingu">Agjenci marketingu në terren (promotorë)</option>
                 </select>
               </div>
               <div class="field">
@@ -437,94 +451,6 @@
             <div id="settings-msg" class="alert alert-ok hidden" style="margin-top:0.75rem"></div>
           </div>
         </section>
-
-        <!-- SECURITY — formë native (projekt i ndarë; të dhënat shkojnë te serveri i Security-t) -->
-        <section class="section" id="sec-security-embed">
-          <!-- Portë sekreti (vetëm herën e parë) -->
-          <div class="card" id="sec-secret-gate">
-            <div class="card-title"><span>Super Admin — Security</span></div>
-            <p style="color:var(--muted);font-size:0.88rem;margin:0 0 0.75rem">
-              Shkruaj një herë secret-in e Super Admin të Security-t (i njëjti si te paneli i Security-t).
-            </p>
-            <div class="field full">
-              <div class="nc-input-row">
-                <input id="sec-secret" type="password" placeholder="Secret i Super Admin (Security)" autocomplete="off" spellcheck="false">
-                <button type="button" class="btn btn-primary" id="sec-secret-btn">Hyr</button>
-              </div>
-              <span id="sec-secret-msg" style="color:var(--muted);font-size:0.9rem"></span>
-            </div>
-          </div>
-
-          <!-- Regjistro firmë Security (hidden derisa hapet sekreti) -->
-          <div class="card hidden" id="sec-form-card">
-            <div class="card-title"><span>Shto firmë Security</span></div>
-            <form id="sec-form-new" class="form-grid">
-              <div class="field">
-                <label for="sec-nc-product">Produkti / Industria</label>
-                <select id="sec-nc-product" disabled>
-                  <option value="security">REVOLUTION SECURITY (terren)</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="sec-nc-emri">Emri i biznesit</label>
-                <input id="sec-nc-emri" required placeholder="p.sh. Alba Security" autocomplete="organization">
-              </div>
-              <div class="field">
-                <label for="sec-nc-vepr">Veprimtaria — REVOLUTION SECURITY</label>
-                <select id="sec-nc-vepr">
-                  <option value="kompani_sigurie">Kompani sigurie (rojë, patrulla)</option>
-                  <option value="transport_logjistike">Kompani transporti (shoferë, autobusë, kamionë)</option>
-                  <option value="ndertimtari">Kompani ndërtimi (punëtorë kantieri)</option>
-                  <option value="pastrim">Kompani pastrimi (pastrues, sanitizim)</option>
-                  <option value="kuriere_dergesa">Posta / shërbime dërgese (postierë, korrierë)</option>
-                  <option value="mirembajtje_nderte">Kompani mirëmbajtje (teknikanë, instalues)</option>
-                  <option value="magazinim">Kompani magazinimi (depo, punëtorë magazine)</option>
-                  <option value="agjenci_marketingu">Agjenci marketingu në terren (promotorë)</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="sec-nc-email">Email</label>
-                <input id="sec-nc-email" type="email" placeholder="opsionale">
-              </div>
-              <div class="field">
-                <label for="sec-nc-tel">Telefon</label>
-                <input id="sec-nc-tel" type="tel" placeholder="opsionale">
-              </div>
-              <div class="field full">
-                <label for="sec-nc-adr">Adresa</label>
-                <input id="sec-nc-adr" placeholder="opsionale">
-              </div>
-              <div class="field full">
-                <label for="sec-nc-hw">ID pajisjes (16 shenja)</label>
-                <div class="nc-input-row">
-                  <input id="sec-nc-hw" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
-                  <button type="button" class="btn btn-ok" id="sec-btn-gen-id">Gjenero ID</button>
-                </div>
-              </div>
-              <div class="field full">
-                <label for="sec-nc-key">Çelësi i licencës (16 shenja)</label>
-                <div class="nc-input-row">
-                  <input id="sec-nc-key" class="mono" type="text" placeholder="Auto nëse bosh" autocomplete="off" spellcheck="false">
-                  <button type="button" class="btn btn-primary" id="sec-btn-gen-key">Gjenero Licencë</button>
-                </div>
-              </div>
-              <div class="field full">
-                <button type="submit" class="btn btn-primary" id="sec-btn-submit">Regjistro firmën</button>
-                <span id="sec-nc-msg" style="margin-left:0.75rem;color:var(--muted);font-size:0.9rem"></span>
-              </div>
-            </form>
-          </div>
-
-          <!-- Lista e firmave Security -->
-          <div class="card hidden" id="sec-list-card">
-            <div class="card-title">
-              <span>Firmat Security</span>
-              <button type="button" class="btn btn-ghost btn-sm" id="sec-btn-refresh">Rifresko</button>
-            </div>
-            <input type="search" class="search-bar" id="sec-clients-search" placeholder="Kërko firmën…" enterkeyhint="search" autocomplete="off">
-            <div id="sec-clients-list"></div>
-          </div>
-        </section>
       </main>
     </div>
   </div>
@@ -553,6 +479,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=34"></script>
+  <script src="/admin/dashboard.js?v=35"></script>
 </body>
 </html>

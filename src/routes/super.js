@@ -362,13 +362,38 @@ router.post(
       }
     }
 
-    if (product === "security" || product === "hotel" || product === "furra") {
+    if (product === "security") {
+      const { registerSecurityClient } = require("../lib/securityAdminBridge");
+      const result = await registerSecurityClient(req.body || {});
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_create",
+        targetType: "client",
+        targetId: result.client?.id || null,
+        targetLabel: result.client?.emri || req.body?.emri || "Security",
+        details: {
+          license_key: result.license_key || null,
+          hardware_id: result.hardware_id || null,
+          product_line: "security",
+        },
+      }).catch(() => {});
+      return res.status(201).json({
+        ok: true,
+        client: result.client,
+        license: result.license,
+        license_key: result.license_key,
+        celesi: result.license_key,
+        hardware_id: result.hardware_id || null,
+        product_line: "security",
+        already_exists: !!result.already_exists,
+      });
+    }
+
+    if (product === "hotel" || product === "furra") {
       const err = new Error(
         product === "hotel"
           ? "HOTEL nuk menaxhohet nga ky server."
-          : product === "furra"
-            ? "FURRA nuk menaxhohet nga ky server."
-            : "SECURITY nuk menaxhohet nga ky server.",
+          : "FURRA nuk menaxhohet nga ky server.",
       );
       err.status = 400;
       throw err;

@@ -28,6 +28,18 @@ const FALLBACK_SECTORS = [
   { num: 12, id: "other", label: "Të tjera (klientë të vjetër)", keywords: ["tjeter"], clients: [] },
 ];
 
+/** REVOLUTION SECURITY — 8 kategori terreni. */
+const FALLBACK_SECURITY_SECTORS = [
+  { num: 1, id: "kompani_sigurie", label: "Kompani sigurie (rojë, patrulla)", keywords: ["siguri"], clients: [] },
+  { num: 2, id: "transport_logjistike", label: "Kompani transporti", keywords: ["transport"], clients: [] },
+  { num: 3, id: "ndertimtari", label: "Kompani ndërtimi", keywords: ["ndertim"], clients: [] },
+  { num: 4, id: "pastrim", label: "Kompani pastrimi", keywords: ["pastrim"], clients: [] },
+  { num: 5, id: "kuriere_dergesa", label: "Posta / dërgesa", keywords: ["poste"], clients: [] },
+  { num: 6, id: "mirembajtje_nderte", label: "Kompani mirëmbajtje", keywords: ["mirembajtje"], clients: [] },
+  { num: 7, id: "magazinim", label: "Kompani magazinimi", keywords: ["magazin"], clients: [] },
+  { num: 8, id: "agjenci_marketingu", label: "Agjenci marketingu", keywords: ["marketing"], clients: [] },
+];
+
 function ensureSectors(apiSectors, fallback) {
   const list = fallback || FALLBACK_SECTORS;
   const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
@@ -45,13 +57,33 @@ function ensureSectors(apiSectors, fallback) {
 }
 
 function ensureAllSectors(apiSectors) {
-  return ensureSectors(apiSectors, FALLBACK_SECTORS);
+  const fb = currentProduct === "security" ? FALLBACK_SECURITY_SECTORS : FALLBACK_SECTORS;
+  return ensureSectors(apiSectors, fb);
 }
 
 function productQuery(_forClients = false) {
   const p = currentProduct || "kafene";
   if (p === "all" || p === "te_gjitha") return "kafene";
   return p;
+}
+
+function updateProductUiHints() {
+  const isSec = currentProduct === "security";
+  const hint = document.getElementById("product-tabs-hint");
+  if (hint) hint.textContent = isSec ? "Çdo listë i takon Security." : "Çdo listë i takon POS.";
+  const listTitle = document.getElementById("clients-list-title");
+  if (listTitle) {
+    listTitle.textContent = isSec ? "Firmat REVOLUTION SECURITY" : "Klientët REVOLUTION POS";
+  }
+  const activeSec = document.querySelector(".section.active")?.id?.replace(/^sec-/, "") || "";
+  if (activeSec === "klientet") {
+    const sub = document.getElementById("page-sub");
+    if (sub) {
+      sub.textContent = isSec
+        ? `${FALLBACK_SECURITY_SECTORS.length} kategori — gjithmonë të dukshme`
+        : `${FALLBACK_SECTORS.length} kategori — gjithmonë të dukshme`;
+    }
+  }
 }
 
 function setProductTab(product, { reload = true } = {}) {
@@ -63,50 +95,25 @@ function setProductTab(product, { reload = true } = {}) {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
-
-  const hint = document.getElementById("product-tabs-hint");
-
-  if (currentProduct === "security") {
-    // Security është projekt i ndarë. Kjo formë është NATIVE (si POS) por i dërgon
-    // të dhënat te serveri i Security-t (/security/api/admin/...). Zero përzierje me POS.
-    if (sectionRefreshTimer) {
-      clearInterval(sectionRefreshTimer);
-      sectionRefreshTimer = null;
-    }
-    document
-      .querySelectorAll(".section")
-      .forEach((s) => s.classList.toggle("active", s.id === "sec-security-embed"));
-    document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
-    document.getElementById("page-title").textContent = "Revolution Security";
-    document.getElementById("page-sub").textContent = "Regjistro firma & jep licenca — projekt i ndarë";
-    if (hint) hint.textContent = "Firmat Security regjistrohen këtu — të dhënat rrinë te serveri i Security-t.";
-    if (typeof secOnEnter === "function") secOnEnter();
-    return;
-  }
-
-  // POS
-  document.getElementById("sec-security-embed")?.classList.remove("active");
-  if (hint) hint.textContent = "Çdo listë i takon POS.";
   const nc = document.getElementById("nc-product");
   if (nc) {
     nc.value = currentProduct;
     syncNewClientForm();
   }
-  const title = document.getElementById("clients-list-title");
-  if (title) {
-    title.textContent = "Klientët REVOLUTION POS";
-  }
+  updateProductUiHints();
   if (!reload) return;
   const activeSec = document.querySelector(".section.active");
-  let name = activeSec?.id?.replace(/^sec-/, "") || "pasqyra";
-  if (name === "security-embed") name = "pasqyra";
+  const name = activeSec?.id?.replace(/^sec-/, "") || "pasqyra";
   openSection(name);
 }
 
 function syncNewClientForm() {
-  const product = document.getElementById("nc-product")?.value || "kafene";
+  const product = currentProduct || document.getElementById("nc-product")?.value || "kafene";
   document.querySelectorAll(".nc-kafene-only").forEach((el) => {
     el.classList.toggle("hidden", product !== "kafene");
+  });
+  document.querySelectorAll(".nc-security-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "security");
   });
 }
 
@@ -120,237 +127,6 @@ function showBridgeMsg(text) {
   }
   el.textContent = text;
   el.classList.remove("hidden");
-}
-
-/* ===================== SECURITY (native, projekt i ndarë) =====================
-   Formë me të njëjtin stil si POS, por dërgon te serveri i Security-t përmes
-   proxy-t same-origin: /security/api/admin/*  (header x-admin-secret).
-   ASNJË të dhënë s'përzihet me POS — POS-i s'preket fare. */
-const SEC_ADMIN_BASE = "/security/api/admin";
-const SEC_SECRET_KEY = "rip_sec_admin_secret";
-const SEC_VEPR = {
-  kompani_sigurie: "Kompani sigurie (rojë, patrulla)",
-  transport_logjistike: "Kompani transporti",
-  ndertimtari: "Kompani ndërtimi",
-  pastrim: "Kompani pastrimi",
-  kuriere_dergesa: "Posta / dërgesa",
-  mirembajtje_nderte: "Kompani mirëmbajtje",
-  magazinim: "Kompani magazinimi",
-  agjenci_marketingu: "Agjenci marketingu",
-};
-let secClientsCache = [];
-
-function secGetSecret() {
-  try {
-    return sessionStorage.getItem(SEC_SECRET_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-function secSetSecret(s) {
-  try {
-    if (!s) sessionStorage.removeItem(SEC_SECRET_KEY);
-    else sessionStorage.setItem(SEC_SECRET_KEY, s);
-  } catch {
-    /* ignore */
-  }
-}
-function secRandomHw16() {
-  const bytes = new Uint8Array(8);
-  (window.crypto || {}).getRandomValues?.(bytes);
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
-  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
-}
-async function secAdminFetch(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${SEC_ADMIN_BASE}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json", "x-admin-secret": secGetSecret() },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.gabim || data.message || `Gabim ${res.status}`);
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-}
-function secShowUnlocked(on) {
-  document.getElementById("sec-secret-gate")?.classList.toggle("hidden", on);
-  document.getElementById("sec-form-card")?.classList.toggle("hidden", !on);
-  document.getElementById("sec-list-card")?.classList.toggle("hidden", !on);
-}
-function secVeprLabel(id) {
-  return SEC_VEPR[id] || id || "—";
-}
-function secRenderClients(rows, filter = "") {
-  const el = document.getElementById("sec-clients-list");
-  if (!el) return;
-  const q = String(filter || "").trim().toLowerCase();
-  const list = !q
-    ? rows
-    : rows.filter((c) =>
-        `${c.emri || ""} ${c.email || ""} ${c.telefon || ""} ${secVeprLabel(c.veprimtari)}`
-          .toLowerCase()
-          .includes(q),
-      );
-  if (!list.length) {
-    el.innerHTML = `<p style="color:var(--muted);padding:0.5rem 0">Ende pa firma Security.</p>`;
-    return;
-  }
-  el.innerHTML = list
-    .map(
-      (c) => `
-      <div class="client-row">
-        <div>
-          <div style="font-weight:600">${esc(c.emri || "—")}</div>
-          <div style="color:var(--muted);font-size:0.85rem">${esc(secVeprLabel(c.veprimtari))}${c.email ? " · " + esc(c.email) : ""}${c.telefon ? " · " + esc(c.telefon) : ""}</div>
-        </div>
-      </div>`,
-    )
-    .join("");
-}
-async function secLoadClients() {
-  const data = await secAdminFetch("/clients");
-  secClientsCache = Array.isArray(data.clients) ? data.clients : Array.isArray(data) ? data : [];
-  const search = document.getElementById("sec-clients-search");
-  secRenderClients(secClientsCache, search?.value || "");
-}
-async function secOnEnter() {
-  if (!secGetSecret()) {
-    secShowUnlocked(false);
-    return;
-  }
-  try {
-    await secLoadClients();
-    secShowUnlocked(true);
-  } catch (ex) {
-    if (ex.status === 401 || ex.status === 403) {
-      secSetSecret("");
-      secShowUnlocked(false);
-      const m = document.getElementById("sec-secret-msg");
-      if (m) m.textContent = "Secret i pasaktë. Provo sërish.";
-    } else {
-      secShowUnlocked(true);
-    }
-  }
-}
-async function secGenKey() {
-  const data = await secAdminFetch("/gen-key");
-  return data.license_key || data.celesi || "";
-}
-function secBindUi() {
-  document.getElementById("sec-secret-btn")?.addEventListener("click", async () => {
-    const inp = document.getElementById("sec-secret");
-    const msg = document.getElementById("sec-secret-msg");
-    const val = String(inp?.value || "").trim();
-    if (!val) {
-      if (msg) msg.textContent = "Shkruaj secret-in.";
-      return;
-    }
-    secSetSecret(val);
-    if (msg) msg.textContent = "Duke verifikuar…";
-    try {
-      await secLoadClients();
-      secShowUnlocked(true);
-      if (inp) inp.value = "";
-      if (msg) msg.textContent = "";
-    } catch (ex) {
-      secSetSecret("");
-      if (msg) {
-        msg.textContent =
-          ex.status === 401 || ex.status === 403 ? "Secret i pasaktë." : ex.message || "Gabim";
-      }
-    }
-  });
-  document.getElementById("sec-secret")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      document.getElementById("sec-secret-btn")?.click();
-    }
-  });
-  document.getElementById("sec-btn-gen-id")?.addEventListener("click", () => {
-    const el = document.getElementById("sec-nc-hw");
-    if (el) el.value = secRandomHw16();
-  });
-  document.getElementById("sec-btn-gen-key")?.addEventListener("click", async () => {
-    const btn = document.getElementById("sec-btn-gen-key");
-    const keyEl = document.getElementById("sec-nc-key");
-    const msg = document.getElementById("sec-nc-msg");
-    if (btn) btn.disabled = true;
-    if (msg) msg.textContent = "Duke gjeneruar…";
-    try {
-      const key = await secGenKey();
-      if (!key) throw new Error("S'u kthye çelës.");
-      if (keyEl) keyEl.value = key;
-      if (msg) msg.textContent = `Licenca: ${key}`;
-    } catch (ex) {
-      if (msg) msg.textContent = ex.message || "Gjenerimi dështoi";
-    } finally {
-      if (btn) btn.disabled = false;
-    }
-  });
-  document.getElementById("sec-btn-refresh")?.addEventListener("click", () => {
-    secLoadClients().catch(() => null);
-  });
-  document.getElementById("sec-clients-search")?.addEventListener("input", (e) => {
-    secRenderClients(secClientsCache, e.target.value || "");
-  });
-  document.getElementById("sec-form-new")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const msg = document.getElementById("sec-nc-msg");
-    const btn = document.getElementById("sec-btn-submit");
-    const emri = document.getElementById("sec-nc-emri")?.value?.trim();
-    if (!emri) {
-      if (msg) msg.textContent = "Emri është i detyrueshëm.";
-      return;
-    }
-    let hw = String(document.getElementById("sec-nc-hw")?.value || "").trim();
-    const hwHex = hw.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
-    if (hw && hwHex.length !== 16) {
-      if (msg) msg.textContent = "ID e pajisjes duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).";
-      return;
-    }
-    if (!hw) hw = secRandomHw16();
-    const key = String(document.getElementById("sec-nc-key")?.value || "").trim();
-    const body = {
-      emri,
-      email: document.getElementById("sec-nc-email")?.value?.trim() || "",
-      telefon: document.getElementById("sec-nc-tel")?.value?.trim() || "",
-      adresa: document.getElementById("sec-nc-adr")?.value?.trim() || "",
-      veprimtari: document.getElementById("sec-nc-vepr")?.value || "kompani_sigurie",
-      hardware_id: hw,
-      license_key: key || undefined,
-    };
-    if (btn) btn.disabled = true;
-    if (msg) msg.textContent = "Duke regjistruar firmën + licencën…";
-    try {
-      const result = await secAdminFetch("/clients/register-license", { method: "POST", body });
-      const outKey = result.license_key || result.license?.license_key || key || "";
-      if (result.already_exists) {
-        if (msg) msg.textContent = `Ekziston — Licenca: ${outKey || "—"}`;
-      } else {
-        if (msg) msg.textContent = `U regjistrua. ID: ${hw} · Licenca: ${outKey || "—"}`;
-        ["sec-nc-emri", "sec-nc-email", "sec-nc-tel", "sec-nc-adr", "sec-nc-hw", "sec-nc-key"].forEach(
-          (id) => {
-            const f = document.getElementById(id);
-            if (f) f.value = "";
-          },
-        );
-      }
-      await secLoadClients().catch(() => null);
-    } catch (ex) {
-      if (ex.status === 401 || ex.status === 403) {
-        secSetSecret("");
-        secShowUnlocked(false);
-        if (msg) msg.textContent = "Sesioni i Security skadoi — shkruaj sërish secret-in.";
-      } else if (msg) {
-        msg.textContent = ex.message || "Gabim";
-      }
-    } finally {
-      if (btn) btn.disabled = false;
-    }
-  });
 }
 
 const TITLES = {
@@ -432,15 +208,12 @@ function openSection(name) {
     clearInterval(sectionRefreshTimer);
     sectionRefreshTimer = null;
   }
-  // Menuja anësore i takon POS-it. Nëse ishim te Security (i ngulur), kthehu te POS.
-  if (currentProduct === "security") {
-    setProductTab("kafene", { reload: false });
-  }
   document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.section === name));
   document.querySelectorAll(".section").forEach((s) => s.classList.toggle("active", s.id === `sec-${name}`));
   const [t, sub] = TITLES[name] || [name, ""];
   document.getElementById("page-title").textContent = t;
   document.getElementById("page-sub").textContent = sub;
+  updateProductUiHints();
   closeNav();
   if (name === "pasqyra") loadOverview();
   if (name === "klientet") loadClients();
@@ -2209,7 +1982,6 @@ async function loadSettings() {
 
 async function boot() {
   bindProblemResolveUi();
-  secBindUi();
   document.querySelectorAll(".product-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
       // POS ↔ Security. Security ngulet brenda faqes (iframe), pa hapur faqe tjetër.
@@ -2217,7 +1989,10 @@ async function boot() {
     });
   });
   setProductTab(currentProduct, { reload: false });
-  document.getElementById("nc-product")?.addEventListener("change", syncNewClientForm);
+  updateProductUiHints();
+  document.getElementById("nc-product")?.addEventListener("change", (e) => {
+    setProductTab(e.target.value || "kafene");
+  });
   syncNewClientForm();
 
   function bindNcHex16(el) {
@@ -2319,7 +2094,7 @@ async function boot() {
     e.preventDefault();
     const msg = document.getElementById("nc-msg");
     const btn = document.getElementById("btn-nc-submit");
-    const product = document.getElementById("nc-product")?.value || "kafene";
+    const product = currentProduct || document.getElementById("nc-product")?.value || "kafene";
     const hardwareId = String(document.getElementById("nc-hw-id")?.value || "").trim();
     const licenseKey = String(document.getElementById("nc-license-key")?.value || "").trim();
     const issueLicense = Boolean(document.getElementById("nc-license")?.checked);
@@ -2339,20 +2114,31 @@ async function boot() {
       return;
     }
 
+    let hwOut = hardwareId;
+    if (product === "security" && issueLicense && !hwOut) {
+      hwOut = randomHw16();
+      const hwEl = document.getElementById("nc-hw-id");
+      if (hwEl) hwEl.value = hwOut;
+    }
+
     const body = {
       product_line: product,
       emri: document.getElementById("nc-emri")?.value?.trim(),
       email: document.getElementById("nc-email")?.value?.trim(),
       telefoni: document.getElementById("nc-tel")?.value?.trim(),
       telefon: document.getElementById("nc-tel")?.value?.trim(),
-      tipi: document.getElementById("nc-tipi")?.value,
-      package_tier: document.getElementById("nc-pako")?.value,
       issue_license: issueLicense,
       license_type: licenseType,
-      hardware_id: hardwareId || undefined,
+      hardware_id: hwOut || hardwareId || undefined,
       celesi: licenseKey || undefined,
       license_key: licenseKey || undefined,
     };
+    if (product === "security") {
+      body.veprimtari = document.getElementById("nc-vepr")?.value || "kompani_sigurie";
+    } else {
+      body.tipi = document.getElementById("nc-tipi")?.value;
+      body.package_tier = document.getElementById("nc-pako")?.value;
+    }
     if (!body.emri) {
       if (msg) msg.textContent = "Emri është i detyrueshëm.";
       return;
