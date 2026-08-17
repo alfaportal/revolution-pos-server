@@ -245,10 +245,34 @@ async function registerSecurityClient(body = {}) {
   };
 }
 
+async function deleteSecurityClient(id) {
+  const cid = String(id || "").trim();
+  if (!cid) throw new Error("Mungon ID e klientit Security.");
+  return securityRequest(`/clients/${encodeURIComponent(cid)}`, { method: "DELETE" });
+}
+
+async function deleteSecurityLicense(id) {
+  const lid = String(id || "").trim();
+  if (!lid) throw new Error("Mungon ID e licencës Security.");
+  return securityRequest(`/licenses/${encodeURIComponent(lid)}`, { method: "DELETE" });
+}
+
+async function revokeSecurityLicense(id, { status = "revoked" } = {}) {
+  const lid = String(id || "").trim();
+  if (!lid) throw new Error("Mungon ID e licencës Security.");
+  return securityRequest(`/licenses/${encodeURIComponent(lid)}/status`, {
+    method: "POST",
+    body: { status },
+  });
+}
+
 module.exports = {
   SECURITY_SECTORS,
   getSecurityClientsGrouped,
   getSecurityLicensesView,
   getSecurityOverview,
   registerSecurityClient,
+  deleteSecurityClient,
+  deleteSecurityLicense,
+  revokeSecurityLicense,
 };

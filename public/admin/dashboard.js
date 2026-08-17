@@ -924,10 +924,12 @@ function bindLicenseActions(root) {
       e.stopPropagation();
       const id = btn.dataset.deleteLicense;
       const key = btn.dataset.key || id;
+      const prod = btn.dataset.product || (currentProduct === "security" ? "security" : "kafene");
       if (!confirm(`Fshi krejt licencën ${key}?\nNuk kthehet mbrapa.`)) return;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${id}`, { method: "DELETE" });
+        const qs = prod === "security" ? "?product=security" : "";
+        await api(`/api/super/dashboard/licenses/${id}${qs}`, { method: "DELETE" });
         alert("Licenca u fshi.");
         await loadLicenses();
       } catch (ex) {
@@ -1263,7 +1265,7 @@ async function loadLicenses() {
     license_key: l.license_key || l.celesi || "",
     statusi: l.statusi,
     activation_email: l.activation_email || "",
-    source: "pos",
+    source: product,
     product_line: product,
   }));
   licensesCache = list;
@@ -1317,7 +1319,7 @@ function renderLicensesList(filterText = "") {
                     : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
                 }
                 <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
-                <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi licencën</button>
+                <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="${esc(l.product_line || product)}" data-key="${esc(key)}">Fshi licencën</button>
               </div>
             </div>`;
           })
@@ -1353,7 +1355,7 @@ function renderLicensesList(filterText = "") {
                 : `<button type="button" class="btn btn-danger btn-sm" data-revoke="${esc(l.id)}" data-hw="${esc(hw)}">Çaktivizo Menjëherë</button>`
             }
             <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-wipe="${esc(l.id)}" data-hw="${esc(hw)}">Fshi të Dhënat</button>
-            <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="pos" data-key="${esc(key)}">Fshi</button>
+            <button type="button" class="btn btn-danger btn-sm" data-delete-license="${esc(l.id)}" data-product="${esc(l.product_line || product)}" data-key="${esc(key)}">Fshi</button>
             <p class="lic-save-msg" data-save-msg="${esc(l.id)}"></p>
           </td>
         </tr>`;

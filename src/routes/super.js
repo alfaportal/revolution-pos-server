@@ -284,6 +284,19 @@ router.delete(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(req.query.product || req.query.industry || "kafene");
+    if (product === "security") {
+      const { deleteSecurityClient } = require("../lib/securityAdminBridge");
+      await deleteSecurityClient(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_delete",
+        targetType: "client",
+        targetId: id,
+        details: { product_line: "security" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "security" });
+    }
     await deleteClient(id);
     await logAdminActivity({
       ...activityFromReq(req),
@@ -453,11 +466,26 @@ router.post(
   }),
 );
 
-/** Fshi krejt licencën (Super Admin) — POS: wipe remote pastaj fshi */
+/** Fshi krejt licencën — POS: wipe remote; Security: bridge te serveri i Security-t */
 router.delete(
   "/dashboard/licenses/:id",
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
+    const product = normalizeProductLine(
+      req.query.product || req.query.industry || req.body?.product_line || "kafene",
+    );
+    if (product === "security") {
+      const { deleteSecurityLicense } = require("../lib/securityAdminBridge");
+      await deleteSecurityLicense(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "license_delete",
+        targetType: "license",
+        targetId: id,
+        details: { product_line: "security" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "security" });
+    }
     try {
       await revokeLicenseRemote(id, {
         hardwareId: req.body?.hardware_id || req.body?.hardwareId || req.query?.hardware_id,
