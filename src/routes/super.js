@@ -453,11 +453,21 @@ router.post(
   }),
 );
 
-/** Fshi krejt licencën (Super Admin) — POS */
+/** Fshi krejt licencën (Super Admin) — POS: wipe remote pastaj fshi */
 router.delete(
   "/dashboard/licenses/:id",
   asyncHandler(async (req, res) => {
-    await deleteLicense(req.params.id);
+    const id = String(req.params.id || "").trim();
+    try {
+      await revokeLicenseRemote(id, {
+        hardwareId: req.body?.hardware_id || req.body?.hardwareId || req.query?.hardware_id,
+        reason: "Fshirë nga Super Admin",
+        actor: req.user,
+      });
+    } catch (e) {
+      console.warn("[super] revoke before delete:", e.message || e);
+    }
+    await deleteLicense(id);
     await logAdminActivity({
       ...activityFromReq(req),
       action: "license_delete",

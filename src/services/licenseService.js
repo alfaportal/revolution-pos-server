@@ -1213,6 +1213,24 @@ async function updateLicense(id, body) {
 
 async function deleteLicense(id) {
   const { db } = await dbForLicenseId(id);
+  const lic = await loadLicenseForRemoteControl(id).catch(() => null);
+  const now = new Date().toISOString();
+  if (lic?.id) {
+    /* Urdhër wipe PARA fshirjes — POS merr force_factory_reset në heartbeat (~45s) */
+    try {
+      await patchLicenseMeta(lic.id, { force_factory_reset_at: now, statusi: "revokuar" });
+      const hw = resolveLicenseHardwareId(lic);
+      if (hw) {
+        await upsertHardwareControl(lic.id, hw, {
+          wipe_requested_at: now,
+          revoked_at: now,
+          reason: "license_deleted_by_admin",
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("[deleteLicense] wipe flag:", err?.message || err);
+    }
+  }
   const { error } = await db.from("licenses").delete().eq("id", id);
   if (error) throw error;
   return { ok: true };
@@ -1414,7 +1432,22 @@ async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}
     reason: why,
     actor,
   });
-  return { ok: true, license, hardware_id: hw || null };
+
+  /* Urdhër wipe — heartbeat e POS/Security e merr force_factory_reset (si Security revoke) */
+  await patchLicenseMeta(id, { force_factory_reset_at: now });
+  if (hw) {
+    try {
+      await upsertHardwareControl(id, hw, {
+        wipe_requested_at: now,
+        revoked_at: now,
+        reason: why,
+      });
+    } catch (err) {
+      console.warn("[revokeLicenseRemote] wipe flag:", err?.message || err);
+    }
+  }
+
+  return { ok: true, license, hardware_id: hw || null, force_factory_reset_at: now };
 }
 
 /** Riaktivizo pas çaktivizimit. */
