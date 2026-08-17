@@ -4,9 +4,9 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene */
+/** Produkti aktiv: kafene (POS) ose security (i ngulur, projekt i ndarë) */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
-if (currentProduct !== "kafene") currentProduct = "kafene";
+if (currentProduct !== "kafene" && currentProduct !== "security") currentProduct = "kafene";
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 /** Rifreskim automatik kur tab Klientët/Licencat është hapur (sinkron telefon ↔ desktop) */
@@ -55,7 +55,7 @@ function productQuery(_forClients = false) {
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1 };
+  const allowed = { kafene: 1, security: 1 };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -63,6 +63,33 @@ function setProductTab(product, { reload = true } = {}) {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
+
+  const hint = document.getElementById("product-tabs-hint");
+
+  if (currentProduct === "security") {
+    // Security është projekt i ndarë. E ngulim panelin e vet të Super Admin-it
+    // brenda kësaj faqe (iframe same-origin) — pa u hapur faqe tjetër, pa ndryshuar
+    // adresën. Regjistrimi i firmave & licencat shkojnë te serveri i Security-t.
+    // Zero përzierje me të dhënat e POS.
+    if (sectionRefreshTimer) {
+      clearInterval(sectionRefreshTimer);
+      sectionRefreshTimer = null;
+    }
+    const frame = document.getElementById("security-embed-frame");
+    if (frame && !frame.getAttribute("src")) frame.setAttribute("src", "/security/admin/licencat");
+    document
+      .querySelectorAll(".section")
+      .forEach((s) => s.classList.toggle("active", s.id === "sec-security-embed"));
+    document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
+    document.getElementById("page-title").textContent = "Revolution Security";
+    document.getElementById("page-sub").textContent = "Regjistro firma & jep licenca — projekt i ndarë";
+    if (hint) hint.textContent = "Firmat Security regjistrohen këtu — të dhënat rrinë te serveri i Security-t.";
+    return;
+  }
+
+  // POS
+  document.getElementById("sec-security-embed")?.classList.remove("active");
+  if (hint) hint.textContent = "Çdo listë i takon POS.";
   const nc = document.getElementById("nc-product");
   if (nc) {
     nc.value = currentProduct;
@@ -74,7 +101,8 @@ function setProductTab(product, { reload = true } = {}) {
   }
   if (!reload) return;
   const activeSec = document.querySelector(".section.active");
-  const name = activeSec?.id?.replace(/^sec-/, "") || "pasqyra";
+  let name = activeSec?.id?.replace(/^sec-/, "") || "pasqyra";
+  if (name === "security-embed") name = "pasqyra";
   openSection(name);
 }
 
@@ -175,6 +203,10 @@ function openSection(name) {
   if (sectionRefreshTimer) {
     clearInterval(sectionRefreshTimer);
     sectionRefreshTimer = null;
+  }
+  // Menuja anësore i takon POS-it. Nëse ishim te Security (i ngulur), kthehu te POS.
+  if (currentProduct === "security") {
+    setProductTab("kafene", { reload: false });
   }
   document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.section === name));
   document.querySelectorAll(".section").forEach((s) => s.classList.toggle("active", s.id === `sec-${name}`));
@@ -1951,13 +1983,7 @@ async function boot() {
   bindProblemResolveUi();
   document.querySelectorAll(".product-tab").forEach((btn) => {
     btn.addEventListener("click", () => {
-      // Produktet e tjera (Security etj.) rrinë projekt më vete: butoni vetëm
-      // hap panelin e tyre, NUK sjell të dhëna këtu (zero përzierje).
-      const href = btn.dataset.openHref;
-      if (href) {
-        window.location.href = href;
-        return;
-      }
+      // POS ↔ Security. Security ngulet brenda faqes (iframe), pa hapur faqe tjetër.
       setProductTab(btn.dataset.product);
     });
   });

@@ -68,7 +68,7 @@
 
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
           <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
-          <button type="button" class="product-tab" data-open-href="/security/admin/licencat" title="Hap Super Admin të Revolution Security — regjistro firma &amp; jep licenca (projekt i ndarë)">Security</button>
+          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër">Security</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
           Çdo listë i takon POS.
@@ -437,6 +437,13 @@
             <div id="settings-msg" class="alert alert-ok hidden" style="margin-top:0.75rem"></div>
           </div>
         </section>
+
+        <!-- SECURITY — Super Admin i ngulur (projekt i ndarë; të dhënat te serveri i Security-t) -->
+        <section class="section" id="sec-security-embed" style="padding:0">
+          <iframe id="security-embed-frame" title="Revolution Security — Super Admin"
+            referrerpolicy="no-referrer"
+            style="display:block;width:100%;height:calc(100vh - 220px);min-height:520px;border:0;border-radius:14px;background:#0f1020"></iframe>
+        </section>
       </main>
     </div>
   </div>
@@ -465,6 +472,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=32"></script>
+  <script src="/admin/dashboard.js?v=33"></script>
 </body>
 </html>
