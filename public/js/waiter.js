@@ -42,6 +42,24 @@
 
   let syncInProgress = false;
   let waiterEventSource = null;
+  const POLL_SSE_CONNECTED_MS = 30000;
+  const POLL_SSE_DISCONNECTED_MS = 3000;
+  const MENU_BOOTSTRAP_MS = 60000;
+  let sseRefreshTimer = null;
+  let menuBootstrapTimer = null;
+  let backupLiveTimer = null;
+
+  function isWaiterSseOpen() {
+    return Boolean(waiterEventSource && waiterEventSource.readyState === EventSource.OPEN);
+  }
+
+  function acceptPollIntervalMs() {
+    return isWaiterSseOpen() ? POLL_SSE_CONNECTED_MS : POLL_SSE_DISCONNECTED_MS;
+  }
+
+  function backupLiveIntervalMs() {
+    return isWaiterSseOpen() ? POLL_SSE_CONNECTED_MS : POLL_SSE_DISCONNECTED_MS;
+  }
 
   function apiQuery() {
     const parts = [];
@@ -1449,7 +1467,17 @@
     if (!activeWaiter?.id || !slug || !kitchenKey) return;
     try {
       const pollUrl = `/api/kds/${encodeURIComponent(slug)}/bar/orders${apiQuery()}`;
-      const data = await api(pollUrl);
+      const liveUrl = `/api/waiter/${encodeURIComponent(slug)}/live${apiQuery()}`;
+      const [data, live] = await Promise.all([
+        api(pollUrl),
+        api(liveUrl).catch(() => null),
+      ]);
+      if (live?.tables && bootstrap) {
+        bootstrap.tables = live.tables;
+        bootstrap.areas = live.areas;
+        bootstrap.reservations = live.reservations || [];
+        detectIncomingOrders(live.tables);
+      }
       const orders = data.orders || [];
       console.log("[waiter] accept poll", {
         count: orders.length,
@@ -1472,7 +1500,7 @@
     if (acceptPollTimer) clearInterval(acceptPollTimer);
     if (!activeWaiter?.id) return;
     pollIncomingOrders();
-    acceptPollTimer = setInterval(() => pollIncomingOrders(), 3000);
+    acceptPollTimer = setInterval(() => pollIncomingOrders(), acceptPollIntervalMs());
   }
 
   function stopAcceptPolling() {
@@ -1485,10 +1513,15 @@
 
   async function refreshWaiterLiveState() {
     if (!activeWaiter?.id) return;
-    try {
-      await pollIncomingOrders();
-      await refreshBootstrap();
-    } catch { /* SSE refresh — poll/bootstrap log own errors */ }
+    await pollIncomingOrders();
+  }
+
+  function scheduleSseRefresh() {
+    if (sseRefreshTimer) clearTimeout(sseRefreshTimer);
+    sseRefreshTimer = setTimeout(() => {
+      sseRefreshTimer = null;
+      refreshWaiterLiveState().catch(() => {});
+    }, 100);
   }
 
   let sseReconnectTimer = null;
@@ -1504,14 +1537,18 @@
     }
     const url = `/api/kds/${encodeURIComponent(slug)}/events?key=${encodeURIComponent(kitchenKey)}`;
     waiterEventSource = new EventSource(url);
+    waiterEventSource.addEventListener("open", () => {
+      restartRealtimePollIntervals();
+    });
     waiterEventSource.addEventListener("kitchen", () => {
-      refreshWaiterLiveState().catch(() => {});
+      scheduleSseRefresh();
     });
     waiterEventSource.onerror = () => {
       if (waiterEventSource) {
         try { waiterEventSource.close(); } catch { /* ignore */ }
         waiterEventSource = null;
       }
+      restartRealtimePollIntervals();
       if (!activeWaiter) return;
       if (sseReconnectTimer) clearTimeout(sseReconnectTimer);
       sseReconnectTimer = setTimeout(() => {
@@ -1618,6 +1655,8 @@
     setupReservationReminders();
     scheduleIdleLock();
     startAcceptPolling();
+    startBackupLiveTimer();
+    startMenuBootstrapTimer();
     connectWaiterSse();
     requestWakeLock();
     showScreen("screen-tables");
@@ -1625,6 +1664,8 @@
 
   function lockSession() {
     stopAcceptPolling();
+    stopBackupLiveTimer();
+    stopMenuBootstrapTimer();
     disconnectWaiterSse();
     pendingAcceptOrders = [];
     onlineSlots = [];
@@ -1761,6 +1802,19 @@
     requestAnimationFrame(syncCartBarLayout);
   }
 
+  async function refreshWaiterLiveTables() {
+    if (!activeWaiter || !bootstrap) return;
+    try {
+      const data = await api(`/api/waiter/${encodeURIComponent(slug)}/live${apiQuery()}`);
+      bootstrap.tables = data.tables;
+      bootstrap.areas = data.areas;
+      bootstrap.reservations = data.reservations || [];
+      detectIncomingOrders(data.tables);
+      renderTables();
+      checkReservationReminders();
+    } catch { /* ignore background refresh */ }
+  }
+
   async function refreshBootstrap() {
     if (!activeWaiter) return;
     try {
@@ -1787,6 +1841,48 @@
       if (!acceptPollTimer) renderTables();
       checkReservationReminders();
     } catch { /* ignore background refresh */ }
+  }
+
+  function startMenuBootstrapTimer() {
+    if (menuBootstrapTimer) clearInterval(menuBootstrapTimer);
+    menuBootstrapTimer = setInterval(() => {
+      if (activeWaiter) refreshBootstrap().catch(() => {});
+    }, MENU_BOOTSTRAP_MS);
+  }
+
+  function stopMenuBootstrapTimer() {
+    if (menuBootstrapTimer) {
+      clearInterval(menuBootstrapTimer);
+      menuBootstrapTimer = null;
+    }
+  }
+
+  function stopBackupLiveTimer() {
+    if (backupLiveTimer) {
+      clearInterval(backupLiveTimer);
+      backupLiveTimer = null;
+    }
+  }
+
+  function startBackupLiveTimer() {
+    stopBackupLiveTimer();
+    backupLiveTimer = setInterval(() => {
+      if (!activeWaiter) return;
+      const onScreen = $("screen-tables")?.classList.contains("active")
+        || $("screen-order")?.classList.contains("active");
+      if (!onScreen) return;
+      refreshWaiterLiveState().catch(() => {});
+    }, backupLiveIntervalMs());
+  }
+
+  function restartRealtimePollIntervals() {
+    if (!activeWaiter?.id) return;
+    if (acceptPollTimer) {
+      clearInterval(acceptPollTimer);
+      acceptPollTimer = null;
+      startAcceptPolling();
+    }
+    startBackupLiveTimer();
   }
 
   $("pin-keypad")?.querySelectorAll("[data-digit]").forEach(btn => {
@@ -2229,8 +2325,5 @@
 
   setInterval(() => {
     if (navigator.onLine) syncPendingOrders().catch(() => {});
-    if (activeWaiter && ($("screen-tables").classList.contains("active") || $("screen-order").classList.contains("active"))) {
-      refreshWaiterLiveState().catch(() => {});
-    }
-  }, 5000);
+  }, POLL_SSE_DISCONNECTED_MS);
 })();

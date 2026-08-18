@@ -11,6 +11,7 @@ const {
   getMenuItemPhotoResponse,
 } = require("../services/publicPageService");
 const { submitPublicOrder } = require("../services/publicOrderService");
+const { getCustomerOrderStatus } = require("../services/customerOrderTrackService");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { isShopStorefront } = require("../lib/storefront");
 
@@ -59,6 +60,25 @@ router.post("/:slug/order", resolvePublicClient, asyncHandler(async (req, res) =
       return res.status(403).json({ ok: false, gabim: e.message, code: "PACKAGE" });
     }
     res.status(400).json({ ok: false, gabim: e.message || "Porosia nuk u dërgua." });
+  }
+}));
+
+router.get("/:slug/order/:orderId/status", resolvePublicClient, asyncHandler(async (req, res) => {
+  if (isShopStorefront(req.publicClient)) {
+    return res.status(404).json({
+      ok: false,
+      gabim: "Statusi i porosisë së dyqanit përdor /api/s/ slug/order/:id/status.",
+      code: "WRONG_STOREFRONT",
+    });
+  }
+  try {
+    const token = String(req.query.token || "").trim();
+    const data = await getCustomerOrderStatus(req.publicClient.id, req.params.orderId, token);
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.json(data);
+  } catch (e) {
+    const code = e.code === "INVALID_TOKEN" ? 403 : e.code === "NOT_FOUND" ? 404 : 400;
+    res.status(code).json({ ok: false, gabim: e.message });
   }
 }));
 

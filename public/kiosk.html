@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/css/waiter.css?v=8">
   <link rel="stylesheet" href="/css/menu-pos.css?v=16">
   <link rel="stylesheet" href="/css/waiter-phone-truffle.css?v=3">
+  <link rel="stylesheet" href="/css/order-track.css?v=1">
   <style>
     .kiosk-badge {
       display: inline-block;
@@ -182,6 +183,10 @@
       <div class="kiosk-success-icon" aria-hidden="true">✅</div>
       <h1>Porosia u dërgua!</h1>
       <p id="success-msg">Porosia juaj u dërgua te banaku.</p>
+      <p class="order-track-status-label" id="order-track-label">Në pritje</p>
+      <p class="order-track-status-detail" id="order-track-detail">Restoranti do ta pranojë porosinë tuaj.</p>
+      <ul class="order-track-steps" id="order-track-steps" aria-label="Statusi i porosisë"></ul>
+      <p class="order-track-updated" id="order-track-updated"></p>
       <button type="button" class="btn btn-primary" id="btn-order-again">Porosi tjetër</button>
     </div>
   </div>
@@ -191,6 +196,7 @@
     </footer>
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=18"></script>
-  <script src="/js/kiosk.js?v=13"></script>
+  <script src="/js/order-track.js?v=1"></script>
+  <script src="/js/kiosk.js?v=14"></script>
 </body>
 </html>

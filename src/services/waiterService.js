@@ -149,29 +149,23 @@ function assertWaiterOnTable(existing, waiter, tableNumber) {
   return;
 }
 
-async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter", webToken = "" } = {}) {
-  const client = await assertClient(clientId);
+/** Tavolina + rezervime — pa menu (për SSE / live refresh të shpejtë). */
+async function buildWaiterTableLayout(clientId, { webToken = "" } = {}) {
   const db = getSupabase();
   const { getWaiterByWebToken } = require("./waiterPinService");
 
   let assigned_waiter = null;
-  let web_token_invalid = false;
   const token = String(webToken || "").trim();
   if (token) {
     const w = await getWaiterByWebToken(clientId, token);
-    if (w) {
-      assigned_waiter = { id: w.id, name: w.name };
-    } else {
-      web_token_invalid = true;
-    }
+    if (w) assigned_waiter = { id: w.id, name: w.name };
   }
 
-  const [{ data: settings }, { data: categories }, { data: menu }] =
-    await Promise.all([
-      db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
-      db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
-      db.from("pos_menu_items").select("local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold").eq("client_id", clientId).eq("active", true).order("category").order("name"),
-    ]);
+  const { data: settings } = await db
+    .from("pos_settings")
+    .select("table_count")
+    .eq("client_id", clientId)
+    .maybeSingle();
 
   const areas = await loadAreasForClient(clientId);
   const activeTables = await getActiveTableOrders(clientId);
@@ -190,12 +184,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
   const layout = buildTablesFromAreas(areas, settings?.table_count, activeByTable);
   const reservations = await listWaiterReservations(clientId);
   const layoutWithReservations = attachReservationsToLayout(layout, reservations);
-  const pinWaiters = await loadPinWaitersCount(clientId);
-  const branding = await getStaffBrandingForClient(client, kitchenSlug);
 
-  // Filtrimi sipas caktimit të tavolinave (vetëm për link personal të kamarierit).
-  // Nëse pronari ka caktuar tavolina, kamarieri sheh VETËM të vetat; tavolinat pa
-  // caktim nuk shfaqen te askush. Nëse nuk ka asnjë caktim, sillet si më parë (të gjitha).
   let tables = layoutWithReservations.tables;
   let areasOut = layoutWithReservations.areas;
   if (assigned_waiter?.id) {
@@ -211,6 +200,50 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
   }
 
   return {
+    tables,
+    areas: areasOut,
+    reservations: layoutWithReservations.reservations ?? reservations,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function getWaiterLiveState(clientId, { webToken = "" } = {}) {
+  await assertClient(clientId);
+  return buildWaiterTableLayout(clientId, { webToken });
+}
+
+async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waiter", webToken = "" } = {}) {
+  const client = await assertClient(clientId);
+  const db = getSupabase();
+  const { getWaiterByWebToken } = require("./waiterPinService");
+
+  let assigned_waiter = null;
+  let web_token_invalid = false;
+  const token = String(webToken || "").trim();
+  if (token) {
+    const w = await getWaiterByWebToken(clientId, token);
+    if (w) {
+      assigned_waiter = { id: w.id, name: w.name };
+    } else {
+      web_token_invalid = true;
+    }
+  }
+
+  const [{ data: settings }, { data: categories }, { data: menu }, tableLayout] =
+    await Promise.all([
+      db.from("pos_settings").select("*").eq("client_id", clientId).maybeSingle(),
+      db.from("pos_categories").select("name, sort_order").eq("client_id", clientId).order("sort_order"),
+      db.from("pos_menu_items").select("local_id, name, category, price, active, photo, track_stock, stock_quantity, stock_alert_threshold").eq("client_id", clientId).eq("active", true).order("category").order("name"),
+      buildWaiterTableLayout(clientId, { webToken: token }),
+    ]);
+
+  const pinWaiters = await loadPinWaitersCount(clientId);
+  const branding = await getStaffBrandingForClient(client, kitchenSlug);
+
+  const tables = tableLayout.tables;
+  const areasOut = tableLayout.areas;
+
+  return {
     client_name: client.emri,
     restaurant_name: settings?.restaurant_name || client.emri,
     address: branding.address,
@@ -224,7 +257,7 @@ async function getWaiterBootstrap(clientId, { kitchenSlug = "", channel = "waite
     menu: (menu || []).filter(isVisibleOnWebMenu).map(row => mapMenuItemForKitchen(row, { slug: kitchenSlug, channel })),
     areas: areasOut,
     tables,
-    reservations,
+    reservations: tableLayout.reservations,
     assigned_waiter,
     web_token_invalid,
   };
@@ -523,6 +556,7 @@ async function closeWaiterTable(clientId, body) {
 
 module.exports = {
   getWaiterBootstrap,
+  getWaiterLiveState,
   loginWaiterWithPin,
   submitWaiterOrder,
   cancelWaiterOrder,

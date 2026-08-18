@@ -4,6 +4,35 @@
   let activeCategory = "";
   let cart = [];
   let orderSubmitting = false;
+  let orderTrackHandle = null;
+
+  function stopOrderTracking() {
+    if (orderTrackHandle) {
+      orderTrackHandle.stop();
+      orderTrackHandle = null;
+    }
+  }
+
+  function startOrderTracking(slug, orderId, trackToken) {
+    stopOrderTracking();
+    if (!slug || !orderId || !trackToken || typeof OrderTrack === "undefined") return;
+    const statusUrl = `/api/s/${encodeURIComponent(slug)}/order/${encodeURIComponent(orderId)}/status`;
+    orderTrackHandle = OrderTrack.start({
+      statusUrl,
+      trackToken,
+      stepsEl: document.getElementById("order-track-steps"),
+      labelEl: document.getElementById("order-track-label"),
+      detailEl: document.getElementById("order-track-detail"),
+      onUpdate(data) {
+        const upd = document.getElementById("order-track-updated");
+        if (upd && data.updated_at) {
+          upd.textContent = `Përditësuar: ${new Date(data.updated_at).toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`;
+        }
+      },
+    });
+    const stepsEl = document.getElementById("order-track-steps");
+    if (stepsEl) OrderTrack.renderSteps(stepsEl, "pending");
+  }
 
   function getSlug() {
     const parts = window.location.pathname.split("/").filter(Boolean);
@@ -339,6 +368,7 @@
       if (msg) {
         msg.textContent = `Faleminderit ${data.customer_name || name}! Porosia juaj për ${kind} u dërgua te dyqani. Do t'ju kontaktojmë në ${phone}.`;
       }
+      startOrderTracking(slug, data.order_id || data.order?.id, data.track_token);
       showScreen("screen-success");
     } catch (err) {
       showFormError(err.message || "Gabim rrjeti.");

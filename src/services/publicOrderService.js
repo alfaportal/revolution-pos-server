@@ -3,6 +3,7 @@ const { normalizeItems, updateActiveSaleFromPos } = require("./salesService");
 const { getLicenseForClient } = require("./waiterService");
 const { WEB_PUBLIC, publicOrderWaiterLabel } = require("../lib/orderSource");
 const { clientHasFeature, packageUpgradeMessage } = require("../lib/packages");
+const { issueOrderTrackToken } = require("../lib/orderTrackToken");
 
 function normalizeOrderType(raw) {
   const t = String(raw || "takeaway").trim().toLowerCase();
@@ -91,6 +92,8 @@ async function submitPublicOrder(client, body) {
   return {
     ok: true,
     order: sale,
+    order_id: sale?.id || null,
+    track_token: sale?.id ? issueOrderTrackToken(client.id, sale.id) : "",
     order_type: orderType,
     customer_name: customerName,
     delivery_address: orderType === "delivery" ? deliveryAddress : "",

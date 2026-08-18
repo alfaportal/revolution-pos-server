@@ -133,6 +133,35 @@
     return `/api/${apiChannel}/${encodeURIComponent(slug)}${suffix}${apiQuery()}`;
   }
 
+  let orderTrackHandle = null;
+
+  function stopOrderTracking() {
+    if (orderTrackHandle) {
+      orderTrackHandle.stop();
+      orderTrackHandle = null;
+    }
+  }
+
+  function startOrderTracking(orderId, trackToken) {
+    stopOrderTracking();
+    if (!orderId || !trackToken || typeof OrderTrack === "undefined") return;
+    const statusUrl = `/api/${apiChannel}/${encodeURIComponent(slug)}/order/${encodeURIComponent(orderId)}/status`;
+    orderTrackHandle = OrderTrack.start({
+      statusUrl,
+      trackToken,
+      stepsEl: $("order-track-steps"),
+      labelEl: $("order-track-label"),
+      detailEl: $("order-track-detail"),
+      onUpdate(data) {
+        const upd = $("order-track-updated");
+        if (upd && data.updated_at) {
+          upd.textContent = `Përditësuar: ${new Date(data.updated_at).toLocaleTimeString("sq-AL", { hour: "2-digit", minute: "2-digit" })}`;
+        }
+      },
+    });
+    if ($("order-track-steps")) OrderTrack.renderSteps($("order-track-steps"), "pending");
+  }
+
   function kitchenPhotoUrl(item) {
     if (!item?.photo_url) return "";
     const url = String(item.photo_url);
@@ -312,6 +341,7 @@
   }
 
   function startNewOrder() {
+    stopOrderTracking();
     showErr($("order-err"), "");
     showScreen("screen-order");
     scheduleKioskLayout();
@@ -330,7 +360,7 @@
     btn.disabled = true;
     btn.textContent = "Duke dërguar...";
     try {
-      await apiPostWithTimeout(apiPath("/order"), {
+      const result = await apiPostWithTimeout(apiPath("/order"), {
         table_number: tableNumber,
         items: cart.map(c => ({
           name: c.name,
@@ -344,6 +374,7 @@
       if (msgEl) {
         msgEl.textContent = `Porosia juaj për T${tableNumber} u dërgua te banaku.`;
       }
+      startOrderTracking(result.order_id || result.order?.id, result.track_token);
       showScreen("screen-success");
     } catch (e) {
       showErr(err, e.message);

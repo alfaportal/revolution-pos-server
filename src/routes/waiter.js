@@ -3,6 +3,7 @@ const { resolveKitchenClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
 const {
   getWaiterBootstrap,
+  getWaiterLiveState,
   loginWaiterWithPin,
   submitWaiterOrder,
   cancelWaiterOrder,
@@ -47,6 +48,20 @@ router.get("/:slug/bootstrap", resolveKitchenClient, requirePackageFeature("wait
       channel: "waiter",
       webToken: extractWaiterToken(req),
     });
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
+  } catch (e) {
+    res.status(404).json({ ok: false, gabim: e.message });
+  }
+});
+
+/** Tavolina + rezervime — pa menu (rifreskim i shpejtë pas SSE). */
+router.get("/:slug/live", resolveKitchenClient, requirePackageFeature("waiter"), async (req, res) => {
+  try {
+    const data = await getWaiterLiveState(req.kitchenClient.id, {
+      webToken: extractWaiterToken(req),
+    });
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
     res.json({ ok: true, ...data, kitchen_slug: req.kitchenClient.kitchen_slug });
   } catch (e) {
     res.status(404).json({ ok: false, gabim: e.message });

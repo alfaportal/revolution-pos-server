@@ -3,6 +3,7 @@ const { normalizeItems, updateActiveSaleFromPos } = require("./salesService");
 const { getLicenseForClient, cancelTableOrder } = require("./waiterService");
 const { WEB_KIOSK } = require("../lib/orderSource");
 const { getClientMenuCatalog } = require("./menuCatalogService");
+const { issueOrderTrackToken } = require("../lib/orderTrackToken");
 
 const KIOSK_DEVICE = WEB_KIOSK;
 
@@ -77,6 +78,8 @@ async function submitKioskOrder(client, body) {
   return {
     ok: true,
     order: sale,
+    order_id: sale?.id || null,
+    track_token: sale?.id ? issueOrderTrackToken(client.id, sale.id) : "",
     client_name: client.emri,
     sent_to: "bar",
     table_number: tableNumber,

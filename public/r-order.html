@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/css/r.css?v=15">
   <link rel="stylesheet" href="/css/r-truffle.css?v=1">
   <link rel="stylesheet" href="/css/menu-pos.css?v=16">
+  <link rel="stylesheet" href="/css/order-track.css?v=1">
 </head>
 <body class="order-page">
   <div id="screen-loading" class="screen active">
@@ -89,12 +90,17 @@
       <div class="success-icon">✅</div>
       <h1>Porosia u dërgua!</h1>
       <p id="success-msg">Faleminderit. Restoranti do t'ju kontaktojë së shpejti.</p>
+      <p class="order-track-status-label" id="order-track-label">Në pritje</p>
+      <p class="order-track-status-detail" id="order-track-detail">Restoranti do ta pranojë porosinë tuaj.</p>
+      <ul class="order-track-steps" id="order-track-steps" aria-label="Statusi i porosisë"></ul>
+      <p class="order-track-updated" id="order-track-updated"></p>
       <a class="order-back-link" id="success-back" href="#">← Kthehu te faqja</a>
     </div>
   </div>
 
+  <script src="/js/order-track.js?v=1"></script>
   <script src="/js/menuCatalog.js"></script>
   <script src="/js/menu-pos.js?v=17"></script>
-  <script src="/js/r-order.js?v=7"></script>
+  <script src="/js/r-order.js?v=8"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ const { resolvePublicTableClient } = require("../middleware/kitchenAuth");
 const { requirePackageFeature } = require("../middleware/packageTier");
 const { getKioskMenu, submitKioskOrder, cancelKioskOrder } = require("../services/kioskService");
 const { getKitchenMenuItemPhoto } = require("../services/menuService");
+const { getCustomerOrderStatus } = require("../services/customerOrderTrackService");
 
 const router = express.Router();
 
@@ -50,6 +51,18 @@ router.post("/:slug/order", resolvePublicTableClient, requirePackageFeature("kio
     res.status(201).json(result);
   } catch (e) {
     res.status(400).json({ ok: false, gabim: e.message, code: e.code || null });
+  }
+});
+
+router.get("/:slug/order/:orderId/status", resolvePublicTableClient, requirePackageFeature("kiosk"), async (req, res) => {
+  try {
+    const token = String(req.query.token || "").trim();
+    const data = await getCustomerOrderStatus(req.kitchenClient.id, req.params.orderId, token);
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.json(data);
+  } catch (e) {
+    const code = e.code === "INVALID_TOKEN" ? 403 : e.code === "NOT_FOUND" ? 404 : 400;
+    res.status(code).json({ ok: false, gabim: e.message });
   }
 });
 
