@@ -81,8 +81,14 @@ app.use(corsMiddleware);
 // revolution-pos.com/security (railway rri i fshehur prapa).
 // Serveri i restorantit NUK e lexon, s'e ruan, s'e prek bazën e Security-t.
 // Vendoset PARA express.json që body-i i POST-it (p.sh. login) të mos humbasë.
-// Në të ardhmen shtohen njëjtë: /market, /hotel, /furra → serveri i vet.
+// /hotel → revolution-hotel-server (njëjtë pattern). Në të ardhmen: /market, /furra.
 const SECURITY_UPSTREAM = "revolution-security-production.up.railway.app";
+const HOTEL_UPSTREAM = String(
+  process.env.HOTEL_UPSTREAM || "revolution-hotel-server-production.up.railway.app",
+)
+  .replace(/^https?:\/\//, "")
+  .replace(/\/$/, "");
+
 function proxyToSecurity(req, res) {
   const headers = { ...req.headers, host: SECURITY_UPSTREAM };
   const proxyReq = https.request(
@@ -105,7 +111,32 @@ function proxyToSecurity(req, res) {
   });
   req.pipe(proxyReq);
 }
+
+function proxyToHotel(req, res) {
+  const headers = { ...req.headers, host: HOTEL_UPSTREAM };
+  const proxyReq = https.request(
+    {
+      hostname: HOTEL_UPSTREAM,
+      port: 443,
+      path: req.originalUrl,
+      method: req.method,
+      headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", () => {
+    if (!res.headersSent) {
+      res.status(502).send("Hotel upstream nuk përgjigjet");
+    }
+  });
+  req.pipe(proxyReq);
+}
+
 app.use("/security", proxyToSecurity);
+app.use("/hotel", proxyToHotel);
 
 // Stripe webhook — RAW body (para express.json)
 app.post(
