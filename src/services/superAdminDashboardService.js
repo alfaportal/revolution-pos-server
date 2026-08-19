@@ -463,7 +463,11 @@ async function getOverview({ product } = {}) {
     const { getSecurityOverview } = require("../lib/securityAdminBridge");
     return getSecurityOverview();
   }
-  if (p === "hotel" || p === "furra") {
+  if (p === "hotel") {
+    const { getHotelOverview } = require("../lib/hotelAdminBridge");
+    return getHotelOverview();
+  }
+  if (p === "furra") {
     return {
       active_clients: 0,
       licenses_total: 0,
@@ -484,7 +488,11 @@ async function getClientsGrouped({ product } = {}) {
     const { getSecurityClientsGrouped } = require("../lib/securityAdminBridge");
     return getSecurityClientsGrouped();
   }
-  if (p === "hotel" || p === "furra") {
+  if (p === "hotel") {
+    const { getHotelClientsGrouped } = require("../lib/hotelAdminBridge");
+    return getHotelClientsGrouped();
+  }
+  if (p === "furra") {
     return { sectors: [], groups: [], product_line: p };
   }
 
@@ -703,7 +711,11 @@ async function getLicensesView({ product } = {}) {
     const { getSecurityLicensesView } = require("../lib/securityAdminBridge");
     return getSecurityLicensesView();
   }
-  if (p === "hotel" || p === "furra") {
+  if (p === "hotel") {
+    const { getHotelLicensesView } = require("../lib/hotelAdminBridge");
+    return getHotelLicensesView();
+  }
+  if (p === "furra") {
     return { licenses: [], product_line: p };
   }
 

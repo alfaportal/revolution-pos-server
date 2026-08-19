@@ -69,6 +69,7 @@
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
           <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
           <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër">Security</button>
+          <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false" title="Regjistro hotele &amp; jep licenca — bridge te revolution-hotel-server">HOTEL</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
           Çdo listë i takon POS.
@@ -101,6 +102,7 @@
                 <select id="nc-product" required>
                   <option value="kafene">REVOLUTION POS (shitje)</option>
                   <option value="security">REVOLUTION SECURITY (terren)</option>
+                  <option value="hotel">REVOLUTION HOTEL (hospitalitet)</option>
                 </select>
               </div>
               <div class="field">
@@ -143,6 +145,16 @@
                   <option value="mirembajtje_nderte">Kompani mirëmbajtje (teknikanë, instalues)</option>
                   <option value="magazinim">Kompani magazinimi (depo, punëtorë magazine)</option>
                   <option value="agjenci_marketingu">Agjenci marketingu në terren (promotorë)</option>
+                </select>
+              </div>
+              <div class="field nc-hotel-only hidden">
+                <label for="nc-tipi-hotel">Tipi — REVOLUTION HOTEL</label>
+                <select id="nc-tipi-hotel">
+                  <option value="hotel">Hotel</option>
+                  <option value="motel">Motel</option>
+                  <option value="ville_me_qira">Villa</option>
+                  <option value="hostel">Hostel</option>
+                  <option value="resort">Resort</option>
                 </select>
               </div>
               <div class="field">

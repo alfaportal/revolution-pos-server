@@ -167,6 +167,12 @@ router.get(
 router.get(
   "/dashboard/clients/:id",
   asyncHandler(async (req, res) => {
+    const product = normalizeProductLine(req.query.product || req.query.industry || "kafene");
+    if (product === "hotel") {
+      const { getHotelClientDetail } = require("../lib/hotelAdminBridge");
+      const detail = await getHotelClientDetail(req.params.id);
+      return res.json({ ok: true, ...detail });
+    }
     const detail = await getClientDetail(req.params.id);
     res.json({ ok: true, ...detail, product_line: "kafene" });
   }),
@@ -225,6 +231,34 @@ router.patch(
   asyncHandler(async (req, res) => {
     const id = String(req.params.id || "").trim();
     const body = req.body || {};
+    const product = normalizeProductLine(
+      body.product_line || req.query.product || req.query.industry || "kafene",
+    );
+
+    if (product === "hotel") {
+      const { updateHotelClient } = require("../lib/hotelAdminBridge");
+      const result = await updateHotelClient(id, body);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_update",
+        targetType: "client",
+        targetId: result.client?.id || id,
+        targetLabel: result.client?.emri || body.emri,
+        details: {
+          licenses_updated: (result.licenses || []).map((l) => l.id),
+          license_errors: result.license_errors || [],
+          product_line: "hotel",
+        },
+      }).catch(() => {});
+      return res.json({
+        ok: true,
+        client: result.client,
+        licenses: result.licenses || [],
+        license_errors: result.license_errors || [],
+        product_line: "hotel",
+      });
+    }
+
     const licPatches = Array.isArray(body.licenses) ? body.licenses : [];
 
     // Kafene / POS — ruaj klientin GJITHMONË; licencat veç e veç (një gabim licence mos e prish klientin)
@@ -296,6 +330,18 @@ router.delete(
         details: { product_line: "security" },
       }).catch(() => {});
       return res.json({ ok: true, product_line: "security" });
+    }
+    if (product === "hotel") {
+      const { deleteHotelClient } = require("../lib/hotelAdminBridge");
+      await deleteHotelClient(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_delete",
+        targetType: "client",
+        targetId: id,
+        details: { product_line: "hotel" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "hotel" });
     }
     await deleteClient(id);
     await logAdminActivity({
@@ -402,12 +448,43 @@ router.post(
       });
     }
 
-    if (product === "hotel" || product === "furra") {
-      const err = new Error(
-        product === "hotel"
-          ? "HOTEL nuk menaxhohet nga ky server."
-          : "FURRA nuk menaxhohet nga ky server.",
-      );
+    if (product === "hotel") {
+      const { registerHotelClient } = require("../lib/hotelAdminBridge");
+      const result = await registerHotelClient({
+        ...(req.body || {}),
+        celesi: celesi || undefined,
+        license_key: celesi || undefined,
+        hardware_id: hardwareId || undefined,
+        hardwareId: hardwareId || undefined,
+        license_type: licenseType,
+        issue_license: wantLicense,
+      });
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_create",
+        targetType: "client",
+        targetId: result.client?.id || null,
+        targetLabel: result.client?.emri || req.body?.emri || "Hotel",
+        details: {
+          license_key: result.license_key || null,
+          hardware_id: result.hardware_id || null,
+          product_line: "hotel",
+        },
+      }).catch(() => {});
+      return res.status(201).json({
+        ok: true,
+        client: result.client,
+        license: result.license,
+        license_key: result.license_key,
+        celesi: result.license_key,
+        hardware_id: result.hardware_id || null,
+        product_line: "hotel",
+        already_exists: !!result.already_exists,
+      });
+    }
+
+    if (product === "furra") {
+      const err = new Error("FURRA nuk menaxhohet nga ky server.");
       err.status = 400;
       throw err;
     }
@@ -486,6 +563,18 @@ router.delete(
       }).catch(() => {});
       return res.json({ ok: true, product_line: "security" });
     }
+    if (product === "hotel") {
+      const { deleteHotelLicense } = require("../lib/hotelAdminBridge");
+      await deleteHotelLicense(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "license_delete",
+        targetType: "license",
+        targetId: id,
+        details: { product_line: "hotel" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "hotel" });
+    }
     try {
       await revokeLicenseRemote(id, {
         hardwareId: req.body?.hardware_id || req.body?.hardwareId || req.query?.hardware_id,
@@ -540,6 +629,28 @@ router.post(
 router.post(
   "/dashboard/licenses/:id/revoke",
   asyncHandler(async (req, res) => {
+    const product = normalizeProductLine(
+      req.query.product || req.body?.product_line || req.query.industry || "kafene",
+    );
+    if (product === "hotel") {
+      const { revokeHotelLicense } = require("../lib/hotelAdminBridge");
+      const result = await revokeHotelLicense(req.params.id, {
+        reason: req.body?.reason,
+        hardware_id: req.body?.hardware_id || req.body?.hardwareId,
+      });
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "license_revoke",
+        targetType: "license",
+        targetId: req.params.id,
+        details: {
+          hardware_id: req.body?.hardware_id || req.body?.hardwareId || "",
+          reason: req.body?.reason || "",
+          product_line: "hotel",
+        },
+      }).catch(() => {});
+      return res.json({ ok: true, ...result, product_line: "hotel" });
+    }
     const result = await revokeLicenseRemote(req.params.id, {
       hardwareId: req.body?.hardware_id || req.body?.hardwareId,
       reason: req.body?.reason,

@@ -4,9 +4,11 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene (POS) ose security (i ngulur, projekt i ndarë) */
+/** Produkti aktiv: kafene (POS), security, ose hotel (bridge te serveri i veçantë) */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
-if (currentProduct !== "kafene" && currentProduct !== "security") currentProduct = "kafene";
+if (currentProduct !== "kafene" && currentProduct !== "security" && currentProduct !== "hotel") {
+  currentProduct = "kafene";
+}
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 /** Rifreskim automatik kur tab Klientët/Licencat është hapur (sinkron telefon ↔ desktop) */
@@ -40,6 +42,15 @@ const FALLBACK_SECURITY_SECTORS = [
   { num: 8, id: "agjenci_marketingu", label: "Agjenci marketingu", keywords: ["marketing"], clients: [] },
 ];
 
+/** REVOLUTION HOTEL — 5 kategori hospitaliteti. */
+const FALLBACK_HOTEL_SECTORS = [
+  { num: 1, id: "hotel", label: "Hotel", keywords: ["hotel"], clients: [] },
+  { num: 2, id: "motel", label: "Motel", keywords: ["motel"], clients: [] },
+  { num: 3, id: "ville_me_qira", label: "Villa", keywords: ["ville", "villa"], clients: [] },
+  { num: 4, id: "hostel", label: "Hostel", keywords: ["hostel"], clients: [] },
+  { num: 5, id: "resort", label: "Resort", keywords: ["resort"], clients: [] },
+];
+
 function ensureSectors(apiSectors, fallback) {
   const list = fallback || FALLBACK_SECTORS;
   const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
@@ -57,8 +68,16 @@ function ensureSectors(apiSectors, fallback) {
 }
 
 function ensureAllSectors(apiSectors) {
-  const fb = currentProduct === "security" ? FALLBACK_SECURITY_SECTORS : FALLBACK_SECTORS;
+  let fb = FALLBACK_SECTORS;
+  if (currentProduct === "security") fb = FALLBACK_SECURITY_SECTORS;
+  else if (currentProduct === "hotel") fb = FALLBACK_HOTEL_SECTORS;
   return ensureSectors(apiSectors, fb);
+}
+
+function productQueryString(prod) {
+  const p = prod || productQuery(true);
+  if (p === "kafene") return "?product=kafene";
+  return `?product=${encodeURIComponent(p)}`;
 }
 
 function productQuery(_forClients = false) {
@@ -69,25 +88,40 @@ function productQuery(_forClients = false) {
 
 function updateProductUiHints() {
   const isSec = currentProduct === "security";
+  const isHotel = currentProduct === "hotel";
   const hint = document.getElementById("product-tabs-hint");
-  if (hint) hint.textContent = isSec ? "Çdo listë i takon Security." : "Çdo listë i takon POS.";
+  if (hint) {
+    hint.textContent = isSec
+      ? "Çdo listë i takon Security."
+      : isHotel
+        ? "Çdo listë i takon HOTEL."
+        : "Çdo listë i takon POS.";
+  }
   const listTitle = document.getElementById("clients-list-title");
   if (listTitle) {
-    listTitle.textContent = isSec ? "Firmat REVOLUTION SECURITY" : "Klientët REVOLUTION POS";
+    listTitle.textContent = isSec
+      ? "Firmat REVOLUTION SECURITY"
+      : isHotel
+        ? "Klientët REVOLUTION HOTEL"
+        : "Klientët REVOLUTION POS";
   }
   const activeSec = document.querySelector(".section.active")?.id?.replace(/^sec-/, "") || "";
   if (activeSec === "klientet") {
     const sub = document.getElementById("page-sub");
     if (sub) {
-      sub.textContent = isSec
-        ? `${FALLBACK_SECURITY_SECTORS.length} kategori — gjithmonë të dukshme`
-        : `${FALLBACK_SECTORS.length} kategori — gjithmonë të dukshme`;
+      const n =
+        currentProduct === "security"
+          ? FALLBACK_SECURITY_SECTORS.length
+          : currentProduct === "hotel"
+            ? FALLBACK_HOTEL_SECTORS.length
+            : FALLBACK_SECTORS.length;
+      sub.textContent = `${n} kategori — gjithmonë të dukshme`;
     }
   }
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1, security: 1 };
+  const allowed = { kafene: 1, security: 1, hotel: 1 };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -114,6 +148,9 @@ function syncNewClientForm() {
   });
   document.querySelectorAll(".nc-security-only").forEach((el) => {
     el.classList.toggle("hidden", product !== "security");
+  });
+  document.querySelectorAll(".nc-hotel-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "hotel");
   });
 }
 
@@ -530,14 +567,31 @@ function renderPasswordBlock(owners) {
     </div>`;
 }
 
-async function fetchClientDetailSmart(id, preferredProduct) {
-  const product = "kafene";
+const DRAWER_HOTEL_TIPI_OPTS = [
+  ["hotel", "Hotel"],
+  ["motel", "Motel"],
+  ["ville_me_qira", "Villa"],
+  ["hostel", "Hostel"],
+  ["resort", "Resort"],
+];
 
-  const d = await api(
-    `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
-  );
-  if (d?.client?.id || d?.client?.emri) {
-    return { d, product };
+async function fetchClientDetailSmart(id, preferredProduct) {
+  const pref = preferredProduct || currentProduct || "kafene";
+  const order = [pref];
+  for (const p of ["kafene", "security", "hotel"]) {
+    if (!order.includes(p)) order.push(p);
+  }
+  for (const product of order) {
+    try {
+      const d = await api(
+        `/api/super/dashboard/clients/${encodeURIComponent(id)}?product=${encodeURIComponent(product)}`,
+      );
+      if (d?.client?.id || d?.client?.emri) {
+        return { d, product };
+      }
+    } catch {
+      /* provo produktin tjetër */
+    }
   }
   throw new Error("Klienti nuk u gjet");
 }
@@ -559,7 +613,11 @@ async function openClientDetail(id, opts = {}) {
   document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
   document.getElementById("drawer-sub").textContent = "Edito klientin, licencat & fjalëkalimin — Ruaj";
 
-  const sectorFields = `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+  const sectorFields =
+    product === "hotel"
+      ? `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+      <label>Tipi (HOTEL)<select id="dr-tipi">${selectOpts(DRAWER_HOTEL_TIPI_OPTS, c.tipi)}</select></label>`
+      : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
       <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
 
@@ -598,7 +656,7 @@ async function deleteClientById(id, { product, name, close } = {}) {
   let prod = product || drawerProduct || null;
   if (!prod || prod === "all") {
     const hit = clientsFlat.find((c) => String(c.id) === String(id));
-    prod = hit?.product_line || (currentProduct === "security" ? "security" : "kafene");
+    prod = hit?.product_line || currentProduct || "kafene";
   }
   if (
     !confirm(
@@ -614,7 +672,7 @@ async function deleteClientById(id, { product, name, close } = {}) {
     return;
   }
   try {
-    const qs = prod === "security" ? "?product=security" : "?product=kafene";
+    const qs = productQueryString(prod);
     await api(`/api/super/dashboard/clients/${id}${qs}`, { method: "DELETE" });
     alert("Klienti u fshi.");
     if (close) closeDrawer();
@@ -924,11 +982,11 @@ function bindLicenseActions(root) {
       e.stopPropagation();
       const id = btn.dataset.deleteLicense;
       const key = btn.dataset.key || id;
-      const prod = btn.dataset.product || (currentProduct === "security" ? "security" : "kafene");
+      const prod = btn.dataset.product || currentProduct || "kafene";
       if (!confirm(`Fshi krejt licencën ${key}?\nNuk kthehet mbrapa.`)) return;
       btn.disabled = true;
       try {
-        const qs = prod === "security" ? "?product=security" : "";
+        const qs = productQueryString(prod);
         await api(`/api/super/dashboard/licenses/${id}${qs}`, { method: "DELETE" });
         alert("Licenca u fshi.");
         await loadLicenses();
@@ -959,11 +1017,13 @@ function bindLicenseActions(root) {
         "",
       );
       if (reason === null) return;
+      const prod = btn.dataset.product || drawerProduct || currentProduct || "kafene";
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.revoke}/revoke`, {
+        await api(`/api/super/dashboard/licenses/${btn.dataset.revoke}/revoke${productQueryString(prod)}`, {
           method: "POST",
           body: JSON.stringify({
+            product_line: prod,
             hardware_id: btn.dataset.hw || undefined,
             reason: String(reason || "").trim(),
           }),
@@ -2137,6 +2197,8 @@ async function boot() {
     };
     if (product === "security") {
       body.veprimtari = document.getElementById("nc-vepr")?.value || "kompani_sigurie";
+    } else if (product === "hotel") {
+      body.tipi = document.getElementById("nc-tipi-hotel")?.value || "hotel";
     } else {
       body.tipi = document.getElementById("nc-tipi")?.value;
       body.package_tier = document.getElementById("nc-pako")?.value;
