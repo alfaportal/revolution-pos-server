@@ -19,6 +19,7 @@ function normalizeProductLine(v) {
     .toLowerCase();
   if (s === "security" || s === "sekurim" || s === "securetrack") return "security";
   if (s === "hotel" || s === "hotel_restorant") return "hotel";
+  if (s === "market" || s === "minimarket" || s === "supermarket") return "market";
   if (s === "furra" || s === "furre" || s === "furre_buke" || s === "bakery") return "furra";
   if (s === "kafene" || s === "cafe" || s === "pos" || s === "hospitality") return "kafene";
   if (PRODUCT_LINES.some((p) => p.id === s && p.enabled !== false)) return s;

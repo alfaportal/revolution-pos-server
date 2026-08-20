@@ -467,6 +467,10 @@ async function getOverview({ product } = {}) {
     const { getHotelOverview } = require("../lib/hotelAdminBridge");
     return getHotelOverview();
   }
+  if (p === "market") {
+    const { getMarketOverview } = require("../lib/marketAdminBridge");
+    return getMarketOverview();
+  }
   if (p === "furra") {
     return {
       active_clients: 0,
@@ -491,6 +495,10 @@ async function getClientsGrouped({ product } = {}) {
   if (p === "hotel") {
     const { getHotelClientsGrouped } = require("../lib/hotelAdminBridge");
     return getHotelClientsGrouped();
+  }
+  if (p === "market") {
+    const { getMarketClientsGrouped } = require("../lib/marketAdminBridge");
+    return getMarketClientsGrouped();
   }
   if (p === "furra") {
     return { sectors: [], groups: [], product_line: p };
@@ -714,6 +722,10 @@ async function getLicensesView({ product } = {}) {
   if (p === "hotel") {
     const { getHotelLicensesView } = require("../lib/hotelAdminBridge");
     return getHotelLicensesView();
+  }
+  if (p === "market") {
+    const { getMarketLicensesView } = require("../lib/marketAdminBridge");
+    return getMarketLicensesView();
   }
   if (p === "furra") {
     return { licenses: [], product_line: p };

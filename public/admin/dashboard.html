@@ -70,9 +70,10 @@
           <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
           <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër">Security</button>
           <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false" title="Regjistro hotele &amp; jep licenca — bridge te revolution-hotel-server">HOTEL</button>
+          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false" title="Regjistro markete &amp; jep licenca — bridge te revolution-market-server">MARKET</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
-          Çdo listë i takon POS.
+          Master Admin i unifikuar — POS, Security, HOTEL dhe MARKET.
         </p>
         <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
 
@@ -103,6 +104,7 @@
                   <option value="kafene">REVOLUTION POS (shitje)</option>
                   <option value="security">REVOLUTION SECURITY (terren)</option>
                   <option value="hotel">REVOLUTION HOTEL (hospitalitet)</option>
+                  <option value="market">REVOLUTION MARKET (ushqimore / tregtare)</option>
                 </select>
               </div>
               <div class="field">
@@ -155,6 +157,19 @@
                   <option value="ville_me_qira">Villa</option>
                   <option value="hostel">Hostel</option>
                   <option value="resort">Resort</option>
+                </select>
+              </div>
+              <div class="field nc-market-only hidden">
+                <label for="nc-market-tipi">Veprimtaria — Ushqimore / Tregtare</label>
+                <select id="nc-market-tipi">
+                  <option value="minimarket">Mini-market / Market</option>
+                  <option value="pilar">Pilar (dyqan i vogël lagje)</option>
+                  <option value="supermarket">Supermarket</option>
+                  <option value="dyqan_ushqimor">Dyqan ushqimor</option>
+                  <option value="manav">Dyqan pemë-perimesh (manav)</option>
+                  <option value="bulmetore">Dyqan bulmetore</option>
+                  <option value="kasap">Dyqan mishit (kasap)</option>
+                  <option value="dyqan_peshku">Dyqan peshku</option>
                 </select>
               </div>
               <div class="field">

@@ -4,9 +4,9 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene (POS), security, ose hotel (bridge te serveri i veçantë) */
+/** Produkti aktiv: kafene (POS), security, hotel, ose market (bridge te serveri i veçantë) */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
-if (currentProduct !== "kafene" && currentProduct !== "security" && currentProduct !== "hotel") {
+if (currentProduct !== "kafene" && currentProduct !== "security" && currentProduct !== "hotel" && currentProduct !== "market") {
   currentProduct = "kafene";
 }
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
@@ -51,6 +51,18 @@ const FALLBACK_HOTEL_SECTORS = [
   { num: 5, id: "resort", label: "Resort", keywords: ["resort"], clients: [] },
 ];
 
+/** REVOLUTION MARKET — 8 lloje biznesi ushqimore / tregtare. */
+const FALLBACK_MARKET_SECTORS = [
+  { num: 1, id: "minimarket", label: "Mini-market / Market", keywords: ["mini", "market"], clients: [] },
+  { num: 2, id: "pilar", label: "Pilar (dyqan i vogël lagje)", keywords: ["pilar"], clients: [] },
+  { num: 3, id: "supermarket", label: "Supermarket", keywords: ["supermarket"], clients: [] },
+  { num: 4, id: "dyqan_ushqimor", label: "Dyqan ushqimor", keywords: ["ushqimor"], clients: [] },
+  { num: 5, id: "manav", label: "Dyqan pemë-perimesh (manav)", keywords: ["manav"], clients: [] },
+  { num: 6, id: "bulmetore", label: "Dyqan bulmetore", keywords: ["bulmetore"], clients: [] },
+  { num: 7, id: "kasap", label: "Dyqan mishit (kasap)", keywords: ["kasap"], clients: [] },
+  { num: 8, id: "dyqan_peshku", label: "Dyqan peshku", keywords: ["peshk"], clients: [] },
+];
+
 function ensureSectors(apiSectors, fallback) {
   const list = fallback || FALLBACK_SECTORS;
   const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
@@ -71,6 +83,7 @@ function ensureAllSectors(apiSectors) {
   let fb = FALLBACK_SECTORS;
   if (currentProduct === "security") fb = FALLBACK_SECURITY_SECTORS;
   else if (currentProduct === "hotel") fb = FALLBACK_HOTEL_SECTORS;
+  else if (currentProduct === "market") fb = FALLBACK_MARKET_SECTORS;
   return ensureSectors(apiSectors, fb);
 }
 
@@ -89,13 +102,16 @@ function productQuery(_forClients = false) {
 function updateProductUiHints() {
   const isSec = currentProduct === "security";
   const isHotel = currentProduct === "hotel";
+  const isMarket = currentProduct === "market";
   const hint = document.getElementById("product-tabs-hint");
   if (hint) {
     hint.textContent = isSec
       ? "Çdo listë i takon Security."
       : isHotel
         ? "Çdo listë i takon HOTEL."
-        : "Çdo listë i takon POS.";
+        : isMarket
+          ? "Çdo listë i takon MARKET (bridge te cloud i dedikuar)."
+          : "Çdo listë i takon POS.";
   }
   const listTitle = document.getElementById("clients-list-title");
   if (listTitle) {
@@ -103,7 +119,9 @@ function updateProductUiHints() {
       ? "Firmat REVOLUTION SECURITY"
       : isHotel
         ? "Klientët REVOLUTION HOTEL"
-        : "Klientët REVOLUTION POS";
+        : isMarket
+          ? "Klientët REVOLUTION MARKET"
+          : "Klientët REVOLUTION POS";
   }
   const activeSec = document.querySelector(".section.active")?.id?.replace(/^sec-/, "") || "";
   if (activeSec === "klientet") {
@@ -114,14 +132,16 @@ function updateProductUiHints() {
           ? FALLBACK_SECURITY_SECTORS.length
           : currentProduct === "hotel"
             ? FALLBACK_HOTEL_SECTORS.length
-            : FALLBACK_SECTORS.length;
+            : currentProduct === "market"
+              ? FALLBACK_MARKET_SECTORS.length
+              : FALLBACK_SECTORS.length;
       sub.textContent = `${n} kategori — gjithmonë të dukshme`;
     }
   }
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1, security: 1, hotel: 1 };
+  const allowed = { kafene: 1, security: 1, hotel: 1, market: 1 };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -151,6 +171,9 @@ function syncNewClientForm() {
   });
   document.querySelectorAll(".nc-hotel-only").forEach((el) => {
     el.classList.toggle("hidden", product !== "hotel");
+  });
+  document.querySelectorAll(".nc-market-only").forEach((el) => {
+    el.classList.toggle("hidden", product !== "market");
   });
 }
 
@@ -575,10 +598,21 @@ const DRAWER_HOTEL_TIPI_OPTS = [
   ["resort", "Resort"],
 ];
 
+const DRAWER_MARKET_TIPI_OPTS = [
+  ["minimarket", "Mini-market / Market"],
+  ["pilar", "Pilar (dyqan i vogël lagje)"],
+  ["supermarket", "Supermarket"],
+  ["dyqan_ushqimor", "Dyqan ushqimor"],
+  ["manav", "Dyqan pemë-perimesh (manav)"],
+  ["bulmetore", "Dyqan bulmetore"],
+  ["kasap", "Dyqan mishit (kasap)"],
+  ["dyqan_peshku", "Dyqan peshku"],
+];
+
 async function fetchClientDetailSmart(id, preferredProduct) {
   const pref = preferredProduct || currentProduct || "kafene";
   const order = [pref];
-  for (const p of ["kafene", "security", "hotel"]) {
+  for (const p of ["kafene", "security", "hotel", "market"]) {
     if (!order.includes(p)) order.push(p);
   }
   for (const product of order) {
@@ -617,7 +651,10 @@ async function openClientDetail(id, opts = {}) {
     product === "hotel"
       ? `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Tipi (HOTEL)<select id="dr-tipi">${selectOpts(DRAWER_HOTEL_TIPI_OPTS, c.tipi)}</select></label>`
-      : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+      : product === "market"
+        ? `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+      <label>Tipi (MARKET)<select id="dr-tipi">${selectOpts(DRAWER_MARKET_TIPI_OPTS, c.tipi)}</select></label>`
+        : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
       <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
 
@@ -2199,6 +2236,8 @@ async function boot() {
       body.veprimtari = document.getElementById("nc-vepr")?.value || "kompani_sigurie";
     } else if (product === "hotel") {
       body.tipi = document.getElementById("nc-tipi-hotel")?.value || "hotel";
+    } else if (product === "market") {
+      body.tipi = document.getElementById("nc-market-tipi")?.value || "minimarket";
     } else {
       body.tipi = document.getElementById("nc-tipi")?.value;
       body.package_tier = document.getElementById("nc-pako")?.value;

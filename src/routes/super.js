@@ -173,6 +173,11 @@ router.get(
       const detail = await getHotelClientDetail(req.params.id);
       return res.json({ ok: true, ...detail });
     }
+    if (product === "market") {
+      const { getMarketClientDetail } = require("../lib/marketAdminBridge");
+      const detail = await getMarketClientDetail(req.params.id);
+      return res.json({ ok: true, ...detail });
+    }
     const detail = await getClientDetail(req.params.id);
     res.json({ ok: true, ...detail, product_line: "kafene" });
   }),
@@ -259,6 +264,30 @@ router.patch(
       });
     }
 
+    if (product === "market") {
+      const { updateMarketClient } = require("../lib/marketAdminBridge");
+      const result = await updateMarketClient(id, body);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_update",
+        targetType: "client",
+        targetId: result.client?.id || id,
+        targetLabel: result.client?.emri || body.emri,
+        details: {
+          licenses_updated: (result.licenses || []).map((l) => l.id),
+          license_errors: result.license_errors || [],
+          product_line: "market",
+        },
+      }).catch(() => {});
+      return res.json({
+        ok: true,
+        client: result.client,
+        licenses: result.licenses || [],
+        license_errors: result.license_errors || [],
+        product_line: "market",
+      });
+    }
+
     const licPatches = Array.isArray(body.licenses) ? body.licenses : [];
 
     // Kafene / POS — ruaj klientin GJITHMONË; licencat veç e veç (një gabim licence mos e prish klientin)
@@ -342,6 +371,18 @@ router.delete(
         details: { product_line: "hotel" },
       }).catch(() => {});
       return res.json({ ok: true, product_line: "hotel" });
+    }
+    if (product === "market") {
+      const { deleteMarketClient } = require("../lib/marketAdminBridge");
+      await deleteMarketClient(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_delete",
+        targetType: "client",
+        targetId: id,
+        details: { product_line: "market" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "market" });
     }
     await deleteClient(id);
     await logAdminActivity({
@@ -483,6 +524,48 @@ router.post(
       });
     }
 
+    if (product === "market") {
+      const { registerMarketClient } = require("../lib/marketAdminBridge");
+      const { normalizeClientTipi, MARKET_TIPI } = require("../utils/businessTipi");
+      let tipi = normalizeClientTipi(req.body?.tipi || "minimarket");
+      if (!MARKET_TIPI.includes(tipi)) tipi = "minimarket";
+      const result = await registerMarketClient({
+        ...(req.body || {}),
+        tipi,
+        celesi: celesi || undefined,
+        license_key: celesi || undefined,
+        hardware_id: hardwareId || undefined,
+        hardwareId: hardwareId || undefined,
+        license_type: licenseType,
+        data_skadimit: dataSkadimit,
+        trial_ends_at: trialEndsAt,
+        expires_at: expiresAt,
+        issue_license: wantLicense,
+      });
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_create",
+        targetType: "client",
+        targetId: result.client?.id || null,
+        targetLabel: result.client?.emri || req.body?.emri || "Market",
+        details: {
+          license_key: result.license_key || null,
+          hardware_id: result.hardware_id || null,
+          product_line: "market",
+        },
+      }).catch(() => {});
+      return res.status(201).json({
+        ok: true,
+        client: result.client,
+        license: result.license,
+        license_key: result.license_key,
+        celesi: result.license_key,
+        hardware_id: result.hardware_id || null,
+        product_line: "market",
+        already_exists: !!result.already_exists,
+      });
+    }
+
     if (product === "furra") {
       const err = new Error("FURRA nuk menaxhohet nga ky server.");
       err.status = 400;
@@ -574,6 +657,18 @@ router.delete(
         details: { product_line: "hotel" },
       }).catch(() => {});
       return res.json({ ok: true, product_line: "hotel" });
+    }
+    if (product === "market") {
+      const { deleteMarketLicense } = require("../lib/marketAdminBridge");
+      await deleteMarketLicense(id);
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "license_delete",
+        targetType: "license",
+        targetId: id,
+        details: { product_line: "market" },
+      }).catch(() => {});
+      return res.json({ ok: true, product_line: "market" });
     }
     try {
       await revokeLicenseRemote(id, {

@@ -81,10 +81,17 @@ app.use(corsMiddleware);
 // revolution-pos.com/security (railway rri i fshehur prapa).
 // Serveri i restorantit NUK e lexon, s'e ruan, s'e prek bazën e Security-t.
 // Vendoset PARA express.json që body-i i POST-it (p.sh. login) të mos humbasë.
-// /hotel → revolution-hotel-server (njëjtë pattern). Në të ardhmen: /market, /furra.
+// /hotel → revolution-hotel-server; /market → revolution-market-server.
 const SECURITY_UPSTREAM = "revolution-security-production.up.railway.app";
 const HOTEL_UPSTREAM = String(
   process.env.HOTEL_UPSTREAM || "revolution-hotel-server-production.up.railway.app",
+)
+  .replace(/^https?:\/\//, "")
+  .replace(/\/$/, "");
+const MARKET_UPSTREAM = String(
+  process.env.MARKET_UPSTREAM
+    || process.env.MARKET_UPSTREAM_URL
+    || "revolution-market-server-production.up.railway.app",
 )
   .replace(/^https?:\/\//, "")
   .replace(/\/$/, "");
@@ -135,8 +142,37 @@ function proxyToHotel(req, res) {
   req.pipe(proxyReq);
 }
 
+function proxyToMarket(req, res) {
+  let path = req.originalUrl || "/";
+  if (path.startsWith("/market")) {
+    path = path.slice("/market".length) || "/";
+  }
+  if (!path.startsWith("/")) path = `/${path}`;
+  const headers = { ...req.headers, host: MARKET_UPSTREAM };
+  const proxyReq = https.request(
+    {
+      hostname: MARKET_UPSTREAM,
+      port: 443,
+      path,
+      method: req.method,
+      headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", () => {
+    if (!res.headersSent) {
+      res.status(502).send("MARKET upstream nuk përgjigjet");
+    }
+  });
+  req.pipe(proxyReq);
+}
+
 app.use("/security", proxyToSecurity);
 app.use("/hotel", proxyToHotel);
+app.use("/market", proxyToMarket);
 
 // Stripe webhook — RAW body (para express.json)
 app.post(
