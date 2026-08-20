@@ -54,12 +54,12 @@ const FALLBACK_HOTEL_SECTORS = [
 /** REVOLUTION MARKET — 8 lloje biznesi ushqimore / tregtare. */
 const FALLBACK_MARKET_SECTORS = [
   { num: 1, id: "minimarket", label: "Mini-market / Market", keywords: ["mini", "market"], clients: [] },
-  { num: 2, id: "pilar", label: "Pilar (dyqan i vogël lagje)", keywords: ["pilar"], clients: [] },
+  { num: 2, id: "pilar", label: "Pilar", keywords: ["pilar"], clients: [] },
   { num: 3, id: "supermarket", label: "Supermarket", keywords: ["supermarket"], clients: [] },
   { num: 4, id: "dyqan_ushqimor", label: "Dyqan ushqimor", keywords: ["ushqimor"], clients: [] },
-  { num: 5, id: "manav", label: "Dyqan pemë-perimesh (manav)", keywords: ["manav"], clients: [] },
+  { num: 5, id: "manav", label: "Dyqan pemë-perimesh", keywords: ["peme", "perime"], clients: [] },
   { num: 6, id: "bulmetore", label: "Dyqan bulmetore", keywords: ["bulmetore"], clients: [] },
-  { num: 7, id: "kasap", label: "Dyqan mishit (kasap)", keywords: ["kasap"], clients: [] },
+  { num: 7, id: "kasap", label: "Dyqan mishit", keywords: ["mish"], clients: [] },
   { num: 8, id: "dyqan_peshku", label: "Dyqan peshku", keywords: ["peshk"], clients: [] },
 ];
 
@@ -600,12 +600,12 @@ const DRAWER_HOTEL_TIPI_OPTS = [
 
 const DRAWER_MARKET_TIPI_OPTS = [
   ["minimarket", "Mini-market / Market"],
-  ["pilar", "Pilar (dyqan i vogël lagje)"],
+  ["pilar", "Pilar"],
   ["supermarket", "Supermarket"],
   ["dyqan_ushqimor", "Dyqan ushqimor"],
-  ["manav", "Dyqan pemë-perimesh (manav)"],
+  ["manav", "Dyqan pemë-perimesh"],
   ["bulmetore", "Dyqan bulmetore"],
-  ["kasap", "Dyqan mishit (kasap)"],
+  ["kasap", "Dyqan mishit"],
   ["dyqan_peshku", "Dyqan peshku"],
 ];
 
