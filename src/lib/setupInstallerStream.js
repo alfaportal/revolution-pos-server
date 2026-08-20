@@ -41,17 +41,30 @@ function resolveSetupSource(plan) {
   return { type: "url", url };
 }
 
-function setupContentDisposition() {
+function setupContentDisposition(plan) {
   const ver = getSetupVersion();
-  const name = ver ? `Revolution-POS-Setup-${ver}.exe` : SETUP_FILENAME;
+  const planKey = String(plan || "").trim().toLowerCase();
+  const planLabel =
+    planKey === "p1"
+      ? "-Pako1"
+      : planKey === "p2"
+        ? "-Pako2"
+        : planKey === "p3"
+          ? "-Pako3"
+          : planKey === "p4"
+            ? "-Pako4"
+            : "";
+  const name = ver
+    ? `Revolution-POS-Setup-${ver}${planLabel}.exe`
+    : SETUP_FILENAME;
   return `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
 
-function setSetupDownloadHeaders(res, contentLength) {
+function setSetupDownloadHeaders(res, contentLength, plan) {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.set("X-Content-Type-Options", "nosniff");
   res.set("Content-Type", "application/octet-stream");
-  res.set("Content-Disposition", setupContentDisposition());
+  res.set("Content-Disposition", setupContentDisposition(plan));
   if (contentLength != null && contentLength !== "") {
     res.set("Content-Length", String(contentLength));
   }
@@ -75,7 +88,7 @@ async function streamSetupInstaller(res, plan) {
 
   if (source.type === "file") {
     const stat = fs.statSync(source.path);
-    setSetupDownloadHeaders(res, stat.size);
+    setSetupDownloadHeaders(res, stat.size, plan);
     fs.createReadStream(source.path).pipe(res);
     return true;
   }
@@ -90,7 +103,7 @@ async function streamSetupInstaller(res, plan) {
     err.status = upstream.status;
     throw err;
   }
-  setSetupDownloadHeaders(res, upstream.headers.get("content-length"));
+  setSetupDownloadHeaders(res, upstream.headers.get("content-length"), plan);
   Readable.fromWeb(upstream.body).pipe(res);
   return true;
 }

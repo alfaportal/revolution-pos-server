@@ -12,6 +12,14 @@ const CACHE_TTL_MS = Math.max(
 
 const PUBLIC_ASSET = "KAFENE-Setup.exe";
 
+/** Emra në GitHub release → plan marketing (p1–p4). */
+const PLAN_ASSETS = {
+  p1: "KAFENE-Pako1-Setup.exe",
+  p2: "KAFENE-Pako2-Setup.exe",
+  p3: "KAFENE-Pako3-Setup.exe",
+  p4: "KAFENE-Pako4-Setup.exe",
+};
+
 let cache = {
   tag: null,
   version: null,
@@ -174,8 +182,13 @@ function cachedSetupVersion() {
 }
 
 function cachedSetupDownloadUrl(plan) {
-  /* Setup publik është një skedar; planet p1–p4 mbeten me env URL nëse vendosen. */
-  void plan;
+  kickSetupReleaseRefresh();
+  const key = String(plan || "").trim().toLowerCase();
+  const planAsset = PLAN_ASSETS[key];
+  if (planAsset) {
+    const url = cache.assets[planAsset];
+    if (url) return url;
+  }
   return cachedAssetUrl(PUBLIC_ASSET);
 }
 
@@ -184,6 +197,7 @@ kickSetupReleaseRefresh();
 
 module.exports = {
   PUBLIC_ASSET,
+  PLAN_ASSETS,
   DEFAULT_SETUP_RELEASE_REPO,
   ensureSetupReleaseMeta,
   kickSetupReleaseRefresh,

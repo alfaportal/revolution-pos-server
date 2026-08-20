@@ -5,8 +5,8 @@ const DEFAULT_SUPPORT_PHONE = "+383 48707880";
 const DEFAULT_SUPPORT_EMAIL = "revolutioninvest05@gmail.com";
 /** Fallback i fundit nëse GitHub API / cache dështon. */
 const DEFAULT_SETUP_DOWNLOAD_URL =
-  "https://github.com/alfaportal/revolution-restaurant-server/releases/download/setup-v1.0.508/KAFENE-Setup.exe";
-const DEFAULT_SETUP_VERSION = "1.0.508";
+  "https://github.com/alfaportal/revolution-restaurant-server/releases/download/setup-v1.0.509/KAFENE-Setup.exe";
+const DEFAULT_SETUP_VERSION = "1.0.509";
 /** Link Setup (admin / email / SMS) — default 7 ditë. */
 const DEFAULT_SETUP_LINK_TTL_HOURS = 168;
 
@@ -151,7 +151,13 @@ function getPublicAppConfig() {
     setup_via_email: setup_email,
     setup_via_sms: setup_sms,
     setup_download_url: `${getPublicAppOrigin()}/api/public/setup-download`,
-    setup_downloads: null,
+    setup_downloads: {
+      default: `${getPublicAppOrigin()}/api/public/setup-download`,
+      p1: `${getPublicAppOrigin()}/api/public/setup-download?plan=p1`,
+      p2: `${getPublicAppOrigin()}/api/public/setup-download?plan=p2`,
+      p3: `${getPublicAppOrigin()}/api/public/setup-download?plan=p3`,
+      p4: `${getPublicAppOrigin()}/api/public/setup-download?plan=p4`,
+    },
   };
 }
 
