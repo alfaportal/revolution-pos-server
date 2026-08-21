@@ -520,7 +520,7 @@ async function sendWeeklyAiReportEmail({ to, clientName, weekStart, weekEnd, sum
 }
 
 /**
- * Njoftim PRONARIT: POS/cloud është offline (12/24/36/48 orë).
+ * Njoftim PRONARIT: POS/cloud është offline (36 / 42 / 48 orë).
  * Paralajmërim ATK — pas 48h rrezik kontrolli.
  */
 async function sendOwnerClientOfflineEmail({
@@ -534,6 +534,7 @@ async function sendOwnerClientOfflineEmail({
   if (!to) throw new Error("Mungon email i pronarit.");
   const name = clientName || "Pronar";
   const hours = Math.round(Number(hoursOffline) || Number(milestoneHours) || 0);
+  const milestone = Number(milestoneHours) || hours;
   const support = resolveSupportPhone();
   const seenLabel = lastSeenAt
     ? new Date(lastSeenAt).toLocaleString("sq-AL", { timeZone: "Europe/Belgrade" })
@@ -541,17 +542,23 @@ async function sendOwnerClientOfflineEmail({
 
   const subject = atkWarning
     ? `⚠️ URGJENT: POS offline >48h — rrezik kontrolli ATK — ${name}`
-    : `Paralajmërim: POS offline ${milestoneHours}h — ${name}`;
+    : milestone >= 42
+      ? `Paralajmërim: POS offline ${milestone}h (2/3) — ${name}`
+      : `Paralajmërim: POS offline ${milestone}h (1/3) — ${name}`;
+
+  const offlineGuidance = atkWarning
+    ? "KUJTESË E RËNDËSISHME: Keni kaluar 48 orë offline. ATK mund të vijë për kontroll nëse arka / POS fiskal nuk funksionon online. Rilidhni internetin dhe hapni programin sa më shpejt."
+    : milestone >= 42
+      ? `Ky është njoftimi i dytë (${milestone} orë offline). ATK lejon zakonisht deri ~48 orë pa lidhje — pas 48 orësh mund të kërkojë kontroll. Rilidhni internetin dhe hapni programin.`
+      : `Ky është njoftimi i parë (${milestone} orë offline). Nëse mbeteni offline, do të merrni njoftime edhe në 42 dhe 48 orë. ATK mund të kërkojë kontroll pas 48 orësh pa lidhje.`;
 
   const text = [
     `Përshëndetje ${name},`,
     "",
-    `Sistemi juaj Revolution POS është offline prej rreth ${hours} orësh.`,
+    `Sistemi juaj Revolution POS / arka fiskale është offline prej rreth ${hours} orësh.`,
     `Lidhja e fundit me cloud: ${seenLabel}`,
     "",
-    atkWarning
-      ? "KUJTESË E RËNDËSISHME: Keni kaluar 48 orë offline. ATK mund të vijë për kontroll nëse sistemi fiskal / POS nuk po funksionon online. Rilidhni internetin dhe hapni programin sa më shpejt."
-      : `Mund të jeni offline deri në 48 orë. Ky është njoftimi i ${milestoneHours} orëve. Pas 48 orësh ATK mund të vijë për kontroll nëse sistemi nuk funksionon. Rilidhni internetin dhe hapni programin.`,
+    offlineGuidance,
     "",
     `Nëse keni nevojë për ndihmë: ${support}`,
     "",
@@ -560,21 +567,24 @@ async function sendOwnerClientOfflineEmail({
 
   const html = `
     <p>Përshëndetje <strong>${escapeHtmlEmail(name)}</strong>,</p>
-    <p>Sistemi juaj <strong>Revolution POS</strong> është <strong>offline</strong> prej rreth <strong>${hours} orësh</strong>.</p>
+    <p>Sistemi juaj <strong>Revolution POS</strong> / arka fiskale është <strong>offline</strong> prej rreth <strong>${hours} orësh</strong>.</p>
     <p>Lidhja e fundit me cloud: <code>${escapeHtmlEmail(seenLabel)}</code></p>
     ${
       atkWarning
         ? `<p style="margin-top:16px;padding:12px;background:#7f1d1d;color:#fecaca;border-radius:8px">
-            <strong>URGJENT:</strong> Keni kaluar <strong>48 orë</strong> offline.
-            <strong>ATK mund të vijë për kontroll</strong> nëse sistemi fiskal / POS nuk po funksionon online.
+            <strong>URGJENT (48h):</strong> Keni kaluar <strong>48 orë</strong> offline.
+            <strong>ATK mund të vijë për kontroll</strong> nëse arka / POS fiskal nuk po funksionon online.
             Rilidhni internetin dhe hapni programin sa më shpejt.
           </p>`
-        : `<p style="margin-top:16px;padding:12px;background:#78350f;color:#fde68a;border-radius:8px">
-            <strong>Paralajmërim:</strong> Mund të jeni offline deri në <strong>48 orë</strong>
-            (ky njoftim: ${milestoneHours}h). Pas 48 orësh
-            <strong>ATK mund të vijë për kontroll</strong> nëse sistemi nuk funksionon.
-            Rilidhni internetin dhe hapni programin.
-          </p>`
+        : milestone >= 42
+          ? `<p style="margin-top:16px;padding:12px;background:#78350f;color:#fde68a;border-radius:8px">
+              <strong>Paralajmërim (${milestone}h — 2/3):</strong> ATK lejon zakonisht deri <strong>~48 orë</strong> offline.
+              Pas 48 orësh <strong>ATK mund të kërkojë kontroll</strong>. Rilidhni internetin dhe hapni programin.
+            </p>`
+          : `<p style="margin-top:16px;padding:12px;background:#78350f;color:#fde68a;border-radius:8px">
+              <strong>Paralajmërim (${milestone}h — 1/3):</strong> Do të merrni njoftime edhe në <strong>42</strong> dhe <strong>48 orë</strong>
+              nëse mbeteni offline. Pas 48 orësh ATK mund të kërkojë kontroll.
+            </p>`
     }
     <p style="margin-top:16px">Nëse keni nevojë për ndihmë: <strong>${escapeHtmlEmail(support)}</strong></p>
     <p style="color:#64748b;font-size:13px">Revolution Invest POS</p>

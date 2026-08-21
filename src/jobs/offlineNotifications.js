@@ -1,6 +1,6 @@
 const { processOfflineNotifications } = require("../services/offlineNotificationService");
 
-/** Kontrollo çdo orë — njoftime email çdo 12h offline (deri 48h / ATK). */
+/** Kontrollo çdo orë — njoftime email pronarit në 36h, 42h dhe 48h offline (ATK). */
 function startOfflineNotificationCron() {
   const HOUR_MS = 60 * 60 * 1000;
   const run = () => {

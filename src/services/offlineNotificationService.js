@@ -4,7 +4,7 @@ const {
   sendOwnerClientOfflineEmail,
 } = require("./emailService");
 
-const MILESTONES = [12, 24, 36, 48];
+const MILESTONES = [36, 42, 48];
 const MS_HOUR = 60 * 60 * 1000;
 
 function pickLatestIso(values) {
@@ -114,7 +114,7 @@ async function fetchClientOfflineSnapshots() {
     });
   }
 
-  return [...byClient.values()].filter((c) => c.hours_offline >= 12);
+  return [...byClient.values()].filter((c) => c.hours_offline >= 36);
 }
 
 async function fetchSentMilestones(clientId, offlineSince) {
