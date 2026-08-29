@@ -64,6 +64,7 @@ const {
   renderNotFoundHtml,
 } = require("./services/seoPublicPageHtml");
 const { renderMarketingHtml } = require("./services/seoMarketingHtml");
+const { registerProductPageRoutes } = require("./routes/productPages");
 
 const pkg = require("../package.json");
 const ADMIN_PATH = adminPanelPath();
@@ -96,13 +97,34 @@ const MARKET_UPSTREAM = String(
   .replace(/^https?:\/\//, "")
   .replace(/\/$/, "");
 
+function proxyUpstreamPath(req, product) {
+  const qs = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  const parts = (req.path || "").split("/").filter(Boolean);
+  if (parts[0] !== product || !parts[1]) return req.originalUrl;
+  const slug = parts[1];
+  const role = parts[2] || "";
+  if (product === "hotel") {
+    if (role === "owner") return `/owner/login${qs}`;
+    if (role === "recepsion") return `/waiter/${slug}${qs}`;
+    if (role === "sherbimi") return `/kitchen/${slug}${qs}`;
+    return `/r/${slug}${qs}`;
+  }
+  if (product === "security") {
+    if (role === "pronari") return `/owner/login${qs}`;
+    if (role === "rojtar" || role === "punetor") return `/worker${qs}`;
+    return `/r/${slug}${qs}`;
+  }
+  return req.originalUrl;
+}
+
 function proxyToSecurity(req, res) {
+  const upstreamPath = proxyUpstreamPath(req, "security");
   const headers = { ...req.headers, host: SECURITY_UPSTREAM };
   const proxyReq = https.request(
     {
       hostname: SECURITY_UPSTREAM,
       port: 443,
-      path: req.originalUrl,
+      path: upstreamPath,
       method: req.method,
       headers,
     },
@@ -120,12 +142,13 @@ function proxyToSecurity(req, res) {
 }
 
 function proxyToHotel(req, res) {
+  const upstreamPath = proxyUpstreamPath(req, "hotel");
   const headers = { ...req.headers, host: HOTEL_UPSTREAM };
   const proxyReq = https.request(
     {
       hostname: HOTEL_UPSTREAM,
       port: 443,
-      path: req.originalUrl,
+      path: upstreamPath,
       method: req.method,
       headers,
     },
@@ -513,6 +536,43 @@ app.get("/terms", (_req, res) => sendMarketingPage(res, "/terms"));
 /** SEO — robots, sitemap, /restorante (para static) */
 app.use(seoRoutes);
 
+async function sendPublicStorefront(req, res, storefront, notFoundKind) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  try {
+    const result = await renderPublicStorefrontHtml({
+      slug: req.params.slug,
+      storefront,
+    });
+    if (!result.html) {
+      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
+    }
+    return res.type("html").send(result.html);
+  } catch (err) {
+    if (err.code === "WRONG_STOREFRONT") {
+      const target =
+        storefront === "r"
+          ? `/market/${encodeURIComponent(req.params.slug)}`
+          : `/kafene/${encodeURIComponent(req.params.slug)}`;
+      return res.redirect(302, target);
+    }
+    if (err.code === "PACKAGE") {
+      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
+    }
+    throw err;
+  }
+}
+
+/** Rrugët dinamike /{tipi}/{slug}/... — PARA static që të mos humbasin */
+registerProductPageRoutes(app, {
+  publicDir: PUBLIC_DIR,
+  sendPublicStorefront,
+  manifestHandler,
+  serviceWorkerHandler,
+  resolvePublicClient,
+  shopManifestHandler,
+  shopServiceWorkerHandler,
+});
+
 app.use(express.static(SITE_DIR));
 
 app.use((req, res, next) => {
@@ -581,179 +641,12 @@ app.get("/owner/panel", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/owner/panel.html"));
 });
 
-app.get("/bar/:slug", (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/bar.html"));
-});
-
-app.get("/kiosk/:slug", (_req, res) => {
-  res.sendFile(path.join(__dirname, "../public/kiosk.html"));
-});
-
-app.get("/menu/:slug/:tableNumber", (_req, res) => {
-  res.sendFile(path.join(__dirname, "../public/kiosk.html"));
-});
-
-app.get("/kitchen/:slug", (req, res) => {
-  const token = String(req.query.w || "").trim();
-  if (token) {
-    const q = new URLSearchParams(req.query);
-    return res.redirect(302, `/waiter/${encodeURIComponent(req.params.slug)}?${q.toString()}`);
-  }
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.set("Pragma", "no-cache");
-  res.sendFile(path.join(__dirname, "../public/kitchen.html"));
-});
-
-app.get("/waiter/:slug/manifest.json", (req, res) => {
-  const slug = encodeURIComponent(String(req.params.slug || "").trim());
-  const key = String(req.query.key || "").trim();
-  const w = String(req.query.w || "").trim();
-  const q = new URLSearchParams();
-  if (key) q.set("key", key);
-  if (w) q.set("w", w);
-  const qs = q.toString();
-  // Must include slug (+ key) — bare /waiter/ causes Express "Cannot GET /waiter/"
-  const startUrl = `/waiter/${slug}${qs ? `?${qs}` : ""}`;
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.type("application/manifest+json");
-  res.json({
-    name: "Revolution Invest POS — Kamarieri",
-    short_name: "Kamarieri",
-    description: "Paneli i kamarierit — Revolution Invest POS",
-    start_url: startUrl,
-    scope: "/waiter/",
-    display: "standalone",
-    orientation: "portrait-primary",
-    theme_color: "#0f1b3d",
-    background_color: "#0f1b3d",
-    icons: [
-      {
-        src: "/logo-source.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/logo-source.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "maskable",
-      },
-      {
-        src: "/icons/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "any",
-      },
-    ],
-  });
-});
-
 app.get(["/waiter", "/waiter/"], (_req, res) => {
   res
     .status(404)
     .type("html")
-    .send(`<!DOCTYPE html><html lang="sq"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kamarieri</title></head><body style="font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:1.5rem;line-height:1.5;text-align:center"><h1>Linku i kamarierit mungon</h1><p>Hapni linkun e plotë nga paneli i pronarit (me <code>/waiter/emri-lokalit?key=...</code>), pastaj shtojeni në ekranin kryesor.</p><p>Mos instaloni PWA nga faqja kryesore.</p></body></html>`);
+    .send(`<!DOCTYPE html><html lang="sq"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kamarieri</title></head><body style="font-family:system-ui,sans-serif;max-width:28rem;margin:3rem auto;padding:1.5rem;line-height:1.5;text-align:center"><h1>Linku i kamarierit mungon</h1><p>Hapni linkun e plotë nga paneli i pronarit (p.sh. <code>/kafene/emri-lokalit/kamarier?key=...</code>), pastaj shtojeni në ekranin kryesor.</p><p>Mos instaloni PWA nga faqja kryesore.</p></body></html>`);
 });
-
-app.get("/waiter/:slug", (req, res) => {
-  const slug = String(req.params.slug || "").trim();
-  const key = String(req.query.key || "").trim();
-  const w = String(req.query.w || "").trim();
-  const manQ = new URLSearchParams();
-  if (key) manQ.set("key", key);
-  if (w) manQ.set("w", w);
-  const manifestHref = `/waiter/${encodeURIComponent(slug)}/manifest.json${
-    manQ.toString() ? `?${manQ.toString()}` : ""
-  }`;
-
-  const filePath = path.join(__dirname, "../public/waiter.html");
-  let html;
-  try {
-    html = fs.readFileSync(filePath, "utf8");
-  } catch (err) {
-    console.error("[waiter] failed to read waiter.html:", formatError(err));
-    return res.status(500).type("text").send("Gabim serveri.");
-  }
-
-  // Inject absolute manifest BEFORE the browser can race-fetch a wrong start_url
-  html = html.replace(
-    /<link\s+rel="manifest"[^>]*>/i,
-    `<link rel="manifest" href="${manifestHref}">`,
-  );
-
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.type("html").send(html);
-});
-
-async function sendPublicStorefront(req, res, storefront, notFoundKind) {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  try {
-    const result = await renderPublicStorefrontHtml({
-      slug: req.params.slug,
-      storefront,
-    });
-    if (!result.html) {
-      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
-    }
-    return res.type("html").send(result.html);
-  } catch (err) {
-    if (err.code === "WRONG_STOREFRONT") {
-      const other = storefront === "r" ? "s" : "r";
-      return res.redirect(302, `/${other}/${encodeURIComponent(req.params.slug)}`);
-    }
-    if (err.code === "PACKAGE") {
-      return res.status(404).type("html").send(renderNotFoundHtml(notFoundKind));
-    }
-    throw err;
-  }
-}
-
-app.get("/r/:slug/manifest.json", manifestHandler);
-app.get("/r/:slug/sw.js", resolvePublicClient, serviceWorkerHandler);
-app.get("/r/:slug/order", (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/r-order.html"));
-});
-app.get(
-  ["/r/:slug/menu", "/r/:slug/menu/"],
-  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
-);
-app.get(
-  "/r/:slug",
-  asyncHandler((req, res) => sendPublicStorefront(req, res, "r", "restorant")),
-);
-app.get("/s/:slug/manifest.json", shopManifestHandler);
-app.get("/s/:slug/sw.js", resolvePublicClient, shopServiceWorkerHandler);
-app.get("/s/:slug/order", (_req, res) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/s-order.html"));
-});
-app.get(
-  "/s/:slug",
-  asyncHandler(async (req, res) => {
-    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
-    try {
-      const result = await renderPublicStorefrontHtml({
-        slug: req.params.slug,
-        storefront: "s",
-      });
-      if (!result.html) {
-        return res.status(404).type("html").send(renderNotFoundHtml("shop"));
-      }
-      return res.type("html").send(result.html);
-    } catch (err) {
-      if (err.code === "WRONG_STOREFRONT") {
-        return res.redirect(302, `/r/${encodeURIComponent(req.params.slug)}`);
-      }
-      if (err.code === "PACKAGE") {
-        return res.status(404).type("html").send(renderNotFoundHtml("shop"));
-      }
-      throw err;
-    }
-  }),
-);
 
 app.use((err, req, res, _next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, formatError(err));
@@ -865,14 +758,15 @@ async function start() {
     console.log(`  🏠 Website:     /  (revolution-pos.com)`);
     console.log(`  🔎 SEO:         /robots.txt  /sitemap.xml  /restorante`);
     console.log(`  🏪 Pronarët:    /owner/login`);
-    console.log(`  🍹 Banak:       /bar/:slug?key=...  (porosi tavolinë/online/POS)`);
-    console.log(`  🍳 Kuzhina KDS:  /kitchen/:slug?key=...  (ushqim)`);
-    console.log(`  🧑‍🍳 Kamarieri:   /waiter/:slug?key=...`);
-    console.log(`  🪑 Tavolinë:    /menu/:slug/:tableNumber  (QR publike)`);
-    console.log(`  🪑 Kiosk vjetër: /kiosk/:slug?key=...&table=5`);
-    console.log(`  🍽️  Restorant:   /r/:slug`);
-    console.log(`  🛵 Porosi web:  /r/:slug/order`);
-    console.log(`  🛍️  Dyqani:      /s/:slug`);
+    console.log(`  🍹 Banak:       /{tipi}/:slug/bar  (p.sh. /bar/ferizaj/bar)`);
+    console.log(`  🍳 Kuzhina:     /{tipi}/:slug/kuzhina  (p.sh. /kafene/babylon/kuzhina)`);
+    console.log(`  🧑‍🍳 Kamarieri:   /{tipi}/:slug/kamarier`);
+    console.log(`  🪑 Menu QR:     /{tipi}/:slug/menu/:table`);
+    console.log(`  🍽️  Publike:     /{tipi}/:slug  (p.sh. /kafene/babylon)`);
+    console.log(`  🛵 Takeaway:    /{tipi}/:slug/takeaway`);
+    console.log(`  🏨 Hotel:       /hotel/:slug/owner (proxy)`);
+    console.log(`  🛡️  Security:    /security/:slug/pronari (proxy)`);
+    console.log(`  🛍️  Market:      /market/:slug/owner`);
     console.log(`  📦 Porosi dyqan: /s/:slug/order`);
     console.log(`  📋 POS catalog:  GET /api/v1/pos/catalog  POST /api/v1/pos/catalog/sync`);
     console.log(`  🔑 License API: POST /api/v1/license/validate`);

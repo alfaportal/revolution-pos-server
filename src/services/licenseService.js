@@ -13,6 +13,7 @@ const {
 const { formatError, logRouteError } = require("../lib/errors");
 const { normalizePackageTier } = require("../lib/packages");
 const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl, buildClientWebLinks } = require("../lib/kitchenAccess");
+const { validateKitchenSlug, resolveUniqueKitchenSlug } = require("../lib/kitchenSlug");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
 const { featuresForTier } = require("../lib/packages");
 const { todayISO, isExpired, addMonthsISO, addMonthsTimestamp } = require("../lib/licenseDates");
@@ -750,18 +751,35 @@ async function createClient(body) {
   const productLine = isDedicatedProduct(requestedLine)
     ? requestedLine
     : toDbProductLine(requestedLine);
+  const emri = String(body.emri || "").trim();
+  if (!emri) throw new Error("Emri i klientit është i detyrueshëm.");
+
+  const rawSlug = String(body.kitchen_slug || body.slug || "").trim();
+  let kitchen_slug;
+  if (rawSlug) {
+    kitchen_slug = validateKitchenSlug(rawSlug);
+    const { data: taken, error: takenErr } = await db
+      .from("clients")
+      .select("id")
+      .eq("kitchen_slug", kitchen_slug)
+      .maybeSingle();
+    if (takenErr) throw takenErr;
+    if (taken) throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+  } else {
+    kitchen_slug = await resolveUniqueKitchenSlug(db, { emri });
+  }
+
   const row = {
-    emri: String(body.emri || "").trim(),
+    emri,
     adresa: String(body.adresa || "").trim(),
     telefoni: String(body.telefoni || "").trim(),
     email: String(body.email || "").trim(),
     tipi: assertClientTipi(body.tipi || "restorant"),
     package_tier: normalizePackageTier(body.package_tier),
-    kitchen_slug: generateKitchenSlug(body.emri || "lokal"),
+    kitchen_slug,
     kitchen_key: generateKitchenKey(),
     product_line: productLine,
   };
-  if (!row.emri) throw new Error("Emri i klientit është i detyrueshëm.");
 
   let { data, error } = await db.from("clients").insert(row).select().single();
   if (error && /product_line/i.test(error.message || "")) {
@@ -825,6 +843,14 @@ async function updateClient(id, body) {
   if (body.email != null) patch.email = String(body.email).trim().toLowerCase();
   if (body.adresa != null) patch.adresa = String(body.adresa).trim();
   if (typeof body.aktiv === "boolean") patch.aktiv = body.aktiv;
+  let slugUpdated = null;
+  if (body.kitchen_slug != null || body.slug != null) {
+    const { updateClientKitchenSlug } = require("../lib/kitchenSlug");
+    const raw = String(body.kitchen_slug ?? body.slug ?? "").trim();
+    if (raw) {
+      slugUpdated = await updateClientKitchenSlug(db, id, raw);
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(body, "package_tier") && body.package_tier != null && body.package_tier !== "") {
     patch.package_tier = normalizePackageTier(body.package_tier);
   }
@@ -847,6 +873,7 @@ async function updateClient(id, body) {
   }
 
   if (!Object.keys(patch).length) {
+    if (slugUpdated) return normalizeClientRow(slugUpdated);
     throw new Error("Nuk ka fusha për përditësim.");
   }
 
@@ -942,7 +969,7 @@ async function regenerateKitchenAccess(id, productHint) {
   if (!client) throw new Error("Klienti nuk u gjet.");
 
   const patch = {
-    kitchen_slug: generateKitchenSlug(client.emri),
+    kitchen_slug: await resolveUniqueKitchenSlug(db, { emri: client.emri, excludeClientId: client.id }),
     kitchen_key: generateKitchenKey(),
   };
 
@@ -974,6 +1001,7 @@ async function createClientOnboard(body, baseUrl) {
       telefoni: body.telefoni,
       email: body.email,
       adresa: body.adresa,
+      kitchen_slug: body.kitchen_slug || body.slug,
     });
 
     license = await createLicense({

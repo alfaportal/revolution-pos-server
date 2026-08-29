@@ -1,27 +1,20 @@
 const crypto = require("crypto");
 const { getSupabase } = require("../db");
-const { featuresForTier } = require("./packages");
-const { isShopStorefront, storefrontPrefix } = require("./storefront");
+const {
+  generateKitchenSlug,
+  resolveUniqueKitchenSlug,
+} = require("./kitchenSlug");
+const {
+  buildClientWebLinks: buildProductClientWebLinks,
+  buildStaffUrl,
+  buildRoleUrl,
+  urlTipiSegment,
+} = require("./productUrls");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function generateKitchenKey() {
   return crypto.randomBytes(24).toString("hex");
-}
-
-function slugifyName(emri) {
-  const base = String(emri || "lokal")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 24);
-  return base || "lokal";
-}
-
-function generateKitchenSlug(emri) {
-  return `${slugifyName(emri)}-${crypto.randomBytes(3).toString("hex")}`;
 }
 
 function extractKitchenKey(req) {
@@ -80,7 +73,9 @@ async function ensureKitchenCredentials(client) {
   const { db } = await require("./productSupabase").dbForClientId(client.id);
   const patch = {};
   if (!client.kitchen_key) patch.kitchen_key = generateKitchenKey();
-  if (!client.kitchen_slug) patch.kitchen_slug = generateKitchenSlug(client.emri);
+  if (!client.kitchen_slug) {
+    patch.kitchen_slug = await resolveUniqueKitchenSlug(db, { emri: client.emri });
+  }
 
   const { data, error } = await db
     .from("clients")
@@ -94,43 +89,35 @@ async function ensureKitchenCredentials(client) {
 }
 
 function buildKitchenUrl(baseUrl, client, kind) {
-  const base = String(baseUrl || "").replace(/\/+$/, "");
-  const slug = client.kitchen_slug || client.id;
-  const key = client.kitchen_key || "";
-  const path = kind === "waiter"
-    ? "waiter"
-    : kind === "kiosk"
-      ? "kiosk"
+  const role =
+    kind === "waiter"
+      ? "kamarier"
       : kind === "bar"
         ? "bar"
-        : kind === "kitchen"
-          ? "kitchen"
-          : "kitchen";
-  return `${base}/${path}/${encodeURIComponent(slug)}?key=${encodeURIComponent(key)}`;
+        : kind === "kiosk"
+          ? "menu"
+          : "kuzhina";
+  return buildStaffUrl(baseUrl, client, role);
 }
 
 /** URL publike për skanim QR tavoline — pa key në link */
 function buildTableMenuUrl(baseUrl, client, tableNumber) {
-  const base = String(baseUrl || "").replace(/\/+$/, "");
   const slug = client.kitchen_slug || client.id;
+  const tipi = urlTipiSegment(client);
   const table = Math.max(1, Number(tableNumber) || 1);
-  return `${base}/menu/${encodeURIComponent(slug)}/${table}`;
+  return buildRoleUrl(baseUrl, tipi, slug, "menu", { table });
 }
 
 /** Link personal i kamarierit — shto &w=token (çdo kamarier tablet i veçantë) */
 function buildWaiterUrl(baseUrl, client, webToken = "") {
-  const url = buildKitchenUrl(baseUrl, client, "waiter");
-  const t = String(webToken || "").trim();
-  if (!url || !t) return url;
-  return `${url}&w=${encodeURIComponent(t)}`;
+  return buildStaffUrl(baseUrl, client, "kamarier", { webToken });
 }
 
-/** Link personal i pranimit të porosive (KDS) për një kamarier — /kitchen/...&w=token */
+/** Link personal i pranimit të porosive (KDS) për një kamarier — kuzhina + w=token */
 function buildWaiterKitchenUrl(baseUrl, client, webToken = "") {
-  const url = buildKitchenUrl(baseUrl, client, "kitchen");
   const t = String(webToken || "").trim();
-  if (!url || !t) return "";
-  return `${url}&w=${encodeURIComponent(t)}`;
+  if (!t) return buildStaffUrl(baseUrl, client, "kuzhina");
+  return buildStaffUrl(baseUrl, client, "kuzhina", { webToken: t });
 }
 
 /** Shton waiter_url dhe kds_url për secilin kamarier (POS / owner panel). */
@@ -149,31 +136,7 @@ function enrichWaitersWithWebLinks(baseUrl, client, waiters = []) {
 
 /** Linket web për një lokal — sipas paketës (banak, kuzhinë, kamarier, kiosk, faqe). */
 function buildClientWebLinks(baseUrl, client, packageTier) {
-  const base = String(baseUrl || "").replace(/\/+$/, "");
-  const features = featuresForTier(packageTier);
-  const links = {};
-  if (!client?.kitchen_slug && !client?.id) return links;
-
-  if (features.waiter) links.waiter_url = buildKitchenUrl(base, client, "waiter");
-  if (features.kds) {
-    links.bar_url = buildKitchenUrl(base, client, "bar");
-    links.kitchen_url = buildKitchenUrl(base, client, "kitchen");
-  }
-  if (features.kiosk) links.kiosk_url = buildTableMenuUrl(base, client, 1);
-  const slug = client.kitchen_slug || client.id;
-  const prefix = storefrontPrefix(client);
-  if (features.website) {
-    links.public_page_url = `${base}/${prefix}/${encodeURIComponent(slug)}`;
-    if (isShopStorefront(client)) {
-      links.shop_page_url = links.public_page_url;
-    } else {
-      links.restaurant_page_url = links.public_page_url;
-    }
-  }
-  if (features.online_orders && slug) {
-    links.public_order_url = `${base}/${prefix}/${encodeURIComponent(slug)}/order`;
-  }
-  return links;
+  return buildProductClientWebLinks(baseUrl, client, packageTier);
 }
 
 module.exports = {

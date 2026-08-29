@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=30">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=32">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -56,6 +56,7 @@
       </aside>
 
       <main class="main">
+        <div class="main-head">
         <div class="topbar">
           <div style="display:flex;align-items:flex-start;gap:0.75rem">
             <button type="button" class="hamburger" id="btn-hamburger" aria-label="Menu">☰</button>
@@ -67,15 +68,19 @@
         </div>
 
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
-          <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">POS</button>
+          <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">RESTAURANT</button>
           <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër">Security</button>
           <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false" title="Regjistro hotele &amp; jep licenca — bridge te revolution-hotel-server">HOTEL</button>
-          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false" title="Regjistro markete &amp; jep licenca — bridge te revolution-market-server">MARKET</button>
+          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false" title="Dyqane — bridge te revolution-market-server">MARKET</button>
+          <button type="button" class="product-tab" data-product="furra" role="tab" aria-selected="false" title="Furra — ende pa server cloud">FURRA</button>
+          <button type="button" class="product-tab" data-product="kontabilisti" role="tab" aria-selected="false" title="Kontabilisti — bridge te Railway">KONTABILISTI</button>
+          <button type="button" class="product-tab" data-product="fiskale" role="tab" aria-selected="false" title="Fiskale — ende pa cloud">FISKALE</button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
-          Master Admin i unifikuar — POS, Security, HOTEL dhe MARKET.
+          Çdo listë i takon RESTAURANT.
         </p>
         <p id="product-bridge-msg" class="product-bridge-msg hidden"></p>
+        </div>
 
         <!-- PASQYRA -->
         <section class="section active" id="sec-pasqyra">
@@ -104,7 +109,7 @@
                   <option value="kafene">REVOLUTION POS (shitje)</option>
                   <option value="security">REVOLUTION SECURITY (terren)</option>
                   <option value="hotel">REVOLUTION HOTEL (hospitalitet)</option>
-                  <option value="market">REVOLUTION MARKET (ushqimore / tregtare)</option>
+                  <option value="market">REVOLUTION MARKET (dyqane)</option>
                 </select>
               </div>
               <div class="field">
@@ -160,15 +165,15 @@
                 </select>
               </div>
               <div class="field nc-market-only hidden">
-                <label for="nc-market-tipi">Veprimtaria — Ushqimore / Tregtare</label>
-                <select id="nc-market-tipi">
+                <label for="nc-tipi-market">Tipi — REVOLUTION MARKET</label>
+                <select id="nc-tipi-market">
                   <option value="minimarket">Mini-market / Market</option>
                   <option value="pilar">Pilar</option>
                   <option value="supermarket">Supermarket</option>
                   <option value="dyqan_ushqimor">Dyqan ushqimor</option>
-                  <option value="manav">Dyqan pemë-perimesh</option>
-                  <option value="bulmetore">Dyqan bulmetore</option>
-                  <option value="kasap">Dyqan mishit</option>
+                  <option value="manav">Manav (pemë-perime)</option>
+                  <option value="bulmetore">Bulmetore</option>
+                  <option value="kasap">Kasap (mish)</option>
                   <option value="dyqan_peshku">Dyqan peshku</option>
                 </select>
               </div>
@@ -506,6 +511,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=36"></script>
+  <script src="/admin/dashboard.js?v=41"></script>
 </body>
 </html>

@@ -4,11 +4,16 @@ let currentUser = null;
 let clientsFlat = [];
 let sectorsCache = [];
 let openSectorIds = new Set();
-/** Produkti aktiv: kafene (POS), security, hotel, ose market (bridge te serveri i veçantë) */
+/** Produkti aktiv: kafene (POS), security, ose hotel (bridge te serveri i veçantë) */
 let currentProduct = localStorage.getItem("rip_admin_product") || "kafene";
-if (currentProduct !== "kafene" && currentProduct !== "security" && currentProduct !== "hotel" && currentProduct !== "market") {
+if (!["kafene", "security", "hotel", "market", "furra", "kontabilisti", "fiskale"].includes(currentProduct)) {
   currentProduct = "kafene";
 }
+
+const UNCONFIGURED_PRODUCT_MSG = {
+  furra: "Ende pa konfiguruar — nuk ka revolution-furra-server.",
+  fiskale: "Ende pa konfiguruar — nuk ka cloud server Fiskale.",
+};
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 /** Rifreskim automatik kur tab Klientët/Licencat është hapur (sinkron telefon ↔ desktop) */
@@ -51,15 +56,29 @@ const FALLBACK_HOTEL_SECTORS = [
   { num: 5, id: "resort", label: "Resort", keywords: ["resort"], clients: [] },
 ];
 
-/** REVOLUTION MARKET — 8 lloje biznesi ushqimore / tregtare. */
+const FALLBACK_KONTABILISTI_SECTORS = [
+  { num: 1, id: "kontabiliste", label: "Kontabilistë / zyra kontabiliteti", keywords: ["kontabilist"], clients: [] },
+];
+
+const PRODUCT_LABELS = {
+  kafene: "RESTAURANT",
+  security: "Security",
+  hotel: "HOTEL",
+  market: "MARKET",
+  furra: "FURRA",
+  kontabilisti: "KONTABILISTI",
+  fiskale: "FISKALE",
+};
+
+/** REVOLUTION MARKET — 8 kategori dyqanesh. */
 const FALLBACK_MARKET_SECTORS = [
   { num: 1, id: "minimarket", label: "Mini-market / Market", keywords: ["mini", "market"], clients: [] },
-  { num: 2, id: "pilar", label: "Pilar", keywords: ["pilar"], clients: [] },
+  { num: 2, id: "pilar", label: "Pilar (dyqan i vogël lagje)", keywords: ["pilar"], clients: [] },
   { num: 3, id: "supermarket", label: "Supermarket", keywords: ["supermarket"], clients: [] },
   { num: 4, id: "dyqan_ushqimor", label: "Dyqan ushqimor", keywords: ["ushqimor"], clients: [] },
-  { num: 5, id: "manav", label: "Dyqan pemë-perimesh", keywords: ["peme", "perime"], clients: [] },
+  { num: 5, id: "manav", label: "Dyqan pemë-perimesh (manav)", keywords: ["manav"], clients: [] },
   { num: 6, id: "bulmetore", label: "Dyqan bulmetore", keywords: ["bulmetore"], clients: [] },
-  { num: 7, id: "kasap", label: "Dyqan mishit", keywords: ["mish"], clients: [] },
+  { num: 7, id: "kasap", label: "Dyqan mishit (kasap)", keywords: ["kasap"], clients: [] },
   { num: 8, id: "dyqan_peshku", label: "Dyqan peshku", keywords: ["peshk"], clients: [] },
 ];
 
@@ -84,6 +103,7 @@ function ensureAllSectors(apiSectors) {
   if (currentProduct === "security") fb = FALLBACK_SECURITY_SECTORS;
   else if (currentProduct === "hotel") fb = FALLBACK_HOTEL_SECTORS;
   else if (currentProduct === "market") fb = FALLBACK_MARKET_SECTORS;
+  else if (currentProduct === "kontabilisti") fb = FALLBACK_KONTABILISTI_SECTORS;
   return ensureSectors(apiSectors, fb);
 }
 
@@ -99,49 +119,56 @@ function productQuery(_forClients = false) {
   return p;
 }
 
+function productHintLabel() {
+  return PRODUCT_LABELS[currentProduct] || "RESTAURANT";
+}
+
 function updateProductUiHints() {
-  const isSec = currentProduct === "security";
-  const isHotel = currentProduct === "hotel";
-  const isMarket = currentProduct === "market";
+  const label = productHintLabel();
   const hint = document.getElementById("product-tabs-hint");
   if (hint) {
-    hint.textContent = isSec
-      ? "Çdo listë i takon Security."
-      : isHotel
-        ? "Çdo listë i takon HOTEL."
-        : isMarket
-          ? "Çdo listë i takon MARKET (bridge te cloud i dedikuar)."
-          : "Çdo listë i takon POS.";
+    hint.textContent = `Çdo listë i takon ${label}.`;
   }
   const listTitle = document.getElementById("clients-list-title");
   if (listTitle) {
-    listTitle.textContent = isSec
-      ? "Firmat REVOLUTION SECURITY"
-      : isHotel
-        ? "Klientët REVOLUTION HOTEL"
-        : isMarket
-          ? "Klientët REVOLUTION MARKET"
-          : "Klientët REVOLUTION POS";
+    listTitle.textContent =
+      currentProduct === "security"
+        ? "Firmat REVOLUTION SECURITY"
+        : `Klientët REVOLUTION ${label}`;
   }
   const activeSec = document.querySelector(".section.active")?.id?.replace(/^sec-/, "") || "";
   if (activeSec === "klientet") {
     const sub = document.getElementById("page-sub");
     if (sub) {
-      const n =
-        currentProduct === "security"
-          ? FALLBACK_SECURITY_SECTORS.length
-          : currentProduct === "hotel"
-            ? FALLBACK_HOTEL_SECTORS.length
-            : currentProduct === "market"
-              ? FALLBACK_MARKET_SECTORS.length
-              : FALLBACK_SECTORS.length;
-      sub.textContent = `${n} kategori — gjithmonë të dukshme`;
+      let n = FALLBACK_SECTORS.length;
+      if (currentProduct === "security") n = FALLBACK_SECURITY_SECTORS.length;
+      else if (currentProduct === "hotel") n = FALLBACK_HOTEL_SECTORS.length;
+      else if (currentProduct === "market") n = FALLBACK_MARKET_SECTORS.length;
+      else if (currentProduct === "kontabilisti") n = FALLBACK_KONTABILISTI_SECTORS.length;
+      else if (currentProduct === "furra" || currentProduct === "fiskale") n = 0;
+      sub.textContent =
+        currentProduct === "furra" || currentProduct === "fiskale"
+          ? UNCONFIGURED_PRODUCT_MSG[currentProduct] || "Ende pa konfiguruar"
+          : `${n} kategori — gjithmonë të dukshme`;
     }
+  }
+  if (UNCONFIGURED_PRODUCT_MSG[currentProduct]) {
+    showBridgeMsg(UNCONFIGURED_PRODUCT_MSG[currentProduct]);
+  } else {
+    showBridgeMsg("");
   }
 }
 
 function setProductTab(product, { reload = true } = {}) {
-  const allowed = { kafene: 1, security: 1, hotel: 1, market: 1 };
+  const allowed = {
+    kafene: 1,
+    security: 1,
+    hotel: 1,
+    market: 1,
+    furra: 1,
+    kontabilisti: 1,
+    fiskale: 1,
+  };
   currentProduct = allowed[product] ? product : "kafene";
   localStorage.setItem("rip_admin_product", currentProduct);
   document.querySelectorAll(".product-tab").forEach((btn) => {
@@ -598,21 +625,10 @@ const DRAWER_HOTEL_TIPI_OPTS = [
   ["resort", "Resort"],
 ];
 
-const DRAWER_MARKET_TIPI_OPTS = [
-  ["minimarket", "Mini-market / Market"],
-  ["pilar", "Pilar"],
-  ["supermarket", "Supermarket"],
-  ["dyqan_ushqimor", "Dyqan ushqimor"],
-  ["manav", "Dyqan pemë-perimesh"],
-  ["bulmetore", "Dyqan bulmetore"],
-  ["kasap", "Dyqan mishit"],
-  ["dyqan_peshku", "Dyqan peshku"],
-];
-
 async function fetchClientDetailSmart(id, preferredProduct) {
   const pref = preferredProduct || currentProduct || "kafene";
   const order = [pref];
-  for (const p of ["kafene", "security", "hotel", "market"]) {
+  for (const p of ["kafene", "security", "hotel"]) {
     if (!order.includes(p)) order.push(p);
   }
   for (const product of order) {
@@ -630,6 +646,22 @@ async function fetchClientDetailSmart(id, preferredProduct) {
   throw new Error("Klienti nuk u gjet");
 }
 
+function renderWebLinksBlock(links = []) {
+  if (!Array.isArray(links) || !links.length) return "";
+  const rows = links
+    .map(
+      (l) => `<div class="link-row" style="margin-bottom:0.65rem">
+      <label style="font-size:0.85rem;color:var(--muted)">${esc(l.label)}</label>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <input type="text" readonly value="${esc(l.url)}" style="flex:1;font-size:0.8rem">
+        <button type="button" class="btn btn-ghost btn-sm" data-copy-link="${esc(l.url)}">📋</button>
+      </div>
+    </div>`,
+    )
+    .join("");
+  return `<div class="detail-block"><h4>🔗 Linket e biznesit</h4>${rows}</div>`;
+}
+
 async function openClientDetail(id, opts = {}) {
   const preferred =
     opts.product
@@ -642,6 +674,7 @@ async function openClientDetail(id, opts = {}) {
   const c = d.client || {};
   const licenses = d.licenses || [];
   const owners = d.owners || [];
+  const webLinks = d.web_links || [];
 
   document.getElementById("drawer-root").classList.remove("hidden");
   document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
@@ -651,10 +684,7 @@ async function openClientDetail(id, opts = {}) {
     product === "hotel"
       ? `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Tipi (HOTEL)<select id="dr-tipi">${selectOpts(DRAWER_HOTEL_TIPI_OPTS, c.tipi)}</select></label>`
-      : product === "market"
-        ? `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
-      <label>Tipi (MARKET)<select id="dr-tipi">${selectOpts(DRAWER_MARKET_TIPI_OPTS, c.tipi)}</select></label>`
-        : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
+      : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
       <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
 
@@ -671,6 +701,7 @@ async function openClientDetail(id, opts = {}) {
       <button type="button" class="btn btn-danger" id="btn-drawer-delete-client" style="margin-top:0.5rem;width:100%">Fshi klientin krejt</button>
       <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
     </div>
+    ${renderWebLinksBlock(webLinks)}
     ${renderPasswordBlock(owners)}
     <div class="detail-block">
       <h4>Licenca (edito ID / çelës / status)</h4>
@@ -683,6 +714,21 @@ async function openClientDetail(id, opts = {}) {
   bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
+  body.querySelectorAll("[data-copy-link]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.getAttribute("data-copy-link") || "";
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = "✓";
+        setTimeout(() => {
+          btn.textContent = "📋";
+        }, 1200);
+      } catch {
+        /* ignore */
+      }
+    });
+  });
   document.getElementById("btn-drawer-delete-client")?.addEventListener("click", async () => {
     await deleteClientById(id, { product, name: c.emri, close: true });
   });
@@ -2237,7 +2283,7 @@ async function boot() {
     } else if (product === "hotel") {
       body.tipi = document.getElementById("nc-tipi-hotel")?.value || "hotel";
     } else if (product === "market") {
-      body.tipi = document.getElementById("nc-market-tipi")?.value || "minimarket";
+      body.tipi = document.getElementById("nc-tipi-market")?.value || "minimarket";
     } else {
       body.tipi = document.getElementById("nc-tipi")?.value;
       body.package_tier = document.getElementById("nc-pako")?.value;

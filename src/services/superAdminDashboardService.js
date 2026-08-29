@@ -26,6 +26,9 @@ const {
   adminProductOfClient,
   adminProductOfLicense,
 } = require("../utils/productLine");
+const { ensureKitchenCredentials, buildClientWebLinks } = require("../lib/kitchenAccess");
+const { buildClientWebLinksList } = require("../lib/productUrls");
+const { getPublicAppOrigin } = require("../lib/publicOrigin");
 function clientProductLine(c) {
   return adminProductOfClient(c);
 }
@@ -626,6 +629,18 @@ async function getClientDetail(clientId) {
   if (error) throw error;
   if (!client) throw new Error("Klienti nuk u gjet");
 
+  const clientWithCreds = await ensureKitchenCredentials(client);
+  const web_links = buildClientWebLinksList(
+    getPublicAppOrigin(),
+    clientWithCreds,
+    clientWithCreds.package_tier,
+  );
+  const web_links_map = buildClientWebLinks(
+    getPublicAppOrigin(),
+    clientWithCreds,
+    clientWithCreds.package_tier,
+  );
+
   const { listOwnersForClient } = require("./userService");
   const fromIso = dayStartIso(addDays(new Date(), -30));
   const [salesRows, licenses, stockAlerts, aiSummary, staff, owners] = await Promise.all([
@@ -710,6 +725,8 @@ async function getClientDetail(clientId) {
       calls: 0,
     },
     owners: owners || [],
+    web_links,
+    web_links_map,
   };
 }
 

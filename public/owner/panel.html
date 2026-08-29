@@ -1034,8 +1034,15 @@
     <div id="panel-linqet" class="panel-section hidden">
       <div class="card links-card" id="owner-links-card">
         <div class="card-title">Linqet e lokalit tuaj</div>
-        <p class="links-hint">Linku <strong>Banak</strong> hapet te <code>/bar/…</code> (porositë e tavolinës, online, POS). Linku <strong>Kuzhina</strong> hapet te <code>/kitchen/…</code> (ushqim).</p>
+        <p class="links-hint">Format: <code>/kafene/emri/owner</code>, <code>/restorant/emri/kamarier</code>, <code>/bar/emri/kuzhina</code>, etj.</p>
         <p id="owner-links-empty" class="links-hint hidden">Paketa juaj nuk përfshin module web (KDS/Kiosk/Kamarier). Kontaktoni administratorin për upgrade.</p>
+        <div class="link-row" id="owner-link-owner-row">
+          <label>Pronari — paneli web</label>
+          <div class="link-actions">
+            <input type="text" id="owner-owner-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-owner">Kopjo</button>
+          </div>
+        </div>
         <div class="link-row" id="owner-link-bar-row">
           <label>Banak — porosi (QR, kamarier, online, POS)</label>
           <div class="link-actions">
@@ -1058,10 +1065,17 @@
           </div>
         </div>
         <div class="link-row" id="owner-link-kiosk-row">
-          <label>Tavolinë (QR menu)</label>
+          <label>Menu publike / QR tavolinë</label>
           <div class="link-actions">
             <input type="text" id="owner-kiosk-url" readonly>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-kiosk">Kopjo</button>
+          </div>
+        </div>
+        <div class="link-row" id="owner-link-takeaway-row">
+          <label>Takeaway / porosi online</label>
+          <div class="link-actions">
+            <input type="text" id="owner-takeaway-url" readonly>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-owner-copy-takeaway">Kopjo</button>
           </div>
         </div>
         <div class="link-row" id="owner-link-public-row">

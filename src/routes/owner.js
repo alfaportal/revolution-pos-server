@@ -234,10 +234,13 @@ router.get("/client", async (req, res) => {
     const features = featuresForTier(client?.package_tier);
     const built = buildClientWebLinks(base, client, client?.package_tier);
     const links = {
+      owner: built.owner_url || null,
       waiter: built.waiter_url || null,
       kitchen: built.kitchen_url || null,
       bar: built.bar_url || null,
-      kiosk: built.kiosk_url || null,
+      kiosk: built.kiosk_url || built.menu_url || null,
+      menu: built.menu_url || built.kiosk_url || null,
+      takeaway: built.public_order_url || null,
       public_page: built.public_page_url || null,
     };
     res.json({

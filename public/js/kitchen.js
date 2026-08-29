@@ -1,6 +1,9 @@
 (function () {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "kitchen" ? parts[1] : "";
+  const parsed =
+    typeof parseProductPath === "function"
+      ? parseProductPath(window.location.pathname)
+      : { slug: "", role: "" };
+  const slug = parsed.slug || "";
   const urlParams = new URLSearchParams(window.location.search);
   const kitchenKey = urlParams.get("key") || "";
   const waiterToken = String(urlParams.get("w") || "").trim();
@@ -324,7 +327,7 @@
 
   async function fetchOrders() {
     if (!slug) {
-      showError("Linku i kuzhinës nuk është i saktë. Duhet /kitchen/[slug]?key=...");
+      showError("Linku i kuzhinës nuk është i saktë. Duhet /{tipi}/[slug]/kuzhina?key=...");
       return;
     }
     if (!kitchenKey) {

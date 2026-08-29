@@ -1,13 +1,18 @@
 (function () {
+  const parsed =
+    typeof parseProductPath === "function"
+      ? parseProductPath(window.location.pathname)
+      : { prefix: "", slug: "", role: "", table: 0 };
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const params = new URLSearchParams(window.location.search);
-  const isTableMenu = parts[0] === "menu" && parts.length >= 3;
+  const isTableMenu =
+    parsed.role === "menu" && (parsed.table > 0 || (parts[0] === "menu" && parts.length >= 3));
   const isLegacyKiosk = parts[0] === "kiosk" && parts.length >= 2;
 
-  const slug = isTableMenu ? parts[1] : isLegacyKiosk ? parts[1] : "";
+  const slug = parsed.slug || (isLegacyKiosk ? parts[1] : "");
   const tableNumber = isTableMenu
-    ? Number(parts[2] || 0)
-    : Number(params.get("table") || 0);
+    ? Number(parsed.table || parts[2] || 0)
+    : Number(new URLSearchParams(window.location.search).get("table") || 0);
+  const params = new URLSearchParams(window.location.search);
   const kitchenKey = isTableMenu ? "" : (params.get("key") || "");
   const apiChannel = isTableMenu ? "menu" : "kiosk";
 

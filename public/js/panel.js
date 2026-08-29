@@ -906,11 +906,41 @@ function openEditClient(id) {
   }
 }
 
+function clientUrlTipi(client) {
+  const raw = String(client?.tipi || "kafene").toLowerCase();
+  const map = {
+    fast_food: "fastfood",
+    klub_nate: "klub",
+    furre_buke: "furra",
+    lounge_bar: "bar",
+    ville_me_qira: "ville",
+    mini_market: "minimarket",
+    hotel_restorant: "hotel",
+    farmaci: "barnatore",
+  };
+  if (map[raw]) return map[raw];
+  return raw.replace(/_/g, "") || "kafene";
+}
+
 function clientAccessLink(client, kind, extraQuery = "") {
   const slug = client?.kitchen_slug || client?.id || "";
   const key = client?.kitchen_key || "";
-  const pathKind = kind;
-  const base = `${publicOrigin()}/${pathKind}/${encodeURIComponent(slug)}`;
+  const tipi = clientUrlTipi(client);
+  const roleMap = {
+    waiter: "kamarier",
+    kitchen: "kuzhina",
+    bar: "bar",
+    kiosk: "menu",
+    recepsion: "recepsion",
+    sherbimi: "sherbimi",
+    pronari: "pronari",
+    rojtar: "rojtar",
+    kasa: "kasa",
+  };
+  const role = roleMap[kind] || kind;
+  const base = `${publicOrigin()}/${encodeURIComponent(tipi)}/${encodeURIComponent(slug)}/${role}`;
+  const needsKey = ["kamarier", "kuzhina", "bar", "recepsion", "rojtar", "kasa"].includes(role);
+  if (!needsKey) return `${base}${extraQuery ? `?${extraQuery}` : ""}`;
   const q = `key=${encodeURIComponent(key)}${extraQuery ? `&${extraQuery}` : ""}`;
   return `${base}?${q}`;
 }
@@ -946,7 +976,8 @@ function barLink(clientId) {
 function kioskTableLink(clientId, table = 1) {
   const c = clientsCache.find(x => x.id === clientId);
   const slug = c?.kitchen_slug || c?.id || clientId;
-  return `${publicOrigin()}/menu/${encodeURIComponent(slug)}/${Number(table) || 1}`;
+  const tipi = c ? clientUrlTipi(c) : "kafene";
+  return `${publicOrigin()}/${encodeURIComponent(tipi)}/${encodeURIComponent(slug)}/menu/${Number(table) || 1}`;
 }
 
 function publicPageLink(clientId) {
@@ -954,7 +985,8 @@ function publicPageLink(clientId) {
   if (!c) return "";
   const slug = c.kitchen_slug || c.id || "";
   if (!slug) return "";
-  return `${publicOrigin()}/r/${encodeURIComponent(slug)}`;
+  const tipi = clientUrlTipi(c);
+  return `${publicOrigin()}/${encodeURIComponent(tipi)}/${encodeURIComponent(slug)}`;
 }
 
 async function copyLink(url, btn) {
@@ -1056,17 +1088,97 @@ function closeClientHub() {
   showHubMsg("");
 }
 
+function clientProductCategory(client) {
+  const tipi = clientUrlTipi(client);
+  if (["hotel", "motel", "ville", "resort", "bujtine"].includes(tipi)) return "hotel";
+  if (["security", "pastrim", "ndertimtari", "transport", "sherbime", "bujqesi", "kurier"].includes(tipi)) {
+    return "security";
+  }
+  if (["furra", "pasticeri"].includes(tipi)) return "furra";
+  if (["market", "minimarket", "supermarket", "dyqan", "barnatore"].includes(tipi)) return "market";
+  return "pos";
+}
+
+function clientRoleLink(client, role, extraQuery = "") {
+  if (!client) return "";
+  return clientAccessLink(client, role, extraQuery);
+}
+
+function setHubRowLabel(rowId, text) {
+  const row = document.getElementById(rowId);
+  const label = row?.querySelector("label");
+  if (label && text) label.textContent = text;
+}
+
 function fillHubLinks(clientId) {
+  const c = clientsCache.find(x => x.id === clientId);
+  const cat = clientProductCategory(c);
   const features = clientTierFeatures(clientId);
-  setHubLinkRow("hub-row-waiter", features.waiter, "hub-link-waiter", waiterLink(clientId));
-  setHubLinkRow("hub-row-bar", features.kds, "hub-link-bar", barLink(clientId));
-  setHubLinkRow("hub-row-kitchen", features.kds, "hub-link-kitchen", kitchenLink(clientId));
-  setHubLinkRow("hub-row-kiosk", features.kiosk, "hub-link-kiosk", kioskTableLink(clientId, 1));
-  setHubLinkRow("hub-row-public", features.website, "hub-link-public", publicPageLink(clientId));
-  const empty = document.getElementById("hub-links-empty");
-  if (empty) {
+
+  if (cat === "pos") {
+    setHubRowLabel("hub-row-bar", "Banak — porosi");
+    setHubRowLabel("hub-row-waiter", "Kamarier");
+    setHubRowLabel("hub-row-kitchen", "Kuzhina (KDS) — ushqim");
+    setHubRowLabel("hub-row-kiosk", "Tavolinë (Kiosk)");
+    setHubRowLabel("hub-row-public", "Faqja publike");
+    setHubLinkRow("hub-row-waiter", features.waiter, "hub-link-waiter", waiterLink(clientId));
+    setHubLinkRow("hub-row-bar", features.kds, "hub-link-bar", barLink(clientId));
+    setHubLinkRow("hub-row-kitchen", features.kds, "hub-link-kitchen", kitchenLink(clientId));
+    setHubLinkRow("hub-row-kiosk", features.kiosk, "hub-link-kiosk", kioskTableLink(clientId, 1));
+    setHubLinkRow("hub-row-public", features.website, "hub-link-public", publicPageLink(clientId));
     const any = features.waiter || features.kds || features.kiosk || features.website;
-    empty.classList.toggle("hidden", any);
+    document.getElementById("hub-links-empty")?.classList.toggle("hidden", any);
+    return;
+  }
+
+  if (cat === "hotel") {
+    setHubRowLabel("hub-row-bar", "Banak — porosi");
+    setHubRowLabel("hub-row-waiter", "Kamarier");
+    setHubRowLabel("hub-row-kitchen", "Kuzhina (KDS)");
+    setHubRowLabel("hub-row-kiosk", "Tavolinë (QR)");
+    setHubRowLabel("hub-row-public", "Faqja publike");
+    setHubLinkRow("hub-row-waiter", features.waiter, "hub-link-waiter", waiterLink(clientId));
+    setHubLinkRow("hub-row-bar", features.kds, "hub-link-bar", barLink(clientId));
+    setHubLinkRow("hub-row-kitchen", features.kds, "hub-link-kitchen", kitchenLink(clientId));
+    setHubLinkRow("hub-row-kiosk", features.kiosk, "hub-link-kiosk", kioskTableLink(clientId, 1));
+    setHubLinkRow("hub-row-public", features.website, "hub-link-public", publicPageLink(clientId));
+    const any = features.waiter || features.kds || features.kiosk || features.website;
+    document.getElementById("hub-links-empty")?.classList.toggle("hidden", any);
+    return;
+  }
+
+  if (cat === "security") {
+    setHubRowLabel("hub-row-waiter", "Pronari");
+    setHubRowLabel("hub-row-kitchen", "Rojtar");
+    setHubLinkRow("hub-row-waiter", true, "hub-link-waiter", clientRoleLink(c, "pronari"));
+    setHubLinkRow("hub-row-kitchen", true, "hub-link-kitchen", clientRoleLink(c, "rojtar"));
+    setHubLinkRow("hub-row-bar", false, "hub-link-bar", "");
+    setHubLinkRow("hub-row-kiosk", false, "hub-link-kiosk", "");
+    setHubLinkRow("hub-row-public", true, "hub-link-public", publicPageLink(clientId));
+    document.getElementById("hub-links-empty")?.classList.add("hidden");
+    return;
+  }
+
+  if (cat === "furra") {
+    setHubRowLabel("hub-row-waiter", "Takeaway");
+    setHubRowLabel("hub-row-kiosk", "Menu publike");
+    setHubLinkRow("hub-row-waiter", true, "hub-link-waiter", `${publicOrigin()}/${encodeURIComponent(clientUrlTipi(c))}/${encodeURIComponent(c.kitchen_slug || c.id)}/takeaway`);
+    setHubLinkRow("hub-row-kiosk", true, "hub-link-kiosk", `${publicOrigin()}/${encodeURIComponent(clientUrlTipi(c))}/${encodeURIComponent(c.kitchen_slug || c.id)}/menu`);
+    setHubLinkRow("hub-row-bar", false, "hub-link-bar", "");
+    setHubLinkRow("hub-row-kitchen", false, "hub-link-kitchen", "");
+    setHubLinkRow("hub-row-public", true, "hub-link-public", publicPageLink(clientId));
+    document.getElementById("hub-links-empty")?.classList.add("hidden");
+    return;
+  }
+
+  if (cat === "market") {
+    setHubRowLabel("hub-row-waiter", "Kasa");
+    setHubLinkRow("hub-row-waiter", true, "hub-link-waiter", clientRoleLink(c, "kasa"));
+    setHubLinkRow("hub-row-bar", false, "hub-link-bar", "");
+    setHubLinkRow("hub-row-kitchen", false, "hub-link-kitchen", "");
+    setHubLinkRow("hub-row-kiosk", false, "hub-link-kiosk", "");
+    setHubLinkRow("hub-row-public", true, "hub-link-public", publicPageLink(clientId));
+    document.getElementById("hub-links-empty")?.classList.add("hidden");
   }
 }
 

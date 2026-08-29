@@ -278,10 +278,12 @@ async function loadClient() {
   if (linksCard) linksCard.classList.toggle("hidden", !!viewAll);
 
   const rows = [
+    ["owner-link-owner-row", "owner-owner-url", true, links.owner],
     ["owner-link-bar-row", "owner-bar-url", features.kds, links.bar || data.bar_url],
     ["owner-link-waiter-row", "owner-waiter-url", features.waiter, links.waiter || data.waiter_url],
     ["owner-link-kitchen-row", "owner-kitchen-url", features.kds, links.kitchen || data.kitchen_url],
-    ["owner-link-kiosk-row", "owner-kiosk-url", features.kiosk, links.kiosk],
+    ["owner-link-kiosk-row", "owner-kiosk-url", features.kiosk, links.menu || links.kiosk],
+    ["owner-link-takeaway-row", "owner-takeaway-url", features.online_orders, links.takeaway],
     ["owner-link-public-row", "owner-public-url", features.website, links.public_page],
   ];
   for (const [rowId, inputId, enabled, url] of rows) {
@@ -310,6 +312,9 @@ async function kopjoLinkun(inputId, btn) {
   }
 }
 
+document.getElementById("btn-owner-copy-owner")?.addEventListener("click", function () {
+  kopjoLinkun("owner-owner-url", this);
+});
 document.getElementById("btn-owner-copy-waiter").addEventListener("click", function () {
   kopjoLinkun("owner-waiter-url", this);
 });
@@ -321,6 +326,9 @@ document.getElementById("btn-owner-copy-bar")?.addEventListener("click", functio
 });
 document.getElementById("btn-owner-copy-kiosk")?.addEventListener("click", function () {
   kopjoLinkun("owner-kiosk-url", this);
+});
+document.getElementById("btn-owner-copy-takeaway")?.addEventListener("click", function () {
+  kopjoLinkun("owner-takeaway-url", this);
 });
 document.getElementById("btn-owner-copy-public")?.addEventListener("click", function () {
   kopjoLinkun("owner-public-url", this);

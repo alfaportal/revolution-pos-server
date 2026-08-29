@@ -1,6 +1,9 @@
 (function () {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "bar" ? parts[1] : "";
+  const parsed =
+    typeof parseProductPath === "function"
+      ? parseProductPath(window.location.pathname)
+      : { slug: "", role: "" };
+  const slug = parsed.slug || "";
   const kitchenKey = new URLSearchParams(window.location.search).get("key") || "";
 
   const titleEl = document.getElementById("bar-title");

@@ -18,11 +18,14 @@
   <script>
     (function () {
       const parts = location.pathname.split("/").filter(Boolean);
-      const slug = parts[0] === "r" ? parts[1] : "";
+      const slug = parts[0] === "r" || parts.length >= 2
+        ? decodeURIComponent(parts[0] === "r" ? parts[1] : parts[1] || "")
+        : "";
+      const tipi = parts[0] === "r" ? "kafene" : decodeURIComponent(parts[0] || "kafene");
       if (!slug) return;
       const link = document.createElement("link");
       link.rel = "manifest";
-      link.href = "/r/" + encodeURIComponent(slug) + "/manifest.json";
+      link.href = "/" + encodeURIComponent(tipi) + "/" + encodeURIComponent(slug) + "/manifest.json";
       document.head.appendChild(link);
     })();
   </script>
@@ -135,6 +138,7 @@
 
   <script src="/js/menuCatalog.js?v=1"></script>
   <script src="/js/menu-pos.js?v=17"></script>
-  <script src="/js/r.js?v=17"></script>
+  <script src="/js/product-path.js?v=1"></script>
+  <script src="/js/r.js?v=18"></script>
 </body>
 </html>

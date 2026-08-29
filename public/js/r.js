@@ -4,10 +4,23 @@
   let pageData = null;
 
   function getSlug() {
+    if (typeof parseProductPath === "function") {
+      const p = parseProductPath(window.location.pathname);
+      if (p.slug) return p.slug;
+    }
     const parts = window.location.pathname.split("/").filter(Boolean);
-    return parts[0] === "r"
-      ? decodeURIComponent(parts[1] || "")
+    return parts[0] === "r" || parts.length >= 2
+      ? decodeURIComponent(parts[0] === "r" ? parts[1] : parts[1] || "")
       : "";
+  }
+
+  function getUrlTipi() {
+    if (typeof parseProductPath === "function") {
+      const p = parseProductPath(window.location.pathname);
+      if (p.tipi) return p.tipi;
+    }
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    return parts[0] === "r" ? "kafene" : decodeURIComponent(parts[0] || "kafene");
   }
 
   function showScreen(id) {
@@ -98,7 +111,12 @@
   function registerSw(slug) {
     if (!("serviceWorker" in navigator) || !slug) return;
     const enc = encodeURIComponent(slug);
-    navigator.serviceWorker.register(`/r/${enc}/sw.js`, { scope: `/r/${enc}/` }).catch(() => {});
+    const slug = getSlug();
+    const tipi = getUrlTipi();
+    if (!slug) return;
+    const encSlug = encodeURIComponent(slug);
+    const encTipi = encodeURIComponent(tipi);
+    navigator.serviceWorker.register(`/${encTipi}/${encSlug}/sw.js`, { scope: `/${encTipi}/${encSlug}/` }).catch(() => {});
   }
 
   function applyTheme(color) {

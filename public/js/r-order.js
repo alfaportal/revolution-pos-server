@@ -35,12 +35,19 @@
   }
 
   function getSlug() {
+    if (typeof parseProductPath === "function") {
+      const p = parseProductPath(window.location.pathname);
+      if (p.slug) return p.slug;
+    }
     const parts = window.location.pathname.split("/").filter(Boolean);
-    return parts[0] === "r" ? decodeURIComponent(parts[1] || "") : "";
+    return parts[0] === "r" || parts[0] === "restaurant"
+      ? decodeURIComponent(parts[1] || "")
+      : "";
   }
 
   function publicPageUrl(slug) {
-    return `/r/${encodeURIComponent(slug)}`;
+    const tipi = getUrlTipi();
+    return `/${encodeURIComponent(tipi)}/${encodeURIComponent(slug)}`;
   }
 
   function showScreen(id) {

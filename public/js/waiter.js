@@ -1,6 +1,9 @@
 (function () {
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = parts[0] === "waiter" ? parts[1] : "";
+  const parsed =
+    typeof parseProductPath === "function"
+      ? parseProductPath(window.location.pathname)
+      : { slug: "", role: "" };
+  const slug = parsed.slug || "";
   const urlParams = new URLSearchParams(window.location.search);
   const kitchenKey = urlParams.get("key") || "";
   let waiterToken = urlParams.get("w") || "";
@@ -473,7 +476,7 @@
   }
 
   async function loadBootstrap() {
-    if (!slug) throw new Error("URL i gabuar. Duhet /waiter/[slug]?key=...&w=...");
+      if (!slug) throw new Error("URL i gabuar. Duhet /{tipi}/[slug]/kamarier?key=...&w=...");
     if (!kitchenKey) {
       throw new Error("Mungon kodi i aksesit (?key=...) në link. Kopjoni linkun e plotë nga paneli → Kamarierët → Kopjo.");
     }
