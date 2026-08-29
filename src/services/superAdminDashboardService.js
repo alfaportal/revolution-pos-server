@@ -42,6 +42,63 @@ function filterByProduct(rows, product, getLine) {
   return (rows || []).filter((r) => getLine(r) === p);
 }
 
+const FURRA_ADMIN_SECTORS = [
+  {
+    num: 1,
+    id: "furre_buke",
+    label: "Furrë buke",
+    tipet: ["furre_buke"],
+    keywords: ["furre", "buke"],
+  },
+  {
+    num: 2,
+    id: "pasticeri",
+    label: "Pastiçeri",
+    tipet: ["pasticeri"],
+    keywords: ["pasticeri", "embelsore"],
+  },
+];
+
+const KONTABILISTI_ADMIN_SECTORS = [
+  {
+    num: 1,
+    id: "kontabiliste",
+    label: "Kontabilistë / zyra kontabiliteti",
+    tipet: ["tjeter", "kontabilist"],
+    keywords: ["kontabilist"],
+  },
+];
+
+const FISKALE_ADMIN_SECTORS = [
+  {
+    num: 1,
+    id: "fiskale",
+    label: "Kasa fiskale / biznes fiskal",
+    tipet: ["tjeter"],
+    keywords: ["fiskale", "fiscal"],
+  },
+];
+
+function sectorDefsForProduct(product) {
+  const p = normalizeProductLine(product || "kafene");
+  if (p === "furra") return FURRA_ADMIN_SECTORS;
+  if (p === "kontabilisti") return KONTABILISTI_ADMIN_SECTORS;
+  if (p === "fiskale") return FISKALE_ADMIN_SECTORS;
+  return CLIENT_SECTORS;
+}
+
+function sectorBucketForClient(product, tipi) {
+  const p = normalizeProductLine(product || "kafene");
+  const t = normalizeClientTipi(tipi);
+  if (p === "kontabilisti") return KONTABILISTI_ADMIN_SECTORS[0];
+  if (p === "fiskale") return FISKALE_ADMIN_SECTORS[0];
+  if (p === "furra") {
+    if (t === "pasticeri") return FURRA_ADMIN_SECTORS[1];
+    return FURRA_ADMIN_SECTORS[0];
+  }
+  return sectorForTipi(t);
+}
+
 const SETTINGS_PATH = path.join(__dirname, "../../data/super-admin-settings.json");
 const INVOICES_PATH = path.join(__dirname, "../../data/super-admin-invoices.json");
 
@@ -474,18 +531,6 @@ async function getOverview({ product } = {}) {
     const { getMarketOverview } = require("../lib/marketAdminBridge");
     return getMarketOverview();
   }
-  if (p === "furra") {
-    return {
-      active_clients: 0,
-      licenses_total: 0,
-      licenses_active: 0,
-      trial_accounts: 0,
-      sales_today_total: 0,
-      problem_clients: [],
-      weekly_sales: [],
-      product_line: p,
-    };
-  }
   return getOverviewKafene(p);
 }
 
@@ -503,9 +548,6 @@ async function getClientsGrouped({ product } = {}) {
     const { getMarketClientsGrouped } = require("../lib/marketAdminBridge");
     return getMarketClientsGrouped();
   }
-  if (p === "furra") {
-    return { sectors: [], groups: [], product_line: p };
-  }
 
   const [clientsAll, licenses, salesToday] = await Promise.all([
     listClients(),
@@ -522,7 +564,7 @@ async function getClientsGrouped({ product } = {}) {
     licByClient.get(cid).push(lic);
   }
 
-  const sectorDefs = CLIENT_SECTORS;
+  const sectorDefs = sectorDefsForProduct(p);
   const sectors = sectorDefs.map((s) => ({
     num: s.num,
     id: s.id,
@@ -535,7 +577,7 @@ async function getClientsGrouped({ product } = {}) {
 
   for (const c of clients) {
     const tipi = normalizeClientTipi(c.tipi);
-    let sector = sectorForTipi(tipi);
+    const sector = sectorBucketForClient(p, tipi);
     const lics = licByClient.get(c.id) || [];
     const activeLic = lics.some((l) => l.statusi === "aktive");
     const row = {
@@ -743,9 +785,6 @@ async function getLicensesView({ product } = {}) {
   if (p === "market") {
     const { getMarketLicensesView } = require("../lib/marketAdminBridge");
     return getMarketLicensesView();
-  }
-  if (p === "furra") {
-    return { licenses: [], product_line: p };
   }
 
   const { ensureLicenseHardwareSchema } = require("../lib/ensureLicenseHardwareSchema");

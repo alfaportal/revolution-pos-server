@@ -164,8 +164,16 @@ async function registerViaBridge(program, body, licenseOpts) {
   return null;
 }
 
+function posDbProductLine(program) {
+  if (program === "furra") return "furra";
+  if (program === "kontabilisti") return "kontabilisti";
+  if (program === "fiskale") return "fiskale";
+  return "kafene";
+}
+
 async function registerPosFamilyClient(body, program, licenseOpts) {
   const tipi = resolveTipi(program, body);
+  const dbProductLine = posDbProductLine(program);
   const client = await createClient({
     emri: body.emri,
     tipi,
@@ -175,7 +183,7 @@ async function registerPosFamilyClient(body, program, licenseOpts) {
     kitchen_slug: body.kitchen_slug || body.slug,
     slug: body.kitchen_slug || body.slug,
     package_tier: mapPackageTier(program, body.package_tier || body.package),
-    product_line: program === "furra" ? "furra" : "kafene",
+    product_line: dbProductLine,
   });
 
   let license = null;
@@ -183,7 +191,7 @@ async function registerPosFamilyClient(body, program, licenseOpts) {
     license = await createLicense({
       client_id: client.id,
       app_type: appTypeForProductLine("kafene", tipi),
-      product_line: "kafene",
+      product_line: dbProductLine,
       license_type: "annual",
       muaj: licenseOpts.muaj,
       max_terminals: 1,
@@ -200,7 +208,7 @@ async function registerPosFamilyClient(body, program, licenseOpts) {
     emri: body.emri,
   }).catch(() => {});
 
-  return { client, license, product_line: program === "furra" ? "furra" : program };
+  return { client, license, product_line: dbProductLine };
 }
 
 async function registerFullDashboardClient(body, baseUrl) {

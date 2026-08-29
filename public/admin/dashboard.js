@@ -10,10 +10,16 @@ if (!["kafene", "security", "hotel", "market", "furra", "kontabilisti", "fiskale
   currentProduct = "kafene";
 }
 
-const UNCONFIGURED_PRODUCT_MSG = {
-  furra: "Ende pa konfiguruar — nuk ka revolution-furra-server.",
-  fiskale: "Ende pa konfiguruar — nuk ka cloud server Fiskale.",
-};
+const UNCONFIGURED_PRODUCT_MSG = {};
+
+const FALLBACK_FURRA_SECTORS = [
+  { num: 1, id: "furre_buke", label: "Furrë buke", keywords: ["furre"], clients: [] },
+  { num: 2, id: "pasticeri", label: "Pastiçeri", keywords: ["pasticeri"], clients: [] },
+];
+
+const FALLBACK_FISKALE_SECTORS = [
+  { num: 1, id: "fiskale", label: "Kasa fiskale / biznes fiskal", keywords: ["fiskale"], clients: [] },
+];
 /** Produkti i drawer-it të hapur (që Ruaj / rifreskimi mos e humbasë) */
 let drawerProduct = null;
 /** Rifreskim automatik kur tab Klientët/Licencat është hapur (sinkron telefon ↔ desktop) */
@@ -85,9 +91,8 @@ const FALLBACK_MARKET_SECTORS = [
 function ensureSectors(apiSectors, fallback) {
   const list = fallback || FALLBACK_SECTORS;
   const byId = new Map((apiSectors || []).map((s) => [s.id, s]));
-  const byNum = new Map((apiSectors || []).map((s) => [Number(s.num), s]));
   return list.map((fb) => {
-    const hit = byId.get(fb.id) || byNum.get(fb.num) || null;
+    const hit = byId.get(fb.id) || null;
     return {
       num: fb.num,
       id: fb.id,
@@ -104,6 +109,8 @@ function ensureAllSectors(apiSectors) {
   else if (currentProduct === "hotel") fb = FALLBACK_HOTEL_SECTORS;
   else if (currentProduct === "market") fb = FALLBACK_MARKET_SECTORS;
   else if (currentProduct === "kontabilisti") fb = FALLBACK_KONTABILISTI_SECTORS;
+  else if (currentProduct === "furra") fb = FALLBACK_FURRA_SECTORS;
+  else if (currentProduct === "fiskale") fb = FALLBACK_FISKALE_SECTORS;
   return ensureSectors(apiSectors, fb);
 }
 
@@ -145,11 +152,9 @@ function updateProductUiHints() {
       else if (currentProduct === "hotel") n = FALLBACK_HOTEL_SECTORS.length;
       else if (currentProduct === "market") n = FALLBACK_MARKET_SECTORS.length;
       else if (currentProduct === "kontabilisti") n = FALLBACK_KONTABILISTI_SECTORS.length;
-      else if (currentProduct === "furra" || currentProduct === "fiskale") n = 0;
-      sub.textContent =
-        currentProduct === "furra" || currentProduct === "fiskale"
-          ? UNCONFIGURED_PRODUCT_MSG[currentProduct] || "Ende pa konfiguruar"
-          : `${n} kategori — gjithmonë të dukshme`;
+      else if (currentProduct === "furra") n = FALLBACK_FURRA_SECTORS.length;
+      else if (currentProduct === "fiskale") n = FALLBACK_FISKALE_SECTORS.length;
+      sub.textContent = `${n} kategori — gjithmonë të dukshme`;
     }
   }
   if (UNCONFIGURED_PRODUCT_MSG[currentProduct]) {
