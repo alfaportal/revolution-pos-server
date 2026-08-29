@@ -419,12 +419,38 @@ router.get(
   }),
 );
 
-/** Krijo klient (+ licencë 16-shenja) në një kërkesë */
+/** Krijo klient (+ licencë + pronar) në një kërkesë */
 router.post(
   "/dashboard/clients",
   asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const hasOwner = Boolean(
+      String(body.owner_email || "").trim()
+      && String(body.owner_emri || "").trim()
+      && String(body.owner_password || "").trim(),
+    );
+
+    if (hasOwner) {
+      const { registerFullDashboardClient } = require("../services/dashboardClientRegister");
+      const result = await registerFullDashboardClient(body, getPublicAppOrigin());
+      await logAdminActivity({
+        ...activityFromReq(req),
+        action: "client_create",
+        targetType: "client",
+        targetId: result.client?.id || null,
+        targetLabel: result.client?.emri || body.emri || "—",
+        details: {
+          license_id: result.license?.id,
+          license_celesi: result.license_key || result.license?.celesi || null,
+          owner_email: body.owner_email,
+          product_line: result.product_line,
+        },
+      }).catch(() => {});
+      return res.status(201).json(result);
+    }
+
     const product = normalizeProductLine(
-      req.body?.product_line || req.body?.industry_type || req.query.product,
+      body.product_line || body.industry_type || req.query.product,
     );
     const {
       generateHardwareLicenseKey,
@@ -623,6 +649,26 @@ router.post(
       hardware_id: hardwareId || null,
       product_line: "kafene",
     });
+  }),
+);
+
+router.post(
+  "/dashboard/clients/send-welcome-email",
+  asyncHandler(async (req, res) => {
+    const body = req.body || {};
+    const to = String(body.to || body.owner_email || "").trim();
+    if (!to) throw new Error("Mungon email i pronarit.");
+    const { sendOwnerWelcomeCredentialsEmail } = require("../services/emailService");
+    await sendOwnerWelcomeCredentialsEmail({
+      to,
+      ownerName: body.ownerName || body.owner_emri,
+      clientName: body.clientName || body.emri,
+      ownerUrl: body.ownerUrl || body.owner_url,
+      password: body.password || body.password_plain,
+      licenseKey: body.licenseKey || body.license_key || body.celesi,
+      expiresAt: body.expiresAt || body.expires_at,
+    });
+    res.json({ ok: true, emailed: true });
   }),
 );
 

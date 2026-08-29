@@ -102,129 +102,198 @@
             <div class="card-title">
               <span>Shto klient të ri</span>
             </div>
-            <form id="form-new-client" class="form-grid">
-              <div class="field">
-                <label for="nc-product">Produkti / Industria</label>
-                <select id="nc-product" required>
-                  <option value="kafene">REVOLUTION POS (shitje)</option>
-                  <option value="security">REVOLUTION SECURITY (terren)</option>
-                  <option value="hotel">REVOLUTION HOTEL (hospitalitet)</option>
-                  <option value="market">REVOLUTION MARKET (dyqane)</option>
-                </select>
+            <div id="nc-success-panel" class="nc-success hidden" role="status" aria-live="polite">
+              <div class="nc-success-title">✅ Klienti u regjistrua me sukses!</div>
+              <pre id="nc-success-body" class="nc-success-body"></pre>
+              <div class="nc-success-actions">
+                <button type="button" class="btn btn-primary" id="btn-nc-copy-all">📋 Kopjo krejt</button>
+                <button type="button" class="btn btn-ok" id="btn-nc-email-all">📧 Dërgo me email</button>
+                <button type="button" class="btn btn-ghost" id="btn-nc-new-another">+ Klient tjetër</button>
               </div>
-              <div class="field">
-                <label for="nc-emri">Emri i biznesit</label>
-                <input id="nc-emri" required placeholder="p.sh. Café Roma" autocomplete="organization">
-              </div>
-              <div class="field nc-kafene-only">
-                <label for="nc-tipi">Veprimtaria — REVOLUTION POS</label>
-                <select id="nc-tipi">
-                  <option value="restorant">Restorant</option>
-                  <option value="kafene">Kafene</option>
-                  <option value="bar">Bar</option>
-                  <option value="lounge_bar">Lounge bar</option>
-                  <option value="pub">Pub</option>
-                  <option value="fast_food">Fast food</option>
-                  <option value="piceri">Pizzeri</option>
-                  <option value="doner_kebab">Doner / Kebab</option>
-                  <option value="gjelltore">Gjelltore</option>
-                  <option value="fish_restaurant">Fish restaurant</option>
-                  <option value="sushi_bar">Sushi bar</option>
-                </select>
-              </div>
-              <div class="field nc-kafene-only">
-                <label for="nc-pako">Pako</label>
-                <select id="nc-pako">
-                  <option value="pako_3">Pako 1</option>
-                  <option value="pako_4">Pako 2</option>
-                  <option value="pako_2">Pako 3</option>
-                  <option value="pako_5">Pako 4 (AI)</option>
-                </select>
-              </div>
-              <div class="field nc-security-only hidden">
-                <label for="nc-vepr">Veprimtaria — REVOLUTION SECURITY</label>
-                <select id="nc-vepr">
-                  <option value="kompani_sigurie">Kompani sigurie (rojë, patrulla)</option>
-                  <option value="transport_logjistike">Kompani transporti (shoferë, autobusë, kamionë)</option>
-                  <option value="ndertimtari">Kompani ndërtimi (punëtorë kantieri)</option>
-                  <option value="pastrim">Kompani pastrimi (pastrues, sanitizim)</option>
-                  <option value="kuriere_dergesa">Posta / shërbime dërgese (postierë, korrierë)</option>
-                  <option value="mirembajtje_nderte">Kompani mirëmbajtje (teknikanë, instalues)</option>
-                  <option value="magazinim">Kompani magazinimi (depo, punëtorë magazine)</option>
-                  <option value="agjenci_marketingu">Agjenci marketingu në terren (promotorë)</option>
-                </select>
-              </div>
-              <div class="field nc-hotel-only hidden">
-                <label for="nc-tipi-hotel">Tipi — REVOLUTION HOTEL</label>
-                <select id="nc-tipi-hotel">
-                  <option value="hotel">Hotel</option>
-                  <option value="motel">Motel</option>
-                  <option value="ville_me_qira">Villa</option>
-                  <option value="hostel">Hostel</option>
-                  <option value="resort">Resort</option>
-                </select>
-              </div>
-              <div class="field nc-market-only hidden">
-                <label for="nc-tipi-market">Tipi — REVOLUTION MARKET</label>
-                <select id="nc-tipi-market">
-                  <option value="minimarket">Mini-market / Market</option>
-                  <option value="pilar">Pilar</option>
-                  <option value="supermarket">Supermarket</option>
-                  <option value="dyqan_ushqimor">Dyqan ushqimor</option>
-                  <option value="manav">Manav (pemë-perime)</option>
-                  <option value="bulmetore">Bulmetore</option>
-                  <option value="kasap">Kasap (mish)</option>
-                  <option value="dyqan_peshku">Dyqan peshku</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="nc-email">Email</label>
-                <input id="nc-email" type="email" placeholder="opsionale">
-              </div>
-              <div class="field">
-                <label for="nc-tel">Telefon</label>
-                <input id="nc-tel" type="tel" placeholder="opsionale">
-              </div>
+              <p id="nc-success-msg" class="nc-form-hint"></p>
+            </div>
 
-              <div class="field full nc-license-block">
-                <div class="card-title" style="margin:0.25rem 0 0.5rem;font-size:1rem">
-                  <span>Licenca / Aktivizimi (16 shenja)</span>
+            <form id="form-new-client" class="nc-form">
+              <fieldset class="nc-section">
+                <legend>1 — Programi</legend>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="nc-program">Programi</label>
+                    <select id="nc-program" required>
+                      <option value="pos">POS</option>
+                      <option value="hotel">HOTEL</option>
+                      <option value="furra">FURRA</option>
+                      <option value="market">MARKET</option>
+                      <option value="security">SECURITY</option>
+                      <option value="kontabilisti">KONTABILISTI</option>
+                      <option value="fiskale">FISKALE</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-pos">
+                    <label for="nc-tipi">Tipi i biznesit</label>
+                    <select id="nc-tipi">
+                      <option value="kafene">Kafene</option>
+                      <option value="restorant">Restorant</option>
+                      <option value="bar">Bar</option>
+                      <option value="lounge_bar">Lounge bar</option>
+                      <option value="pub">Pub</option>
+                      <option value="fast_food">Fast food</option>
+                      <option value="piceri">Pizzeri</option>
+                      <option value="doner_kebab">Doner / Kebab</option>
+                      <option value="gjelltore">Gjelltore</option>
+                      <option value="fish_restaurant">Fish restaurant</option>
+                      <option value="sushi_bar">Sushi bar</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-hotel hidden">
+                    <label for="nc-tipi-hotel">Tipi i biznesit</label>
+                    <select id="nc-tipi-hotel">
+                      <option value="hotel">Hotel</option>
+                      <option value="motel">Motel</option>
+                      <option value="ville_me_qira">Villa</option>
+                      <option value="hostel">Hostel</option>
+                      <option value="resort">Resort</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-market hidden">
+                    <label for="nc-tipi-market">Tipi i biznesit</label>
+                    <select id="nc-tipi-market">
+                      <option value="minimarket">Mini-market / Market</option>
+                      <option value="pilar">Pilar</option>
+                      <option value="supermarket">Supermarket</option>
+                      <option value="dyqan_ushqimor">Dyqan ushqimor</option>
+                      <option value="manav">Manav</option>
+                      <option value="bulmetore">Bulmetore</option>
+                      <option value="kasap">Kasap</option>
+                      <option value="dyqan_peshku">Dyqan peshku</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-security hidden">
+                    <label for="nc-vepr">Tipi i biznesit</label>
+                    <select id="nc-vepr">
+                      <option value="kompani_sigurie">Kompani sigurie</option>
+                      <option value="transport_logjistike">Transport</option>
+                      <option value="ndertimtari">Ndërtim</option>
+                      <option value="pastrim">Pastrim</option>
+                      <option value="kuriere_dergesa">Posta / dërgesa</option>
+                      <option value="mirembajtje_nderte">Mirëmbajtje</option>
+                      <option value="magazinim">Magazinim</option>
+                      <option value="agjenci_marketingu">Marketing terren</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-furra hidden">
+                    <label for="nc-tipi-furra">Tipi i biznesit</label>
+                    <select id="nc-tipi-furra">
+                      <option value="furre_buke">Furrë buke</option>
+                      <option value="pasticeri">Pastiçeri</option>
+                    </select>
+                  </div>
+                  <div class="field nc-tipi-simple hidden">
+                    <label for="nc-tipi-simple">Tipi i biznesit</label>
+                    <select id="nc-tipi-simple" disabled>
+                      <option value="tjeter">Standard</option>
+                    </select>
+                  </div>
                 </div>
-                <p style="color:var(--muted);font-size:0.88rem;margin:0 0 0.75rem">
-                  Ngjit ID nga ekrani «Aktivizo» te klienti, ose gjenero ID + licencë këtu. Ruhet së bashku me klientin.
-                </p>
-              </div>
-              <div class="field">
-                <label for="nc-license-type">Lloji i licencës</label>
-                <select id="nc-license-type">
-                  <option value="trial">Trial (7 ditë)</option>
-                  <option value="annual" selected>Vjetor (1 vit)</option>
-                </select>
-              </div>
-              <div class="field full">
-                <label for="nc-hw-id">ID pajisjes (16 shenja)</label>
-                <div class="nc-input-row">
-                  <input id="nc-hw-id" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-                  <button type="button" class="btn btn-ok" id="btn-nc-gen-id">Gjenero ID</button>
+              </fieldset>
+
+              <fieldset class="nc-section">
+                <legend>2 — Biznesi</legend>
+                <div class="form-grid">
+                  <div class="field full">
+                    <label for="nc-emri">Emri i biznesit *</label>
+                    <input id="nc-emri" required placeholder="p.sh. BABYLON Caffe" autocomplete="organization">
+                  </div>
+                  <div class="field full">
+                    <label for="nc-slug">Slug (emri në URL) *</label>
+                    <input id="nc-slug" class="mono" placeholder="babylon" autocomplete="off" spellcheck="false" minlength="3">
+                    <p class="nc-form-hint" id="nc-slug-preview">URL: revolution-pos.com/kafene/babylon/owner</p>
+                  </div>
+                  <div class="field">
+                    <label for="nc-nui">NUI</label>
+                    <input id="nc-nui" placeholder="opsionale">
+                  </div>
+                  <div class="field">
+                    <label for="nc-qyteti">Qyteti</label>
+                    <input id="nc-qyteti" placeholder="opsionale">
+                  </div>
+                  <div class="field full">
+                    <label for="nc-adresa">Adresa</label>
+                    <input id="nc-adresa" placeholder="opsionale">
+                  </div>
+                  <div class="field">
+                    <label for="nc-tel">Telefoni</label>
+                    <input id="nc-tel" type="tel" placeholder="opsionale">
+                  </div>
+                  <div class="field">
+                    <label for="nc-email">Email i biznesit</label>
+                    <input id="nc-email" type="email" placeholder="opsionale">
+                  </div>
                 </div>
-              </div>
-              <div class="field full">
-                <label for="nc-license-key">Çelësi i licencës (16 shenja)</label>
-                <div class="nc-input-row">
-                  <input id="nc-license-key" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
-                  <button type="button" class="btn btn-primary" id="btn-nc-gen-key">Gjenero Licencë</button>
+              </fieldset>
+
+              <fieldset class="nc-section">
+                <legend>3 — Pronari (llogaria e hyrjes)</legend>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="nc-owner-emri">Emri i pronarit *</label>
+                    <input id="nc-owner-emri" required placeholder="Emri mbiemri">
+                  </div>
+                  <div class="field">
+                    <label for="nc-owner-email">Email i pronarit *</label>
+                    <input id="nc-owner-email" type="email" required placeholder="pronari@email.com" autocomplete="username">
+                  </div>
+                  <div class="field full">
+                    <label for="nc-owner-password">Fjalëkalimi *</label>
+                    <div class="nc-input-row">
+                      <input id="nc-owner-password" type="text" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
+                      <button type="button" class="btn btn-ok" id="btn-nc-gen-password">Gjenero</button>
+                      <button type="button" class="btn btn-ghost" id="btn-nc-copy-password">Kopjo</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="field full" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-                <button type="button" class="btn btn-ghost btn-sm" id="btn-nc-copy-pair">Kopjo ID + Licencë</button>
-              </div>
-              <div class="field full">
-                <label class="chk-row"><input type="checkbox" id="nc-license" checked> Ruaj klientin me këtë licencë</label>
-              </div>
-              <div class="field full">
-                <button type="submit" class="btn btn-primary" id="btn-nc-submit">Regjistro klientin</button>
-                <span id="nc-msg" style="margin-left:0.75rem;color:var(--muted);font-size:0.9rem"></span>
-              </div>
+              </fieldset>
+
+              <fieldset class="nc-section">
+                <legend>4 — Licenca</legend>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="nc-package">Paketa</label>
+                    <select id="nc-package"></select>
+                  </div>
+                  <div class="field">
+                    <label for="nc-duration">Kohëzgjatja</label>
+                    <select id="nc-duration">
+                      <option value="1">1 muaj</option>
+                      <option value="3">3 muaj</option>
+                      <option value="6">6 muaj</option>
+                      <option value="12" selected>1 vit</option>
+                      <option value="24">2 vite</option>
+                    </select>
+                  </div>
+                  <div class="field full">
+                    <label for="nc-hw-id">Hardware ID (16 hex, opsional)</label>
+                    <div class="nc-input-row">
+                      <input id="nc-hw-id" class="mono" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+                      <button type="button" class="btn btn-ok" id="btn-nc-gen-id">Gjenero ID</button>
+                    </div>
+                  </div>
+                  <div class="field full">
+                    <label for="nc-license-key">Çelësi i licencës</label>
+                    <div class="nc-input-row">
+                      <input id="nc-license-key" class="mono" type="text" placeholder="Gjenerohet automatikisht" autocomplete="off" spellcheck="false">
+                      <button type="button" class="btn btn-primary" id="btn-nc-gen-key">Gjenero Licencë</button>
+                      <button type="button" class="btn btn-ghost" id="btn-nc-copy-key">Kopjo</button>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset class="nc-section nc-section-submit">
+                <legend>5 — Konfirmimi</legend>
+                <button type="submit" class="btn btn-primary btn-lg" id="btn-nc-submit">REGJISTRO KLIENTIN</button>
+                <p id="nc-msg" class="nc-form-hint"></p>
+              </fieldset>
             </form>
           </div>
           <div class="card">
@@ -511,6 +580,6 @@
     </aside>
   </div>
 
-  <script src="/admin/dashboard.js?v=41"></script>
+  <script src="/admin/dashboard.js?v=42"></script>
 </body>
 </html>

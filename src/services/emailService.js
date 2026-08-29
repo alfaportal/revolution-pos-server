@@ -660,6 +660,48 @@ async function sendKafeneSecurityAlertEmail({
   return deliverEmail({ to: dest, subject, text, html });
 }
 
+async function sendOwnerWelcomeCredentialsEmail({
+  to,
+  ownerName,
+  clientName,
+  ownerUrl,
+  password,
+  licenseKey,
+  expiresAt,
+}) {
+  const loginUrl = ownerUrl || `${getPublicAppOrigin()}/owner/login`;
+  const exp = expiresAt ? String(expiresAt).slice(0, 10) : "";
+  const subject = `Aksesi juaj — ${clientName || "Revolution POS"}`;
+  const text = [
+    ownerName ? `Përshëndetje ${ownerName},` : "Përshëndetje,",
+    "",
+    clientName ? `Biznesi «${clientName}» u regjistrua në Revolution POS.` : "Llogaria juaj u krijua.",
+    "",
+    `Hyrja e pronarit: ${loginUrl}`,
+    `Email: ${to}`,
+    password ? `Fjalëkalimi: ${password}` : null,
+    licenseKey ? `Licenca: ${licenseKey}` : null,
+    exp ? `Skadon: ${exp}` : null,
+    "",
+    "Ruajeni këto të dhëna në vend të sigurt.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const html = `
+    <p>${ownerName ? `Përshëndetje <strong>${ownerName}</strong>,` : "Përshëndetje,"}</p>
+    ${clientName ? `<p>Biznesi <strong>${clientName}</strong> u regjistrua.</p>` : ""}
+    <p><strong>Hyrja:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+    <p><strong>Email:</strong> ${to}</p>
+    ${password ? `<p><strong>Fjalëkalimi:</strong> <code>${password}</code></p>` : ""}
+    ${licenseKey ? `<p><strong>Licenca:</strong> <code>${licenseKey}</code></p>` : ""}
+    ${exp ? `<p><strong>Skadon:</strong> ${exp}</p>` : ""}
+    <p style="color:#666;font-size:13px">Ruajeni këto të dhëna në vend të sigurt.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
 module.exports = {
   isEmailConfigured,
   deliverEmail,
@@ -681,4 +723,5 @@ module.exports = {
   sendOwnerClientOfflineEmail,
   sendAdminClientOfflineEmail,
   sendKafeneSecurityAlertEmail,
+  sendOwnerWelcomeCredentialsEmail,
 };

@@ -176,9 +176,18 @@ function setProductTab(product, { reload = true } = {}) {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
-  const nc = document.getElementById("nc-product");
+  const nc = document.getElementById("nc-program");
   if (nc) {
-    nc.value = currentProduct;
+    const tabToProgram = {
+      kafene: "pos",
+      security: "security",
+      hotel: "hotel",
+      market: "market",
+      furra: "furra",
+      kontabilisti: "kontabilisti",
+      fiskale: "fiskale",
+    };
+    nc.value = tabToProgram[currentProduct] || "pos";
     syncNewClientForm();
   }
   updateProductUiHints();
@@ -189,19 +198,161 @@ function setProductTab(product, { reload = true } = {}) {
 }
 
 function syncNewClientForm() {
-  const product = currentProduct || document.getElementById("nc-product")?.value || "kafene";
-  document.querySelectorAll(".nc-kafene-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "kafene");
-  });
-  document.querySelectorAll(".nc-security-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "security");
-  });
-  document.querySelectorAll(".nc-hotel-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "hotel");
-  });
-  document.querySelectorAll(".nc-market-only").forEach((el) => {
-    el.classList.toggle("hidden", product !== "market");
-  });
+  const program = document.getElementById("nc-program")?.value || "pos";
+  const show = (sel, on) => {
+    document.querySelectorAll(sel).forEach((el) => el.classList.toggle("hidden", !on));
+  };
+  show(".nc-tipi-pos", program === "pos");
+  show(".nc-tipi-hotel", program === "hotel");
+  show(".nc-tipi-market", program === "market");
+  show(".nc-tipi-security", program === "security");
+  show(".nc-tipi-furra", program === "furra");
+  show(".nc-tipi-simple", program === "kontabilisti" || program === "fiskale");
+  populateNcPackageOptions(program);
+  updateNcSlugPreview();
+}
+
+const NC_PUBLIC_ORIGIN = "https://revolution-pos.com";
+let lastNcRegistration = null;
+let ncSlugTouched = false;
+
+const NC_URL_TIPI = {
+  pos: "kafene",
+  kafene: "kafene",
+  restorant: "restorant",
+  bar: "bar",
+  hotel: "hotel",
+  furra: "furra",
+  furre_buke: "furra",
+  pasticeri: "pasticeri",
+  market: "market",
+  minimarket: "market",
+  security: "security",
+  kontabilisti: "kontabilist",
+  fiskale: "fiskale",
+};
+
+function ncSlugifyEmri(emri) {
+  const base = String(emri || "lokal")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return base.length >= 3 ? base : "lokal";
+}
+
+function ncSelectedTipi(program) {
+  if (program === "hotel") return document.getElementById("nc-tipi-hotel")?.value || "hotel";
+  if (program === "market") return document.getElementById("nc-tipi-market")?.value || "minimarket";
+  if (program === "security") return document.getElementById("nc-vepr")?.value || "kompani_sigurie";
+  if (program === "furra") return document.getElementById("nc-tipi-furra")?.value || "furre_buke";
+  if (program === "kontabilisti" || program === "fiskale") return "tjeter";
+  return document.getElementById("nc-tipi")?.value || "kafene";
+}
+
+function ncUrlSegment(program, tipi) {
+  if (program === "pos") return NC_URL_TIPI[tipi] || "kafene";
+  if (program === "furra") return "furra";
+  if (program === "kontabilisti") return "kontabilist";
+  if (program === "fiskale") return "fiskale";
+  return NC_URL_TIPI[program] || program;
+}
+
+function ncOwnerRole(program) {
+  return program === "security" ? "pronari" : "owner";
+}
+
+function updateNcSlugPreview() {
+  const program = document.getElementById("nc-program")?.value || "pos";
+  const tipi = ncSelectedTipi(program);
+  const slugEl = document.getElementById("nc-slug");
+  const emri = document.getElementById("nc-emri")?.value?.trim() || "";
+  if (slugEl && !ncSlugTouched && emri) {
+    slugEl.value = ncSlugifyEmri(emri);
+  }
+  const slug = String(slugEl?.value || ncSlugifyEmri(emri)).trim() || "babylon";
+  const urlTipi = ncUrlSegment(program, tipi);
+  const role = ncOwnerRole(program);
+  const preview = document.getElementById("nc-slug-preview");
+  if (preview) {
+    preview.textContent = `URL: ${NC_PUBLIC_ORIGIN.replace(/^https?:\/\//, "")}/${urlTipi}/${slug}/${role}`;
+  }
+}
+
+function populateNcPackageOptions(program) {
+  const sel = document.getElementById("nc-package");
+  if (!sel) return;
+  const opts = [];
+  if (program === "pos" || program === "furra") {
+    opts.push(["pako_3", "Pako 1"], ["pako_4", "Pako 2"], ["pako_2", "Pako 3"], ["pako_5", "Pako 4"]);
+  } else if (program === "hotel" || program === "market") {
+    opts.push(["pako_2", "Pako"], ["pako_5", "Pako AI"]);
+  } else if (program === "security" || program === "kontabilisti") {
+    opts.push(["standard", "Standard"], ["premium", "Premium"]);
+  } else if (program === "fiskale") {
+    opts.push(["standard", "Standard"]);
+  } else {
+    opts.push(["pako_5", "Pako 4"]);
+  }
+  const prev = sel.value;
+  sel.innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  if (opts.some(([v]) => v === prev)) sel.value = prev;
+}
+
+function randomNcPassword(len = 10) {
+  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+}
+
+function formatNcDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(String(iso).slice(0, 10));
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10);
+  return d.toLocaleDateString("sq-AL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function buildNcSuccessText(data) {
+  const emri = data.client?.emri || "—";
+  const url = data.owner_url || "—";
+  const email = data.owner?.email || document.getElementById("nc-owner-email")?.value || "—";
+  const pass = data.password_plain || "—";
+  const lic = data.license_key || data.license?.celesi || "—";
+  const exp = formatNcDate(data.expires_at || data.license?.data_skadimit);
+  return [
+    `Emri: ${emri}`,
+    `URL: ${url.replace(/^https?:\/\//, "")}`,
+    `Email: ${email}`,
+    `Password: ${pass}`,
+    `Licenca: ${lic}`,
+    `Skadon: ${exp}`,
+  ].join("\n");
+}
+
+function showNcSuccess(data) {
+  lastNcRegistration = data;
+  const panel = document.getElementById("nc-success-panel");
+  const form = document.getElementById("form-new-client");
+  const body = document.getElementById("nc-success-body");
+  if (body) body.textContent = buildNcSuccessText(data);
+  panel?.classList.remove("hidden");
+  form?.classList.add("hidden");
+}
+
+function resetNcForm() {
+  lastNcRegistration = null;
+  ncSlugTouched = false;
+  document.getElementById("nc-success-panel")?.classList.add("hidden");
+  document.getElementById("form-new-client")?.classList.remove("hidden");
+  document.getElementById("form-new-client")?.reset();
+  document.getElementById("nc-duration").value = "12";
+  populateNcPackageOptions(document.getElementById("nc-program")?.value || "pos");
+  updateNcSlugPreview();
+  const msg = document.getElementById("nc-msg");
+  if (msg) msg.textContent = "";
 }
 
 function showBridgeMsg(text) {
@@ -2135,10 +2286,78 @@ async function boot() {
   });
   setProductTab(currentProduct, { reload: false });
   updateProductUiHints();
-  document.getElementById("nc-product")?.addEventListener("change", (e) => {
-    setProductTab(e.target.value || "kafene");
+  document.getElementById("nc-program")?.addEventListener("change", (e) => {
+    syncNewClientForm();
+    const map = {
+      pos: "kafene",
+      security: "security",
+      hotel: "hotel",
+      market: "market",
+      furra: "furra",
+      kontabilisti: "kontabilisti",
+      fiskale: "fiskale",
+    };
+    const p = map[e.target.value] || "kafene";
+    if (p !== currentProduct) setProductTab(p);
   });
   syncNewClientForm();
+
+  document.getElementById("nc-emri")?.addEventListener("input", () => {
+    if (!ncSlugTouched) updateNcSlugPreview();
+  });
+  document.getElementById("nc-slug")?.addEventListener("input", () => {
+    ncSlugTouched = true;
+    updateNcSlugPreview();
+  });
+  ["nc-program", "nc-tipi", "nc-tipi-hotel", "nc-tipi-market", "nc-vepr", "nc-tipi-furra"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", updateNcSlugPreview);
+  });
+
+  document.getElementById("btn-nc-gen-password")?.addEventListener("click", () => {
+    const el = document.getElementById("nc-owner-password");
+    if (el) el.value = randomNcPassword(10);
+  });
+  document.getElementById("btn-nc-copy-password")?.addEventListener("click", (e) => {
+    const v = document.getElementById("nc-owner-password")?.value || "";
+    if (!v) return alert("Nuk ka fjalëkalim.");
+    copyText(v, e.currentTarget);
+  });
+  document.getElementById("btn-nc-copy-key")?.addEventListener("click", (e) => {
+    const v = document.getElementById("nc-license-key")?.value || "";
+    if (!v) return alert("Nuk ka licencë.");
+    copyText(v, e.currentTarget);
+  });
+  document.getElementById("btn-nc-copy-all")?.addEventListener("click", (e) => {
+    if (!lastNcRegistration) return;
+    copyText(buildNcSuccessText(lastNcRegistration), e.currentTarget);
+  });
+  document.getElementById("btn-nc-email-all")?.addEventListener("click", async (e) => {
+    if (!lastNcRegistration) return;
+    const btn = e.currentTarget;
+    const msg = document.getElementById("nc-success-msg");
+    btn.disabled = true;
+    if (msg) msg.textContent = "Duke dërguar email…";
+    try {
+      await api("/api/super/dashboard/clients/send-welcome-email", {
+        method: "POST",
+        body: JSON.stringify({
+          to: lastNcRegistration.owner?.email || document.getElementById("nc-owner-email")?.value,
+          owner_emri: lastNcRegistration.owner?.emri,
+          emri: lastNcRegistration.client?.emri,
+          owner_url: lastNcRegistration.owner_url,
+          password: lastNcRegistration.password_plain,
+          license_key: lastNcRegistration.license_key,
+          expires_at: lastNcRegistration.expires_at || lastNcRegistration.license?.data_skadimit,
+        }),
+      });
+      if (msg) msg.textContent = "Email u dërgua.";
+    } catch (ex) {
+      if (msg) msg.textContent = ex.message || "Email dështoi";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  document.getElementById("btn-nc-new-another")?.addEventListener("click", () => resetNcForm());
 
   function bindNcHex16(el) {
     if (!el || el.dataset.fmtBound === "1") return;
@@ -2186,10 +2405,7 @@ async function boot() {
       hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
       if (hwEl) hwEl.value = hardwareId;
     }
-    const licenseType =
-      String(document.getElementById("nc-license-type")?.value || "annual").toLowerCase() === "trial"
-        ? "trial"
-        : "annual";
+    const licenseType = "annual";
     if (btn) btn.disabled = true;
     if (msg) msg.textContent = "Duke gjeneruar licencën…";
     try {
@@ -2213,8 +2429,6 @@ async function boot() {
         keyEl.focus();
         keyEl.select();
       }
-      const chk = document.getElementById("nc-license");
-      if (chk) chk.checked = true;
       if (msg) msg.textContent = `Licenca: ${key}`;
     } catch (ex) {
       if (msg) msg.textContent = ex.message || "Gjenerimi dështoi";
@@ -2239,82 +2453,101 @@ async function boot() {
     e.preventDefault();
     const msg = document.getElementById("nc-msg");
     const btn = document.getElementById("btn-nc-submit");
-    const product = currentProduct || document.getElementById("nc-product")?.value || "kafene";
+    const program = document.getElementById("nc-program")?.value || "pos";
+    const emri = document.getElementById("nc-emri")?.value?.trim();
+    let slug = document.getElementById("nc-slug")?.value?.trim().toLowerCase() || ncSlugifyEmri(emri);
+    slug = slug.replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "");
+    const ownerEmri = document.getElementById("nc-owner-emri")?.value?.trim();
+    const ownerEmail = document.getElementById("nc-owner-email")?.value?.trim();
+    const ownerPassword = document.getElementById("nc-owner-password")?.value?.trim();
     const hardwareId = String(document.getElementById("nc-hw-id")?.value || "").trim();
     const licenseKey = String(document.getElementById("nc-license-key")?.value || "").trim();
-    const issueLicense = Boolean(document.getElementById("nc-license")?.checked);
-    const licenseType =
-      String(document.getElementById("nc-license-type")?.value || "annual").toLowerCase() === "trial"
-        ? "trial"
-        : "annual";
     const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
     const keyHex = licenseKey.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
 
-    if (issueLicense && hardwareId && hwHex.length !== 16) {
-      if (msg) msg.textContent = "ID e pajisjes duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).";
+    if (!emri) {
+      if (msg) msg.textContent = "Emri i biznesit është i detyrueshëm.";
       return;
     }
-    if (issueLicense && licenseKey && keyHex.length !== 16) {
-      if (msg) msg.textContent = "Çelësi i licencës duhet 16 shenja (XXXX-XXXX-XXXX-XXXX).";
+    if (slug.length < 3) {
+      if (msg) msg.textContent = "Slug duhet min. 3 karaktere (a-z, 0-9, vizë).";
+      return;
+    }
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+      if (msg) msg.textContent = "Slug: vetëm shkronja të vogla, numra dhe vizë.";
+      return;
+    }
+    if (!ownerEmri || !ownerEmail || !ownerPassword) {
+      if (msg) msg.textContent = "Pronari (emër, email, fjalëkalim) është i detyrueshëm.";
+      return;
+    }
+    if (ownerPassword.length < 6) {
+      if (msg) msg.textContent = "Fjalëkalimi min. 6 karaktere.";
+      return;
+    }
+    if (hardwareId && hwHex.length !== 16) {
+      if (msg) msg.textContent = "Hardware ID duhet 16 hex ose bosh.";
+      return;
+    }
+    if (licenseKey && keyHex.length !== 16) {
+      if (msg) msg.textContent = "Licenca duhet 16 hex ose bosh (gjenerohet automatikisht).";
       return;
     }
 
-    let hwOut = hardwareId;
-    if (product === "security" && issueLicense && !hwOut) {
-      hwOut = randomHw16();
-      const hwEl = document.getElementById("nc-hw-id");
-      if (hwEl) hwEl.value = hwOut;
-    }
-
+    const tipi = ncSelectedTipi(program);
     const body = {
-      product_line: product,
-      emri: document.getElementById("nc-emri")?.value?.trim(),
+      program,
+      product_line: program === "pos" ? "kafene" : program,
+      emri,
+      kitchen_slug: slug,
+      slug,
+      nui: document.getElementById("nc-nui")?.value?.trim(),
+      adresa: document.getElementById("nc-adresa")?.value?.trim(),
+      qyteti: document.getElementById("nc-qyteti")?.value?.trim(),
       email: document.getElementById("nc-email")?.value?.trim(),
       telefoni: document.getElementById("nc-tel")?.value?.trim(),
       telefon: document.getElementById("nc-tel")?.value?.trim(),
-      issue_license: issueLicense,
-      license_type: licenseType,
-      hardware_id: hwOut || hardwareId || undefined,
+      tipi,
+      veprimtari: program === "security" ? tipi : undefined,
+      package: document.getElementById("nc-package")?.value,
+      package_tier: document.getElementById("nc-package")?.value,
+      muaj: Number(document.getElementById("nc-duration")?.value || 12),
+      duration_months: Number(document.getElementById("nc-duration")?.value || 12),
+      owner_emri: ownerEmri,
+      owner_email: ownerEmail,
+      owner_password: ownerPassword,
+      issue_license: true,
+      license_type: "annual",
+      hardware_id: hardwareId || undefined,
       celesi: licenseKey || undefined,
       license_key: licenseKey || undefined,
     };
-    if (product === "security") {
-      body.veprimtari = document.getElementById("nc-vepr")?.value || "kompani_sigurie";
-    } else if (product === "hotel") {
-      body.tipi = document.getElementById("nc-tipi-hotel")?.value || "hotel";
-    } else if (product === "market") {
-      body.tipi = document.getElementById("nc-tipi-market")?.value || "minimarket";
-    } else {
-      body.tipi = document.getElementById("nc-tipi")?.value;
-      body.package_tier = document.getElementById("nc-pako")?.value;
-    }
-    if (!body.emri) {
-      if (msg) msg.textContent = "Emri është i detyrueshëm.";
-      return;
-    }
+
     if (btn) btn.disabled = true;
-    if (msg) msg.textContent = "Duke regjistruar klientin + licencën…";
+    if (msg) msg.textContent = "Duke regjistruar klientin, licencën dhe pronarin…";
     try {
       const data = await api("/api/super/dashboard/clients", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      const licKey = data.license?.celesi || data.license?.license_key || licenseKey || "";
-      const hwOut = data.hardware_id || hardwareId || "";
-      if (msg) {
-        msg.textContent = licKey
-          ? `U krijua. ID: ${hwOut || "—"} · Licenca: ${licKey}`
-          : "Klienti u krijua.";
+      if (data.license_key && document.getElementById("nc-license-key")) {
+        document.getElementById("nc-license-key").value = data.license_key;
       }
-      if (licKey && document.getElementById("nc-license-key")) {
-        document.getElementById("nc-license-key").value = licKey;
+      if (data.hardware_id && document.getElementById("nc-hw-id")) {
+        document.getElementById("nc-hw-id").value = data.hardware_id;
       }
-      if (hwOut && document.getElementById("nc-hw-id")) {
-        document.getElementById("nc-hw-id").value = hwOut;
-      }
-      document.getElementById("nc-emri").value = "";
-      setProductTab(product);
-      await loadLicenses().catch(() => null);
+      showNcSuccess(data);
+      const tabMap = {
+        pos: "kafene",
+        security: "security",
+        hotel: "hotel",
+        market: "market",
+        furra: "furra",
+        kontabilisti: "kontabilisti",
+        fiskale: "fiskale",
+      };
+      setProductTab(tabMap[program] || "kafene");
+      await Promise.all([loadClients().catch(() => null), loadLicenses().catch(() => null)]);
     } catch (ex) {
       if (msg) msg.textContent = ex.message || "Gabim";
       else alert(ex.message || "Gabim");
