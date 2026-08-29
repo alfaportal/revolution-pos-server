@@ -11,7 +11,7 @@ const {
   isDedicatedProduct,
 } = require("../lib/productSupabase");
 const { formatError, logRouteError } = require("../lib/errors");
-const { normalizePackageTier } = require("../lib/packages");
+const { normalizePackageTier, packageLabel } = require("../lib/packages");
 const { generateKitchenKey, generateKitchenSlug, ensureKitchenCredentials, buildKitchenUrl, buildTableMenuUrl, buildClientWebLinks } = require("../lib/kitchenAccess");
 const { validateKitchenSlug, resolveUniqueKitchenSlug } = require("../lib/kitchenSlug");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
@@ -472,7 +472,8 @@ async function validateLicense({
     };
   }
 
-  const REVOKED_MSG = "Licenca është çaktivizuar. Kontaktoni Revolution Invest.";
+  const { getSupportPhone } = require("../lib/publicOrigin");
+  const REVOKED_MSG = `Licenca nuk është më aktive. Kontaktoni: ${getSupportPhone()}`;
   const hwForCheck = normalizeHardwareIdStored(hardware_id) || resolveLicenseHardwareId(license);
   const hwControl = await getHardwareControl(license.id, hwForCheck);
   const wipePending =
@@ -581,6 +582,8 @@ async function validateLicense({
     kitchen_slug: kitchenSlug,
     kitchen_key: kitchenKey,
     package_tier: normalizePackageTier(license.clients?.package_tier),
+    paketa_id: normalizePackageTier(license.clients?.package_tier),
+    paketa: packageLabel(normalizePackageTier(license.clients?.package_tier)),
     client_type: licenseAppType(license),
     device_id: license.device_id,
     device_hostname: license.device_hostname || host,
@@ -589,8 +592,10 @@ async function validateLicense({
     trial_active: Boolean(license.trial_ends_at && new Date(license.trial_ends_at) > new Date()),
     trial_ends_at: license.trial_ends_at || null,
     status: license.statusi,
+    statusi: license.statusi,
     valid_from: license.data_fillimit,
     valid_until: license.data_skadimit,
+    data_skadimit: license.data_skadimit,
     message,
     force_factory_reset: Boolean(license.force_factory_reset_at) || Boolean(hwControl?.wipe_requested_at),
     force_factory_reset_at: license.force_factory_reset_at || hwControl?.wipe_requested_at || null,
@@ -877,6 +882,12 @@ async function updateClient(id, body) {
     throw new Error("Nuk ka fusha për përditësim.");
   }
 
+  let previousPackageTier = null;
+  if (patch.package_tier !== undefined) {
+    const { data: prevRow } = await db.from("clients").select("package_tier").eq("id", id).maybeSingle();
+    previousPackageTier = prevRow?.package_tier ?? null;
+  }
+
   async function doUpdate(p) {
     return db.from("clients").update(p).eq("id", id).select("*").single();
   }
@@ -916,6 +927,21 @@ async function updateClient(id, body) {
     }
   } catch (syncErr) {
     console.warn("[updateClient] pos_settings sync failed:", syncErr.message);
+  }
+  if (
+    patch.package_tier !== undefined
+    && previousPackageTier != null
+    && normalizePackageTier(previousPackageTier) !== normalizePackageTier(patch.package_tier)
+  ) {
+    const { notifyOwnerPackageChanged } = require("./licenseOwnerNotificationService");
+    notifyOwnerPackageChanged({
+      clientId: id,
+      clientName: data.emri,
+      oldTier: previousPackageTier,
+      newTier: patch.package_tier,
+    }).catch((err) => {
+      console.warn("[updateClient] package change email:", err.message || err);
+    });
   }
   return normalizeClientRow(data);
 }
@@ -1475,6 +1501,11 @@ async function revokeLicenseRemote(licenseId, { hardwareId, reason, actor } = {}
     }
   }
 
+  const { notifyOwnerLicenseRevoked } = require("./licenseOwnerNotificationService");
+  notifyOwnerLicenseRevoked(id).catch((err) => {
+    console.warn("[revokeLicenseRemote] revoke email:", err.message || err);
+  });
+
   return { ok: true, license, hardware_id: hw || null, force_factory_reset_at: now };
 }
 
@@ -1487,6 +1518,8 @@ async function reactivateLicenseRemote(licenseId, { hardwareId, reason, actor } 
   const why = String(reason || "").trim();
 
   const license = await updateLicenseStatus(id, "aktive");
+
+  await patchLicenseMeta(id, { force_factory_reset_at: null });
 
   try {
     if (hw) {

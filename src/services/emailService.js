@@ -1,7 +1,8 @@
 /** Dërgim email transaksional (Resend). */
 
 const DEFAULT_EMAIL_FROM = "Revolution POS <noreply@revolution-pos.com>";
-const { getPublicAppOrigin, getSupportPhone } = require("../lib/publicOrigin");
+const { getPublicAppOrigin, getSupportPhone, getSupportEmail } = require("../lib/publicOrigin");
+const { packageLabelFull } = require("../lib/packages");
 
 function resolveEmailFrom() {
   const raw = process.env.EMAIL_FROM?.trim();
@@ -660,6 +661,31 @@ async function sendKafeneSecurityAlertEmail({
   return deliverEmail({ to: dest, subject, text, html });
 }
 
+function formatOwnerUrlDisplay(ownerUrl) {
+  const raw = String(ownerUrl || "").trim();
+  if (!raw) return "revolution-pos.com/owner/login";
+  try {
+    const u = new URL(raw);
+    return `${u.host}${u.pathname}${u.search}`;
+  } catch {
+    return raw.replace(/^https?:\/\//i, "");
+  }
+}
+
+function formatExpiryDateSq(expiresAt) {
+  if (!expiresAt) return "";
+  try {
+    const d = new Date(String(expiresAt).slice(0, 10));
+    return d.toLocaleDateString("sq-AL", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return String(expiresAt).slice(0, 10);
+  }
+}
+
 async function sendOwnerWelcomeCredentialsEmail({
   to,
   ownerName,
@@ -670,33 +696,119 @@ async function sendOwnerWelcomeCredentialsEmail({
   expiresAt,
 }) {
   const loginUrl = ownerUrl || `${getPublicAppOrigin()}/owner/login`;
-  const exp = expiresAt ? String(expiresAt).slice(0, 10) : "";
+  const urlDisplay = formatOwnerUrlDisplay(loginUrl);
+  const exp = formatExpiryDateSq(expiresAt);
+  const phone = resolveSupportPhone();
+  const supportEmail = getSupportEmail();
   const subject = `Aksesi juaj — ${clientName || "Revolution POS"}`;
   const text = [
     ownerName ? `Përshëndetje ${ownerName},` : "Përshëndetje,",
     "",
     clientName ? `Biznesi «${clientName}» u regjistrua në Revolution POS.` : "Llogaria juaj u krijua.",
     "",
-    `Hyrja e pronarit: ${loginUrl}`,
+    `Emri i biznesit: ${clientName || "—"}`,
+    `URL: ${urlDisplay}`,
     `Email: ${to}`,
     password ? `Fjalëkalimi: ${password}` : null,
-    licenseKey ? `Licenca: ${licenseKey}` : null,
-    exp ? `Skadon: ${exp}` : null,
+    licenseKey ? `Çelësi i licencës: ${licenseKey}` : null,
+    exp ? `Data e skadimit: ${exp}` : null,
     "",
     "Ruajeni këto të dhëna në vend të sigurt.",
+    "",
+    `Kontakt: ${supportEmail}, ${phone}`,
   ]
     .filter(Boolean)
     .join("\n");
 
   const html = `
-    <p>${ownerName ? `Përshëndetje <strong>${ownerName}</strong>,` : "Përshëndetje,"}</p>
-    ${clientName ? `<p>Biznesi <strong>${clientName}</strong> u regjistrua.</p>` : ""}
-    <p><strong>Hyrja:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
-    <p><strong>Email:</strong> ${to}</p>
-    ${password ? `<p><strong>Fjalëkalimi:</strong> <code>${password}</code></p>` : ""}
-    ${licenseKey ? `<p><strong>Licenca:</strong> <code>${licenseKey}</code></p>` : ""}
-    ${exp ? `<p><strong>Skadon:</strong> ${exp}</p>` : ""}
+    <p>${ownerName ? `Përshëndetje <strong>${escapeHtmlEmail(ownerName)}</strong>,` : "Përshëndetje,"}</p>
+    ${clientName ? `<p>Biznesi <strong>${escapeHtmlEmail(clientName)}</strong> u regjistrua në Revolution POS.</p>` : ""}
+    <table style="margin:16px 0;font-size:14px;line-height:1.6">
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Emri i biznesit</td><td><strong>${escapeHtmlEmail(clientName || "—")}</strong></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">URL</td><td><a href="${escapeHtmlEmail(loginUrl)}">${escapeHtmlEmail(urlDisplay)}</a></td></tr>
+      <tr><td style="padding:4px 12px 4px 0;color:#64748b">Email</td><td>${escapeHtmlEmail(to)}</td></tr>
+      ${password ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Fjalëkalimi</td><td><code>${escapeHtmlEmail(password)}</code></td></tr>` : ""}
+      ${licenseKey ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Çelësi i licencës</td><td><code>${escapeHtmlEmail(licenseKey)}</code></td></tr>` : ""}
+      ${exp ? `<tr><td style="padding:4px 12px 4px 0;color:#64748b">Data e skadimit</td><td>${escapeHtmlEmail(exp)}</td></tr>` : ""}
+    </table>
     <p style="color:#666;font-size:13px">Ruajeni këto të dhëna në vend të sigurt.</p>
+    <p style="margin-top:16px">Kontakt: <a href="mailto:${escapeHtmlEmail(supportEmail)}">${escapeHtmlEmail(supportEmail)}</a>, <strong>${escapeHtmlEmail(phone)}</strong></p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendLicenseExpiry7DayEmail({ to, clientName, expiryDate }) {
+  const phone = resolveSupportPhone();
+  const biz = clientName || "biznesin tuaj";
+  const subject = `Licenca skadon së shpejti — ${clientName || "Revolution POS"}`;
+  const text = [
+    `Licenca juaj për ${biz} skadon më ${expiryDate}.`,
+    `Kontaktoni për rinovim: ${phone}`,
+  ].join("\n");
+
+  const html = `
+    <p>Licenca juaj për <strong>${escapeHtmlEmail(biz)}</strong> skadon më <strong>${escapeHtmlEmail(expiryDate)}</strong>.</p>
+    <p>Kontaktoni për rinovim: <strong>${escapeHtmlEmail(phone)}</strong></p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendLicenseExpiredEmail({ to, clientName }) {
+  const phone = resolveSupportPhone();
+  const subject = `Licenca ka skaduar — ${clientName || "Revolution POS"}`;
+  const text = [
+    "Licenca juaj ka skaduar. Programi nuk funksionon më.",
+    "Kontaktoni për rinovim.",
+    "",
+    `Telefon: ${phone}`,
+  ].join("\n");
+
+  const html = `
+    <p><strong>Licenca juaj ka skaduar.</strong> Programi nuk funksionon më.</p>
+    <p>Kontaktoni për rinovim.</p>
+    <p style="margin-top:16px">Telefon: <strong>${escapeHtmlEmail(phone)}</strong></p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendOwnerPackageChangedEmail({ to, clientName, oldTier, newTier }) {
+  const oldLabel = packageLabelFull(oldTier);
+  const newLabel = packageLabelFull(newTier);
+  const subject = `Paketa u ndryshua — ${clientName || "Revolution POS"}`;
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    `Paketa juaj u ndryshua nga ${oldLabel} në ${newLabel}.`,
+    "Funksionet e reja janë aktive menjëherë.",
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p>Paketa juaj u ndryshua nga <strong>${escapeHtmlEmail(oldLabel)}</strong> në <strong>${escapeHtmlEmail(newLabel)}</strong>.</p>
+    <p>Funksionet e reja janë aktive menjëherë.</p>
+  `;
+
+  return deliverEmail({ to, subject, text, html });
+}
+
+async function sendOwnerLicenseRevokedEmail({ to, clientName }) {
+  const phone = resolveSupportPhone();
+  const subject = `Licenca u çaktivizua — ${clientName || "Revolution POS"}`;
+  const text = [
+    clientName ? `Përshëndetje ${clientName},` : "Përshëndetje,",
+    "",
+    "Licenca juaj u çaktivizua. Kontaktoni për informata.",
+    "",
+    `Telefon: ${phone}`,
+  ].join("\n");
+
+  const html = `
+    <p>${clientName ? `Përshëndetje <strong>${escapeHtmlEmail(clientName)}</strong>,` : "Përshëndetje,"}</p>
+    <p><strong>Licenca juaj u çaktivizua.</strong> Kontaktoni për informata.</p>
+    <p style="margin-top:16px">Telefon: <strong>${escapeHtmlEmail(phone)}</strong></p>
   `;
 
   return deliverEmail({ to, subject, text, html });
@@ -724,4 +836,8 @@ module.exports = {
   sendAdminClientOfflineEmail,
   sendKafeneSecurityAlertEmail,
   sendOwnerWelcomeCredentialsEmail,
+  sendLicenseExpiry7DayEmail,
+  sendLicenseExpiredEmail,
+  sendOwnerPackageChangedEmail,
+  sendOwnerLicenseRevokedEmail,
 };

@@ -40,6 +40,7 @@ const { ensureSuperAdmin } = require("./services/licenseService");
 const { startLicenseExpiryCron } = require("./jobs/expireLicenses");
 const { startRefusedOrdersExpiryJob } = require("./jobs/expireRefusedOrders");
 const { startTrialNotificationCron } = require("./jobs/trialNotifications");
+const { startLicenseOwnerNotificationCron } = require("./jobs/licenseOwnerNotifications");
 const { startOfflineNotificationCron } = require("./jobs/offlineNotifications");
 const { startAiDailyReportCron } = require("./jobs/aiDailyReports");
 const { startAiWeeklyReportCron } = require("./jobs/aiWeeklyReports");
@@ -740,6 +741,7 @@ async function start() {
   startLicenseExpiryCron();
   startRefusedOrdersExpiryJob();
   startTrialNotificationCron();
+  startLicenseOwnerNotificationCron();
   startOfflineNotificationCron();
   startAiDailyReportCron();
   startAiWeeklyReportCron();

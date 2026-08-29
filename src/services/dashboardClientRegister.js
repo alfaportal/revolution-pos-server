@@ -276,7 +276,7 @@ async function registerFullDashboardClient(body, baseUrl) {
     const ownerUrl = buildOwnerLoginUrl(client, program);
     const expires = license?.data_skadimit || null;
 
-    return {
+    const result = {
       ok: true,
       client,
       license,
@@ -290,6 +290,22 @@ async function registerFullDashboardClient(body, baseUrl) {
       expires_at: expires,
       email_configured: isEmailConfigured(),
     };
+
+    if (ownerEmail) {
+      sendOwnerWelcomeCredentialsEmail({
+        to: ownerEmail,
+        ownerName: ownerEmri,
+        clientName: client.emri,
+        ownerUrl,
+        password: ownerPassword,
+        licenseKey: result.license_key,
+        expiresAt: expires,
+      }).catch((err) => {
+        console.warn("[registerFullDashboardClient] welcome email:", err.message || err);
+      });
+    }
+
+    return result;
   } catch (e) {
     if (license?.id) {
       try {

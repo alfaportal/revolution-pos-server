@@ -126,6 +126,83 @@ function productQuery(_forClients = false) {
   return p;
 }
 
+const PAKO_LABELS = {
+  pako_3: "Pako 1",
+  pako_4: "Pako 2",
+  pako_2: "Pako 3",
+  pako_5: "Pako 4",
+};
+
+function formatSqDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(String(iso).slice(0, 10));
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10);
+  return d.toLocaleDateString("sq-AL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function pakoLabel(tier) {
+  return PAKO_LABELS[String(tier || "").trim()] || tier || "—";
+}
+
+function showToast(message, type = "ok") {
+  let stack = document.getElementById("admin-toast-stack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "admin-toast-stack";
+    stack.className = "admin-toast-stack";
+    stack.setAttribute("aria-live", "polite");
+    document.body.appendChild(stack);
+  }
+  const el = document.createElement("div");
+  el.className = `admin-toast ${type === "err" ? "err" : "ok"}`;
+  el.textContent = message;
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    el.style.transition = "opacity 0.3s ease";
+    setTimeout(() => el.remove(), 320);
+  }, 3800);
+}
+
+function patchClientInSectorsCache(clientId, patch) {
+  if (!clientId || !sectorsCache?.length) return;
+  for (const s of sectorsCache) {
+    for (const c of s.clients || []) {
+      if (String(c.id) === String(clientId)) {
+        Object.assign(c, patch);
+      }
+    }
+  }
+  renderClientsSectors(document.getElementById("clients-search")?.value || "");
+}
+
+function patchLicenseInDrawer(licenseId, patch) {
+  const row = document.querySelector(`[data-lic-edit="${licenseId}"]`);
+  if (!row) return;
+  if (patch.data_skadimit != null) {
+    const exp = row.querySelector(`[data-lic-exp="${licenseId}"]`);
+    if (exp) exp.value = String(patch.data_skadimit).slice(0, 10);
+  }
+  if (patch.statusi != null) {
+    const st = row.querySelector(`[data-lic-status="${licenseId}"]`);
+    if (st) st.value = patch.statusi;
+  }
+}
+
+async function afterLicenseAction(clientId, { toast, toastType, clientPatch, licenseId, licensePatch, reloadDrawer = false, product } = {}) {
+  if (toast) showToast(toast, toastType || "ok");
+  if (licenseId && licensePatch) patchLicenseInDrawer(licenseId, licensePatch);
+  if (clientId && clientPatch) patchClientInSectorsCache(clientId, clientPatch);
+  await Promise.all([
+    loadOverview().catch(() => null),
+    loadLicenses().catch(() => null),
+    refreshClientsAndProblems().catch(() => null),
+  ]);
+  if (reloadDrawer && clientId) {
+    await openClientDetail(clientId, { product: product || drawerProduct });
+  }
+}
+
 function productHintLabel() {
   return PRODUCT_LABELS[currentProduct] || "RESTAURANT";
 }
@@ -735,12 +812,14 @@ function renderLicenseEditBlocks(licenses) {
         <div class="prob-actions" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem">
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="1">+1 muaj</button>
               <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="3">+3 muaj</button>
-              <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+12 muaj</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="6">+6 muaj</button>
+              <button type="button" class="btn btn-primary btn-sm" data-drawer-extend="${esc(l.id)}" data-months="12">+1 vit</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-drawer-extend="${esc(l.id)}" data-months="24">+2 vite</button>
               ${
                 ["pezulluar", "revokuar"].includes(String(l.statusi || ""))
                   ? `<button type="button" class="btn btn-ok btn-sm" data-drawer-reactivate="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Riaktivizo</button>
                      <button type="button" class="btn btn-ghost btn-sm" data-drawer-unblock="${esc(l.id)}">Zhblloko</button>`
-                  : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Çaktivizo</button>`
+                  : `<button type="button" class="btn btn-danger btn-sm" data-drawer-revoke="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Revoko</button>`
               }
               <button type="button" class="btn btn-ghost btn-sm" style="border-color:#b45309;color:#b45309" data-drawer-wipe="${esc(l.id)}" data-hw="${esc(l.hardware_id || "")}">Fshi të Dhënat</button>
         </div>
@@ -842,7 +921,12 @@ async function openClientDetail(id, opts = {}) {
       <label>Tipi (HOTEL)<select id="dr-tipi">${selectOpts(DRAWER_HOTEL_TIPI_OPTS, c.tipi)}</select></label>`
       : `<label>Adresa<input id="dr-adresa" value="${esc(c.adresa || "")}"></label>
       <label>Veprimtaria (POS)<select id="dr-tipi">${selectOpts(DRAWER_TIPI_OPTS, c.tipi)}</select></label>
-      <label>Pako<select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select></label>`;
+      <label>Paketa
+        <div class="nc-input-row">
+          <select id="dr-pako">${selectOpts(DRAWER_PAKO_OPTS, c.package_tier)}</select>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-drawer-change-pako">Ndrysho</button>
+        </div>
+      </label>`;
 
   document.getElementById("drawer-body").innerHTML = `
     <div class="detail-block">
@@ -867,6 +951,7 @@ async function openClientDetail(id, opts = {}) {
   const body = document.getElementById("drawer-body");
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
   bindDrawerSave(id, product);
+  bindDrawerChangePackage(id, product);
   bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
@@ -1082,27 +1167,55 @@ function bindDrawerSave(clientId, productLine) {
   });
 }
 
+function bindDrawerChangePackage(clientId, productLine) {
+  const btn = document.getElementById("btn-drawer-change-pako");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const tier = document.getElementById("dr-pako")?.value;
+    if (!tier) return;
+    const product = productLine || drawerProduct || "kafene";
+    btn.disabled = true;
+    try {
+      await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ product_line: product, package_tier: tier }),
+      });
+      await afterLicenseAction(clientId, {
+        toast: `✅ Paketa u ndryshua në ${pakoLabel(tier)}`,
+        clientPatch: { package_tier: tier, package_label: pakoLabel(tier) },
+        product,
+      });
+    } catch (ex) {
+      showToast(ex.message || "Ndryshimi i paketës dështoi", "err");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 function bindDrawerLicenseFix(root, clientId, productLine) {
   if (!root) return;
-  const reopen = async () => {
-    if (!clientId) return;
-    await openClientDetail(clientId, { product: productLine || drawerProduct });
-  };
+  const product = productLine || drawerProduct || "kafene";
   root.querySelectorAll("[data-drawer-extend]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const months = Number(btn.dataset.months) || 12;
-      if (!confirm(`Zgjato licencën me ${months} muaj?`)) return;
+      const licId = btn.dataset.drawerExtend;
       btn.disabled = true;
       try {
-        const r = await api(`/api/super/dashboard/licenses/${btn.dataset.drawerExtend}/extend`, {
+        const r = await api(`/api/super/dashboard/licenses/${licId}/extend`, {
           method: "POST",
           body: JSON.stringify({ months }),
         });
-        alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
-        await refreshClientsAndProblems();
-        await reopen();
+        const newDate = r.data_skadimit || r.license?.data_skadimit;
+        await afterLicenseAction(clientId, {
+          toast: `✅ Licenca u zgjat deri ${formatSqDate(newDate)}`,
+          licenseId: licId,
+          licensePatch: { data_skadimit: newDate, statusi: "aktive" },
+          clientPatch: { status: "aktiv" },
+          product,
+        });
       } catch (ex) {
-        alert(ex.message || "Zgjatja dështoi.");
+        showToast(ex.message || "Zgjatja dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -1110,16 +1223,20 @@ function bindDrawerLicenseFix(root, clientId, productLine) {
   });
   root.querySelectorAll("[data-drawer-unblock]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      if (!confirm("Zhblloko licencën?")) return;
+      const licId = btn.dataset.drawerUnblock;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerUnblock}/unblock`, {
-          method: "POST",
+        await api(`/api/super/dashboard/licenses/${licId}/unblock`, { method: "POST" });
+        await afterLicenseAction(clientId, {
+          toast: "✅ Licenca u zhbllokua",
+          licenseId: licId,
+          licensePatch: { statusi: "aktive" },
+          clientPatch: { status: "aktiv" },
+          reloadDrawer: true,
+          product,
         });
-        await refreshClientsAndProblems();
-        await reopen();
       } catch (ex) {
-        alert(ex.message || "Zhbllokimi dështoi.");
+        showToast(ex.message || "Zhbllokimi dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -1127,21 +1244,27 @@ function bindDrawerLicenseFix(root, clientId, productLine) {
   });
   root.querySelectorAll("[data-drawer-revoke]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const reason = prompt("Çaktivizo menjëherë? Arsyeja (opsionale):", "");
-      if (reason === null) return;
+      const licId = btn.dataset.drawerRevoke;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerRevoke}/revoke`, {
+        await api(`/api/super/dashboard/licenses/${licId}/revoke`, {
           method: "POST",
           body: JSON.stringify({
+            product_line: product,
             hardware_id: btn.dataset.hw || undefined,
-            reason: String(reason || "").trim(),
           }),
         });
-        await refreshClientsAndProblems();
-        await reopen();
+        await afterLicenseAction(clientId, {
+          toast: "⛔ Licenca u revokua",
+          toastType: "err",
+          licenseId: licId,
+          licensePatch: { statusi: "revokuar" },
+          clientPatch: { status: "joaktiv" },
+          reloadDrawer: true,
+          product,
+        });
       } catch (ex) {
-        alert(ex.message || "Çaktivizimi dështoi.");
+        showToast(ex.message || "Revokimi dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -1149,17 +1272,23 @@ function bindDrawerLicenseFix(root, clientId, productLine) {
   });
   root.querySelectorAll("[data-drawer-reactivate]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      if (!confirm("Riaktivizo licencën?")) return;
+      const licId = btn.dataset.drawerReactivate;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.drawerReactivate}/reactivate`, {
+        await api(`/api/super/dashboard/licenses/${licId}/reactivate`, {
           method: "POST",
           body: JSON.stringify({ hardware_id: btn.dataset.hw || undefined }),
         });
-        await refreshClientsAndProblems();
-        await reopen();
+        await afterLicenseAction(clientId, {
+          toast: "✅ Licenca u riaktivizua",
+          licenseId: licId,
+          licensePatch: { statusi: "aktive" },
+          clientPatch: { status: "aktiv" },
+          reloadDrawer: true,
+          product,
+        });
       } catch (ex) {
-        alert(ex.message || "Riaktivizimi dështoi.");
+        showToast(ex.message || "Riaktivizimi dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -1251,26 +1380,21 @@ function bindLicenseActions(root) {
   });
   root.querySelectorAll("[data-revoke]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const reason = prompt(
-        "Çaktivizo menjëherë këtë licencë / Hardware ID?\nPOS mbyllet brenda ~15 sekondash.\nArsyeja (opsionale):",
-        "",
-      );
-      if (reason === null) return;
       const prod = btn.dataset.product || drawerProduct || currentProduct || "kafene";
+      const licId = btn.dataset.revoke;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.revoke}/revoke${productQueryString(prod)}`, {
+        await api(`/api/super/dashboard/licenses/${licId}/revoke${productQueryString(prod)}`, {
           method: "POST",
           body: JSON.stringify({
             product_line: prod,
             hardware_id: btn.dataset.hw || undefined,
-            reason: String(reason || "").trim(),
           }),
         });
-        alert("Licenca u çaktivizua. POS do të mbyllet në heartbeat-in e radhës.");
-        loadLicenses();
+        showToast("⛔ Licenca u revokua", "err");
+        await Promise.all([loadLicenses(), refreshClientsAndProblems().catch(() => null)]);
       } catch (ex) {
-        alert(ex.message || "Çaktivizimi dështoi.");
+        showToast(ex.message || "Revokimi dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -1278,19 +1402,17 @@ function bindLicenseActions(root) {
   });
   root.querySelectorAll("[data-reactivate]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      if (!confirm("Riaktivizo licencën? Klienti mund të hapë POS përsëri.")) return;
+      const licId = btn.dataset.reactivate;
       btn.disabled = true;
       try {
-        await api(`/api/super/dashboard/licenses/${btn.dataset.reactivate}/reactivate`, {
+        await api(`/api/super/dashboard/licenses/${licId}/reactivate`, {
           method: "POST",
-          body: JSON.stringify({
-            hardware_id: btn.dataset.hw || undefined,
-          }),
+          body: JSON.stringify({ hardware_id: btn.dataset.hw || undefined }),
         });
-        alert("Licenca u riaktivizua.");
-        loadLicenses();
+        showToast("✅ Licenca u riaktivizua");
+        await Promise.all([loadLicenses(), refreshClientsAndProblems().catch(() => null)]);
       } catch (ex) {
-        alert(ex.message || "Riaktivizimi dështoi.");
+        showToast(ex.message || "Riaktivizimi dështoi", "err");
       } finally {
         btn.disabled = false;
       }
@@ -2141,11 +2263,11 @@ function bindProblemResolveUi() {
             }),
           }).catch(() => null);
         }
-        alert(`Licenca u zgjat deri më ${r.data_skadimit || "—"}.`);
+        showToast(`✅ Licenca u zgjat deri ${formatSqDate(r.data_skadimit)}`);
         closeProblemResolve();
         await refreshClientsAndProblems();
       } catch (ex) {
-        alert(ex.message || "Zgjatja dështoi.");
+        showToast(ex.message || "Zgjatja dështoi", "err");
       } finally {
         ext.disabled = false;
       }

@@ -658,7 +658,10 @@ router.post(
     const body = req.body || {};
     const to = String(body.to || body.owner_email || "").trim();
     if (!to) throw new Error("Mungon email i pronarit.");
-    const { sendOwnerWelcomeCredentialsEmail } = require("../services/emailService");
+    const { sendOwnerWelcomeCredentialsEmail, isEmailConfigured } = require("../services/emailService");
+    if (!isEmailConfigured()) {
+      return res.json({ ok: true, emailed: false, skipped: true, reason: "email_not_configured" });
+    }
     await sendOwnerWelcomeCredentialsEmail({
       to,
       ownerName: body.ownerName || body.owner_emri,

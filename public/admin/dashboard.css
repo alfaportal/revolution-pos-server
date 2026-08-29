@@ -827,6 +827,41 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   padding-right: 0;
 }
 
+.admin-toast-stack {
+  position: fixed;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(420px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.admin-toast {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  animation: admin-toast-in 0.25s ease;
+  pointer-events: auto;
+}
+.admin-toast.ok {
+  background: rgba(46, 160, 67, 0.96);
+  color: #fff;
+}
+.admin-toast.err {
+  background: rgba(220, 38, 38, 0.96);
+  color: #fff;
+}
+@keyframes admin-toast-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .emergency-code-card .card-title {
   align-items: flex-start;
 }
