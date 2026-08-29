@@ -144,6 +144,110 @@ function pakoLabel(tier) {
   return PAKO_LABELS[String(tier || "").trim()] || tier || "—";
 }
 
+let clientsExpirySummary = null;
+let productTabBadgesCache = null;
+let clientsOnlineCount = 0;
+
+function clientRowClass(c) {
+  const parts = ["client-row"];
+  if (c.license_alert === "revoked") parts.push("client-row-revoked");
+  else if (c.license_alert === "expired") parts.push("client-row-expired");
+  else if (c.license_alert === "expiring") parts.push("client-row-expiring");
+  return parts.join(" ");
+}
+
+function presenceHeadline(c) {
+  const icon = c.presence_icon || "⚫";
+  if (c.presence_status === "online") return `${icon} Online`;
+  if (c.presence_status === "idle") return `${icon} Idle`;
+  if (c.presence_status === "offline") return `${icon} Offline`;
+  return `${icon} Kurrë`;
+}
+
+function drawerUrlTipi(c, product) {
+  if (product === "furra") return "furra";
+  if (product === "kontabilisti") return "kontabilist";
+  if (product === "fiskale") return "fiskale";
+  if (product === "security") return "security";
+  if (product === "hotel") return "hotel";
+  if (product === "market") return "market";
+  return NC_URL_TIPI[c?.tipi] || "kafene";
+}
+
+function drawerOwnerRole(product) {
+  return product === "security" ? "pronari" : "owner";
+}
+
+function buildSlugPreviewUrl(slug, c, product) {
+  const s = String(slug || "").trim().toLowerCase() || "babylon";
+  const tipi = drawerUrlTipi(c, product);
+  const role = drawerOwnerRole(product);
+  return `revolution-pos.com/${tipi}/${s}/${role}`;
+}
+
+function updateProductTabBadges(badges) {
+  productTabBadgesCache = badges || {};
+  document.querySelectorAll("[data-tab-badge]").forEach((el) => {
+    const p = el.dataset.tabBadge;
+    const b = productTabBadgesCache[p] || {};
+    const parts = [];
+    if (b.expiring > 0) parts.push(`⚠️${b.expiring}`);
+    if (b.expired > 0) parts.push(`🔴${b.expired}`);
+    if (!parts.length) {
+      el.textContent = "";
+      el.classList.add("hidden");
+      return;
+    }
+    el.textContent = ` ${parts.join(" ")}`;
+    el.classList.remove("hidden");
+  });
+}
+
+function renderExpiryBanners(summary) {
+  const root = document.getElementById("clients-expiry-banners");
+  if (!root) return;
+  const expiring = summary?.expiring_clients || [];
+  const expired = summary?.expired_clients || [];
+  const parts = [];
+  if (expiring.length) {
+    const names = expiring
+      .slice(0, 4)
+      .map((x) => `${x.emri} (${x.days_remaining ?? x.ditë_mbetura ?? "?"} ditë)`)
+      .join(", ");
+    parts.push(`<div class="expiry-banner expiry-banner-warn">
+      <div><strong>⚠️ ${expiring.length} licenca skadojnë brenda 7 ditëve</strong>${names}${expiring.length > 4 ? "…" : ""}</div>
+      <button type="button" class="btn btn-ghost btn-sm" data-expiry-scroll="expiring">Shiko →</button>
+    </div>`);
+  }
+  if (expired.length) {
+    const names = expired
+      .slice(0, 4)
+      .map((x) => `${x.emri} (${x.days_past ?? x.ditë_kaluar ?? "?"} ditë më parë)`)
+      .join(", ");
+    parts.push(`<div class="expiry-banner expiry-banner-expired">
+      <div><strong>🔴 ${expired.length} licenca kanë skaduar!</strong>${names}${expired.length > 4 ? "…" : ""}</div>
+      <button type="button" class="btn btn-ghost btn-sm" data-expiry-scroll="expired">Shiko →</button>
+    </div>`);
+  }
+  root.innerHTML = parts.join("");
+  root.querySelectorAll("[data-expiry-scroll]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const kind = btn.dataset.expiryScroll;
+      const hit = clientsFlat.find((c) =>
+        kind === "expired" ? c.license_alert === "expired" : c.license_alert === "expiring",
+      );
+      if (hit) openClientDetail(hit.id, { product: hit.product_line }).catch(() => {});
+    });
+  });
+}
+
+function updateClientsOnlineKpi(total, online) {
+  const el = document.getElementById("clients-online-kpi");
+  if (el) el.textContent = total ? `· 🟢 Online: ${online}/${total}` : "";
+  const title = document.getElementById("clients-list-title");
+  if (title && total) title.textContent = `Klientët sipas sektorit (${total})`;
+}
+
 function showToast(message, type = "ok") {
   let stack = document.getElementById("admin-toast-stack");
   if (!stack) {
@@ -555,11 +659,12 @@ function openSection(name) {
     ]).catch(() => {});
   }
   if (name === "klientet" || name === "licencat") {
+    const pollMs = name === "klientet" ? 8_000 : 30_000;
     sectionRefreshTimer = setInterval(() => {
       if (document.visibilityState === "hidden") return;
       if (name === "klientet") loadClients().catch(() => null);
       else loadLicenses().catch(() => null);
-    }, 30_000);
+    }, pollMs);
   }
 }
 
@@ -580,6 +685,8 @@ function renderChart(el, points, valueKey = "total") {
 async function loadOverview() {
   const d = await api(`/api/super/dashboard/overview?product=${encodeURIComponent(currentProduct || "all")}`);
   document.getElementById("kpi-active").textContent = String(d.active_clients ?? 0);
+  const kpiOnline = document.getElementById("kpi-online");
+  if (kpiOnline) kpiOnline.textContent = String(d.online_count ?? 0);
   const kpiLic = document.getElementById("kpi-licenses");
   if (kpiLic) kpiLic.textContent = String(d.licenses_active ?? d.licenses_total ?? 0);
   const kpiTrial = document.getElementById("kpi-trial");
@@ -650,10 +757,11 @@ function renderClientsSectors(filterText = "") {
       const isOpen = openSectorIds.has(s.id) || Boolean(q && (sectorMatch || clients.length));
       const rows = clients
         .map(
-          (c) => `<div class="client-row" data-client-id="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}">
+          (c) => `<div class="${clientRowClass(c)}" data-client-id="${esc(c.id)}" data-product="${esc(c.product_line || currentProduct || "kafene")}">
             <div class="client-meta">
               <strong>${esc(c.emri)}</strong>
               <span>${esc(c.tipi_label)} · ${esc(c.package_label)}${c.package_contents ? ` — ${esc(c.package_contents)}` : ""}</span>
+              <div class="client-presence ${esc(c.presence_status || "never")}">${esc(presenceHeadline(c))} · ${esc(c.presence_label || "Kurrë i lidhur")}</div>
             </div>
             <div class="client-row-actions" style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0">
               <span class="badge ${c.status === "aktiv" ? "badge-ok" : "badge-off"}">${esc(c.status)}</span>
@@ -723,12 +831,26 @@ async function loadClients() {
     const d = await api(`/api/super/dashboard/clients?product=${encodeURIComponent(product)}`);
     showBridgeMsg(d.bridge_error || "");
     sectorsCache = ensureAllSectors(d.sectors || d.groups || []);
+    clientsExpirySummary = {
+      expiring_count: d.expiring_count || 0,
+      expired_count: d.expired_count || 0,
+      expiring_clients: d.expiring_clients || [],
+      expired_clients: d.expired_clients || [],
+    };
+    clientsOnlineCount = Number(d.online_count) || 0;
+    updateProductTabBadges(d.tab_badges || {});
+    renderExpiryBanners(clientsExpirySummary);
+    updateClientsOnlineKpi(d.total || clientsFlat.length, clientsOnlineCount);
   } catch (e) {
     showBridgeMsg(e.message || "Gabim gjatë ngarkimit të klientëve");
     sectorsCache = [];
   }
   const q = document.getElementById("clients-search")?.value || "";
   renderClientsSectors(q);
+  updateClientsOnlineKpi(
+    clientsFlat.length || sectorsCache.reduce((n, s) => n + (s.clients?.length || 0), 0),
+    clientsOnlineCount,
+  );
 }
 
 async function copyText(text, btn) {
@@ -928,9 +1050,44 @@ async function openClientDetail(id, opts = {}) {
         </div>
       </label>`;
 
+  const cacheHit = clientsFlat.find((x) => String(x.id) === String(id));
+  const expiryAlertHtml = (() => {
+    const alert = cacheHit?.license_alert;
+    if (alert === "expiring") {
+      const days = cacheHit.license_days_remaining ?? "?";
+      return `<div class="drawer-expiry-alert expiring">
+        <span>⚠️ Skadon për ${esc(String(days))} ditë</span>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-drawer-extend-now">Zgjat tani</button>
+      </div>`;
+    }
+    if (alert === "expired") {
+      const days = cacheHit.license_days_past ?? "?";
+      return `<div class="drawer-expiry-alert expired">
+        <span>🔴 Skaduar nga ${esc(String(days))} ditë</span>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-drawer-extend-now">Rinovoje</button>
+      </div>`;
+    }
+    return "";
+  })();
+
+  const slugBlockHtml = `<div class="detail-block">
+      <h4>Slug (URL)</h4>
+      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 0.5rem">Aktual: <code>${esc(c.kitchen_slug || "—")}</code></p>
+      <div id="dr-slug-view">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-drawer-edit-slug">✏️ Ndrysho Slug</button>
+      </div>
+      <div id="dr-slug-edit" class="hidden drawer-form" style="margin-top:0.65rem">
+        <label>Slug i ri<input id="dr-slug" class="mono" value="${esc(c.kitchen_slug || "")}" autocomplete="off" spellcheck="false"></label>
+        <p id="dr-slug-preview" class="drawer-slug-preview">URL e re: ${esc(buildSlugPreviewUrl(c.kitchen_slug, c, product))}</p>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-drawer-save-slug">Ruaj slug</button>
+        <p id="dr-slug-msg" style="color:var(--muted);font-size:0.85rem;margin:0.35rem 0 0"></p>
+      </div>
+    </div>`;
+
   document.getElementById("drawer-body").innerHTML = `
     <div class="detail-block">
       <h4>Të dhënat e klientit</h4>
+      ${expiryAlertHtml}
       <div class="drawer-form">
         <label>Emri<input id="dr-emri" value="${esc(c.emri || "")}" required></label>
         <label>Email<input id="dr-email" type="email" value="${esc(c.email || "")}"></label>
@@ -941,6 +1098,7 @@ async function openClientDetail(id, opts = {}) {
       <button type="button" class="btn btn-danger" id="btn-drawer-delete-client" style="margin-top:0.5rem;width:100%">Fshi klientin krejt</button>
       <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
     </div>
+    ${slugBlockHtml}
     ${renderWebLinksBlock(webLinks)}
     ${renderPasswordBlock(owners)}
     <div class="detail-block">
@@ -952,9 +1110,17 @@ async function openClientDetail(id, opts = {}) {
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
   bindDrawerSave(id, product);
   bindDrawerChangePackage(id, product);
+  bindDrawerChangeSlug(id, c, product);
   bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
+  document.getElementById("btn-drawer-extend-now")?.addEventListener("click", () => {
+    const btn = body.querySelector("[data-drawer-extend]");
+    if (btn) {
+      btn.scrollIntoView({ behavior: "smooth", block: "center" });
+      btn.focus();
+    }
+  });
   body.querySelectorAll("[data-copy-link]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const url = btn.getAttribute("data-copy-link") || "";
@@ -1189,6 +1355,59 @@ function bindDrawerChangePackage(clientId, productLine) {
       showToast(ex.message || "Ndryshimi i paketës dështoi", "err");
     } finally {
       btn.disabled = false;
+    }
+  });
+}
+
+function bindDrawerChangeSlug(clientId, clientRow, productLine) {
+  const editBtn = document.getElementById("btn-drawer-edit-slug");
+  const view = document.getElementById("dr-slug-view");
+  const edit = document.getElementById("dr-slug-edit");
+  const input = document.getElementById("dr-slug");
+  const preview = document.getElementById("dr-slug-preview");
+  const saveBtn = document.getElementById("btn-drawer-save-slug");
+  const msg = document.getElementById("dr-slug-msg");
+  const product = productLine || drawerProduct || "kafene";
+
+  function refreshPreview() {
+    if (preview && input) {
+      preview.textContent = `URL e re: ${buildSlugPreviewUrl(input.value, clientRow, product)}`;
+    }
+  }
+
+  editBtn?.addEventListener("click", () => {
+    view?.classList.add("hidden");
+    edit?.classList.remove("hidden");
+    refreshPreview();
+    input?.focus();
+  });
+  input?.addEventListener("input", refreshPreview);
+
+  saveBtn?.addEventListener("click", async () => {
+    const slug = String(input?.value || "").trim().toLowerCase();
+    if (slug.length < 3) {
+      if (msg) msg.textContent = "Slug duhet min. 3 karaktere.";
+      return;
+    }
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+      if (msg) msg.textContent = "Vetëm shkronja të vogla, numra dhe vizë (-).";
+      return;
+    }
+    saveBtn.disabled = true;
+    if (msg) msg.textContent = "Duke ruajtur…";
+    try {
+      await api(`/api/super/dashboard/clients/${encodeURIComponent(clientId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ product_line: product, kitchen_slug: slug }),
+      });
+      showToast("✅ Slug u përditësua");
+      await openClientDetail(clientId, { product });
+      await loadClients().catch(() => null);
+    } catch (ex) {
+      if (msg) msg.textContent = ex.message || "Ruajtja dështoi";
+      showToast(ex.message || "Ruajtja dështoi", "err");
+    } finally {
+      saveBtn.disabled = false;
     }
   });
 }
@@ -2830,6 +3049,10 @@ async function boot() {
   } catch {
     logout(false);
   }
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/admin/sw.js").catch(() => {});
 }
 
 boot();

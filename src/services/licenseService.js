@@ -302,6 +302,7 @@ const OPTIONAL_LICENSE_META = [
   "last_ip",
   "hardware_id",
   "activation_email",
+  "last_heartbeat_at",
 ];
 
 function normalizeContactEmail(input) {
@@ -534,6 +535,7 @@ async function validateLicense({
   const hwStored = hwForCheck;
   const successPatch = {
     last_activated_at: now,
+    last_heartbeat_at: now,
     last_validation_at: now,
     last_validation_error: hwStored && !normalizeHardwareIdStored(license.hardware_id || "")
       ? encodeHwMeta(hwStored)
@@ -769,7 +771,7 @@ async function createClient(body) {
       .eq("kitchen_slug", kitchen_slug)
       .maybeSingle();
     if (takenErr) throw takenErr;
-    if (taken) throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+    if (taken) throw new Error("Ky slug përdoret tashmë");
   } else {
     kitchen_slug = await resolveUniqueKitchenSlug(db, { emri });
   }

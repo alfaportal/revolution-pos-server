@@ -29,6 +29,187 @@ const {
 const { ensureKitchenCredentials, buildClientWebLinks } = require("../lib/kitchenAccess");
 const { buildClientWebLinksList } = require("../lib/productUrls");
 const { getPublicAppOrigin } = require("../lib/publicOrigin");
+const { daysUntilTrialEnd } = require("../lib/trialDates");
+
+const PRESENCE_ONLINE_MS = 2 * 60 * 1000;
+const PRESENCE_IDLE_MS = 10 * 60 * 1000;
+const EXPIRY_WARN_DAYS = 7;
+
+function licenseLastSeen(lic) {
+  let latest =
+    lic.last_heartbeat_at
+    || lic.last_activated_at
+    || lic.last_validation_at
+    || lic.updated_at
+    || lic.created_at
+    || null;
+  const terminals = lic.terminals || [];
+  for (const t of terminals) {
+    if (t.last_seen_at && (!latest || new Date(t.last_seen_at) > new Date(latest))) {
+      latest = t.last_seen_at;
+    }
+  }
+  return latest;
+}
+
+function computePresence(lastSeenAt) {
+  if (!lastSeenAt) {
+    return { status: "never", label: "Kurrë i lidhur", icon: "⚫" };
+  }
+  const ms = Date.now() - new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(ms) || ms < 0) {
+    return { status: "never", label: "Kurrë i lidhur", icon: "⚫" };
+  }
+  if (ms < PRESENCE_ONLINE_MS) {
+    return { status: "online", label: formatRelativeSq(ms), icon: "🟢" };
+  }
+  if (ms < PRESENCE_IDLE_MS) {
+    return { status: "idle", label: formatRelativeSq(ms), icon: "🟡" };
+  }
+  return { status: "offline", label: "Offline", icon: "🔴" };
+}
+
+function formatRelativeSq(ms) {
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `Para ${sec} sek`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `Para ${min} min`;
+  const hr = Math.floor(min / 60);
+  if (hr < 48) return `Para ${hr} orë`;
+  const days = Math.floor(hr / 24);
+  return `Para ${days} ditë`;
+}
+
+function licenseExpiryInfo(lic) {
+  if (!lic) return { alert: "none", days_remaining: null, days_past: null };
+  const statusi = String(lic.statusi || "");
+  if (statusi === "revokuar" || statusi === "pezulluar") {
+    return { alert: "revoked", days_remaining: null, days_past: null };
+  }
+  const days = daysUntilTrialEnd(lic.data_skadimit);
+  if (days == null) return { alert: "none", days_remaining: null, days_past: null };
+  if (statusi === "skaduar" || days < 0) {
+    return { alert: "expired", days_remaining: null, days_past: Math.abs(days) };
+  }
+  if (days <= EXPIRY_WARN_DAYS) {
+    return { alert: "expiring", days_remaining: days, days_past: null };
+  }
+  return { alert: "none", days_remaining: days, days_past: null };
+}
+
+function clientLicenseSummary(licenses) {
+  const list = licenses || [];
+  if (!list.length) {
+    return {
+      alert: "none",
+      days_remaining: null,
+      days_past: null,
+      last_heartbeat_at: null,
+      data_skadimit: null,
+      statusi: null,
+      license_id: null,
+    };
+  }
+  let lastHeartbeat = null;
+  for (const l of list) {
+    const seen = licenseLastSeen(l);
+    if (seen && (!lastHeartbeat || new Date(seen) > new Date(lastHeartbeat))) {
+      lastHeartbeat = seen;
+    }
+  }
+  const priority = { revoked: 4, expired: 3, expiring: 2, none: 1 };
+  let best = list[0];
+  let bestScore = -1;
+  for (const l of list) {
+    const info = licenseExpiryInfo(l);
+    const score = priority[info.alert] || 0;
+    if (score > bestScore) {
+      bestScore = score;
+      best = l;
+    }
+  }
+  const exp = licenseExpiryInfo(best);
+  return {
+    ...exp,
+    last_heartbeat_at: lastHeartbeat,
+    data_skadimit: best.data_skadimit || null,
+    statusi: best.statusi || null,
+    license_id: best.id || null,
+  };
+}
+
+function buildExpiryLists(clients, licByClient) {
+  const expiring_clients = [];
+  const expired_clients = [];
+  for (const c of clients) {
+    const lics = licByClient.get(c.id) || [];
+    for (const l of lics) {
+      const info = licenseExpiryInfo(l);
+      if (info.alert === "expiring") {
+        expiring_clients.push({
+          id: c.id,
+          emri: c.emri,
+          license_id: l.id,
+          ditë_mbetura: info.days_remaining,
+          days_remaining: info.days_remaining,
+          data_skadimit: l.data_skadimit,
+        });
+      } else if (info.alert === "expired") {
+        expired_clients.push({
+          id: c.id,
+          emri: c.emri,
+          license_id: l.id,
+          ditë_kaluar: info.days_past,
+          days_past: info.days_past,
+          data_skadimit: l.data_skadimit,
+        });
+      }
+    }
+  }
+  expiring_clients.sort((a, b) => (a.days_remaining ?? 99) - (b.days_remaining ?? 99));
+  expired_clients.sort((a, b) => (b.days_past ?? 0) - (a.days_past ?? 0));
+  return {
+    expiring_count: expiring_clients.length,
+    expired_count: expired_clients.length,
+    expiring_clients,
+    expired_clients,
+  };
+}
+
+const TAB_PRODUCT_IDS = ["kafene", "security", "hotel", "market", "furra", "kontabilisti", "fiskale"];
+
+function buildProductTabBadges(licensesAll, clientsAll) {
+  const badges = {};
+  for (const pl of TAB_PRODUCT_IDS) {
+    badges[pl] = { expiring: 0, expired: 0 };
+  }
+  const clientIdsByProduct = new Map();
+  for (const c of clientsAll || []) {
+    const pl = clientProductLine(c);
+    if (!clientIdsByProduct.has(pl)) clientIdsByProduct.set(pl, new Set());
+    clientIdsByProduct.get(pl).add(c.id);
+  }
+  for (const lic of licensesAll || []) {
+    const pl = licenseProductLine(lic);
+    const cid = lic.client_id || lic.clients?.id;
+    if (!badges[pl]) badges[pl] = { expiring: 0, expired: 0 };
+    if (cid && clientIdsByProduct.has(pl) && !clientIdsByProduct.get(pl).has(cid)) continue;
+    const info = licenseExpiryInfo(lic);
+    if (info.alert === "expiring") badges[pl].expiring += 1;
+    if (info.alert === "expired") badges[pl].expired += 1;
+  }
+  return badges;
+}
+
+function countOnlineClients(clients, licByClient) {
+  let online = 0;
+  for (const c of clients) {
+    const summary = clientLicenseSummary(licByClient.get(c.id) || []);
+    if (computePresence(summary.last_heartbeat_at).status === "online") online += 1;
+  }
+  return online;
+}
+
 function clientProductLine(c) {
   return adminProductOfClient(c);
 }
@@ -416,17 +597,6 @@ async function weeklySalesSeries() {
   }));
 }
 
-function licenseLastSeen(lic) {
-  const terminals = lic.terminals || [];
-  let latest = lic.last_activated_at || lic.updated_at || lic.created_at || null;
-  for (const t of terminals) {
-    if (t.last_seen_at && (!latest || new Date(t.last_seen_at) > new Date(latest))) {
-      latest = t.last_seen_at;
-    }
-  }
-  return latest;
-}
-
 function isOfflineOver48h(lic) {
   const seen = licenseLastSeen(lic);
   if (!seen) return true;
@@ -503,6 +673,8 @@ async function getOverviewKafene(adminProduct = "kafene") {
   // Trial = licencë aktive me afat të shkurtër (≤16 ditë).
   // Mos numëro licenca vjetore që gabimisht kanë trial_ends_at të mbushur.
   const trial = licenses.filter((l) => isShortTrialLicense(l)).length;
+  const expiry = buildExpiryLists(clients, licByClient);
+  const online_count = countOnlineClients(clients, licByClient);
 
   return {
     active_clients: activeClients.length,
@@ -510,10 +682,12 @@ async function getOverviewKafene(adminProduct = "kafene") {
     licenses_total: licenses.length,
     licenses_active: licenses.filter((l) => l.statusi === "aktive").length,
     trial_accounts: trial,
+    online_count,
     sales_today_total: slice === "kafene" ? salesToday.total : 0,
     problem_clients: problems,
     weekly_sales: slice === "kafene" ? weekly : [],
     product_line: slice,
+    ...expiry,
   };
 }
 
@@ -580,11 +754,14 @@ async function getClientsGrouped({ product } = {}) {
     const sector = sectorBucketForClient(p, tipi);
     const lics = licByClient.get(c.id) || [];
     const activeLic = lics.some((l) => l.statusi === "aktive");
+    const licSummary = clientLicenseSummary(lics);
+    const presence = computePresence(licSummary.last_heartbeat_at);
     const row = {
       id: c.id,
       emri: c.emri,
       tipi,
       tipi_label: labelForTipi(c.tipi),
+      kitchen_slug: c.kitchen_slug || "",
       package_tier: c.package_tier,
       package_label: packageLabel(c.package_tier),
       package_contents: packageContents(c.package_tier),
@@ -596,6 +773,15 @@ async function getClientsGrouped({ product } = {}) {
       sector_num: sector.num,
       sector_id: sector.id,
       product_line: p,
+      last_heartbeat_at: licSummary.last_heartbeat_at,
+      presence_status: presence.status,
+      presence_label: presence.label,
+      presence_icon: presence.icon,
+      license_alert: licSummary.alert,
+      license_days_remaining: licSummary.days_remaining,
+      license_days_past: licSummary.days_past,
+      license_id: licSummary.license_id,
+      data_skadimit: licSummary.data_skadimit,
     };
     const bucket = bySectorId.get(sector.id) || bySectorId.get("other") || sectors[0];
     bucket.clients.push(row);
@@ -614,12 +800,19 @@ async function getClientsGrouped({ product } = {}) {
     };
   });
 
+  const expiry = buildExpiryLists(clients, licByClient);
+  const online_count = countOnlineClients(clients, licByClient);
+  const tab_badges = buildProductTabBadges(licenses, clientsAll);
+
   return {
     sectors: padded,
     groups: padded,
     total: clients.length,
+    online_count,
     product_line: p,
     products: PRODUCT_LINES,
+    tab_badges,
+    ...expiry,
   };
 }
 

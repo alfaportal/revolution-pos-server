@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rev Admin">
   <title>Master Admin — Revolution Invest</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#1a1a2e">
+  <meta name="theme-color" content="#FF6B35">
+  <link rel="manifest" href="/admin/manifest.json">
+  <link rel="apple-touch-icon" href="/admin/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=33">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=34">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -68,13 +72,13 @@
         </div>
 
         <div class="product-tabs" id="product-tabs" role="tablist" aria-label="Produkti">
-          <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true">RESTAURANT</button>
-          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër">Security</button>
-          <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false" title="Regjistro hotele &amp; jep licenca — bridge te revolution-hotel-server">HOTEL</button>
-          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false" title="Dyqane — bridge te revolution-market-server">MARKET</button>
-          <button type="button" class="product-tab" data-product="furra" role="tab" aria-selected="false" title="Furra — ende pa server cloud">FURRA</button>
-          <button type="button" class="product-tab" data-product="kontabilisti" role="tab" aria-selected="false" title="Kontabilisti — bridge te Railway">KONTABILISTI</button>
-          <button type="button" class="product-tab" data-product="fiskale" role="tab" aria-selected="false" title="Fiskale — ende pa cloud">FISKALE</button>
+          <button type="button" class="product-tab active" data-product="kafene" role="tab" aria-selected="true"><span class="tab-label">RESTAURANT</span><span class="tab-badge hidden" data-tab-badge="kafene"></span></button>
+          <button type="button" class="product-tab" data-product="security" role="tab" aria-selected="false" title="Regjistro firma Security &amp; jep licenca — brenda këtu, pa hapur faqe tjetër"><span class="tab-label">Security</span><span class="tab-badge hidden" data-tab-badge="security"></span></button>
+          <button type="button" class="product-tab" data-product="hotel" role="tab" aria-selected="false" title="Regjistro hotele &amp; jep licenca — bridge te revolution-hotel-server"><span class="tab-label">HOTEL</span><span class="tab-badge hidden" data-tab-badge="hotel"></span></button>
+          <button type="button" class="product-tab" data-product="market" role="tab" aria-selected="false" title="Dyqane — bridge te revolution-market-server"><span class="tab-label">MARKET</span><span class="tab-badge hidden" data-tab-badge="market"></span></button>
+          <button type="button" class="product-tab" data-product="furra" role="tab" aria-selected="false" title="Furra — ende pa server cloud"><span class="tab-label">FURRA</span><span class="tab-badge hidden" data-tab-badge="furra"></span></button>
+          <button type="button" class="product-tab" data-product="kontabilisti" role="tab" aria-selected="false" title="Kontabilisti — bridge te Railway"><span class="tab-label">KONTABILISTI</span><span class="tab-badge hidden" data-tab-badge="kontabilisti"></span></button>
+          <button type="button" class="product-tab" data-product="fiskale" role="tab" aria-selected="false" title="Fiskale — ende pa cloud"><span class="tab-label">FISKALE</span><span class="tab-badge hidden" data-tab-badge="fiskale"></span></button>
         </div>
         <p class="product-tabs-hint" id="product-tabs-hint">
           Çdo listë i takon RESTAURANT.
@@ -86,6 +90,7 @@
         <section class="section active" id="sec-pasqyra">
           <div class="kpi-row">
             <div class="kpi"><div class="lbl">Klientë aktiv</div><div class="val" id="kpi-active">—</div></div>
+            <div class="kpi ok"><div class="lbl">🟢 Online</div><div class="val" id="kpi-online">—</div></div>
             <div class="kpi"><div class="lbl">Licenca aktive</div><div class="val" id="kpi-licenses">—</div></div>
             <div class="kpi"><div class="lbl">Trial</div><div class="val" id="kpi-trial">—</div></div>
             <div class="kpi warn"><div class="lbl">Me probleme</div><div class="val" id="kpi-problems">—</div></div>
@@ -299,8 +304,10 @@
           <div class="card">
             <div class="card-title">
               <span id="clients-list-title">Klientët sipas sektorit</span>
+              <span id="clients-online-kpi" class="clients-online-kpi"></span>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh-clients">Rifresko</button>
             </div>
+            <div id="clients-expiry-banners" class="expiry-banners" aria-live="polite"></div>
             <input type="search" class="search-bar" id="clients-search" placeholder="Kërko klientin e këtij produkti…" enterkeyhint="search" autocomplete="off">
             <div id="clients-sectors"></div>
           </div>
@@ -582,6 +589,6 @@
 
   <div id="admin-toast-stack" class="admin-toast-stack" aria-live="polite"></div>
 
-  <script src="/admin/dashboard.js?v=44"></script>
+  <script src="/admin/dashboard.js?v=45"></script>
 </body>
 </html>

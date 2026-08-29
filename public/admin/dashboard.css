@@ -467,8 +467,69 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   border: 1px solid transparent;
 }
 .client-row:active { border-color: rgba(255,107,53,0.35); background: rgba(255,107,53,0.08); }
+.client-row-expiring { border-color: #ea580c; box-shadow: inset 0 0 0 1px rgba(234,88,12,0.35); }
+.client-row-expired { border-color: #dc2626; box-shadow: inset 0 0 0 1px rgba(220,38,38,0.35); }
+.client-row-revoked { background: rgba(100,116,139,0.14); border-color: rgba(100,116,139,0.35); opacity: 0.92; }
 .client-meta strong { display: block; font-size: 1.1rem; margin-bottom: 0.2rem; }
 .client-meta span { color: var(--muted); font-size: 0.98rem; }
+.client-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.client-presence.online { color: #4ade80; }
+.client-presence.idle { color: #fbbf24; }
+.client-presence.offline { color: #f87171; }
+.clients-online-kpi {
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
+  color: #4ade80;
+  font-weight: 650;
+}
+.expiry-banners { display: flex; flex-direction: column; gap: 0.65rem; margin: 0 0 0.85rem; }
+.expiry-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.expiry-banner-warn { background: rgba(234,88,12,0.14); border: 1px solid rgba(234,88,12,0.45); }
+.expiry-banner-expired { background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.45); }
+.expiry-banner strong { display: block; margin-bottom: 0.25rem; }
+.tab-badge {
+  margin-left: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.tab-badge.hidden { display: none; }
+.kpi.ok .val { color: #4ade80; }
+.drawer-slug-preview {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+  word-break: break-all;
+}
+.drawer-expiry-alert {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.drawer-expiry-alert.expiring { background: rgba(234,88,12,0.14); border: 1px solid rgba(234,88,12,0.4); }
+.drawer-expiry-alert.expired { background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.4); }
 
 /* Licenses — card layout on phone */
 .license-cards { display: flex; flex-direction: column; gap: 0.75rem; }

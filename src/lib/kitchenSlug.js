@@ -90,7 +90,7 @@ async function updateClientKitchenSlug(db, clientId, rawSlug) {
   if (current.kitchen_slug === slug) return current;
 
   if (await isKitchenSlugTaken(db, slug, id)) {
-    throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+    throw new Error("Ky slug përdoret tashmë");
   }
 
   const { data, error } = await db
@@ -102,7 +102,7 @@ async function updateClientKitchenSlug(db, clientId, rawSlug) {
 
   if (error) {
     if (error.code === "23505") {
-      throw new Error("Ky slug është i zënë. Zgjidhni një tjetër.");
+      throw new Error("Ky slug përdoret tashmë");
     }
     throw error;
   }
