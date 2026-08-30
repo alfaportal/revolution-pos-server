@@ -4,9 +4,7 @@
  */
 const { getSupabase } = require("../db");
 const { normalizeProductLine } = require("../utils/productLine");
-
-const MARKET_SERVER = "https://revolution-market-server-production.up.railway.app";
-const HOTEL_SERVER = "https://revolution-hotel-server-production.up.railway.app";
+const { getPublicAppOrigin } = require("./publicOrigin");
 
 function isDedicatedProduct(product) {
   const p = normalizeProductLine(product);
@@ -15,10 +13,11 @@ function isDedicatedProduct(product) {
 
 function dedicatedServerError(product) {
   const p = normalizeProductLine(product);
+  const base = getPublicAppOrigin().replace(/\/+$/, "");
   const err = new Error(
     p === "hotel"
-      ? `HOTEL nuk kalon nga POS. Përdor ${HOTEL_SERVER}`
-      : `MARKET nuk kalon nga POS. Përdor ${MARKET_SERVER}`,
+      ? `HOTEL nuk kalon nga POS. Përdor ${base}/hotel/`
+      : `MARKET nuk kalon nga POS. Përdor ${base}/market/`,
   );
   err.code = "PRODUCT_WRONG_SERVER";
   err.status = 400;
