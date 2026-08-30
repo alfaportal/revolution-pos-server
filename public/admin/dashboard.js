@@ -503,9 +503,10 @@ function formatNcDate(iso) {
 
 function buildNcSuccessText(data) {
   const emri = data.client?.emri || "—";
+  const email = data.owner?.email || data.owner_email || "—";
   const lic = data.license_key || data.license?.celesi || "—";
   const exp = formatNcDate(data.expires_at || data.license?.data_skadimit);
-  return { emri, lic, exp };
+  return { emri, email, lic, exp };
 }
 
 function showNcSuccess(data) {
@@ -514,9 +515,11 @@ function showNcSuccess(data) {
   const form = document.getElementById("form-new-client");
   const info = buildNcSuccessText(data);
   const emriEl = document.getElementById("nc-success-emri");
+  const emailEl = document.getElementById("nc-success-email");
   const licEl = document.getElementById("nc-success-lic");
   const expEl = document.getElementById("nc-success-exp");
   if (emriEl) emriEl.textContent = info.emri;
+  if (emailEl) emailEl.textContent = info.email;
   if (licEl) licEl.textContent = info.lic;
   if (expEl) expEl.textContent = info.exp;
   panel?.classList.remove("hidden");
@@ -2659,6 +2662,15 @@ async function boot() {
     document.getElementById(id)?.addEventListener("change", updateNcSlugPreview);
   });
 
+  document.getElementById("btn-nc-gen-password")?.addEventListener("click", () => {
+    const el = document.getElementById("nc-owner-password");
+    if (el) el.value = randomNcPassword(10);
+  });
+  document.getElementById("btn-nc-copy-password")?.addEventListener("click", (e) => {
+    const v = document.getElementById("nc-owner-password")?.value || "";
+    if (!v) return alert("Nuk ka fjalëkalim.");
+    copyText(v, e.currentTarget);
+  });
   document.getElementById("btn-nc-copy-key")?.addEventListener("click", (e) => {
     const v = document.getElementById("nc-license-key")?.value || "";
     if (!v) return alert("Nuk ka licencë.");
@@ -2770,6 +2782,8 @@ async function boot() {
     const emri = document.getElementById("nc-emri")?.value?.trim();
     let slug = document.getElementById("nc-slug")?.value?.trim().toLowerCase() || ncSlugifyEmri(emri);
     slug = slug.replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "");
+    const ownerEmail = document.getElementById("nc-owner-email")?.value?.trim();
+    const ownerPassword = document.getElementById("nc-owner-password")?.value?.trim();
     const hardwareId = String(document.getElementById("nc-hw-id")?.value || "").trim();
     const licenseKey = String(document.getElementById("nc-license-key")?.value || "").trim();
     const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
@@ -2785,6 +2799,14 @@ async function boot() {
     }
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
       if (msg) msg.textContent = "Slug: vetëm shkronja të vogla, numra dhe vizë.";
+      return;
+    }
+    if (!ownerEmail) {
+      if (msg) msg.textContent = "Email i pronarit është i detyrueshëm.";
+      return;
+    }
+    if (!ownerPassword || ownerPassword.length < 6) {
+      if (msg) msg.textContent = "Fjalëkalimi min. 6 karaktere.";
       return;
     }
     if (hardwareId && hwHex.length !== 16) {
@@ -2811,6 +2833,9 @@ async function boot() {
       package_tier: document.getElementById("nc-package")?.value,
       muaj: Number(document.getElementById("nc-duration")?.value || 12),
       duration_months: Number(document.getElementById("nc-duration")?.value || 12),
+      owner_emri: emri,
+      owner_email: ownerEmail,
+      owner_password: ownerPassword,
       issue_license: true,
       license_type: "annual",
       hardware_id: hardwareId || undefined,

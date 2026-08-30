@@ -111,6 +111,7 @@
               <div class="nc-success-title">✅ Klienti u regjistrua!</div>
               <div class="nc-success-body">
                 <p><strong>Emri:</strong> <span id="nc-success-emri">—</span></p>
+                <p><strong>Email:</strong> <span id="nc-success-email">—</span></p>
                 <p><strong>Licenca:</strong> <span id="nc-success-lic" class="mono">—</span></p>
                 <p><strong>Skadon:</strong> <span id="nc-success-exp">—</span></p>
               </div>
@@ -219,6 +220,18 @@
                   <div class="field">
                     <label for="nc-tel">Telefoni</label>
                     <input id="nc-tel" type="tel" placeholder="opsionale">
+                  </div>
+                  <div class="field">
+                    <label for="nc-owner-email">Email i pronarit *</label>
+                    <input id="nc-owner-email" type="email" required placeholder="pronari@email.com" autocomplete="username">
+                  </div>
+                  <div class="field full">
+                    <label for="nc-owner-password">Fjalëkalimi *</label>
+                    <div class="nc-input-row">
+                      <input id="nc-owner-password" type="text" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
+                      <button type="button" class="btn btn-ok" id="btn-nc-gen-password">Gjenero</button>
+                      <button type="button" class="btn btn-ghost" id="btn-nc-copy-password">Kopjo</button>
+                    </div>
                   </div>
                 </div>
               </fieldset>
@@ -552,6 +565,6 @@
 
   <div id="admin-toast-stack" class="admin-toast-stack" aria-live="polite"></div>
 
-  <script src="/admin/dashboard.js?v=46"></script>
+  <script src="/admin/dashboard.js?v=47"></script>
 </body>
 </html>
