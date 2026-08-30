@@ -113,6 +113,7 @@ const RESERVED_URL_TIPI = new Set([
   "s",
   "css",
   "js",
+  "assets",
   "icons",
   "blog",
   "privacy",
