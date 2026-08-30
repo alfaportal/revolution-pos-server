@@ -178,6 +178,11 @@ router.get(
       const detail = await getMarketClientDetail(req.params.id);
       return res.json({ ok: true, ...detail });
     }
+    if (product === "security") {
+      const { getSecurityClientDetail } = require("../lib/securityAdminBridge");
+      const detail = await getSecurityClientDetail(req.params.id);
+      return res.json({ ok: true, ...detail, product_line: "security" });
+    }
     const detail = await getClientDetail(req.params.id);
     res.json({ ok: true, ...detail, product_line: "kafene" });
   }),

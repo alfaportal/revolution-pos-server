@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/admin/dashboard.css?v=34">
+  <link rel="stylesheet" href="/admin/dashboard.css?v=35">
 </head>
 <body>
   <div id="view-login" class="login-wrap">
@@ -108,14 +108,16 @@
               <span>Shto klient të ri</span>
             </div>
             <div id="nc-success-panel" class="nc-success hidden" role="status" aria-live="polite">
-              <div class="nc-success-title">✅ Klienti u regjistrua me sukses!</div>
-              <pre id="nc-success-body" class="nc-success-body"></pre>
+              <div class="nc-success-title">✅ Klienti u regjistrua!</div>
+              <div class="nc-success-body">
+                <p><strong>Emri:</strong> <span id="nc-success-emri">—</span></p>
+                <p><strong>Licenca:</strong> <span id="nc-success-lic" class="mono">—</span></p>
+                <p><strong>Skadon:</strong> <span id="nc-success-exp">—</span></p>
+              </div>
               <div class="nc-success-actions">
-                <button type="button" class="btn btn-primary" id="btn-nc-copy-all">📋 Kopjo krejt</button>
-                <button type="button" class="btn btn-ok" id="btn-nc-email-all">📧 Dërgo me email</button>
+                <button type="button" class="btn btn-primary" id="btn-nc-copy-license">📋 Kopjo licencën</button>
                 <button type="button" class="btn btn-ghost" id="btn-nc-new-another">+ Klient tjetër</button>
               </div>
-              <p id="nc-success-msg" class="nc-form-hint"></p>
             </div>
 
             <form id="form-new-client" class="nc-form">
@@ -215,52 +217,14 @@
                     <p class="nc-form-hint" id="nc-slug-preview">URL: revolution-pos.com/kafene/babylon/owner</p>
                   </div>
                   <div class="field">
-                    <label for="nc-nui">NUI</label>
-                    <input id="nc-nui" placeholder="opsionale">
-                  </div>
-                  <div class="field">
-                    <label for="nc-qyteti">Qyteti</label>
-                    <input id="nc-qyteti" placeholder="opsionale">
-                  </div>
-                  <div class="field full">
-                    <label for="nc-adresa">Adresa</label>
-                    <input id="nc-adresa" placeholder="opsionale">
-                  </div>
-                  <div class="field">
                     <label for="nc-tel">Telefoni</label>
                     <input id="nc-tel" type="tel" placeholder="opsionale">
                   </div>
-                  <div class="field">
-                    <label for="nc-email">Email i biznesit</label>
-                    <input id="nc-email" type="email" placeholder="opsionale">
-                  </div>
                 </div>
               </fieldset>
 
               <fieldset class="nc-section">
-                <legend>3 — Pronari (llogaria e hyrjes)</legend>
-                <div class="form-grid">
-                  <div class="field">
-                    <label for="nc-owner-emri">Emri i pronarit *</label>
-                    <input id="nc-owner-emri" required placeholder="Emri mbiemri">
-                  </div>
-                  <div class="field">
-                    <label for="nc-owner-email">Email i pronarit *</label>
-                    <input id="nc-owner-email" type="email" required placeholder="pronari@email.com" autocomplete="username">
-                  </div>
-                  <div class="field full">
-                    <label for="nc-owner-password">Fjalëkalimi *</label>
-                    <div class="nc-input-row">
-                      <input id="nc-owner-password" type="text" required minlength="6" placeholder="min. 6 karaktere" autocomplete="new-password">
-                      <button type="button" class="btn btn-ok" id="btn-nc-gen-password">Gjenero</button>
-                      <button type="button" class="btn btn-ghost" id="btn-nc-copy-password">Kopjo</button>
-                    </div>
-                  </div>
-                </div>
-              </fieldset>
-
-              <fieldset class="nc-section">
-                <legend>4 — Licenca</legend>
+                <legend>3 — Licenca</legend>
                 <div class="form-grid">
                   <div class="field">
                     <label for="nc-package">Paketa</label>
@@ -273,7 +237,6 @@
                       <option value="3">3 muaj</option>
                       <option value="6">6 muaj</option>
                       <option value="12" selected>1 vit</option>
-                      <option value="24">2 vite</option>
                     </select>
                   </div>
                   <div class="field full">
@@ -295,7 +258,7 @@
               </fieldset>
 
               <fieldset class="nc-section nc-section-submit">
-                <legend>5 — Konfirmimi</legend>
+                <legend>4 — Konfirmimi</legend>
                 <button type="submit" class="btn btn-primary btn-lg" id="btn-nc-submit">REGJISTRO KLIENTIN</button>
                 <p id="nc-msg" class="nc-form-hint"></p>
               </fieldset>
@@ -589,6 +552,6 @@
 
   <div id="admin-toast-stack" class="admin-toast-stack" aria-live="polite"></div>
 
-  <script src="/admin/dashboard.js?v=45"></script>
+  <script src="/admin/dashboard.js?v=46"></script>
 </body>
 </html>

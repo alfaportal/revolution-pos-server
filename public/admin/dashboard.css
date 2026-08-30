@@ -861,14 +861,20 @@ table.sa-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
   margin-bottom: 0.75rem;
 }
 .nc-success-body {
-  white-space: pre-wrap;
-  font-family: ui-monospace, monospace;
-  font-size: 0.92rem;
+  font-size: 1rem;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0.85rem;
   margin: 0 0 0.85rem;
+}
+.nc-success-body p {
+  margin: 0.35rem 0;
+}
+.nc-success-body .mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+  word-break: break-all;
 }
 .nc-success-actions {
   display: flex;

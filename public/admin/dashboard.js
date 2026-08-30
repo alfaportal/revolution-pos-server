@@ -503,27 +503,22 @@ function formatNcDate(iso) {
 
 function buildNcSuccessText(data) {
   const emri = data.client?.emri || "—";
-  const url = data.owner_url || "—";
-  const email = data.owner?.email || document.getElementById("nc-owner-email")?.value || "—";
-  const pass = data.password_plain || "—";
   const lic = data.license_key || data.license?.celesi || "—";
   const exp = formatNcDate(data.expires_at || data.license?.data_skadimit);
-  return [
-    `Emri: ${emri}`,
-    `URL: ${url.replace(/^https?:\/\//, "")}`,
-    `Email: ${email}`,
-    `Password: ${pass}`,
-    `Licenca: ${lic}`,
-    `Skadon: ${exp}`,
-  ].join("\n");
+  return { emri, lic, exp };
 }
 
 function showNcSuccess(data) {
   lastNcRegistration = data;
   const panel = document.getElementById("nc-success-panel");
   const form = document.getElementById("form-new-client");
-  const body = document.getElementById("nc-success-body");
-  if (body) body.textContent = buildNcSuccessText(data);
+  const info = buildNcSuccessText(data);
+  const emriEl = document.getElementById("nc-success-emri");
+  const licEl = document.getElementById("nc-success-lic");
+  const expEl = document.getElementById("nc-success-exp");
+  if (emriEl) emriEl.textContent = info.emri;
+  if (licEl) licEl.textContent = info.lic;
+  if (expEl) expEl.textContent = info.exp;
   panel?.classList.remove("hidden");
   form?.classList.add("hidden");
 }
@@ -730,6 +725,13 @@ function normalizeSearch(s) {
     .replace(/ë/g, "e");
 }
 
+function clientMatchesQuery(c, q) {
+  if (!q) return true;
+  const blob = normalizeSearch(`${c.emri} ${c.tipi_label} ${c.package_label || ""} ${c.email || ""}`);
+  const words = q.split(/\s+/).filter(Boolean);
+  return words.every((w) => blob.includes(w));
+}
+
 function renderClientsSectors(filterText = "") {
   const root = document.getElementById("clients-sectors");
   if (!root) return;
@@ -744,9 +746,7 @@ function renderClientsSectors(filterText = "") {
 
       let clients = s.clients || [];
       if (q) {
-        const nameHits = clients.filter((c) =>
-          normalizeSearch(`${c.emri} ${c.tipi_label} ${c.package_label}`).includes(q),
-        );
+        const nameHits = clients.filter((c) => clientMatchesQuery(c, q));
         if (sectorMatch) clients = nameHits.length ? nameHits : clients;
         else clients = nameHits;
         // Gjatë kërkimit: fsheh vetëm nëse as sektori as klientët nuk përputhen
@@ -811,7 +811,7 @@ function renderClientsSectors(filterText = "") {
       if (e.target.closest("[data-delete-client]")) return;
       const hit = clientsFlat.find((c) => String(c.id) === String(row.dataset.clientId));
       openClientDetail(row.dataset.clientId, {
-        product: hit?.product_line || productQuery(true) || "kafene",
+        product: row.dataset.product || hit?.product_line || productQuery(true) || "kafene",
       }).catch((ex) => alert(ex.message || ex));
     });
   });
@@ -985,7 +985,7 @@ const DRAWER_HOTEL_TIPI_OPTS = [
 async function fetchClientDetailSmart(id, preferredProduct) {
   const pref = preferredProduct || currentProduct || "kafene";
   const order = [pref];
-  for (const p of ["kafene", "security", "hotel"]) {
+  for (const p of ["kafene", "security", "hotel", "market"]) {
     if (!order.includes(p)) order.push(p);
   }
   for (const product of order) {
@@ -2659,49 +2659,16 @@ async function boot() {
     document.getElementById(id)?.addEventListener("change", updateNcSlugPreview);
   });
 
-  document.getElementById("btn-nc-gen-password")?.addEventListener("click", () => {
-    const el = document.getElementById("nc-owner-password");
-    if (el) el.value = randomNcPassword(10);
-  });
-  document.getElementById("btn-nc-copy-password")?.addEventListener("click", (e) => {
-    const v = document.getElementById("nc-owner-password")?.value || "";
-    if (!v) return alert("Nuk ka fjalëkalim.");
-    copyText(v, e.currentTarget);
-  });
   document.getElementById("btn-nc-copy-key")?.addEventListener("click", (e) => {
     const v = document.getElementById("nc-license-key")?.value || "";
     if (!v) return alert("Nuk ka licencë.");
     copyText(v, e.currentTarget);
   });
-  document.getElementById("btn-nc-copy-all")?.addEventListener("click", (e) => {
+  document.getElementById("btn-nc-copy-license")?.addEventListener("click", (e) => {
     if (!lastNcRegistration) return;
-    copyText(buildNcSuccessText(lastNcRegistration), e.currentTarget);
-  });
-  document.getElementById("btn-nc-email-all")?.addEventListener("click", async (e) => {
-    if (!lastNcRegistration) return;
-    const btn = e.currentTarget;
-    const msg = document.getElementById("nc-success-msg");
-    btn.disabled = true;
-    if (msg) msg.textContent = "Duke dërguar email…";
-    try {
-      await api("/api/super/dashboard/clients/send-welcome-email", {
-        method: "POST",
-        body: JSON.stringify({
-          to: lastNcRegistration.owner?.email || document.getElementById("nc-owner-email")?.value,
-          owner_emri: lastNcRegistration.owner?.emri,
-          emri: lastNcRegistration.client?.emri,
-          owner_url: lastNcRegistration.owner_url,
-          password: lastNcRegistration.password_plain,
-          license_key: lastNcRegistration.license_key,
-          expires_at: lastNcRegistration.expires_at || lastNcRegistration.license?.data_skadimit,
-        }),
-      });
-      if (msg) msg.textContent = "Email u dërgua.";
-    } catch (ex) {
-      if (msg) msg.textContent = ex.message || "Email dështoi";
-    } finally {
-      btn.disabled = false;
-    }
+    const lic = lastNcRegistration.license_key || lastNcRegistration.license?.celesi || "";
+    if (!lic) return alert("Nuk ka licencë.");
+    copyText(lic, e.currentTarget);
   });
   document.getElementById("btn-nc-new-another")?.addEventListener("click", () => resetNcForm());
 
@@ -2803,9 +2770,6 @@ async function boot() {
     const emri = document.getElementById("nc-emri")?.value?.trim();
     let slug = document.getElementById("nc-slug")?.value?.trim().toLowerCase() || ncSlugifyEmri(emri);
     slug = slug.replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "");
-    const ownerEmri = document.getElementById("nc-owner-emri")?.value?.trim();
-    const ownerEmail = document.getElementById("nc-owner-email")?.value?.trim();
-    const ownerPassword = document.getElementById("nc-owner-password")?.value?.trim();
     const hardwareId = String(document.getElementById("nc-hw-id")?.value || "").trim();
     const licenseKey = String(document.getElementById("nc-license-key")?.value || "").trim();
     const hwHex = hardwareId.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
@@ -2821,14 +2785,6 @@ async function boot() {
     }
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
       if (msg) msg.textContent = "Slug: vetëm shkronja të vogla, numra dhe vizë.";
-      return;
-    }
-    if (!ownerEmri || !ownerEmail || !ownerPassword) {
-      if (msg) msg.textContent = "Pronari (emër, email, fjalëkalim) është i detyrueshëm.";
-      return;
-    }
-    if (ownerPassword.length < 6) {
-      if (msg) msg.textContent = "Fjalëkalimi min. 6 karaktere.";
       return;
     }
     if (hardwareId && hwHex.length !== 16) {
@@ -2847,10 +2803,6 @@ async function boot() {
       emri,
       kitchen_slug: slug,
       slug,
-      nui: document.getElementById("nc-nui")?.value?.trim(),
-      adresa: document.getElementById("nc-adresa")?.value?.trim(),
-      qyteti: document.getElementById("nc-qyteti")?.value?.trim(),
-      email: document.getElementById("nc-email")?.value?.trim(),
       telefoni: document.getElementById("nc-tel")?.value?.trim(),
       telefon: document.getElementById("nc-tel")?.value?.trim(),
       tipi,
@@ -2859,9 +2811,6 @@ async function boot() {
       package_tier: document.getElementById("nc-package")?.value,
       muaj: Number(document.getElementById("nc-duration")?.value || 12),
       duration_months: Number(document.getElementById("nc-duration")?.value || 12),
-      owner_emri: ownerEmri,
-      owner_email: ownerEmail,
-      owner_password: ownerPassword,
       issue_license: true,
       license_type: "annual",
       hardware_id: hardwareId || undefined,

@@ -216,11 +216,10 @@ async function registerFullDashboardClient(body, baseUrl) {
   const ownerEmri = String(body.owner_emri || "").trim();
   const ownerEmail = String(body.owner_email || "").trim().toLowerCase();
   const ownerPassword = String(body.owner_password || "").trim();
+  const hasOwner = !!(ownerEmri && ownerEmail && ownerPassword);
 
   if (!String(body.emri || "").trim()) throw new Error("Emri i biznesit është i detyrueshëm.");
-  if (!ownerEmri) throw new Error("Emri i pronarit është i detyrueshëm.");
-  if (!ownerEmail) throw new Error("Email i pronarit është i detyrueshëm.");
-  if (!ownerPassword || ownerPassword.length < 6) {
+  if (hasOwner && ownerPassword.length < 6) {
     throw new Error("Fjalëkalimi i pronarit min. 6 karaktere.");
   }
 
@@ -259,15 +258,17 @@ async function registerFullDashboardClient(body, baseUrl) {
       const posResult = await registerPosFamilyClient(body, program, licenseOpts);
       client = posResult.client;
       license = posResult.license;
-      owner = await createOwner(
-        {
-          client_id: client.id,
-          emri: ownerEmri,
-          email: ownerEmail,
-          password: ownerPassword,
-        },
-        baseUrl,
-      );
+      if (hasOwner) {
+        owner = await createOwner(
+          {
+            client_id: client.id,
+            emri: ownerEmri,
+            email: ownerEmail,
+            password: ownerPassword,
+          },
+          baseUrl,
+        );
+      }
       celesi = license?.celesi || celesi;
     }
 
@@ -286,12 +287,12 @@ async function registerFullDashboardClient(body, baseUrl) {
       celesi: celesi || license?.celesi || "",
       hardware_id: hardwareId || bridgeResult?.hardware_id || null,
       product_line: program,
-      password_plain: ownerPassword,
+      password_plain: hasOwner ? ownerPassword : null,
       expires_at: expires,
       email_configured: isEmailConfigured(),
     };
 
-    if (ownerEmail) {
+    if (hasOwner && ownerEmail) {
       sendOwnerWelcomeCredentialsEmail({
         to: ownerEmail,
         ownerName: ownerEmri,

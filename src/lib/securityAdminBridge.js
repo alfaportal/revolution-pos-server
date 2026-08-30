@@ -154,6 +154,62 @@ async function getSecurityClientsGrouped() {
   }
 }
 
+async function getSecurityClientDetail(id) {
+  const cid = String(id || "").trim();
+  if (!cid) throw new Error("Mungon ID e klientit Security.");
+
+  let client = null;
+  let licenses = [];
+
+  try {
+    const data = await securityRequest(`/clients/${encodeURIComponent(cid)}`);
+    client = data.client || data;
+    licenses = Array.isArray(data.licenses) ? data.licenses : [];
+  } catch (e) {
+    const grouped = await getSecurityClientsGrouped();
+    const all = (grouped.sectors || []).flatMap((s) => s.clients || []);
+    client = all.find((c) => String(c.id) === cid) || null;
+    if (!client) throw e;
+  }
+
+  if (!licenses.length) {
+    try {
+      const licView = await getSecurityLicensesView();
+      licenses = (licView.licenses || []).filter((l) => String(l.client_id) === cid);
+    } catch {
+      licenses = [];
+    }
+  }
+
+  const sector = sectorForVeprimtari(client.veprimtari || client.tipi || "kompani_sigurie");
+  return {
+    client: {
+      id: client.id,
+      emri: client.emri,
+      tipi: sector.id,
+      tipi_label: sector.label,
+      email: client.email || "",
+      telefoni: client.telefon || client.telefoni || "",
+      adresa: client.adresa || "",
+      status: client.status || "aktiv",
+      product_line: "security",
+      veprimtari: client.veprimtari || sector.id,
+    },
+    licenses: licenses.map((l) => ({
+      id: l.id,
+      client_id: l.client_id || cid,
+      celesi: l.license_key || l.celesi || "",
+      license_key: l.license_key || l.celesi || "",
+      hardware_id: l.hardware_id || l.device_id || "",
+      statusi: l.status || l.statusi || "aktive",
+      data_skadimit: l.expires_at || l.data_skadimit || null,
+      product_line: "security",
+    })),
+    owners: [],
+    product_line: "security",
+  };
+}
+
 async function getSecurityLicensesView() {
   try {
     const data = await securityRequest("/licenses");
@@ -269,6 +325,7 @@ async function revokeSecurityLicense(id, { status = "revoked" } = {}) {
 module.exports = {
   SECURITY_SECTORS,
   getSecurityClientsGrouped,
+  getSecurityClientDetail,
   getSecurityLicensesView,
   getSecurityOverview,
   registerSecurityClient,
