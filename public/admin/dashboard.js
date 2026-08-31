@@ -1033,12 +1033,9 @@ async function openClientDetail(id, opts = {}) {
   drawerProduct = product;
   const c = d.client || {};
   const licenses = d.licenses || [];
-  const owners = d.owners || [];
-  const webLinks = d.web_links || [];
-
   document.getElementById("drawer-root").classList.remove("hidden");
   document.getElementById("drawer-title").textContent = `${c.icon || "🏪"} ${c.emri || "Klient"}`;
-  document.getElementById("drawer-sub").textContent = "Edito klientin, licencat & fjalëkalimin — Ruaj";
+  document.getElementById("drawer-sub").textContent = "Edito klientin & licencat — Ruaj";
 
   const sectorFields =
     product === "hotel"
@@ -1073,20 +1070,6 @@ async function openClientDetail(id, opts = {}) {
     return "";
   })();
 
-  const slugBlockHtml = `<div class="detail-block">
-      <h4>Slug (URL)</h4>
-      <p style="color:var(--muted);font-size:0.88rem;margin:0 0 0.5rem">Aktual: <code>${esc(c.kitchen_slug || "—")}</code></p>
-      <div id="dr-slug-view">
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-drawer-edit-slug">✏️ Ndrysho Slug</button>
-      </div>
-      <div id="dr-slug-edit" class="hidden drawer-form" style="margin-top:0.65rem">
-        <label>Slug i ri<input id="dr-slug" class="mono" value="${esc(c.kitchen_slug || "")}" autocomplete="off" spellcheck="false"></label>
-        <p id="dr-slug-preview" class="drawer-slug-preview">URL e re: ${esc(buildSlugPreviewUrl(c.kitchen_slug, c, product))}</p>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-drawer-save-slug">Ruaj slug</button>
-        <p id="dr-slug-msg" style="color:var(--muted);font-size:0.85rem;margin:0.35rem 0 0"></p>
-      </div>
-    </div>`;
-
   document.getElementById("drawer-body").innerHTML = `
     <div class="detail-block">
       <h4>Të dhënat e klientit</h4>
@@ -1101,9 +1084,6 @@ async function openClientDetail(id, opts = {}) {
       <button type="button" class="btn btn-danger" id="btn-drawer-delete-client" style="margin-top:0.5rem;width:100%">Fshi klientin krejt</button>
       <p id="dr-save-msg" style="color:var(--muted);font-size:0.9rem;margin:0.5rem 0 0"></p>
     </div>
-    ${slugBlockHtml}
-    ${renderWebLinksBlock(webLinks)}
-    ${renderPasswordBlock(owners)}
     <div class="detail-block">
       <h4>Licenca (edito ID / çelës / status)</h4>
       ${renderLicenseEditBlocks(licenses)}
@@ -1113,8 +1093,6 @@ async function openClientDetail(id, opts = {}) {
   body.querySelectorAll("[data-lic-hw], [data-lic-key]").forEach((el) => bindDrawerHex16(el));
   bindDrawerSave(id, product);
   bindDrawerChangePackage(id, product);
-  bindDrawerChangeSlug(id, c, product);
-  bindDrawerPassword(id, product);
   bindDrawerLicenseFix(body, id, product);
   bindLicenseActions(body);
   document.getElementById("btn-drawer-extend-now")?.addEventListener("click", () => {
@@ -1123,21 +1101,6 @@ async function openClientDetail(id, opts = {}) {
       btn.scrollIntoView({ behavior: "smooth", block: "center" });
       btn.focus();
     }
-  });
-  body.querySelectorAll("[data-copy-link]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const url = btn.getAttribute("data-copy-link") || "";
-      if (!url) return;
-      try {
-        await navigator.clipboard.writeText(url);
-        btn.textContent = "✓";
-        setTimeout(() => {
-          btn.textContent = "📋";
-        }, 1200);
-      } catch {
-        /* ignore */
-      }
-    });
   });
   document.getElementById("btn-drawer-delete-client")?.addEventListener("click", async () => {
     await deleteClientById(id, { product, name: c.emri, close: true });
